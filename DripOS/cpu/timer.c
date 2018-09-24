@@ -2,8 +2,10 @@
 #include "isr.h"
 #include "ports.h"
 #include "../libc/function.h"
+#include "../drivers/screen.h"
 
 u32 tick = 0;
+u32 prev = 0;
 
 static void timer_callback(registers_t regs) {
     tick++;
@@ -22,4 +24,12 @@ void init_timer(u32 freq) {
     port_byte_out(0x43, 0x36); /* Command port */
     port_byte_out(0x40, low);
     port_byte_out(0x40, high);
+
+}
+
+void wait(u32 ticks) {
+	prev = tick;
+	while(tick - prev < ticks) {
+		
+	}
 }
