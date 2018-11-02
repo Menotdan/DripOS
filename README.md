@@ -9,7 +9,8 @@ Linux:
 
 Install qemu for your distro
 
-Run os-image.bin in qemu-system-i386 -fda
+Run os-image.bin in qemu-system-i386 -fda OR
+Run: make run in the DripOS directory
 
 Windows:
 
