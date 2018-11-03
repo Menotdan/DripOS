@@ -26,3 +26,4 @@ qemu.exe -m 256 -fda /path/to/Downloads/DripOS-master/DripOS/os-image.bin
 
 
 
+Curretly, this OS supports a shell and thats about it.
