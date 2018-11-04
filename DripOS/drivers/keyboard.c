@@ -39,11 +39,15 @@ static void keyboard_callback(registers_t regs) {
     
     if (scancode > SC_MAX) return;
     if (scancode == BACKSPACE) {
-        backspace(key_buffer);
-        kprint_backspace();
+		if (uinlen > 0) {
+			backspace(key_buffer);
+			kprint_backspace();
+			uinlen -= 1;
+		}
     } else if (scancode == ENTER) {
         kprint("\n");
         user_input(key_buffer); /* kernel-controlled function */
+		uinlen = 0;
         key_buffer[0] = '\0';
     } else if (scancode == LSHIFT || scancode == RSHIFT) {
 		if (shift == 0) {
@@ -52,6 +56,7 @@ static void keyboard_callback(registers_t regs) {
 			shift = 0;
 		}
 	} else {
+		uinlen += 1;
 		if (shift == 0) {
 			char letter = sc_ascii[(int)scancode];
 			/* Remember that kprint only accepts char[] */
