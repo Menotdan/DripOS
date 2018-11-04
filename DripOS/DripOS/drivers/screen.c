@@ -1,10 +1,7 @@
 #include "screen.h"
 #include "../cpu/ports.h"
 #include "../libc/mem.h"
-<<<<<<< HEAD
-#include "colors.h"
-=======
->>>>>>> ab5c5fe1324ce987a89224738614a54b559d9946
+
 /* Declaration of private functions */
 int get_cursor_offset();
 void set_cursor_offset(int offset);
@@ -42,47 +39,8 @@ void kprint_at(char *message, int col, int row) {
     }
 }
 
-void kprint_at_blue(char *message, int col, int row) {
-    /* Set cursor if col/row are negative */
-    int offset;
-    if (col >= 0 && row >= 0)
-        offset = get_offset(col, row);
-    else {
-        offset = get_cursor_offset();
-        row = get_offset_row(offset);
-        col = get_offset_col(offset);
-    }
-
-    /* Loop through message and print it */
-    int i = 0;
-    while (message[i] != 0) {
-        offset = print_char(message[i++], col, row, BLUE_ON_BLACK);
-        /* Compute row/col for next iteration */
-        row = get_offset_row(offset);
-        col = get_offset_col(offset);
-    }
-}
-
-
 void kprint(char *message) {
     kprint_at(message, -1, -1);
-}
-
-void drip() {
-	kprint_at_blue("#",  32, 0);
-	kprint_at_blue("#",  32, 1);
-	kprint_at_blue("###",  31, 2);
-	kprint_at_blue("###",  31, 3);
-	kprint_at_blue("#######",  29, 4);
-	kprint_at_blue("###########",  27, 5);
-	kprint_at_blue("###############",  25, 6);
-	kprint_at_blue("#################",  24, 7);
-	kprint_at_blue("###################",  23, 8);
-	kprint_at_blue("###################",  23, 9);
-	kprint_at_blue("#################",  24, 10);
-	kprint_at_blue("###############",  25, 11);
-	kprint_at_blue("###########",  27, 12);
-	kprint_at_blue("DripOS", 30, 14);
 }
 
 void kprint_backspace() {

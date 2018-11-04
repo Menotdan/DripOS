@@ -8,16 +8,8 @@
 
 #define BACKSPACE 0x0E
 #define ENTER 0x1C
-<<<<<<< HEAD
-#define LSHIFT 0x2A
-#define RSHIFT 0x36
-
-int shift = 0;
-static char key_buffer[2560];
-=======
 
 static char key_buffer[256];
->>>>>>> ab5c5fe1324ce987a89224738614a54b559d9946
 
 #define SC_MAX 57
 const char *sc_name[] = { "ERROR", "Esc", "1", "2", "3", "4", "5", "6", 
@@ -26,25 +18,11 @@ const char *sc_name[] = { "ERROR", "Esc", "1", "2", "3", "4", "5", "6",
         "A", "S", "D", "F", "G", "H", "J", "K", "L", ";", "'", "`", 
         "LShift", "\\", "Z", "X", "C", "V", "B", "N", "M", ",", ".", 
         "/", "RShift", "Keypad *", "LAlt", "Spacebar"};
-<<<<<<< HEAD
-const char sc_ascii[] = { ' ', ' ', '1', '2', '3', '4', '5', '6',     
-    '7', '8', '9', '0', '-', '=', ' ', ' ', 'q', 'w', 'e', 'r', 't', 'y', 
-        'u', 'i', 'o', 'p', '[', ']', ' ', ' ', 'a', 's', 'd', 'f', 'g', 
-        'h', 'j', 'k', 'l', ';', '\'', '`', ' ', '\\', 'z', 'x', 'c', 'v', 
-        'b', 'n', 'm', ',', '.', '/', ' ', ' ', ' ', ' '};
-
-const char sc_ascii_uppercase[] = { ' ', ' ', '!', '@', '#', '$', '%', '^',     
-    '&', '*', '(', ')', '_', '+', ' ', ' ', 'Q', 'W', 'E', 'R', 'T', 'Y', 
-        'U', 'I', 'O', 'P', '{', '}', ' ', ' ', 'A', 'S', 'D', 'F', 'G', 
-        'H', 'J', 'K', 'L', ':', '|', '~', ' ', '\\', 'Z', 'X', 'C', 'V', 
-        'B', 'N', 'M', '<', '>', '?', ' ', ' ', ' ', ' '};
-=======
 const char sc_ascii[] = { '?', '?', '1', '2', '3', '4', '5', '6',     
     '7', '8', '9', '0', '-', '=', '?', '?', 'q', 'w', 'e', 'r', 't', 'y', 
         'u', 'i', 'o', 'p', '[', ']', '?', '?', 'a', 's', 'd', 'f', 'g', 
         'h', 'j', 'k', 'l', ';', '\'', '`', '?', '\\', 'z', 'x', 'c', 'v', 
         'b', 'n', 'm', ',', '.', '/', '?', '?', '?', ' '};
->>>>>>> ab5c5fe1324ce987a89224738614a54b559d9946
 
 static void keyboard_callback(registers_t regs) {
     /* The PIC leaves us the scancode in port 0x60 */
@@ -58,35 +36,12 @@ static void keyboard_callback(registers_t regs) {
         kprint("\n");
         user_input(key_buffer); /* kernel-controlled function */
         key_buffer[0] = '\0';
-<<<<<<< HEAD
-    } else if (scancode == LSHIFT || scancode == RSHIFT) {
-		if (shift == 0) {
-			shift = 1;
-		} else {
-			shift = 0;
-		}
-	} else {
-		if (shift == 0) {
-			char letter = sc_ascii[(int)scancode];
-			/* Remember that kprint only accepts char[] */
-			char str[2] = {letter, '\0'};
-			append(key_buffer, letter);
-			kprint(str);
-		} else {
-			char letter = sc_ascii_uppercase[(int)scancode];
-			/* Remember that kprint only accepts char[] */
-			char str[2] = {letter, '\0'};
-			append(key_buffer, letter);
-			kprint(str);
-		}
-=======
     } else {
         char letter = sc_ascii[(int)scancode];
         /* Remember that kprint only accepts char[] */
         char str[2] = {letter, '\0'};
         append(key_buffer, letter);
         kprint(str);
->>>>>>> ab5c5fe1324ce987a89224738614a54b559d9946
     }
     UNUSED(regs);
 }
