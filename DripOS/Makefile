@@ -26,7 +26,6 @@ kernel.elf: boot/kernel_entry.o ${OBJ}
 run: os-image.bin
 	qemu-system-i386 -fda os-image.bin
 
-<<<<<<< HEAD
 myos.iso: os-image.bin
 	dd if=/dev/zero of=floppy.img bs=1024 count=1440
 	dd if=os-image.bin of=floppy.img seek=0 conv=notrunc
@@ -35,8 +34,6 @@ myos.iso: os-image.bin
 
 iso: myos.iso
 	cp myos.iso doneiso/
-=======
->>>>>>> ab5c5fe1324ce987a89224738614a54b559d9946
 # Open the connection to qemu and load our kernel-object file with symbols
 debug: os-image.bin kernel.elf
 	qemu-system-i386 -s -fda os-image.bin -d guest_errors,int &

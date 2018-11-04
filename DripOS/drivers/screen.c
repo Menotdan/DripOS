@@ -1,10 +1,7 @@
 #include "screen.h"
 #include "../cpu/ports.h"
 #include "../libc/mem.h"
-<<<<<<< HEAD
 #include "colors.h"
-=======
->>>>>>> ab5c5fe1324ce987a89224738614a54b559d9946
 /* Declaration of private functions */
 int get_cursor_offset();
 void set_cursor_offset(int offset);
