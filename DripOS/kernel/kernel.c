@@ -12,17 +12,18 @@ int login = 1;
 int passin = 0;
 int state = 0;
 int uinlen = 0;
+int prompttype = 0;
 void main() {
 	isr_install();
 	irq_install();
-	init_timer(50);
+	init_timer(1);
 	clear_screen();
 	prevtick = tick;
 	drip();
-	wait(120);
+	wait(100);
 	clear_screen();
 	kprint("DripOS 0.001\n"); //Version
-    kprint("Type help for commands\nType end to halt the CPU\n> ");
+    kprint("Type help for commands\nType shutdown to shutdown\n> ");
 }
 
 void user_input(char *input) {
@@ -30,11 +31,10 @@ void user_input(char *input) {
 		if(argt == 1) {
 				if(strcmp(input, "password") == 0) {
 					shutdown();
-					//arg = 0;
-					//argt = 0;
 				} else if(strcmp(input, "cancel") == 0) {
 					arg = 0;
 					argt = 0;
+					prompttype = 0;
 				} else {
 					kprint("Password incorrect! Type cancel to cancel");
 				}
@@ -42,6 +42,7 @@ void user_input(char *input) {
 	} else if (strcmp(input, "shutdown") == 0) {
 		arg = 1;
 		argt = 1;
+		prompttype = 1;
     } else if (strcmp(input, "panic") == 0) {
 		panic();
     } else if (strcmp(input, "nmem") == 0) {

@@ -6,5 +6,6 @@ void shifton();
 void shftoff();
 int getstate();
 int uinlen;
+int prompttype;
 
 #endif

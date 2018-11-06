@@ -62,13 +62,21 @@ static void keyboard_callback(registers_t regs) {
 			/* Remember that kprint only accepts char[] */
 			char str[2] = {letter, '\0'};
 			append(key_buffer, letter);
-			kprint(str);
+			if (prompttype == 0) {
+				kprint(str);
+			} else {
+				kprint("*");
+			}
 		} else {
 			char letter = sc_ascii_uppercase[(int)scancode];
 			/* Remember that kprint only accepts char[] */
 			char str[2] = {letter, '\0'};
 			append(key_buffer, letter);
-			kprint(str);
+			if (prompttype == 0) {
+				kprint(str);
+			} else {
+				kprint("*");
+			}
 		}
     }
     UNUSED(regs);
