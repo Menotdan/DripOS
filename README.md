@@ -1,5 +1,6 @@
 # DripOS
 An OS made for fun.
+DISCOOOORD : https://discord.gg/E9ZXZWn
 NOTE: This is based off of this tutorial: https://github.com/cfenollosa/os-tutorial
 
 
