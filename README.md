@@ -1,5 +1,5 @@
 # DripOS
-Support: [Discord Server](https://discord.gg/E9ZXZWn)  
+Support and preview builds: [Discord Server](https://discord.gg/E9ZXZWn)  
   
 An OS made for fun.  
   
