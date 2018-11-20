@@ -7,8 +7,7 @@ OBJ = ${C_SOURCES:.c=.o cpu/interrupt.o}
 CC = /home/aforsyth/
 GDB = /usr/local/i386elfgcc/bin/i386-elf-gdb
 # -g: Use debugging symbols in gcc
-CFLAGS = -g -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs \
-		 -Wall -Wextra
+CFLAGS = -g -ffreestanding -Wall -Wextra -fno-exceptions -m32
 
 # First rule is run by default
 os-image.bin: boot/bootsect.bin kernel.bin
@@ -24,7 +23,7 @@ kernel.elf: boot/kernel_entry.o ${OBJ}
 	i686-elf-ld -o $@ -Ttext 0x1000 $^ 
 
 run: os-image.bin
-	qemu-system-i386 -fda os-image.bin
+	qemu-system-i386 -device isa-debug-exit,iobase=0xf4,iosize=0x04 -fda os-image.bin
 
 myos.iso: os-image.bin
 	dd if=/dev/zero of=floppy.img bs=1024 count=1440
