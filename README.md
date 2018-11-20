@@ -1,15 +1,16 @@
 # DripOS
-Support: [Discord Server](https://discord.gg/E9ZXZWn)
-NOTE: This project is based on tutorials from [os-dev](https://github.com/cfenollosa/os-tutorial)
-An OS made for fun.
-
-Note: There are preview builds on the support server
-
+Support: [Discord Server](https://discord.gg/E9ZXZWn)  
+  
+An OS made for fun.  
+  
+NOTE: This project is based on tutorials from [os-dev](https://github.com/cfenollosa/os-tutorial)  
+NOTE: There are preview builds on the support server  
+  
 ## Usage
 ### Linux
 
-Install qemu for your distro
-
+Install qemu for your distro  
+  
 Run os-image.bin by
 ```
 qemu-system-i386 -fda <path to os-image.bin>
