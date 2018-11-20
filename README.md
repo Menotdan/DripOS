@@ -4,6 +4,8 @@ DISCOOOORD : https://discord.gg/E9ZXZWn
 NOTE: This is based off of this tutorial: https://github.com/cfenollosa/os-tutorial
 
 
+On Discord there are preview builds of new features. :DDD
+
 To use:
 
 Linux:
