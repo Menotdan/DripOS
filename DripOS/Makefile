@@ -4,35 +4,35 @@ HEADERS = $(wildcard kernel/*.h drivers/*.h cpu/*.h libc/*.h)
 OBJ = ${C_SOURCES:.c=.o cpu/interrupt.o} 
 
 # Change this if your cross-compiler is somewhere else
-CC = /home/aforsyth/
-GDB = /usr/local/i386elfgcc/bin/i386-elf-gdb
+CC = /usr/bin/i686-elf-gcc
+GDB = /usr/bin/i686-elf-gdb
 # -g: Use debugging symbols in gcc
-CFLAGS = -g -ffreestanding -Wall -Wextra -fno-exceptions -m32
+CFLAGS = -g #-m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra
 
 # First rule is run by default
-os-image.bin: boot/bootsect.bin kernel.bin
-	cat $^ > os-image.bin
+os-image.bin: kernel.o boot.o
+	i686-elf-gcc -T linker.ld -o os-image.bin -ffreestanding -O2 -nostdlib boot.o kernel.o -lgcc
 
 # '--oformat binary' deletes all symbols as a collateral, so we don't need
 # to 'strip' them manually on this case
-kernel.bin: boot/kernel_entry.o ${OBJ}
-	i686-elf-ld -o $@ -Ttext 0x1000 $^ --oformat binary
+kernel.o: ${OBJ}
+	i686-elf-ld -r -o $@ -Ttext 0x1000 $^ 
 
 # Used for debugging purposes
 kernel.elf: boot/kernel_entry.o ${OBJ}
 	i686-elf-ld -o $@ -Ttext 0x1000 $^ 
 
-run: os-image.bin
-	qemu-system-i386 -device isa-debug-exit,iobase=0xf4,iosize=0x04 -fda os-image.bin
+run: myos.iso
+	qemu-system-i386 -soundhw pcspk os-image.iso
 
 myos.iso: os-image.bin
-	dd if=/dev/zero of=floppy.img bs=1024 count=1440
-	dd if=os-image.bin of=floppy.img seek=0 conv=notrunc
-	cp floppy.img iso/
-	genisoimage -quiet -V 'DRIPOS' -input-charset iso8859-1 -o myos.iso -b floppy.img iso/
+	mkdir -p isodir/boot/grub
+	cp os-image.bin isodir/boot/os-image.bin
+	cp grub.cfg isodir/boot/grub/grub.cfg
+	grub-mkrescue -o os-image.iso isodir
 
 iso: myos.iso
-	cp myos.iso doneiso/
+	cp os-image.iso .
 # Open the connection to qemu and load our kernel-object file with symbols
 debug: os-image.bin kernel.elf
 	qemu-system-i386 -s -fda os-image.bin -d guest_errors,int &

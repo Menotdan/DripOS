@@ -18,6 +18,26 @@ int get_offset_col(int offset);
  * Print a message on the specified location
  * If col, row, are negative, we will use the current offset
  */
+
+int logo[16][16] = {
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0},
+        {0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0},
+        {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0},
+        {0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0},
+        {0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0},
+        {0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+};
+
 void kprint_at(char *message, int col, int row) {
     /* Set cursor if col/row are negative */
     int offset;
@@ -65,21 +85,33 @@ void kprint(char *message) {
     kprint_at(message, -1, -1);
 }
 
-void drip() {
-	kprint_at_blue("#",  32, 0);
-	kprint_at_blue("#",  32, 1);
-	kprint_at_blue("###",  31, 2);
-	kprint_at_blue("###",  31, 3);
-	kprint_at_blue("#######",  29, 4);
-	kprint_at_blue("###########",  27, 5);
-	kprint_at_blue("###############",  25, 6);
-	kprint_at_blue("#################",  24, 7);
-	kprint_at_blue("###################",  23, 8);
-	kprint_at_blue("###################",  23, 9);
-	kprint_at_blue("#################",  24, 10);
-	kprint_at_blue("###############",  25, 11);
-	kprint_at_blue("###########",  27, 12);
-	kprint_at_blue("DripOS", 30, 14);
+//void drip() {
+//	kprint_at_blue("#",  32, 0);
+//	kprint_at_blue("#",  32, 1);
+//	kprint_at_blue("###",  31, 2);
+//	kprint_at_blue("###",  31, 3);
+//	kprint_at_blue("#######",  29, 4);
+//	kprint_at_blue("###########",  27, 5);
+//	kprint_at_blue("###############",  25, 6);
+//	kprint_at_blue("#################",  24, 7);
+//	kprint_at_blue("###################",  23, 8);
+//	kprint_at_blue("###################",  23, 9);
+//	kprint_at_blue("#################",  24, 10);
+//	kprint_at_blue("###############",  25, 11);
+//	kprint_at_blue("###########",  27, 12);
+//	kprint_at_blue("DripOS", 30, 14);
+//}
+
+void logoDraw() {
+    for (int y = 0; y < 16; y++) {
+        for (int x = 0; x < 16; x++) {
+            if(logo[y][x] == 1) {
+                kprint_at_blue("*", x, y);
+            } else {
+                kprint_at_blue(" ", x, y);
+            }
+        }
+    }
 }
 
 void kprint_backspace() {

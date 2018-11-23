@@ -2,13 +2,11 @@
 #define KERNEL_H
 
 void user_input(char *input);
+void shifton();
+void shftoff();
+void beep();
 int getstate();
 int uinlen;
 int prompttype;
-int state;
-void halt();
-void shutdown();
-void panic();
-void memory();
 
 #endif
