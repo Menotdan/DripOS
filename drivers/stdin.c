@@ -4,9 +4,10 @@
 
 #define LSHIFT 0x2A
 #define RSHIFT 0x36
-#define KEY_DEL 8
+#define KEY_DEL 6
 
 //extern bool keydown[256];
+static int keytimeout[256];
 static char key_buffer[2560];
 
 const char *sc_name[] = { "ERROR", "Esc", "1", "2", "3", "4", "5", "6", 
@@ -31,6 +32,7 @@ int shift = 0;
 
 
 void key_handler() {
+    kprint("recv");
     for (int i = 0; i < 58; i++) {
         if (strcmp(sc_name[i], "Enter") == 0 && keydown[i] == true && keytimeout[i] <= 0) {
             keytimeout[i] = KEY_DEL;
@@ -56,10 +58,14 @@ void key_handler() {
         } else if (strcmp(sc_name[i], "RShift") == 0 && keydown[i] == true && keytimeout[i] <= 0) {
             keytimeout[i] = KEY_DEL;
         } else {
+            if(keydown[i] == true) {
+                    kprint("Timeout is the problem");
+            }
             //char time[6];
             //int_to_ascii(keytimeout[i], time);
             //kprint(time);
             if(keytimeout[i] <= 0) {
+                
                 keytimeout[i] = KEY_DEL;
                 if (keydown[(int)LSHIFT] == true || keydown[(int)RSHIFT] == true) {
                     if(keydown[i] == true) {
@@ -90,5 +96,10 @@ void key_handler() {
                 }
             }
         }
+    }
+}
+void key_time() {
+    for (int i = 0; i < 256; i++) {
+        keytimeout[i] -= 1;
     }
 }

@@ -19,8 +19,9 @@
 #define SC_MAX 57
 
 bool keydown[256];
-int keytimeout[256];
-
+static int prevcode = 0;
+static int times[256];
+static bool send = true;
 
 static void keyboard_callback(registers_t regs) {
     /* The PIC leaves us the scancode in port 0x60 */
@@ -37,9 +38,23 @@ static void keyboard_callback(registers_t regs) {
 	if (iskeyup == true) {
 		keydown[(int)scancode] = false;
 	} else {
-		keydown[(int)scancode] = true;
+		if ((int)scancode != prevcode) {
+			keydown[(int)scancode] = true;
+			prevcode = (int)scancode;
+			send = true;
+		} else {
+			send = false;
+			times[(int)scancode] += 1;
+		}
     }
-	key_handler();
+	if (times[(int)scancode] >= 1) {
+		send = true;
+		times[(int)scancode] = 0;
+	}
+	if (send == true) {
+		key_handler();
+		//kprint("sent");
+	}
     UNUSED(regs);
 }
 

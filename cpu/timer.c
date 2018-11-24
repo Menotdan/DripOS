@@ -13,9 +13,7 @@ u32 prev = 0;
 static void timer_callback(registers_t regs) {
 	sys_state_manager();
     tick++;
-    for (int i = 0; i < 256; i++) {
-        keytimeout[i] -= 1;
-    }
+    key_time();
     //key_handler();
     UNUSED(regs);
 }
