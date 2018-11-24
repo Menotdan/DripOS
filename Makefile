@@ -33,7 +33,6 @@ myos.iso: os-image.bin
 
 iso: myos.iso
 	cp myos.iso doneiso/
-
 # Open the connection to qemu and load our kernel-object file with symbols
 debug: os-image.bin kernel.elf
 	qemu-system-i386 -s -fda os-image.bin -d guest_errors,int &
@@ -51,6 +50,5 @@ debug: os-image.bin kernel.elf
 	nasm $< -f bin -o $@
 
 clean:
-	rm -rf *.bin *.dis *.o *.elf
-	rm -rf boot/*.o boot/*.bin
-	rm -rf kernel/*.o drivers/*.o cpu/*.o libc/*.o
+	rm -rf *.bin *.dis *.o os-image.bin *.elf
+	rm -rf kernel/*.o boot/*.bin drivers/*.o boot/*.o cpu/*.o libc/*.o

@@ -48,31 +48,37 @@ void key_handler() {
         } else if (strcmp(sc_name[i], "LShift") == 0 && keydown[i] == true) {
         } else if (strcmp(sc_name[i], "RShift") == 0 && keydown[i] == true) {
         } else {
-            if (keydown[(int)LSHIFT] == true || keydown[(int)RSHIFT] == true) {
-                if(keydown[i] == true) {
-                    char letter = sc_ascii_uppercase[i];
-	                /* Remember that kprint only accepts char[] */
-	                char str[2] = {letter, '\0'};
-                    uinlen += 1;
-                    append(key_buffer, letter);
-	                if (prompttype == 0) {
-		                kprint(str);
-	                } else {
-		                kprint("*");
-	                }
-                }
-            } else {
-                if(keydown[i] == true) {
-                    char letter = sc_ascii[i];
-	                /* Remember that kprint only accepts char[] */
-	                char str[2] = {letter, '\0'};
-                    uinlen += 1;
-                    append(key_buffer, letter);
-	                if (prompttype == 0) {
-		                kprint(str);
-	                } else {
-		                kprint("*");
-	                }
+            char time[6];
+            int_to_ascii(keytimeout[i], time);
+            kprint(time);
+            if(keytimeout[i] == 0) {
+                keytimeout[i] == 500;
+                if (keydown[(int)LSHIFT] == true || keydown[(int)RSHIFT] == true) {
+                    if(keydown[i] == true) {
+                        char letter = sc_ascii_uppercase[i];
+                        /* Remember that kprint only accepts char[] */
+                        char str[2] = {letter, '\0'};
+                        uinlen += 1;
+                        append(key_buffer, letter);
+                        if (prompttype == 0) {
+                            kprint(str);
+                        } else {
+                            kprint("*");
+                        }
+                    }
+                } else {
+                    if(keydown[i] == true) {
+                        char letter = sc_ascii[i];
+                        /* Remember that kprint only accepts char[] */
+                        char str[2] = {letter, '\0'};
+                        uinlen += 1;
+                        append(key_buffer, letter);
+                        if (prompttype == 0) {
+                            kprint(str);
+                        } else {
+		                    kprint("*");
+	                    }
+                    }
                 }
             }
         }
