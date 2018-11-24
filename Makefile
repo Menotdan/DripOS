@@ -4,11 +4,10 @@ HEADERS = $(wildcard kernel/*.h drivers/*.h cpu/*.h libc/*.h)
 OBJ = ${C_SOURCES:.c=.o cpu/interrupt.o} 
 
 # Change this if your cross-compiler is somewhere else
-CC = /home/aforsyth/
-GDB = /usr/local/i386elfgcc/bin/i386-elf-gdb
+CC = /usr/bin/i686-elf-gcc
+GDB = /usr/bin/i686-elf-gdb
 # -g: Use debugging symbols in gcc
-CFLAGS = -g -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs \
-		 -Wall -Wextra
+CFLAGS = -g #-m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra
 
 # First rule is run by default
 os-image.bin: boot/bootsect.bin kernel.bin
@@ -24,7 +23,16 @@ kernel.elf: boot/kernel_entry.o ${OBJ}
 	i686-elf-ld -o $@ -Ttext 0x1000 $^ 
 
 run: os-image.bin
-	qemu-system-i386 -fda os-image.bin
+	qemu-system-i386 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -fda os-image.bin
+
+myos.iso: os-image.bin
+	dd if=/dev/zero of=floppy.img bs=1024 count=1440
+	dd if=os-image.bin of=floppy.img seek=0 conv=notrunc
+	cp floppy.img iso/
+	genisoimage -quiet -V 'DRIPOS' -input-charset iso8859-1 -o myos.iso -b floppy.img iso/
+
+iso: myos.iso
+	cp myos.iso doneiso/
 
 # Open the connection to qemu and load our kernel-object file with symbols
 debug: os-image.bin kernel.elf
@@ -43,5 +51,6 @@ debug: os-image.bin kernel.elf
 	nasm $< -f bin -o $@
 
 clean:
-	rm -rf *.bin *.dis *.o os-image.bin *.elf
-	rm -rf kernel/*.o boot/*.bin drivers/*.o boot/*.o cpu/*.o libc/*.o
+	rm -rf *.bin *.dis *.o *.elf
+	rm -rf boot/*.o boot/*.bin
+	rm -rf kernel/*.o drivers/*.o cpu/*.o libc/*.o
