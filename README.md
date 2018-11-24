@@ -9,7 +9,7 @@ Linux:
 
 Install qemu for your distro
 
-Run os-image.bin in qemu-system-i386 -fda
+Run qemu-system-i386 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -fda os-image.bin
 
 Windows:
 
@@ -21,4 +21,4 @@ And run os-image.bin:
 
 cd "\Program Files\Qemu"
 
-qemu.exe -m 256 -fda /path/to/Downloads/DripOS-master/DripOS/os-image.bin
+qemu.exe -m 256 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -fda /path/to/Downloads/DripOS-master/DripOS/os-image.bin
