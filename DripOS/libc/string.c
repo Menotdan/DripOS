@@ -1,5 +1,6 @@
 #include "string.h"
 #include "../cpu/types.h"
+#include "../drivers/screen.h"
 
 /**
  * K&R implementation
@@ -75,3 +76,41 @@ int strcmp(char s1[], char s2[]) {
     }
     return s1[i] - s2[i];
 }
+
+int match(char s1[], char s2[]) { //how many characters match, before the first unmatching character
+    int ret;
+    for (int i = 0; s1[i] == s2[i]; i++) {
+        //char hello[100];
+        //int_to_ascii(i, hello);
+        //kprint(hello);
+        if (s1[i] == "\0" || s2[i] == "\0") return i - 1;
+        ret = i;
+    }
+    if (strcmp(s1, s2) == 0) {
+        return -2;
+    }
+    return ret;
+}
+
+char *strcpy(char *dest, const char *src)
+{
+  unsigned i;
+  for (i=0; src[i] != '\0'; ++i)
+    dest[i] = src[i];
+
+  //Ensure trailing null byte is copied
+  dest[i]= '\0';
+
+  return dest;
+}
+
+const char* afterSpace(const char* input) {
+   const char* starting = input;
+   while (*starting != ' ') {
+     starting++;
+   }
+   // first one _after_
+   starting++;
+   return starting;
+ } 
+

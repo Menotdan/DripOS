@@ -10,29 +10,29 @@ GDB = /usr/bin/i686-elf-gdb
 CFLAGS = -g #-m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra
 
 # First rule is run by default
-os-image.bin: kernel.o boot.o
-	i686-elf-gcc -T linker.ld -o os-image.bin -ffreestanding -O2 -nostdlib boot.o kernel.o -lgcc
+os-image.bin: boot/bootsect.bin kernel.bin
+	cat $^ > os-image.bin
 
 # '--oformat binary' deletes all symbols as a collateral, so we don't need
 # to 'strip' them manually on this case
-kernel.o: ${OBJ}
-	i686-elf-ld -r -o $@ -Ttext 0x1000 $^ 
+kernel.bin: boot/kernel_entry.o ${OBJ}
+	i686-elf-ld -o $@ -Ttext 0x1000 $^ --oformat binary
 
 # Used for debugging purposes
 kernel.elf: boot/kernel_entry.o ${OBJ}
 	i686-elf-ld -o $@ -Ttext 0x1000 $^ 
 
-run: myos.iso
-	qemu-system-i386 -soundhw pcspk os-image.iso
+run: os-image.bin
+	qemu-system-i386 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -fda os-image.bin
 
 myos.iso: os-image.bin
-	mkdir -p isodir/boot/grub
-	cp os-image.bin isodir/boot/os-image.bin
-	cp grub.cfg isodir/boot/grub/grub.cfg
-	grub-mkrescue -o os-image.iso isodir
+	dd if=/dev/zero of=floppy.img bs=1024 count=1440
+	dd if=os-image.bin of=floppy.img seek=0 conv=notrunc
+	cp floppy.img iso/
+	genisoimage -quiet -V 'DRIPOS' -input-charset iso8859-1 -o myos.iso -b floppy.img iso/
 
 iso: myos.iso
-	cp os-image.iso .
+	cp myos.iso doneiso/
 # Open the connection to qemu and load our kernel-object file with symbols
 debug: os-image.bin kernel.elf
 	qemu-system-i386 -s -fda os-image.bin -d guest_errors,int &
