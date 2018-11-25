@@ -12,5 +12,6 @@ int match(char s1[], char s2[]);
 //int first_space(char s1[]);
 char *strcpy(char *dest, const char *src);
 const char* afterSpace(const char* input);
+char *strcat(char *dest, const char* src);
 
 #endif
