@@ -19,6 +19,8 @@
 #define SC_MAX 57
 
 bool keydown[256];
+int keytimeout[256];
+
 
 static void keyboard_callback(registers_t regs) {
     /* The PIC leaves us the scancode in port 0x60 */
