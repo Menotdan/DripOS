@@ -2,6 +2,7 @@
 #include "../libc/string.h"
 #include "../cpu/soundManager.h"
 #include "../cpu/timer.h"
+#include "../drivers/sound.h"
 #include <stdint.h>
 
 int arg = 0; //Is an argument being taken?
@@ -38,11 +39,12 @@ void execute_command(char *input) {
 		kprint(afterSpace(input));
 	} else if (match("tone", input) == -2) {
 		kprint("Not enough args!");
+		wait(30);
 	} else if ((match(input, "tone") + 1) == 4) {
 		char test[20];
 		int_to_ascii(atoi(afterSpace(input)), test);
 		kprint(test);
-		p_tone(atoi(afterSpace(input)));
+		p_tone(atoi(afterSpace(input)), 100);
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);
@@ -57,12 +59,8 @@ void execute_command(char *input) {
 	}
 }
 
-void p_tone(uint32_t soundin) {
-	kprint("Tone played");
-	sound = soundin;
-	sound_en = true;
-	sound_dis = false;
-	wait(50);
-	sound_dis = true;
-	sound_en = false;
+void p_tone(uint32_t soundin, int len) {
+	play(soundin);
+	lSnd = tick;
+	pSnd = len;
 }

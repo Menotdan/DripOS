@@ -6,5 +6,7 @@
 void init_timer(u32 freq);
 void wait(u32 ticks);
 u32 tick;
+int lSnd;
+int pSnd;
 
 #endif

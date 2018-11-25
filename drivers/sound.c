@@ -1,16 +1,17 @@
 #include "sound.h"
-//#include "../cpu/types.h"
+
+#include "../cpu/types.h"
 #include "../cpu/ports.h"
 #include "../cpu/timer.h"
 
-void play(uint32_t nFrequence) {
-    uint32_t Div;
-    uint8_t tmp;
+void play(u32 nFrequence) {
+    u32 Div;
+    u8 tmp;
 
     Div = 1193180 / nFrequence;
     port_byte_out(0x43, 0xb6);
-    port_byte_out(0x42, (uint8_t) (Div) );
-    port_byte_out(0x42, (uint8_t) (Div >> 8));
+    port_byte_out(0x42, (u8) (Div) );
+    port_byte_out(0x42, (u8) (Div >> 8));
 
     tmp = port_byte_in(0x61);
     if (tmp != (tmp | 3)) {
@@ -19,21 +20,13 @@ void play(uint32_t nFrequence) {
 }
 
 void nosound() {
-    uint8_t tmp = port_byte_in(0x61) & 0xFC;
+    u8 tmp = port_byte_in(0x61) & 0xFC;
 
     port_byte_out(0x61, tmp);
 }
 
-void play_sound(uint32_t nFrequence, uint32_t ticks) {
+void play_sound(u32 nFrequence, u32 ticks) {
     play(nFrequence);
     wait(ticks);
     nosound();
-}
-
-void pgw() {
-    play_sound(300, 30);
-    play_sound(400, 30);
-    wait(10);
-    play_sound(500, 30);
-    play_sound(600, 30);
 }
