@@ -1,6 +1,7 @@
 #include "../cpu/isr.h"
 #include "../drivers/screen.h"
 #include "../drivers/sound.h"
+#include "../drivers/time.h"
 #include "kernel.h"
 #include "../libc/string.h"
 #include "../libc/mem.h"
@@ -23,8 +24,9 @@ void main() {
 	logoDraw();
 	wait(100);
 	clear_screen();
+	read_rtc();
 	kprint("DripOS 0.001\n"); //Version
-    kprint("Type help for commands\nType shutdown to shutdown\n> ");
+  kprint("Type help for commands\nType shutdown to shutdown\n> ");
 	play_sound(500, 30);
 	play_sound(400, 120);
 }
