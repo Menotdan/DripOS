@@ -4,10 +4,10 @@
 
 #define LSHIFT 0x2A
 #define RSHIFT 0x36
-#define KEY_DEL 6
+#define KEY_DEL 0
 
 //extern bool keydown[256];
-static int keytimeout[256];
+int keytimeout[256];
 static char key_buffer[2560];
 
 const char *sc_name[] = { "ERROR", "Esc", "1", "2", "3", "4", "5", "6", 
@@ -32,7 +32,7 @@ int shift = 0;
 
 
 void key_handler() {
-    kprint("recv");
+    //kprint("recv");
     for (int i = 0; i < 58; i++) {
         if (strcmp(sc_name[i], "Enter") == 0 && keydown[i] == true && keytimeout[i] <= 0) {
             keytimeout[i] = KEY_DEL;
@@ -40,32 +40,31 @@ void key_handler() {
             user_input(key_buffer); /* kernel-controlled function */
 	        uinlen = 0;
             key_buffer[0] = '\0';
-        } else if (strcmp(sc_name[i], "Backspace") == 0 && keydown[i] == true && keytimeout[i] <= 0) {
+        } else if (strcmp(sc_name[i], "Backspace") == 0 && keydown[i] == true) {
             if (uinlen > 0) {
                 keytimeout[i] = KEY_DEL;
 			    backspace(key_buffer);
 			    kprint_backspace();
     		    uinlen -= 1;
             }
-        } else if (strcmp(sc_name[i], "ERROR") == 0 && keydown[i] == true && keytimeout[i] <= 0) {
+        } else if (strcmp(sc_name[i], "ERROR") == 0 && keydown[i] == true && keytimeout[i] == 0) {
             keytimeout[i] = KEY_DEL;
-        } else if (strcmp(sc_name[i], "Lctrl") == 0 && keydown[i] == true && keytimeout[i] <= 0) {
+        } else if (strcmp(sc_name[i], "Lctrl") == 0 && keydown[i] == true && keytimeout[i] == 0) {
             keytimeout[i] = KEY_DEL;
-        } else if (strcmp(sc_name[i], "LAlt") == 0 && keydown[i] == true && keytimeout[i] <= 0) {
+        } else if (strcmp(sc_name[i], "LAlt") == 0 && keydown[i] == true && keytimeout[i] == 0) {
             keytimeout[i] = KEY_DEL;
-        } else if (strcmp(sc_name[i], "LShift") == 0 && keydown[i] == true && keytimeout[i] <= 0) {
+        } else if (strcmp(sc_name[i], "LShift") == 0 && keydown[i] == true && keytimeout[i] == 0) {
             keytimeout[i] = KEY_DEL;
-        } else if (strcmp(sc_name[i], "RShift") == 0 && keydown[i] == true && keytimeout[i] <= 0) {
+        } else if (strcmp(sc_name[i], "RShift") == 0 && keydown[i] == true && keytimeout[i] == 0) {
             keytimeout[i] = KEY_DEL;
         } else {
             if(keydown[i] == true) {
-                    kprint("Timeout is the problem");
+                    //kprint("Timeout is the problem");
             }
             //char time[6];
             //int_to_ascii(keytimeout[i], time);
             //kprint(time);
-            if(keytimeout[i] <= 0) {
-                
+            if(keytimeout[i] == 0) {
                 keytimeout[i] = KEY_DEL;
                 if (keydown[(int)LSHIFT] == true || keydown[(int)RSHIFT] == true) {
                     if(keydown[i] == true) {
@@ -74,6 +73,7 @@ void key_handler() {
                         char str[2] = {letter, '\0'};
                         uinlen += 1;
                         append(key_buffer, letter);
+                        //kprint("We fixed it people!!");
                         if (prompttype == 0) {
                             kprint(str);
                         } else {
@@ -82,6 +82,7 @@ void key_handler() {
                     }
                 } else {
                     if(keydown[i] == true) {
+                        //kprint("We fixed it people!!");
                         char letter = sc_ascii[i];
                         /* Remember that kprint only accepts char[] */
                         char str[2] = {letter, '\0'};
@@ -98,8 +99,8 @@ void key_handler() {
         }
     }
 }
-void key_time() {
+void stdin_init() {
     for (int i = 0; i < 256; i++) {
-        keytimeout[i] -= 1;
+        keytimeout[i] = 0;
     }
 }

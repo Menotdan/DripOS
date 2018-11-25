@@ -19,6 +19,19 @@ void int_to_ascii(int n, char str[]) {
     reverse(str);
 }
 
+int atoi(char *str) 
+{ 
+    int result = 0; // Where the result will be
+   
+    //  For each position in the char, convert to int and store in the result 
+    for (int i = 0; str[i] != '\0'; ++i) 
+        result = result*10 + str[i] - '0'; 
+   
+    // Return the result
+    return result; 
+} 
+
+
 void hex_to_ascii(int n, char str[]) {
     append(str, '0');
     append(str, 'x');

@@ -29,3 +29,11 @@ void play_sound(uint32_t nFrequence, uint32_t ticks) {
     wait(ticks);
     nosound();
 }
+
+void pgw() {
+    play_sound(300, 30);
+    play_sound(400, 30);
+    wait(10);
+    play_sound(500, 30);
+    play_sound(600, 30);
+}

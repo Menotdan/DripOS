@@ -6,6 +6,8 @@
 #include "sysState.h"
 #include "../drivers/keyboard.h"
 #include "../drivers/stdin.h"
+#include "soundManager.h"
+#include "../libc/string.h"
 
 u32 tick = 0;
 u32 prev = 0;
@@ -13,7 +15,25 @@ u32 prev = 0;
 static void timer_callback(registers_t regs) {
 	sys_state_manager();
     tick++;
-    key_time();
+    for (int i = 0; i < 256; i++) {
+        if (keytimeout[i] > 0) {
+            keytimeout[i] -= 1;
+            //char time[6];
+            //int_to_ascii(keytimeout[i], time);
+            //kprint(time);
+        }
+    }
+    sound_on();
+    sound_off();
+
+    char done[24];
+    int_to_ascii((int)tick, done);
+    kprint(done);
+    if (sound_en == true) {
+        char done[24];
+        int_to_ascii((int)tick, done);
+        kprint(done);
+    }
     //key_handler();
     UNUSED(regs);
 }

@@ -6,6 +6,8 @@
 #include "../libc/mem.h"
 #include "../cpu/timer.h"
 #include "terminal.h"
+#include "../drivers/stdin.h"
+
 //codes
 int prevtick = 0;
 int login = 1;
@@ -14,6 +16,7 @@ int state = 0;
 int uinlen = 0;
 int prompttype = 0;
 void main() {
+	stdin_init();
 	isr_install();
 	irq_install();
 	init_timer(1);
@@ -25,9 +28,8 @@ void main() {
 	clear_screen();
 	kprint("DripOS 0.001\n"); //Version
     kprint("Type help for commands\nType shutdown to shutdown\n> ");
-	play_sound(500, 30);
-	play_sound(400, 30);
-	nosound();
+	play_sound(600, 50);
+	play_sound(400, 60);
 }
 
 void user_input(char *input) {

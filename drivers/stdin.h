@@ -1,3 +1,4 @@
 #pragma once
 void key_handler();
-void key_time();
+void stdin_init();
+int keytimeout[256];

@@ -38,16 +38,22 @@ static void keyboard_callback(registers_t regs) {
 	if (iskeyup == true) {
 		keydown[(int)scancode] = false;
 	} else {
+		keydown[(int)scancode] = true;
 		if ((int)scancode != prevcode) {
-			keydown[(int)scancode] = true;
+			times[(int)scancode] = 0;
 			prevcode = (int)scancode;
 			send = true;
 		} else {
-			send = false;
-			times[(int)scancode] += 1;
+			if(scancode != BACKSPACE) {
+				send = false;
+				times[(int)scancode] += 1;
+			} else {
+				send = true;
+				times[(int)scancode] = 0;
+			}
 		}
     }
-	if (times[(int)scancode] >= 1) {
+	if (times[(int)scancode] >= 2) {
 		send = true;
 		times[(int)scancode] = 0;
 	}
