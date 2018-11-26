@@ -3,17 +3,17 @@ An OS made for fun.
 NOTE: This is based off of this tutorial: https://github.com/cfenollosa/os-tutorial
 
 
-### Discord: [Discord](https://discord.gg/E9ZXZWn "Discord")
+###Discord: [Discord](https://discord.gg/E9ZXZWn "Discord")
 
-## Usage:
+##Usage:
 
-## Linux:
+##Linux:
 
 Install qemu for your distro
 
 Run qemu-system-i386 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -fda os-image.bin
 
-## Windows:
+##Windows:
 
 Download and install qemu:
 

@@ -2,5 +2,5 @@
     "files.associations": {
         "screen.h": "c"
     },
-    "C_Cpp.errorSquiggles": "Enabled"
+    "git.ignoreLimitWarning": true
 }

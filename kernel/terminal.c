@@ -48,6 +48,7 @@ void execute_command(char *input) {
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);
+		p_tone(550, 10);
 	}
 	if(state == 0) {
 		if(argt != 1) {
@@ -64,3 +65,4 @@ void p_tone(uint32_t soundin, int len) {
 	lSnd = tick;
 	pSnd = len;
 }
+

@@ -50,7 +50,7 @@ void config_timer(u32 time) {
     port_byte_out(0x43, 0x36); /* Command port */
     port_byte_out(0x40, low);
     port_byte_out(0x40, high);
-    kprint("Timer configured\n");
+    //kprint("Timer configured\n");
 }
 
 void init_timer(u32 freq) {
@@ -61,9 +61,9 @@ void init_timer(u32 freq) {
 
 void wait(u32 ticks) {
 	prev = tick;
-    kprint("Waiting...\n");
+    //kprint("Waiting...\n");
 	while(tick - prev < ticks) {
 		
 	}
-    kprint("Finished waiting\n");
+    //kprint("Finished waiting\n");
 }
