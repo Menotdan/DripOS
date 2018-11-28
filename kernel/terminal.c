@@ -35,7 +35,7 @@ void execute_command(char *input) {
 		clear_screen();
 	} else if (match("print", input) == -2) {
 		kprint("Not enough args!");
-	} else if ((match(input, "print") + 1) == 5) {
+	} else if ((match(input, "print") + 2) == 6) {
 		kprint(afterSpace(input));
 	} else if (match("tone", input) == -2) {
 		kprint("Not enough args!");
