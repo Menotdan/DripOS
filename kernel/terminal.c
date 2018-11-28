@@ -18,7 +18,7 @@ void execute_command(char *input) {
 					argt = 0;
 					prompttype = 0;
 				} else {
-					kprint("Password incorrect! Type cancel to cancel");
+					kprint("Password incorrect! Enter cancel to cancel.");
 				}
 			}
 	} else if (strcmp(input, "shutdown") == 0) {
