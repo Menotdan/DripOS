@@ -48,7 +48,7 @@ void execute_command(char *input) {
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);
-		p_tone(550, 10);
+		p_tone(100, 5);
 	}
 	if(state == 0) {
 		if(argt != 1) {
