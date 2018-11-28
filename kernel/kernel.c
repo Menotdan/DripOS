@@ -22,7 +22,6 @@ void main() {
 	init_timer(1);
 	clear_screen();
 	prevtick = tick;
-	//drip();
 	logoDraw();
 	wait(100);
 	clear_screen();
