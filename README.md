@@ -11,7 +11,10 @@ NOTE: This is based off of this tutorial: https://github.com/cfenollosa/os-tutor
 
 Install qemu for your distro
 
-Run qemu-system-i386 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -fda os-image.bin
+Run 
+```bash
+qemu-system-i386 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -fda os-image.bin
+```
 
 ## Windows:
 
