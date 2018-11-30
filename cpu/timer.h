@@ -8,5 +8,6 @@ void wait(u32 ticks);
 u32 tick;
 int lSnd;
 int pSnd;
+int task;
 
 #endif

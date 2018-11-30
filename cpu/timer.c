@@ -10,11 +10,13 @@
 #include "soundManager.h"
 #include "../libc/string.h"
 
-u32 tick = 0;
-u32 prev = 0;
-int lSnd = 0;
-//int sndT = 0;
-int pSnd = 0;
+u32 tick = 0; //Ticks
+u32 prev = 0; //Previous ticks for (unusable after boot) wait() function
+int lSnd = 0; //Length of sound
+int task = 0; //is task on?
+int pSnd = 0; //ticks before sound started
+int tMil = 0; // How many million ticks
+char tMilStr[12];
 
 static void timer_callback(registers_t regs) {
 	sys_state_manager();
@@ -27,6 +29,15 @@ static void timer_callback(registers_t regs) {
     if (tick - pSnd > lSnd) {
         nosound();
         //kprint("Timed out");
+    }
+    if((int)tick == 1000000) {
+        tMil += 1;
+
+    }
+    if (task == 1) {
+        char tottick[24];
+        int_to_ascii((int)tick, tottick);
+        kprint_no_move(tottick, 0, 0);
     }
     //char done[24];
     //int_to_ascii((int)tick, done);

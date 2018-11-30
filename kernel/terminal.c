@@ -45,6 +45,12 @@ void execute_command(char *input) {
 		int_to_ascii(atoi(afterSpace(input)), test);
 		kprint(test);
 		p_tone(atoi(afterSpace(input)), 100);
+	} else if (strcmp(input, "bgtask") == 0) {
+		kprint("Background task started!");
+		task = 1;
+	} else if (strcmp(input, "bgoff") == 0) {
+		kprint("Background task stopped!");
+		task = 0;
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);
