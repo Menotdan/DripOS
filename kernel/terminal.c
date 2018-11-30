@@ -3,6 +3,7 @@
 #include "../cpu/soundManager.h"
 #include "../cpu/timer.h"
 #include "../drivers/sound.h"
+#include "../drivers/time.h"
 #include <stdint.h>
 
 int arg = 0; //Is an argument being taken?
@@ -51,6 +52,29 @@ void execute_command(char *input) {
 	} else if (strcmp(input, "bgoff") == 0) {
 		kprint("Background task stopped!");
 		task = 0;
+	} else if (strcmp(input, "time") == 0) {
+		read_rtc();
+		kprint_int(year);
+		kprint("/");
+		kprint_int(month);
+		kprint("/");
+		kprint_int(day);
+		kprint(" ");
+		kprint_int(hour);
+		if (minute > 9) {
+			kprint(":");
+			kprint_int(minute);
+		} else {
+			kprint(":0");
+			kprint_int(minute);
+		}
+		if (second > 9) {
+			kprint(":");
+			kprint_int(second);
+		} else {
+			kprint(":0");
+			kprint_int(second);
+		}
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);

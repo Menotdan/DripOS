@@ -62,6 +62,12 @@ void reverse(char s[]) {
     }
 }
 
+void kprint_int(int num) {
+    char toprint[33];
+    int_to_ascii(num, toprint);
+    kprint(toprint);
+}
+
 /* K&R */
 int strlen(char s[]) {
     int i = 0;

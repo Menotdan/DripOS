@@ -32,7 +32,6 @@ static void timer_callback(registers_t regs) {
     }
     if((int)tick == 1000000) {
         tMil += 1;
-
     }
     if (task == 1) {
         char tottick[24];
