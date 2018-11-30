@@ -20,7 +20,7 @@
 
 bool keydown[256];
 static int prevcode = 0;
-static int times[256];
+static int times;
 static bool send = true;
 
 static void keyboard_callback(registers_t regs) {
@@ -40,22 +40,26 @@ static void keyboard_callback(registers_t regs) {
 	} else {
 		keydown[(int)scancode] = true;
 		if ((int)scancode != prevcode) {
-			times[(int)scancode] = 0;
+			times = 0;
 			prevcode = (int)scancode;
 			send = true;
 		} else {
 			if(scancode != BACKSPACE) {
 				send = false;
-				times[(int)scancode] += 1;
+				times += 1;
 			} else {
 				send = true;
-				times[(int)scancode] = 0;
+				times = 0;
 			}
 		}
     }
-	if (times[(int)scancode] >= 2) {
+	if (times >= 2) {
 		send = true;
-		times[(int)scancode] = 0;
+		times = 0;
+	}
+	if (scancode == ENTER) {
+		send = true;
+		times = 0;
 	}
 	if (send == true) {
 		key_handler();

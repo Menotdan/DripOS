@@ -59,8 +59,12 @@ void execute_command(char *input) {
 		kprint_int(month);
 		kprint("/");
 		kprint_int(day);
-		kprint(" ");
-		kprint_int(hour);
+		if (hour - 5 < 0) {
+			kprint(" ");
+			kprint_int(24 + (hour - 5));
+		} else if(hour - 5 == 0) {
+			
+		}
 		if (minute > 9) {
 			kprint(":");
 			kprint_int(minute);
