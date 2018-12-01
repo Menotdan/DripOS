@@ -53,7 +53,7 @@ static void keyboard_callback(registers_t regs) {
 			}
 		}
     }
-	if (times >= 2) {
+	if (times >= 1) {
 		send = true;
 		times = 0;
 	}

@@ -96,6 +96,7 @@ void key_handler() {
                     }
                 }
             }
+            keydown[i] == false;
         }
     }
 }
