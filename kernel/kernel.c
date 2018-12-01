@@ -25,7 +25,7 @@ void main() {
 	logoDraw();
 	wait(100);
 	clear_screen();
-	kprint("DripOS 0.001\n"); //Version
+	kprint("DripOS 0.0012\n"); //Version
     kprint("Type help for commands\nType shutdown to shutdown\n> ");
 	play_sound(600, 60);
 	play_sound(400, 60);

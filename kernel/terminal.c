@@ -3,6 +3,7 @@
 #include "../cpu/soundManager.h"
 #include "../cpu/timer.h"
 #include "../drivers/sound.h"
+#include "../drivers/time.h"
 #include <stdint.h>
 
 int arg = 0; //Is an argument being taken?
@@ -30,7 +31,7 @@ void execute_command(char *input) {
     } else if (strcmp(input, "nmem") == 0) {
         memory();
     } else if (strcmp(input, "help") == 0) {
-		kprint("Commands: nmem, help, shutdown, panic, print, clear\n");
+		kprint("Commands: nmem, help, shutdown, panic, print, clear, bgtask, bgoff, time\n");
 	} else if (strcmp(input, "clear") == 0){
 		clear_screen();
 	} else if (match("print", input) == -2) {
@@ -45,6 +46,43 @@ void execute_command(char *input) {
 		int_to_ascii(atoi(afterSpace(input)), test);
 		kprint(test);
 		p_tone(atoi(afterSpace(input)), 100);
+	} else if (strcmp(input, "bgtask") == 0) {
+		kprint("Background task started!");
+		task = 1;
+	} else if (strcmp(input, "bgoff") == 0) {
+		kprint("Background task stopped!");
+		task = 0;
+	} else if (strcmp(input, "time") == 0) {
+		read_rtc();
+		kprint_int(year);
+		kprint("/");
+		kprint_int(month);
+		kprint("/");
+		kprint_int(day);
+		if (hour - 5 < 0) {
+			kprint(" ");
+			kprint_int(24 + (hour - 5));
+		} else if(hour - 5 <= 10) {
+			kprint(" 0");
+			kprint_int(hour - 5);
+		} else {
+			kprint(" ");
+			kprint_int(hour - 5);
+		}
+		if (minute > 9) {
+			kprint(":");
+			kprint_int(minute);
+		} else {
+			kprint(":0");
+			kprint_int(minute);
+		}
+		if (second > 9) {
+			kprint(":");
+			kprint_int(second);
+		} else {
+			kprint(":0");
+			kprint_int(second);
+		}
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);
