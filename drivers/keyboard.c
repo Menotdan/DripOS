@@ -57,7 +57,7 @@ static void keyboard_callback(registers_t regs) {
 		send = true;
 		times = 0;
 	}
-	if (scancode == ENTER) {
+	if (scancode == ENTER || scancode == BACKSPACE || scancode == LSHIFT || scancode == RSHIFT) {
 		send = true;
 		times = 0;
 	}
