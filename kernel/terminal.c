@@ -31,7 +31,7 @@ void execute_command(char *input) {
     } else if (strcmp(input, "nmem") == 0) {
         memory();
     } else if (strcmp(input, "help") == 0) {
-		kprint("Commands: nmem, help, shutdown, panic, print, clear\n");
+		kprint("Commands: nmem, help, shutdown, panic, print, clear, bgtask, bgoff, time\n");
 	} else if (strcmp(input, "clear") == 0){
 		clear_screen();
 	} else if (match("print", input) == -2) {
