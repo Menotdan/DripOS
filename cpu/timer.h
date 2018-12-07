@@ -3,9 +3,9 @@
 
 #include "types.h"
 
-void init_timer(u32 freq);
-void wait(u32 ticks);
-u32 tick;
+void init_timer(uint32_t freq);
+void wait(uint32_t ticks);
+uint32_t tick;
 int lSnd;
 int pSnd;
 int task;

@@ -4,7 +4,7 @@
 
 #define LSHIFT 0x2A
 #define RSHIFT 0x36
-#define KEY_DEL 0
+#define KEY_DEL 2
 
 //extern bool keydown[256];
 int keytimeout[256];

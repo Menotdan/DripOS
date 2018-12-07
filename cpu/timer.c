@@ -10,8 +10,8 @@
 #include "soundManager.h"
 #include "../libc/string.h"
 
-u32 tick = 0; //Ticks
-u32 prev = 0; //Previous ticks for (unusable after boot) wait() function
+uint32_t tick = 0; //Ticks
+uint32_t prev = 0; //Previous ticks for (unusable after boot) wait() function
 int lSnd = 0; //Length of sound
 int task = 0; //is task on?
 int pSnd = 0; //ticks before sound started
@@ -51,11 +51,11 @@ static void timer_callback(registers_t regs) {
     UNUSED(regs);
 }
 
-void config_timer(u32 time) {
+void config_timer(uint32_t time) {
     /* Get the PIT value: hardware clock at 1193180 Hz */
-    u32 divisor = 1193180 / time;
-    u8 low  = (u8)(divisor & 0xFF);
-    u8 high = (u8)( (divisor >> 8) & 0xFF);
+    uint32_t divisor = 1193180 / time;
+    uint8_t low  = (uint8_t)(divisor & 0xFF);
+    uint8_t high = (uint8_t)( (divisor >> 8) & 0xFF);
     /* Send the command */
     port_byte_out(0x43, 0x36); /* Command port */
     port_byte_out(0x40, low);
@@ -63,13 +63,13 @@ void config_timer(u32 time) {
     //kprint("Timer configured\n");
 }
 
-void init_timer(u32 freq) {
+void init_timer(uint32_t freq) {
     /* Install the function we just wrote */
     register_interrupt_handler(IRQ0, timer_callback);
     config_timer(freq);
 }
 
-void wait(u32 ticks) {
+void wait(uint32_t ticks) {
 	prev = tick;
     //kprint("Waiting...\n");
 	while(tick - prev < ticks) {
