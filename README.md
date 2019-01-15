@@ -18,9 +18,9 @@ qemu-system-i386 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -
 
 ## Windows:
 
-Download and install qemu:
+Download and install qemu (pick 32 or 64 bit version):
 
-https://qemu.weilnetz.de/w64/qemu-w64-setup-20180815.exe
+https://qemu.weilnetz.de/
 
 Go to **qemu** directory
 
