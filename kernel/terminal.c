@@ -83,6 +83,8 @@ void execute_command(char *input) {
 			kprint(":0");
 			kprint_int(second);
 		}
+	} else if (strcmp(input, "pgw") == 0) {
+		kprint("wow");
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);
