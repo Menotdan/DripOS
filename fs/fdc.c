@@ -4,29 +4,31 @@
 #include "fdc.h"
 #include "../cpu/timer.h"
 #include "../drivers/screen.h"
-#define DMA_BUFFER 0x1000
+
+const int DMA_BUFFER = 0x1000;
+
 int floppy = 0;
 //Floppy handler
 void floppy_handler(registers_t regs) {
     floppy = 1;
-    kprint("floppy irq");
+    //kprint("floppy irq");
     UNUSED(regs);
 }
 //Register the floppy handler
 void init_floppy() {
     register_interrupt_handler(IRQ6, floppy_handler);
-    kprint("Floppy registered");
+    //kprint("Floppy registered");
 }
 void flpydsk_wait_irq() {
-    kprint("started waiting");
+    //kprint("started waiting");
     for (int h=0; h<100; h++) {
         if (floppy == 1) {
             floppy = 0;
-            kprint("found irq");
+            //kprint("found irq");
             return;
         }
     }
-    kprint("failed");
+    //kprint("failed");
     return;
 }
 //! initialize DMA to use phys addr 1k-64k
@@ -129,12 +131,12 @@ void flpydsk_lba_to_chs (int lba,int *head,int *track,int *sector) {
 }
 
 void flpydsk_read_sector_imp (uint8_t head, uint8_t track, uint8_t sector) {
-    kprint("imp called");
+    //kprint("imp called");
 	uint32_t st0, cyl;
-    kprint("dmaR");
+    //kprint("dmaR");
 	//! set the DMA for read transfer
 	flpydsk_dma_read ();
-    kprint("sending commands");
+    //kprint("sending commands");
 	//! read in a sector
 	flpydsk_send_command (
 		FDC_CMD_READ_SECT | FDC_CMD_EXT_MULTITRACK |
@@ -149,39 +151,39 @@ void flpydsk_read_sector_imp (uint8_t head, uint8_t track, uint8_t sector) {
 			? 18 : sector + 1 );
 	flpydsk_send_command ( FLPYDSK_GAP3_LENGTH_3_5 );
 	flpydsk_send_command ( 0xff );
-    kprint("irq wait");
+    //kprint("irq wait");
 	//! wait for irq
 	flpydsk_wait_irq ();
-    kprint("read bytes");
+    //kprint("read bytes");
 	//! read status info
 	for (int j=0; j<7; j++)
 		flpydsk_read_data();
-    kprint("tell fdc that we handled the interrupts");
+    //kprint("tell fdc that we handled the interrupts");
 	//! let FDC know we handled interrupt
 	flpydsk_check_int (&st0,&cyl);
 }
 
 uint8_t* flpydsk_read_sector (int sectorLBA) {
-    kprint("called");
+    //kprint("called");
 	if (_CurrentDrive >= 4)
 		return 0;
  
 	//! convert LBA sector to CHS
-    kprint("converting");
+    //kprint("converting");
 	int head=0, track=0, sector=1;
 	flpydsk_lba_to_chs (sectorLBA, &head, &track, &sector);
-    kprint("starting motor");
+    //kprint("starting motor");
 	//! turn motor on and seek to track
 	
-    kprint("verifying position");
+    //kprint("verifying position");
 	if (flpydsk_seek (track, head) != 0)
 		return 0;
-    kprint("imp read");
+    //kprint("imp read");
 	//! read sector and turn motor off
 	flpydsk_read_sector_imp (head, track, sector);
-    kprint("stopping motor");
-	stop_motor();
-    kprint("returning buffer");
+    //kprint("stopping motor");
+	//stop_motor();
+    //kprint("returning buffer");
 	//! warning: this is a bit hackish
 	return (uint8_t*) DMA_BUFFER;
 }
@@ -193,8 +195,6 @@ int flpydsk_calibrate (uint32_t drive) {
 	if (drive >= 4)
 		return -2;
  
-	//! turn on the motor
-	start_motor();
  
 	for (int i = 0; i < 10; i++) {
  
@@ -206,13 +206,9 @@ int flpydsk_calibrate (uint32_t drive) {
  
 		//! did we fine cylinder 0? if so, we are done
 		if (!cyl) {
- 
-			stop_motor();
 			return 0;
 		}
 	}
- 
-	stop_motor();
 	return -1;
 }
 

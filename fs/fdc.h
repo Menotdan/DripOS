@@ -1,6 +1,9 @@
 #pragma once
 void init_floppy();
 uint8_t* flpydsk_read_sector (int sectorLBA);
+void flpydsk_initialize_dma();
+void flpydsk_reset();
+void flpydsk_drive_data(uint32_t stepr, uint32_t loadt, uint32_t unloadt, bool dma);
 //Enumerators for different registers and values
 enum FLPYDSK_IO {
  

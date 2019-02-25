@@ -1,3 +1,4 @@
+//0x1000
 #include "../cpu/isr.h"
 #include "../drivers/screen.h"
 #include "../drivers/sound.h"
@@ -19,6 +20,10 @@ void main() {
 	stdin_init();
 	isr_install();
 	irq_install();
+	flpydsk_initialize_dma();
+	flpydsk_reset();
+	//! set drive information
+	flpydsk_drive_data (13, 1, 0xf, true);
 	start_motor();
 	init_timer(1);
 	clear_screen();

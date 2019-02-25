@@ -40,7 +40,6 @@ void execute_command(char *input) {
 		kprint(afterSpace(input));
 	} else if (match("tone", input) == -2) {
 		kprint("Not enough args!");
-		wait(30);
 	} else if ((match(input, "tone") + 1) == 4) {
 		char test[20];
 		int_to_ascii(atoi(afterSpace(input)), test);
@@ -111,6 +110,7 @@ void p_tone(uint32_t soundin, int len) {
 void read_disk() {
 	uint32_t sectornum = 0;
 	uint8_t* sector = 0;
+	char str[32]={0};
 	sectornum = 0;
  
 	kprint ("\nSector 0 contents:\n\n");
@@ -125,9 +125,11 @@ void read_disk() {
 		for ( int c = 0; c < 4; c++ ) {
  
 			for (int j = 0; j < 128; j++)
-				kprint ("%x", sector[ i + j ]);
+				hex_to_ascii(sector[ i + j ], str);
+				kprint(str);
+				kprint(" ");
 			i += 128;
-
+			kprint("\n");
 		}
 	}
 	else

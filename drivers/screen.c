@@ -157,8 +157,7 @@ void logoDraw() {
         for (int x = 0; x < 16; x++) {
             if(logo[y][x] == 1) {
                 kprint_at_col(" ", x + xOff, y, BLACK_ON_BLACK);
-            } else if(logo[y][x] == 2) {
-                kprint_at_col(" ", x + xOff, y, CYAN_ON_CYAN);
+            } else if(logo[y][x] == 2) {                kprint_at_col(" ", x + xOff, y, CYAN_ON_CYAN);
             } else if(logo[y][x] == 3) {
                 kprint_at_col(" ", x + xOff, y, WHITE_ON_WHITE);
             } else {
@@ -272,69 +271,3 @@ void clear_screen() {
 int get_offset(int col, int row) { return 2 * (row * MAX_COLS + col); }
 int get_offset_row(int offset) { return offset / (2 * MAX_COLS); }
 int get_offset_col(int offset) { return (offset - (get_offset_row(offset)*2*MAX_COLS))/2; }
-
-
-int printf (const char* str, ...) {
-
-	if(!str)
-		return 0;
-
-	va_list		args;
-	va_start (args, str);
-	size_t i;
-	for (i=0; i<strlen(str);i++) {
-
-		switch (str[i]) {
-
-			case '%':
-
-				switch (str[i+1]) {
-
-					/*** characters ***/
-					case 'c': {
-						char c = va_arg (args, char);
-						print_char(c, -1, -1, WHITE_ON_BLACK);
-						i++;		// go to next character
-						break;
-					}
-
-
-					/*** integers ***/
-					case 'd':
-					case 'i': {
-						int c = va_arg (args, int);
-						char str[32]={0};
-						itoa_s (c,str);
-						kprint(str);
-						i++;		// go to next character
-						break;
-					}
-
-					/*** display in hex ***/
-					case 'X':
-					case 'x': {
-						int c = va_arg (args, int);
-						char str[32]={0};
-						itoa_s (c,str);
-						kprint(str);
-						i++;		// go to next character
-						break;
-					}
-
-					default:
-						va_end (args);
-						return 1;
-				}
-
-				break;
-
-			default:
-				DebugPutc (str[i]);
-				break;
-		}
-
-	}
-
-	va_end (args);
-	return i;
-}
