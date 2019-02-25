@@ -1,7 +1,11 @@
 #include "screen.h"
 #include "../cpu/ports.h"
+#include "../cpu/types.h"
+#include <stddef.h>
 #include "../libc/mem.h"
 #include "colors.h"
+#include "../libc/string.h"
+
 /* Declaration of private functions */
 int get_cursor_offset();
 void set_cursor_offset(int offset);
@@ -268,3 +272,69 @@ void clear_screen() {
 int get_offset(int col, int row) { return 2 * (row * MAX_COLS + col); }
 int get_offset_row(int offset) { return offset / (2 * MAX_COLS); }
 int get_offset_col(int offset) { return (offset - (get_offset_row(offset)*2*MAX_COLS))/2; }
+
+
+int printf (const char* str, ...) {
+
+	if(!str)
+		return 0;
+
+	va_list		args;
+	va_start (args, str);
+	size_t i;
+	for (i=0; i<strlen(str);i++) {
+
+		switch (str[i]) {
+
+			case '%':
+
+				switch (str[i+1]) {
+
+					/*** characters ***/
+					case 'c': {
+						char c = va_arg (args, char);
+						print_char(c, -1, -1, WHITE_ON_BLACK);
+						i++;		// go to next character
+						break;
+					}
+
+
+					/*** integers ***/
+					case 'd':
+					case 'i': {
+						int c = va_arg (args, int);
+						char str[32]={0};
+						itoa_s (c,str);
+						kprint(str);
+						i++;		// go to next character
+						break;
+					}
+
+					/*** display in hex ***/
+					case 'X':
+					case 'x': {
+						int c = va_arg (args, int);
+						char str[32]={0};
+						itoa_s (c,str);
+						kprint(str);
+						i++;		// go to next character
+						break;
+					}
+
+					default:
+						va_end (args);
+						return 1;
+				}
+
+				break;
+
+			default:
+				DebugPutc (str[i]);
+				break;
+		}
+
+	}
+
+	va_end (args);
+	return i;
+}

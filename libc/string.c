@@ -18,7 +18,13 @@ void int_to_ascii(int n, char str[]) {
 
     reverse(str);
 }
-
+void itoa_s(int i,char* buf) {
+   if (i < 0) {
+      *buf++ = '-';
+      i *= -1;
+   }
+   int_to_ascii(i,buf);
+}
 int atoi(char *str) 
 { 
     int result = 0; // Where the result will be

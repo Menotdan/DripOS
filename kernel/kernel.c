@@ -19,6 +19,7 @@ void main() {
 	stdin_init();
 	isr_install();
 	irq_install();
+	start_motor();
 	init_timer(1);
 	clear_screen();
 	prevtick = tick;
@@ -27,8 +28,8 @@ void main() {
 	clear_screen();
 	kprint("DripOS 0.0012\n"); //Version
     kprint("Type help for commands\nType shutdown to shutdown\n> ");
-	play_sound(500, 1000);
-	play_sound(300, 1000);
+	play_sound(500, 100);
+	play_sound(300, 100);
 }
 
 void user_input(char *input) {

@@ -85,6 +85,8 @@ void execute_command(char *input) {
 		}
 	} else if (strcmp(input, "pgw") == 0) {
 		kprint("wow");
+	} else if (strcmp(input, "read") == 0) {
+		read_disk();
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);
@@ -106,3 +108,30 @@ void p_tone(uint32_t soundin, int len) {
 	pSnd = len;
 }
 
+void read_disk() {
+	uint32_t sectornum = 0;
+	uint8_t* sector = 0;
+	sectornum = 0;
+ 
+	kprint ("\nSector 0 contents:\n\n");
+ 
+	//! read sector from disk
+	sector = flpydsk_read_sector ( sectornum );
+ 
+	//! display sector
+	if (sector!=0) {
+ 
+		int i = 0;
+		for ( int c = 0; c < 4; c++ ) {
+ 
+			for (int j = 0; j < 128; j++)
+				kprint ("%x", sector[ i + j ]);
+			i += 128;
+
+		}
+	}
+	else
+		kprint ("\n*** Error reading sector from disk");
+ 
+	kprint ("\nDone.");
+}
