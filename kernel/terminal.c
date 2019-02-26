@@ -4,6 +4,7 @@
 #include "../cpu/timer.h"
 #include "../drivers/sound.h"
 #include "../drivers/time.h"
+#include "../fs/hdd.h"
 #include <stdint.h>
 
 int arg = 0; //Is an argument being taken?
@@ -109,23 +110,23 @@ void p_tone(uint32_t soundin, int len) {
 
 void read_disk() {
 	uint32_t sectornum = 0;
-	uint8_t* sector = 0;
+	uint16_t *sector;
 	char str[32]={0};
 	sectornum = 0;
  
 	kprint ("\nSector 0 contents:\n\n");
  
 	//! read sector from disk
-	sector = flpydsk_read_sector ( sectornum );
+	HD_READ(sectornum, PRIMARY, *sector);
  
 	//! display sector
 	if (sector!=0) {
- 
 		int i = 0;
 		for ( int c = 0; c < 4; c++ ) {
  
 			for (int j = 0; j < 128; j++)
-				hex_to_ascii(sector[ i + j ], str);
+				
+				itoa_s((int)sector,str);
 				kprint(str);
 				kprint(" ");
 			i += 128;

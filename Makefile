@@ -23,7 +23,10 @@ kernel.elf: boot/kernel_entry.o ${OBJ}
 	i686-elf-ld -o $@ -Ttext 0x1000 $^ 
 
 run: os-image.bin
-	qemu-system-i386 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -fda os-image.bin
+	echo "------------NOTE----------------"
+	echo "Please select floppy drive as boot drive"
+	echo "------------NOTE----------------"
+	qemu-system-i386 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -fda os-image.bin -hda dripdisk.img
 
 myos.iso: os-image.bin
 	dd if=/dev/zero of=floppy.img bs=1024 count=1440
