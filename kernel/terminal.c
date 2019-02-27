@@ -111,30 +111,20 @@ void p_tone(uint32_t soundin, int len) {
 void read_disk() {
 	uint32_t sectornum = 0;
 	uint16_t *sector;
-	char str[32]={0};
-	sectornum = 0;
- 
+	uint16_t nom;
+	sectornum = 0x0;
+	char str1[32];
+	char str2[32];
 	kprint ("\nSector 0 contents:\n\n");
  
 	//! read sector from disk
-	HD_READ(sectornum, PRIMARY, *sector);
- 
-	//! display sector
-	if (sector!=0) {
-		int i = 0;
-		for ( int c = 0; c < 4; c++ ) {
- 
-			for (int j = 0; j < 128; j++)
-				
-				itoa_s((int)sector,str);
-				kprint(str);
-				kprint(" ");
-			i += 128;
-			kprint("\n");
-		}
+	HD_READ(sectornum, SLAVE, *sector);
+	for (int l = 0; l<256; l++) {
+		hex_to_ascii(sector[l] & 0xff, str1);
+		hex_to_ascii((sector[l] >> 8), str2);
+		kprint(str1);
+		kprint(" ");
+		kprint(str2);
+		kprint(" ");
 	}
-	else
-		kprint ("\n*** Error reading sector from disk");
- 
-	kprint ("\nDone.");
 }

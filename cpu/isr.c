@@ -5,7 +5,6 @@
 #include "../libc/string.h"
 #include "timer.h"
 #include "ports.h"
-#include "../fs/fdc.h"
 
 isr_t interrupt_handlers[256];
 
@@ -151,5 +150,4 @@ void irq_install() {
     //init_timer(50);
     /* IRQ1: keyboard */
     init_keyboard();
-    init_floppy();
 }

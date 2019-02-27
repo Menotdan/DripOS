@@ -1,6 +1,7 @@
 #include "string.h"
 #include "../cpu/types.h"
 #include "../drivers/screen.h"
+#include <stdint.h>
 
 /**
  * K&R implementation
@@ -139,3 +140,8 @@ const char* afterSpace(const char* input) {
    return starting;
  } 
 
+char to_hex(uint8_t nibble)
+{
+   static const char hex[] = "0123456789ABCDEF";
+   return hex[nibble];
+}

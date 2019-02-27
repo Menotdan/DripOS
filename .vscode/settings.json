@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "timer.h": "c",
-        "screen.h": "c"
+        "screen.h": "c",
+        "idt.h": "c"
     }
 }

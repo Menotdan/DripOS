@@ -3,7 +3,8 @@
 #include <stddef.h>
 #include "../cpu/ports.h"
 #include "../drivers/screen.h"
-
+#include "../libc/string.h"
+//ok
 void HD_READ(uint32_t sector, uint32_t DRIVE, uint16_t *out_buf) {
     int cycle;
     uint16_t buffer [256];
@@ -28,6 +29,7 @@ void HD_READ(uint32_t sector, uint32_t DRIVE, uint16_t *out_buf) {
     for (int idx = 0; idx <256; idx ++)
     {
         buffer[idx] = port_word_in(0x1F0);
+        kprint_int(buffer[idx]);
         out_buf[idx] = buffer[idx];
     }
     //kprint("Done reading");

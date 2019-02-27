@@ -1,6 +1,6 @@
 #ifndef STRINGS_H
 #define STRINGS_H
-
+#include <stdint.h>
 void int_to_ascii(int n, char str[]);
 void itoa_s(int i,char* buf);
 void hex_to_ascii(int n, char str[]);
@@ -14,5 +14,6 @@ int match(char s1[], char s2[]);
 char *strcpy(char *dest, const char *src);
 const char* afterSpace(const char* input);
 void kprint_int(int num);
+char to_hex(uint8_t nibble);
 
 #endif
