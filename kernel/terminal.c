@@ -112,19 +112,30 @@ void read_disk() {
 	uint32_t sectornum = 0;
 	uint16_t *sector;
 	uint16_t nom;
-	sectornum = 0x0;
+	sectornum = 1;
 	char str1[32];
 	char str2[32];
-	kprint ("\nSector 0 contents:\n\n");
+	kprint ("\nSector ");
+	kprint_int(sectornum);
+	kprint(" contents:\n\n");
  
 	//! read sector from disk
 	HD_READ(sectornum, SLAVE, *sector);
 	for (int l = 0; l<256; l++) {
-		hex_to_ascii(sector[l] & 0xff, str1);
+		/*hex_to_ascii(sector[l] & 0xff, str1);
 		hex_to_ascii((sector[l] >> 8), str2);
 		kprint(str1);
 		kprint(" ");
 		kprint(str2);
+		kprint(" ");*/
+		hex_to_ascii(sector[l], str1);
+		kprint(str1);
+		//kprint_int(sector[l]);
 		kprint(" ");
+		for (int i = 0; i<32; i++) {
+			str1[i] = 0;
+			str2[i] = 0;
+		}
 	}
+	kprint_int(sizeof(sector));
 }
