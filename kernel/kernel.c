@@ -8,7 +8,8 @@
 #include "../cpu/timer.h"
 #include "terminal.h"
 #include "../drivers/stdin.h"
-
+#include "../libc/stdio.h"
+#include "../fs/hdd.h"
 //codes
 int prevtick = 0;
 int login = 1;
@@ -16,24 +17,32 @@ int passin = 0;
 int state = 0;
 int uinlen = 0;
 int prompttype = 0;
+int stdinpass = 0;
 void main() {
-	stdin_init();
 	isr_install();
 	irq_install();
 	init_timer(1);
 	clear_screen();
+	ata_detect();
 	prevtick = tick;
 	logoDraw();
 	wait(100);
 	clear_screen();
 	kprint("DripOS 0.0012\n"); //Version
     kprint("Type help for commands\nType shutdown to shutdown\n> ");
+	stdin_init();
 	play_sound(500, 100);
 	play_sound(300, 100);
 }
 
 void user_input(char *input) {
-	execute_command(input);
+	if (stdinpass == 0){
+		execute_command(input);
+	}
+	else {
+		stdinpass = 0;
+		stdin_call(input);
+	}
 }
 
 void halt() {

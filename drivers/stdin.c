@@ -8,7 +8,7 @@
 
 //extern bool keydown[256];
 int keytimeout[256];
-static char key_buffer[2560];
+static char *key_buffer;
 
 const char *sc_name[] = { "ERROR", "Esc", "1", "2", "3", "4", "5", "6", 
     "7", "8", "9", "0", "-", "=", "Backspace", "Tab", "Q", "W", "E", 
@@ -104,4 +104,7 @@ void stdin_init() {
     for (int i = 0; i < 256; i++) {
         keytimeout[i] = 0;
     }
+    backspace(key_buffer);
+    uinlen = 0;
+    key_buffer = 0;
 }

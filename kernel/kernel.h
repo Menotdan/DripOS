@@ -10,5 +10,6 @@ void halt();
 void shutdown();
 void panic();
 void memory();
+int stdinpass;
 
 #endif

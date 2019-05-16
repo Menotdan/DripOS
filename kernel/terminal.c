@@ -5,27 +5,14 @@
 #include "../drivers/sound.h"
 #include "../drivers/time.h"
 #include "../fs/hdd.h"
+#include "../libc/stdio.h"
 #include <stdint.h>
 
 int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
 
 void execute_command(char *input) {
-    if (arg == 1) {
-		if(argt == 1) {
-				if(strcmp(input, "password") == 0) {
-					shutdown();
-				} else if(strcmp(input, "cancel") == 0) {
-					arg = 0;
-					argt = 0;
-					prompttype = 0;
-				} else {
-					kprint("Password incorrect! Enter cancel to cancel.");
-				}
-			}
-	} else if (strcmp(input, "shutdown") == 0) {
-		arg = 1;
-		argt = 1;
+    if (strcmp(input, "shutdown") == 0) {
 		prompttype = 1;
     } else if (strcmp(input, "panic") == 0) {
 		panic();
@@ -84,7 +71,7 @@ void execute_command(char *input) {
 			kprint_int(second);
 		}
 	} else if (strcmp(input, "pgw") == 0) {
-		kprint("wow");
+		kprint(scanf("Type something, then press enter: "));
 	} else if (strcmp(input, "read") == 0) {
 		read_disk();
 	} else {
@@ -92,14 +79,8 @@ void execute_command(char *input) {
 		kprint(input);
 		p_tone(100, 5);
 	}
-	if(state == 0) {
-		if(argt != 1) {
-			kprint("\n");
-			kprint("drip@DripOS> ");
-		} else {
-			kprint("\nPassword: ");
-		}
-	}
+	kprint("\n");
+	kprint("drip@DripOS> ");
 }
 
 void p_tone(uint32_t soundin, int len) {
@@ -109,10 +90,10 @@ void p_tone(uint32_t soundin, int len) {
 }
 
 void read_disk() {
-	uint32_t sectornum = 0;
+	uint32_t sectornum;
 	uint16_t *sector;
 	uint16_t nom;
-	sectornum = 1;
+	sectornum = 0;
 	char str1[32];
 	char str2[32];
 	kprint ("\nSector ");
@@ -120,18 +101,17 @@ void read_disk() {
 	kprint(" contents:\n\n");
  
 	//! read sector from disk
-	HD_READ(sectornum, SLAVE, *sector);
+	HD_READ(sectornum, *sector);
 	for (int l = 0; l<256; l++) {
-		/*hex_to_ascii(sector[l] & 0xff, str1);
-		hex_to_ascii((sector[l] >> 8), str2);
-		kprint(str1);
-		kprint(" ");
-		kprint(str2);
-		kprint(" ");*/
+		//hex_to_ascii(sector[l] & 0xff, str1);
+		//hex_to_ascii((sector[l] >> 8), str2);
+		//kprint(str2);
+		//kprint(" ");
+		//kprint(str1);
+		//kprint(" ");
 		hex_to_ascii(sector[l], str1);
-		kprint(str1);
-		//kprint_int(sector[l]);
-		kprint(" ");
+		//kprint(str1);
+		//kprint(" ");
 		for (int i = 0; i<32; i++) {
 			str1[i] = 0;
 			str2[i] = 0;
