@@ -60,11 +60,13 @@ void ata_detect() {
         if(port_byte_in(0x1F7)==83) {  //pio48
             ata_pio=p48;
             ata_drive=PRIMARY;
+            kprint("pmp48");
             return;
         }
         else {  //pio28
             ata_pio=p28;
             ata_drive=PRIMARY;
+            kprint("pmp28");
             return;
         }
 
@@ -73,11 +75,13 @@ void ata_detect() {
         if(port_byte_in(0x1F7)==83) {  //pio48
             ata_pio=p48;
             ata_drive=SLAVE;
+            kprint("psp48");
             return;
         }
         else {  //pio28
             ata_pio=p28;
             ata_drive=SLAVE;
+            kprint("psp28");
             return;
         }
     }
@@ -93,11 +97,13 @@ void ata_detect() {
         if(port_byte_in(0x177)==83) {  //pio48
             ata_pio=p48;
             ata_drive=PRIMARY;
+            kprint("smp48");
             return;
         }
         else {  //pio28
             ata_pio=p28;
             ata_drive=PRIMARY;
+            kprint("smp28");
             return;
         }
 
@@ -106,11 +112,13 @@ void ata_detect() {
         if(port_byte_in(0x177)==83) {  //pio48
             ata_pio=p48;
             ata_drive=SLAVE;
+            kprint("ssp48");
             return;
         }
         else {  //pio28
             ata_pio=p28;
             ata_drive=SLAVE;
+            kprint("ssp28");
             return;
         }
     }

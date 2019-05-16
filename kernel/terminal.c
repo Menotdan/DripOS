@@ -72,6 +72,8 @@ void execute_command(char *input) {
 		}
 	} else if (strcmp(input, "pgw") == 0) {
 		kprint(scanf("Type something, then press enter: "));
+	} else if (strcmp(input, "detect") == 0) {
+		ata_detect();
 	} else if (strcmp(input, "read") == 0) {
 		read_disk();
 	} else {
