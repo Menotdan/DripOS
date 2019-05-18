@@ -75,6 +75,10 @@ void execute_command(char *input) {
 		kprint("Not enough args!");
 	} else if ((match(input, "read") + 1) == 4) {
 		read_disk(atoi(afterSpace(input)));
+	} else if (match("copy", input) == -2) {
+		kprint("Not enough args!");
+	} else if ((match(input, "copy") + 1) == 4) {
+		copy_sector(0, atoi(afterSpace(input)));
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);
