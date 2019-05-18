@@ -79,6 +79,10 @@ void execute_command(char *input) {
 		kprint("Not enough args!");
 	} else if ((match(input, "copy") + 1) == 4) {
 		copy_sector(0, atoi(afterSpace(input)));
+	} else if (match("clearS", input) == -2) {
+		kprint("Not enough args!");
+	} else if ((match(input, "clearS") + 1) == 6) {
+		clear_sector(atoi(afterSpace(input)));
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);
@@ -113,7 +117,7 @@ void read_disk(uint32_t sector) {
 		//kprint(" ");
 		//kprint(str1);
 		//kprint(" ");
-		hex_to_ascii(ata_buffer[l], str1);
+		hex_to_ascii(readOut[l], str1);
 		kprint(str1);
 		kprint(" ");
 		for (int i = 0; i<32; i++) {

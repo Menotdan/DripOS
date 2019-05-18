@@ -10,6 +10,7 @@
 #include "../drivers/stdin.h"
 #include "../libc/stdio.h"
 #include "../fs/hdd.h"
+#include "../fs/hddw.h"
 //codes
 int prevtick = 0;
 int login = 1;
@@ -23,6 +24,7 @@ void main() {
 	irq_install();
 	init_timer(1);
 	clear_screen();
+	empty_sector();
 	//ata_pio28(ata_controler, 1, ata_drive, 0x1);
 	prevtick = tick;
 	logoDraw();
