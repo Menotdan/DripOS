@@ -31,8 +31,10 @@ void main() {
 	wait(100);
 	clear_screen();
 	kprint("DripOS 0.0012\n"); //Version
+	check_crash();
     kprint("Type help for commands\nType shutdown to shutdown\n> ");
 	stdin_init();
+	backspace(key_buffer);
 	play_sound(500, 100);
 	play_sound(300, 100);
 }
@@ -77,4 +79,14 @@ void memory() {
         kprint(", physical address: ");
         kprint(phys_str);
         kprint("\n");
+}
+
+void check_crash() {
+	//0x7263
+	read(128);
+	if (readOut[0] == 0x7263) {
+		kprint("NOTICE: Last time your OS stopped, it was from a crash.\n");
+	}
+	writeIn[0] = 0x0000;
+	writeFromBuffer(128);
 }

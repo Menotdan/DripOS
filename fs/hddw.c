@@ -34,6 +34,10 @@ void writeFromBuffer(uint32_t sector) {
     }
     ata_pio28(ata_controler, 2, ata_drive, sector);
     clear_ata_buffer();
+    for(int i = 0; i < 256; i++)
+    {
+        writeIn[i] = emptySector[i];
+    }
 }
 
 void clear_sector(uint32_t sector) {

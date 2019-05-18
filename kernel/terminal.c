@@ -14,7 +14,7 @@ int argt = 0; //Which Command Is taking the argument?
 
 void execute_command(char *input) {
     if (strcmp(input, "shutdown") == 0) {
-		prompttype = 1;
+		shutdown();
     } else if (strcmp(input, "panic") == 0) {
 		panic();
     } else if (strcmp(input, "nmem") == 0) {
@@ -117,8 +117,8 @@ void read_disk(uint32_t sector) {
 		//kprint(" ");
 		//kprint(str1);
 		//kprint(" ");
-		hex_to_ascii(readOut[l], str1);
-		kprint(str1);
+		hex_to_ascii(readOut[l], str2);
+		kprint(str2);
 		kprint(" ");
 		for (int i = 0; i<32; i++) {
 			str1[i] = 0;
