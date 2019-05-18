@@ -1,6 +1,7 @@
 #include "string.h"
 #include "../cpu/types.h"
 #include "../drivers/screen.h"
+#include <stdint.h>
 
 /**
  * K&R implementation
@@ -18,7 +19,13 @@ void int_to_ascii(int n, char str[]) {
 
     reverse(str);
 }
-
+void itoa_s(int i,char* buf) {
+   if (i < 0) {
+      *buf++ = '-';
+      i *= -1;
+   }
+   int_to_ascii(i,buf);
+}
 int atoi(char *str) 
 { 
     int result = 0; // Where the result will be
@@ -37,7 +44,7 @@ void hex_to_ascii(int n, char str[]) {
     append(str, 'x');
     char zeros = 0;
 
-    s32 tmp;
+    int32_t tmp;
     int i;
     for (i = 28; i > 0; i -= 4) {
         tmp = (n >> i) & 0xF;
@@ -133,3 +140,8 @@ const char* afterSpace(const char* input) {
    return starting;
  } 
 
+char to_hex(uint8_t nibble)
+{
+   static const char hex[] = "0123456789ABCDEF";
+   return hex[nibble];
+}

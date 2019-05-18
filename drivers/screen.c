@@ -1,7 +1,11 @@
 #include "screen.h"
 #include "../cpu/ports.h"
+#include "../cpu/types.h"
+#include <stddef.h>
 #include "../libc/mem.h"
 #include "colors.h"
+#include "../libc/string.h"
+
 /* Declaration of private functions */
 int get_cursor_offset();
 void set_cursor_offset(int offset);
@@ -153,8 +157,7 @@ void logoDraw() {
         for (int x = 0; x < 16; x++) {
             if(logo[y][x] == 1) {
                 kprint_at_col(" ", x + xOff, y, BLACK_ON_BLACK);
-            } else if(logo[y][x] == 2) {
-                kprint_at_col(" ", x + xOff, y, CYAN_ON_CYAN);
+            } else if(logo[y][x] == 2) {                kprint_at_col(" ", x + xOff, y, CYAN_ON_CYAN);
             } else if(logo[y][x] == 3) {
                 kprint_at_col(" ", x + xOff, y, WHITE_ON_WHITE);
             } else {

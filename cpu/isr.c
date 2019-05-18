@@ -5,6 +5,7 @@
 #include "../libc/string.h"
 #include "timer.h"
 #include "ports.h"
+#include "../fs/hdd.h"
 
 isr_t interrupt_handlers[256];
 
