@@ -5,6 +5,7 @@
 #include "../drivers/sound.h"
 #include "../drivers/time.h"
 #include "../fs/hdd.h"
+#include "../fs/hddw.h"
 #include "../libc/stdio.h"
 #include <stdint.h>
 
@@ -100,7 +101,7 @@ void read_disk(uint32_t sector) {
 	kprint(" contents:\n\n");
  
 	//! read sector from disk
-	ata_pio28(ata_controler, 1, ata_drive, sector);
+	read(sector);
 	for (int l = 0; l<256; l++) {
 		//hex_to_ascii(sector[l] & 0xff, str1);
 		//hex_to_ascii((sector[l] >> 8), str2);
