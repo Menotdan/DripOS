@@ -6,120 +6,93 @@
 #include "../libc/string.h"
 #include "../cpu/isr.h"
 //ok
+#define IDE_MASTER 0
+#define IDE_SLAVE  1
+
+#define IDE_DEFAULT_PRIMARY 0x1F0
+#define IDE_DEFAULT_SECONDARY 0x170
+
+#define ATA_PORT_DATA 0x000
+#define ATA_PORT_ERROR 0x001
+#define ATA_PORT_FEATURES 0x001
+#define ATA_PORT_SCT_COUNT 0x002
+#define ATA_PORT_SCT_NUMBER 0x003
+#define ATA_PORT_CYL_LOW 0x004
+#define ATA_PORT_CYL_HIGH 0x005
+#define ATA_PORT_DRV 0x006
+#define ATA_PORT_STATUS 0x007
+#define ATA_PORT_COMMAND 0x007
+#define ATA_PORT_ALT_STATUS 0x206
+
+#define ATA_SR_BSY     0x80    // Busy
+#define ATA_SR_DRQ     0x08    // Data request ready
+#define ATA_SR_ERR     0x01    // Error
+
+#define ATA_READ 1
+#define ATA_WRITE 2
+
+#define ATA_PIO28 0
+#define ATA_PIO48 1
 int ata_pio = 0;
-uint32_t ata_drive;
-uint32_t ata_controler;
-void HD_READ(uint32_t sector, uint16_t *out_buf) {
-    kprint_int(ata_drive);
-    kprint("\n");
-    kprint_int(ata_controler);
-    kprint("\n");
-    kprint_int(ata_pio);
-    kprint("\n");
-    int cycle;
-    uint16_t buffer [256];
-    uint8_t test;
-    //kprint("Starting read by sending port info");
-    port_byte_out (DRIVE_SELECT, ata_drive);
-    cycle = 0;
-    /*for (int i = 0; i <10000; i ++) {
-        cycle = 0;
-        test = (port_byte_in(ata_controler + 0x7));
-        kprint_int(test);
-        if ((test) == 0x08) {
-            cycle = 1;
-            kprint("set");
-            break;
-            kprint("what?");
+uint16_t ata_drive = 0xE0;
+uint32_t ata_controler = 0xF10;
+uint16_t ata_buffer[256];
+
+void clear_ata_buffer() {
+    for(int i=0; i<256; i++) {
+        ata_buffer[i]=0;
+    }
+}
+
+int ata_pio28(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr) {
+    int cycle=0;
+    port_byte_out(base+ATA_PORT_DRV, drive);
+    //PIO28
+    port_byte_out(base+ATA_PORT_FEATURES, 0x00);
+    port_byte_out(base+ATA_PORT_SCT_COUNT, 0x01);
+    port_byte_out(base+ATA_PORT_SCT_NUMBER, (unsigned char)addr);
+    port_byte_out(base+ATA_PORT_CYL_LOW, (unsigned char)(addr >> 8));
+    port_byte_out(base+ATA_PORT_CYL_HIGH, (unsigned char)(addr >> 16));
+    //type
+    if(type==ATA_READ) {
+    port_byte_out(base+ATA_PORT_COMMAND, 0x20);  // Send command
+    }
+    else {
+    port_byte_out(base+ATA_PORT_COMMAND, 0x30);
+    }
+
+    //wait for BSY clear and DRQ set
+    cycle=0;
+    for(int i=0; i<1000; i++) {
+        port_byte_in(base+ATA_PORT_ALT_STATUS);  //wait
+        if( (port_byte_in(base+ATA_PORT_ALT_STATUS) & 0x88)==0x08 ) {  //drq is set
+            cycle=1;
+            break;    
         }    
-    }*/
-    port_byte_out (ata_controler + SECTOR_SET1, 0x00);
-    port_byte_out (ata_controler + SECTOR_SET2, 0x01);
-    port_byte_out (ata_controler + SECTOR_SET3, (unsigned char) sector);
-    port_byte_out (ata_controler + SECTOR_SET4, (unsigned char) (sector >> 8));
-    port_byte_out (ata_controler + SECTOR_SET5, (unsigned char) (sector >> 16));
-    port_byte_out (ata_controler + READ_OR_WRITE, READ);
-    for (int idx = 0; idx <256; idx ++)
+    }
+    if(cycle==0) {  //Something is wrong
+        if( (port_byte_in(base+ATA_PORT_ALT_STATUS) & 0x01)==0x01 ) {
+            kprint("Bad block!");
+        } 
+        return 0;
+    }
+
+    if( (port_byte_in(base+ATA_PORT_ALT_STATUS) & 0x01)==0x01 ) {
+        kprint("Bad block!");
+    }
+
+    for (int idx = 0; idx < 256; idx++)
     {
-        buffer[idx] = port_word_in(ata_controler + DATA);
-        out_buf[idx] = buffer[idx];
+        if(type==ATA_READ) {
+            ata_buffer[idx] = port_word_in(base + ATA_PORT_DATA);
+            kprint(ata_buffer[idx]);
+            kprint("\n");
+        }
+        else {
+            port_word_out(base + ATA_PORT_DATA, ata_buffer[idx]);
+        }
     }
-    //kprint("Done reading");
-    return;
+
+    return 1;
 }
 
-void ata_detect() {
-    //Detecting primary ata
-    port_byte_out(0x1F3, 0x88);
-    wait(2);
-    if(port_byte_in(0x1F3)==0x88) {
-        ata_controler=PRIMARY_BASE;
-
-        port_byte_out(0x1F6, 0xA0);  //master
-        wait(2);
-        if(port_byte_in(0x1F7)==83) {  //pio48
-            ata_pio=p48;
-            ata_drive=PRIMARY;
-            kprint("pmp48");
-            return;
-        }
-        else {  //pio28
-            ata_pio=p28;
-            ata_drive=PRIMARY;
-            kprint("pmp28");
-            return;
-        }
-
-        port_byte_out(0x1F6, 0xB0);  //slave
-        wait(2);
-        if(port_byte_in(0x1F7)==83) {  //pio48
-            ata_pio=p48;
-            ata_drive=SLAVE;
-            kprint("psp48");
-            return;
-        }
-        else {  //pio28
-            ata_pio=p28;
-            ata_drive=SLAVE;
-            kprint("psp28");
-            return;
-        }
-    }
-
-    //Detecting secondary ata
-    port_byte_out(0x173, 0x88);
-    wait(2);
-    if(port_byte_in(0x173)==0x88) {
-        ata_controler=SLAVE_BASE;
-
-        port_byte_out(0x176, 0xA0);  //master
-        wait(2);
-        if(port_byte_in(0x177)==83) {  //pio48
-            ata_pio=p48;
-            ata_drive=PRIMARY;
-            kprint("smp48");
-            return;
-        }
-        else {  //pio28
-            ata_pio=p28;
-            ata_drive=PRIMARY;
-            kprint("smp28");
-            return;
-        }
-
-        port_byte_out(0x176, 0xB0);  //slave
-        wait(2);
-        if(port_byte_in(0x177)==83) {  //pio48
-            ata_pio=p48;
-            ata_drive=SLAVE;
-            kprint("ssp48");
-            return;
-        }
-        else {  //pio28
-            ata_pio=p28;
-            ata_drive=SLAVE;
-            kprint("ssp28");
-            return;
-        }
-    }
-}

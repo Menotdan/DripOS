@@ -70,10 +70,6 @@ void execute_command(char *input) {
 			kprint(":0");
 			kprint_int(second);
 		}
-	} else if (strcmp(input, "pgw") == 0) {
-		kprint(scanf("Type something, then press enter: "));
-	} else if (strcmp(input, "detect") == 0) {
-		ata_detect();
 	} else if (strcmp(input, "read") == 0) {
 		read_disk();
 	} else {
@@ -103,7 +99,7 @@ void read_disk() {
 	kprint(" contents:\n\n");
  
 	//! read sector from disk
-	HD_READ(sectornum, *sector);
+	ata_pio28(ata_controler, 1, ata_drive, 0x0);
 	for (int l = 0; l<256; l++) {
 		//hex_to_ascii(sector[l] & 0xff, str1);
 		//hex_to_ascii((sector[l] >> 8), str2);

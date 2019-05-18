@@ -1,5 +1,8 @@
 #pragma once
 #include <stdint.h>
+uint16_t ata_buffer[256];
+uint16_t ata_drive;
+uint32_t ata_controler;
 enum DRIVE_PORTS {
     DATA = 0x0,
     SECTOR_SET1 = 0x1,
@@ -13,9 +16,9 @@ enum DRIVE_PORTS {
 
 enum DRIVES {
     PRIMARY = 0xE0,
-    SLAVE = 0xF0,
+    SECONDARY = 0xF0,
     PRIMARY_BASE = 0x1F0,
-    SLAVE_BASE = 0x170
+    SECONDARY_BASE = 0x170
 };
 
 enum RW {
@@ -28,5 +31,6 @@ enum PIO {
     p48 = 1
 };
 
-void HD_READ(uint32_t sector, uint16_t *out_buf);
-void ata_detect();
+
+void clear_ata_buffer();
+int ata_pio28(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr);
