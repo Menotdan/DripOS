@@ -19,7 +19,7 @@ void execute_command(char *input) {
     } else if (strcmp(input, "nmem") == 0) {
         memory();
     } else if (strcmp(input, "help") == 0) {
-		kprint("Commands: nmem, help, shutdown, panic, print, clear, bgtask, bgoff, time\n");
+		kprint("Commands: nmem, help, shutdown, panic, print, clear, bgtask, bgoff, time, read\n");
 	} else if (strcmp(input, "clear") == 0){
 		clear_screen();
 	} else if (match("print", input) == -2) {
@@ -70,8 +70,10 @@ void execute_command(char *input) {
 			kprint(":0");
 			kprint_int(second);
 		}
-	} else if (strcmp(input, "read") == 0) {
-		read_disk();
+	} else if (match("read", input) == -2) {
+		kprint("Not enough args!");
+	} else if ((match(input, "read") + 1) == 4) {
+		read_disk(atoi(afterSpace(input)));
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);
@@ -87,9 +89,8 @@ void p_tone(uint32_t soundin, int len) {
 	pSnd = len;
 }
 
-void read_disk() {
+void read_disk(uint32_t sector) {
 	uint32_t sectornum;
-	uint16_t *sector;
 	uint16_t nom;
 	sectornum = 0;
 	char str1[32];
@@ -99,7 +100,7 @@ void read_disk() {
 	kprint(" contents:\n\n");
  
 	//! read sector from disk
-	ata_pio28(ata_controler, 1, ata_drive, 0x0);
+	ata_pio28(ata_controler, 1, ata_drive, sector);
 	for (int l = 0; l<256; l++) {
 		//hex_to_ascii(sector[l] & 0xff, str1);
 		//hex_to_ascii((sector[l] >> 8), str2);
@@ -107,13 +108,14 @@ void read_disk() {
 		//kprint(" ");
 		//kprint(str1);
 		//kprint(" ");
-		hex_to_ascii(sector[l], str1);
-		//kprint(str1);
-		//kprint(" ");
+		hex_to_ascii(ata_buffer[l], str1);
+		kprint(str1);
+		kprint(" ");
 		for (int i = 0; i<32; i++) {
 			str1[i] = 0;
 			str2[i] = 0;
 		}
 	}
-	kprint_int(sizeof(sector));
+	clear_ata_buffer();
+	//kprint_int(sizeof(ata_buffer));
 }

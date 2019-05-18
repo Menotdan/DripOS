@@ -34,8 +34,8 @@
 #define ATA_PIO28 0
 #define ATA_PIO48 1
 int ata_pio = 0;
-uint16_t ata_drive = 0xE0;
-uint32_t ata_controler = 0xF10;
+uint16_t ata_drive = MASTER_DRIVE;
+uint32_t ata_controler = PRIMARY_IDE;
 uint16_t ata_buffer[256];
 
 void clear_ata_buffer() {
@@ -64,29 +64,34 @@ int ata_pio28(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr) {
     //wait for BSY clear and DRQ set
     cycle=0;
     for(int i=0; i<1000; i++) {
-        port_byte_in(base+ATA_PORT_ALT_STATUS);  //wait
+        port_byte_in(base+ATA_PORT_ALT_STATUS);  //Delay
+        port_byte_in(base+ATA_PORT_ALT_STATUS);
+        port_byte_in(base+ATA_PORT_ALT_STATUS);
+        port_byte_in(base+ATA_PORT_ALT_STATUS);
         if( (port_byte_in(base+ATA_PORT_ALT_STATUS) & 0x88)==0x08 ) {  //drq is set
             cycle=1;
             break;    
         }    
     }
-    if(cycle==0) {  //Something is wrong
+    if(cycle==0) {
+        port_byte_in(base+ATA_PORT_ALT_STATUS); //Delay
+        port_byte_in(base+ATA_PORT_ALT_STATUS);
+        port_byte_in(base+ATA_PORT_ALT_STATUS);
+        port_byte_in(base+ATA_PORT_ALT_STATUS);
         if( (port_byte_in(base+ATA_PORT_ALT_STATUS) & 0x01)==0x01 ) {
-            kprint("Bad block!");
+            kprint("Bad block! Bad Cycle! ");
         } 
         return 0;
     }
 
     if( (port_byte_in(base+ATA_PORT_ALT_STATUS) & 0x01)==0x01 ) {
-        kprint("Bad block!");
+        kprint("Bad block! ");
     }
 
     for (int idx = 0; idx < 256; idx++)
     {
         if(type==ATA_READ) {
             ata_buffer[idx] = port_word_in(base + ATA_PORT_DATA);
-            kprint(ata_buffer[idx]);
-            kprint("\n");
         }
         else {
             port_word_out(base + ATA_PORT_DATA, ata_buffer[idx]);

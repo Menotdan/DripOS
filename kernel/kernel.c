@@ -23,7 +23,7 @@ void main() {
 	irq_install();
 	init_timer(1);
 	clear_screen();
-	ata_pio28(ata_controler, 1, ata_drive, 0x1);
+	//ata_pio28(ata_controler, 1, ata_drive, 0x1);
 	prevtick = tick;
 	logoDraw();
 	wait(100);

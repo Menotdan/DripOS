@@ -29,10 +29,14 @@ const char sc_ascii_uppercase[] = { ' ', ' ', '!', '@', '#', '$', '%', '^',
         'B', 'N', 'M', '<', '>', '?', ' ', ' ', ' ', ' '};
 
 int shift = 0;
-
+int first = 1;
 
 void key_handler() {
     //kprint("recv");
+    if (first == 1) {
+        first = 0;
+        return;
+    }
     for (int i = 0; i < 58; i++) {
         if (strcmp(sc_name[i], "Enter") == 0 && keydown[i] == true && keytimeout[i] <= 0) {
             keytimeout[i] = KEY_DEL;
@@ -59,11 +63,7 @@ void key_handler() {
             keytimeout[i] = KEY_DEL;
         } else {
             if(keydown[i] == true) {
-                    //kprint("Timeout is the problem");
             }
-            //char time[6];
-            //int_to_ascii(keytimeout[i], time);
-            //kprint(time);
             if(keytimeout[i] == 0) {
                 keytimeout[i] = KEY_DEL;
                 if (keydown[(int)LSHIFT] == true || keydown[(int)RSHIFT] == true) {
@@ -73,7 +73,6 @@ void key_handler() {
                         char str[2] = {letter, '\0'};
                         uinlen += 1;
                         append(key_buffer, letter);
-                        //kprint("We fixed it people!!");
                         if (prompttype == 0) {
                             kprint(str);
                         } else {
@@ -82,7 +81,6 @@ void key_handler() {
                     }
                 } else {
                     if(keydown[i] == true) {
-                        //kprint("We fixed it people!!");
                         char letter = sc_ascii[i];
                         /* Remember that kprint only accepts char[] */
                         char str[2] = {letter, '\0'};

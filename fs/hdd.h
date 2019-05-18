@@ -15,10 +15,10 @@ enum DRIVE_PORTS {
 };
 
 enum DRIVES {
-    PRIMARY = 0xE0,
-    SECONDARY = 0xF0,
-    PRIMARY_BASE = 0x1F0,
-    SECONDARY_BASE = 0x170
+    MASTER_DRIVE = 0xE0,
+    SLAVE_DRIVE = 0xF0,
+    PRIMARY_IDE = 0x1F0,
+    SECONDARY_IDE = 0x170
 };
 
 enum RW {
