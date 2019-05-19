@@ -50,16 +50,32 @@ void key_handler(uint8_t scancode, bool keyup) {
         shift = 0;
     } else if (strcmp(sc_name[scancode], "RShift") == 0 && keyup == true) {
         shift = 0;
+    } else if (strcmp(sc_name[scancode], "Enter") == 0 && keyup != true) {
+        user_input(key_buffer);
+        uinlen = 0;
+        key_buffer[0] = "\0";
+    } else if (strcmp(sc_name[scancode], "Spacebar") == 0 && keyup != true) {
+        append(key_buffer, " ");
+        kprint(" ");
+        uinlen++;
     } else {
         if (shift == 0) {
             if (!keyup) {
-                append(key_buffer, sc_ascii[scancode]);
-                kprint(sc_ascii[scancode]);
+                if (scancode < SC_MAX){
+                    append(key_buffer, sc_ascii[scancode]);
+                    char str[2] = {sc_ascii[scancode], '\0'};
+                    kprint(str);
+                    uinlen++;
+                }
             }
         } else if (shift == 1) {
             if (!keyup) {
-                append(key_buffer, sc_ascii[scancode]);
-                kprint(sc_ascii[scancode]);
+                if (scancode < SC_MAX){
+                    append(key_buffer, sc_ascii_uppercase[scancode]);
+                    char str[2] = {sc_ascii_uppercase[scancode], '\0'};
+                    kprint(str);
+                    uinlen++;
+                }
             }
         }
     }
