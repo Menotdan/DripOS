@@ -1,5 +1,5 @@
-#ifndef MEM_H
-#define MEM_H
+#ifndef MEM_HF
+#define MEM_HF
 
 #include "../cpuPt2/types.h"
 

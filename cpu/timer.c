@@ -3,11 +3,9 @@
 #include "ports.h"
 #include "../libc/function.h"
 #include "../drivers/screen.h"
-#include "sysState.h"
 #include "../drivers/keyboard.h"
 #include "../drivers/stdin.h"
 #include "../drivers/sound.h"
-#include "soundManager.h"
 #include "../libc/string.h"
 
 uint32_t tick = 0; //Ticks
@@ -19,7 +17,6 @@ int tMil = 0; // How many million ticks
 char tMilStr[12];
 
 static void timer_callback(registers_t regs) {
-	sys_state_manager();
     tick++;
     for (int i = 0; i < 256; i++) {
         if (keytimeout[i] > 0) {

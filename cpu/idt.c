@@ -1,5 +1,5 @@
 #include "idt.h"
-
+//mo
 void set_idt_gate(int n, uint32_t handler) {
     idt[n].low_offset = low_16(handler);
     idt[n].sel = KERNEL_CS;

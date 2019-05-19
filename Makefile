@@ -3,6 +3,11 @@ HEADERS = $(wildcard kernel/*.h drivers/*.h cpu/*.h libc/*.h fs/*.h)
 # Nice syntax for file extension replacement
 OBJ = ${C_SOURCES:.c=.o cpu/interrupt.o} 
 
+C_SOURCES_PT2 = $(wildcard kernelPt2/*.c driversPt2/*.c cpuPt2/*.c libcPt2/*.c fsPt2/*.c)
+HEADERS_PT2 = $(wildcard kernelPt2/*.h driversPt2/*.h cpuPt2/*.h libcPt2/*.h fsPt2/*.h)
+# Nice syntax for file extension replacement
+OBJ_PT2 = ${C_SOURCES_PT2:.c=.o cpuPt2/interrupt.o} 
+
 # Change this if your cross-compiler is somewhere else
 CC = /usr/bin/i686-elf-gcc
 GDB = /usr/bin/i686-elf-gdb
@@ -18,11 +23,18 @@ os-image.bin: boot/bootsect.bin kernel.bin
 kernel.bin: boot/kernel_entry.o ${OBJ}
 	i686-elf-ld -o $@ -Ttext 0x1000 $^ --oformat binary
 
+kernel2.bin: boot/kernel_entry.o ${OBJ_PT2}
+	i686-elf-ld -o $@ -Ttext 0x4C4B40 $^ --oformat binary
+	dd if=/dev/zero of=dripdisk.img bs=1k count=20000
+	mkdosfs -F 12 dripdisk.img
+	cat $@ >> dripdisk.img
+
+
 # Used for debugging purposes
 kernel.elf: boot/kernel_entry.o ${OBJ}
 	i686-elf-ld -o $@ -Ttext 0x1000 $^ 
 
-run: os-image.bin
+run: os-image.bin kernel2.bin
 	echo "------------NOTE----------------"
 	echo "Please select floppy drive as boot drive"
 	echo "------------NOTE----------------"
