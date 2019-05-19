@@ -3,13 +3,12 @@
 #include "../libc/string.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include "../drivers/screen.h"
 
 #define LSHIFT 0x2A
 #define RSHIFT 0x36
 #define KEY_DEL 2
 
-//extern bool keydown[256];
-int keytimeout[256];
 static char *key_buffer;
 
 const char *sc_name[] = { "ERROR", "Esc", "1", "2", "3", "4", "5", "6", 
@@ -34,12 +33,38 @@ int shift = 0;
 int first = 1;
 
 void key_handler(uint8_t scancode, bool keyup) {
-    
+    if (strcmp(sc_name[scancode], "Backspace") == 0 && keyup != true) {
+        if (uinlen > 0) {
+            backspace(key_buffer);
+            kprint_backspace();
+            uinlen -= 1;
+        }
+    } else if (strcmp(sc_name[scancode], "ERROR") == 0 && keyup != true) {
+    } else if (strcmp(sc_name[scancode], "Lctrl") == 0 && keyup != true) {
+    } else if (strcmp(sc_name[scancode], "LAlt") == 0 && keyup != true) {
+    } else if (strcmp(sc_name[scancode], "LShift") == 0 && keyup != true) {
+        shift = 1;
+    } else if (strcmp(sc_name[scancode], "RShift") == 0 && keyup != true) {
+        shift = 1;
+    }  else if (strcmp(sc_name[scancode], "LShift") == 0 && keyup == true) {
+        shift = 0;
+    } else if (strcmp(sc_name[scancode], "RShift") == 0 && keyup == true) {
+        shift = 0;
+    } else {
+        if (shift == 0) {
+            if (!keyup) {
+                append(key_buffer, sc_ascii[scancode]);
+                kprint(sc_ascii[scancode]);
+            }
+        } else if (shift == 1) {
+            if (!keyup) {
+                append(key_buffer, sc_ascii[scancode]);
+                kprint(sc_ascii[scancode]);
+            }
+        }
+    }
 }
 void stdin_init() {
-    for (int i = 0; i < 256; i++) {
-        keytimeout[i] = 0;
-    }
     backspace(key_buffer);
     uinlen = 0;
     key_buffer = 0;
