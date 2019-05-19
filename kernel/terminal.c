@@ -75,6 +75,7 @@ void execute_command(char *input) {
 		kprint("Not enough args!");
 	} else if ((match(input, "read") + 1) == 4) {
 		read_disk(atoi(afterSpace(input)));
+		kprint(atoi(afterSpace(input)));
 	} else if (match("copy", input) == -2) {
 		kprint("Not enough args!");
 	} else if ((match(input, "copy") + 1) == 4) {
@@ -105,7 +106,7 @@ void read_disk(uint32_t sector) {
 	char str1[32];
 	char str2[32];
 	kprint ("\nSector ");
-	kprint_int(sectornum);
+	kprint_int(sector);
 	kprint(" contents:\n\n");
  
 	//! read sector from disk

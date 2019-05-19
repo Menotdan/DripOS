@@ -52,8 +52,10 @@ void key_handler(uint8_t scancode, bool keyup) {
         shift = 0;
     } else if (strcmp(sc_name[scancode], "Enter") == 0 && keyup != true) {
         user_input(key_buffer);
+        for (int i = 0; i < uinlen; i++) {
+            backspace(key_buffer);
+        }
         uinlen = 0;
-        key_buffer[0] = "\0";
     } else if (strcmp(sc_name[scancode], "Spacebar") == 0 && keyup != true) {
         append(key_buffer, " ");
         kprint(" ");
