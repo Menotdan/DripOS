@@ -1,12 +1,12 @@
 #include "kernel.h"
-#include "../libc/string.h"
-#include "../cpu/soundManager.h"
-#include "../cpu/timer.h"
-#include "../drivers/sound.h"
-#include "../drivers/time.h"
-#include "../fs/hdd.h"
-#include "../fs/hddw.h"
-#include "../libc/stdio.h"
+#include "../libcPt2/string.h"
+#include "../cpuPt2/soundManager.h"
+#include "../cpuPt2/timer.h"
+#include "../driversPt2/sound.h"
+#include "../driversPt2/time.h"
+#include "../fsPt2/hdd.h"
+#include "../fsPt2/hddw.h"
+#include "../libcPt2/stdio.h"
 #include <stdint.h>
 
 int arg = 0; //Is an argument being taken?
