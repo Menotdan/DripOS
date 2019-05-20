@@ -55,7 +55,11 @@ void driveLoop() {
 	}
 	kprint("Done loading.\n");
 	kprint("Attempting to call...\n");
-	asm volatile("call (%0)" : : "r" (&code));
+	//asm volatile("call (%0)" : : "r" (&code));
+	__builtin__clear_cache(&code[0][0], &code[30][255]);   // don't optimize away stores into the buffer
+    void (*fptr)(void) =  (void*)code;                     // casting to void* instead of the actual target type is simpler
+
+    fptr();
 }
 
 int getstate() {
