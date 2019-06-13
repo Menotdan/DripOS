@@ -1,4 +1,3 @@
-//0x1000
 #include "../cpu/isr.h"
 #include "../drivers/screen.h"
 #include "kernel.h"
@@ -54,12 +53,11 @@ void driveLoop() {
 		}
 	}
 	kprint("Done loading.\n");
-	kprint("Attempting to call...\n");
-	//asm volatile("call (%0)" : : "r" (&code));
-	__builtin__clear_cache(&code[0][0], &code[30][255]);   // don't optimize away stores into the buffer
+	__builtin___clear_cache(&code[0][0], &code[sectors][256]);   // don't optimize away stores into the buffer
     void (*fptr)(void) =  (void*)code;                     // casting to void* instead of the actual target type is simpler
-
+	kprint("The OS is executing now.\n If nothing prints then the execution hanged.\n");
     fptr();
+	kprint("Execution did nothing!\n");
 }
 
 int getstate() {
