@@ -1,12 +1,12 @@
 #include "kernel.h"
-#include "../libcPt2/string.h"
-#include "../cpuPt2/soundManager.h"
-#include "../cpuPt2/timer.h"
-#include "../driversPt2/sound.h"
-#include "../driversPt2/time.h"
-#include "../fsPt2/hdd.h"
-#include "../fsPt2/hddw.h"
-#include "../libcPt2/stdio.h"
+#include "../libc/string.h"
+#include "../cpu/soundManager.h"
+#include "../cpu/timer.h"
+#include "../drivers/sound.h"
+#include "../drivers/time.h"
+#include "../fs/hdd.h"
+#include "../fs/hddw.h"
+#include "../libc/stdio.h"
 #include <stdint.h>
 
 int arg = 0; //Is an argument being taken?
@@ -75,7 +75,7 @@ void execute_command(char *input) {
 		kprint("Not enough args!");
 	} else if ((match(input, "read") + 1) == 4) {
 		read_disk(atoi(afterSpace(input)));
-		//kprint_int(atoi(afterSpace(input)));
+		kprint(atoi(afterSpace(input)));
 	} else if (match("copy", input) == -2) {
 		kprint("Not enough args!");
 	} else if ((match(input, "copy") + 1) == 4) {
@@ -85,7 +85,7 @@ void execute_command(char *input) {
 	} else if ((match(input, "clearS") + 1) == 6) {
 		clear_sector(atoi(afterSpace(input)));
 	} else {
-		kprint("Unknown command: ");
+		kprint("\nUnknown command: ");
 		kprint(input);
 		p_tone(100, 5);
 	}

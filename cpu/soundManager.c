@@ -1,5 +1,5 @@
 #include "soundManager.h"
-#include "../driversPt2/sound.h"
+#include "../drivers/sound.h"
 #include <stdint.h>
 
 bool sound_en = false;

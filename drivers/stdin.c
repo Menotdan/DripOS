@@ -1,9 +1,9 @@
-#include "../kernelPt2/kernel.h"
+#include "../kernel/kernel.h"
 #include "keyboard.h"
-#include "../libcPt2/string.h"
+#include "../libc/string.h"
 #include <stdint.h>
 #include <stdbool.h>
-#include "../driversPt2/screen.h"
+#include "../drivers/screen.h"
 
 #define LSHIFT 0x2A
 #define RSHIFT 0x36

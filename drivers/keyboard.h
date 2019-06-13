@@ -1,6 +1,6 @@
 #pragma once
 #include <stdbool.h>
-#include "../cpuPt2/types.h"
+#include "../cpu/types.h"
 #define BACKSPACE 0x0E
 #define ENTER 0x1C
 #define LSHIFT 0x2A

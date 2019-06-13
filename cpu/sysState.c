@@ -1,11 +1,11 @@
 #include "sysState.h"
 #include "isr.h"
-#include "../libcPt2/function.h"
-#include "../driversPt2/screen.h"
-#include "../kernelPt2/kernel.h"
+#include "../libc/function.h"
+#include "../drivers/screen.h"
+#include "../kernel/kernel.h"
 #include "ports.h"
 #include "timer.h"
-#include "../fsPt2/hddw.h"
+#include "../fs/hddw.h"
 
 void sys_state_manager() {
     int state = getstate();
