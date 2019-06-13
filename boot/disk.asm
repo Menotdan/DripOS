@@ -21,6 +21,10 @@ disk_load:
     jc disk_error ; if error (stored in the carry bit)
 
     pop dx
+    pusha
+    mov dh, al
+    call print_hex
+    popa
     cmp al, dh    ; BIOS also sets 'al' to the # of sectors read. Compare it.
     jne sectors_error
     popa
