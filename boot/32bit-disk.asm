@@ -22,7 +22,7 @@ disk_op:
     call portbout
     ; Set sector count
     mov dx, 0x1F2
-    mov ax, bh
+    movzx ax, bh
     call portbout
     ; Select start sector
     pop dx
