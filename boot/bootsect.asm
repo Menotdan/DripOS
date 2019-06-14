@@ -36,8 +36,7 @@ dw 0xaa55
 SECOND_STAGE:
     [bits 16]
 
-    %include "boot/32bit-disk.asm"
-    %include "boot/32bit-ports.asm"
+    
     KERNEL_OFFSET equ 0x1000 ; The same one we used when linking the kernel
 
     mov bx, LOADED
@@ -72,11 +71,12 @@ SECOND_STAGE:
         ;mov ebx, MSG_EXIT_KERNEL
         ;call print_string_pm
         jmp $ ; Stay here when the kernel returns control to us (if ever)
+    %include "boot/32bit-disk.asm"
+    %include "boot/32bit-ports.asm"
     BOOT_DRIVE db 0 ; It is a good idea to store it in memory because 'dl' may get overwritten
     MSG_PROT_MODE db "32 bit mode loaded!", 0
     MSG_LOAD_KERNEL db "Loading kernel into memory, becuase why not", 0
     MSG_EXIT_KERNEL db "Kernel exited, hanging", 0
-
     jmp $
 
 times 2048-($-$$) db 0
