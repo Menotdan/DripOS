@@ -26,7 +26,7 @@ run: os-image.bin
 	echo "------------NOTE----------------"
 	echo "Please select floppy drive as boot drive"
 	echo "------------NOTE----------------"
-	qemu-system-i386 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -fda os-image.bin -hda dripdisk.img
+	qemu-system-x86_64 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -fda boot/bootsect.bin -hda dripdisk.img -hdb kernel.bin
 
 myos.iso: os-image.bin
 	dd if=/dev/zero of=floppy.img bs=1024 count=1440

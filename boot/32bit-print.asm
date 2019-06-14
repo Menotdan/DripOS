@@ -2,7 +2,7 @@
 
 ; this is how constants are defined
 VIDEO_MEMORY equ 0xb8000
-WHITE_ON_BLACK equ 0x04 ; the color byte for each character
+WHITE_ON_BLACK equ 0x0f ; the color byte for each character
 
 print_string_pm:
     pusha
