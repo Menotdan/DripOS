@@ -79,4 +79,4 @@ SECOND_STAGE:
     MSG_EXIT_KERNEL db "Kernel exited, hanging", 0
     jmp $
 
-times 2048-($-$$) db 0
+times 2560-($-$$) db 0
