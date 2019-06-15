@@ -5,7 +5,7 @@ OBJ = ${C_SOURCES:.c=.o}
 
 # Change this if your cross-compiler is somewhere else
 CC = /usr/bin/i686-elf-gcc
-GDB = /usr/bin/i686-elf-gdb
+GDB = gdb
 # -g: Use debugging symbols in gcc
 CFLAGS = -g #-m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra
 
@@ -38,9 +38,9 @@ myos.iso: os-image.bin
 iso: myos.iso
 	cp myos.iso doneiso/
 # Open the connection to qemu and load our kernel-object file with symbols
-debug: os-image.bin kernel.elf
-	qemu-system-i386 -s -fda os-image.bin -d guest_errors,int &
-	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf"
+debug: os-image.bin
+	qemu-system-x86_64 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -fda boot/bootsect.bin -hdb dripdisk.img -hda kernel.bin &
+	${GDB} -ex "target remote localhost:1234" -ex "symbol-file bootsect.elf"
 
 # Generic rules for wildcards
 # To make an object, always compile from its .c $< $@

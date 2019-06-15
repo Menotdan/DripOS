@@ -23,7 +23,7 @@ disk_op:
     call portbout
     ; Set sector count
     mov dx, 0x1F2
-    movzx ax, bh
+    mov ax, bx
     call portbout
     ; Select start sector
     pop edx
@@ -52,7 +52,7 @@ disk_op:
     mov dx, 0x3F6
     handled:
     ; return to caller
-    ret
+    jmp breakpoint
 
 
 drq_set:
@@ -99,9 +99,11 @@ error_both:
 read_data:
     push ecx
     push ebx
+    mov eax, 0
     push eax
-    mov ecx, 0x0
-    mov ebx, 0xEFFFFF
+    mov ecx, 0
+    mov ebx, 0
+    jmp breakpoint
     jmp read_loop
     return_label:
 
@@ -109,20 +111,24 @@ read_data:
 read_loop:
     mov dx, 0x1F0
     call portwin
-    mov [ebx], ax
-    add ecx, 0x2
-    add ebx, 0x2
-    cmp ecx, 0x200
-    je inc_sector_count
+    mov [0xEFFFFF + ebx], ax
+    add ecx, 2
+    add ebx, 2
+    cmp ecx, 512
+    jnz inc_sector_count
 
 
 inc_sector_count:
+    mov ecx, 0
     pop eax
     inc eax
+    mov ecx, ebx
     pop ebx
     cmp bx, ax
     je handled
     push ebx
+    mov ebx, ecx
+    mov ecx, 0
     push eax
     jmp read_loop
 

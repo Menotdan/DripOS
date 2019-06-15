@@ -47,16 +47,18 @@ SECOND_STAGE:
     LOADED db 'Second Stage loaded, entering 32 bit mode.', 0
     [bits 32]
     BEGIN_PM:
-        mov bh, 34
-        mov bl, 1
+        mov bx, 64
         mov cx, 0xE0
-        mov edx, 0x0
+        mov edx, 0
         call disk_op
-        ;push ebx
-        ;mov ebx, WRITE
-        ;call print_string_pm
-        ;pop ebx
-        jmp KERNEL_OFFSET
+        breakpoint:
+        jmp read_loop
+        push ebx
+        mov ebx, DWORD [0xEFFFFF]
+        call print_string_pm
+        pop ebx
+        call KERNEL_OFFSET
+        cli
         jmp $ ; hangs
     %include "boot/32bit-disk.asm"
     %include "boot/32bit-ports.asm"
