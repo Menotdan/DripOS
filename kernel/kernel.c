@@ -1,4 +1,9 @@
-//0x1000
+//0xEFFFFF
+__asm__ (".pushsection .text.start\r\n" \
+         "jmp main\r\n" \
+         ".popsection\r\n"
+         );
+
 #include "../cpu/isr.h"
 #include "../drivers/screen.h"
 #include "../drivers/sound.h"

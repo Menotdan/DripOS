@@ -1,7 +1,7 @@
 C_SOURCES = $(wildcard kernel/*.c drivers/*.c cpu/*.c libc/*.c fs/*.c)
 HEADERS = $(wildcard kernel/*.h drivers/*.h cpu/*.h libc/*.h fs/*.h)
 # Nice syntax for file extension replacement
-OBJ = ${C_SOURCES:.c=.o cpu/interrupt.o} 
+OBJ = ${C_SOURCES:.c=.o} 
 
 # Change this if your cross-compiler is somewhere else
 CC = /usr/bin/i686-elf-gcc
@@ -15,8 +15,9 @@ os-image.bin: boot/bootsect.bin kernel.bin
 
 # '--oformat binary' deletes all symbols as a collateral, so we don't need
 # to 'strip' them manually on this case
-kernel.bin: boot/kernel_entry.o ${OBJ}
-	i686-elf-ld -o $@ -Ttext 0x1000 $^ --oformat binary
+kernel.bin: ${OBJ} cpu/interrupt.o
+	i686-elf-ld -melf_i386 -Tlinker.ld -nostdlib --nmagic -o kernel.elf ${OBJ} cpu/interrupt.o
+	objcopy -O binary kernel.elf $@
 
 # Used for debugging purposes
 kernel.elf: boot/kernel_entry.o ${OBJ}
@@ -26,7 +27,7 @@ run: os-image.bin
 	echo "------------NOTE----------------"
 	echo "Please select floppy drive as boot drive"
 	echo "------------NOTE----------------"
-	qemu-system-x86_64 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -fda boot/bootsect.bin -hda dripdisk.img -hdb kernel.bin
+	qemu-system-x86_64 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -fda boot/bootsect.bin -hdb dripdisk.img -hda kernel.bin
 
 myos.iso: os-image.bin
 	dd if=/dev/zero of=floppy.img bs=1024 count=1440
@@ -42,15 +43,17 @@ debug: os-image.bin kernel.elf
 	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf"
 
 # Generic rules for wildcards
-# To make an object, always compile from its .c
+# To make an object, always compile from its .c $< $@
 %.o: %.c ${HEADERS}
-	i686-elf-gcc ${CFLAGS} -ffreestanding -c $< -o $@
+	i686-elf-gcc -g -m32 -c -ffreestanding -o $@ $< -lgcc
 
 %.o: %.asm
-	nasm $< -f elf -o $@
+	nasm -g -f elf32 -F dwarf -o $@ $<
 
 %.bin: %.asm
-	nasm $< -f bin -o $@
+	nasm -g -f elf32 -F dwarf -o bootsect.o $<
+	ld -melf_i386 -Ttext=0x7c00 -nostdlib --nmagic -o bootsect.elf bootsect.o
+	objcopy -O binary bootsect.elf $@
 
 clean:
 	rm -rf *.bin *.dis *.o os-image.bin *.elf

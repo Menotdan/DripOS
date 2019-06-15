@@ -74,7 +74,7 @@ int ata_pio28(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr) {
         }    
     }
     if(cycle==0) {
-        port_byte_in(base+ATA_PORT_ALT_STATUS); //Delay
+        port_byte_in(base+ATA_PORT_ALT_STATUS); //Delay so the drive can set its port values
         port_byte_in(base+ATA_PORT_ALT_STATUS);
         port_byte_in(base+ATA_PORT_ALT_STATUS);
         port_byte_in(base+ATA_PORT_ALT_STATUS);
