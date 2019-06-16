@@ -49,10 +49,11 @@ disk_op:
     pop edx
     pop ax
     jmp select_read
-    mov dx, 0x3F6
     handled:
+    ;call breakpoint
     ; return to caller
-    jmp breakpoint
+    ;jmp breakpoint
+    ret
 
 
 drq_set:
@@ -63,6 +64,7 @@ drq_set:
     call portbin
     and al, 0x01
     cmp al, 0x01
+    ;jne breakpoint
     jne read_data
     push ebx
     mov ebx, ERR_BLOCK
@@ -97,25 +99,25 @@ error_both:
     jmp handled
 
 read_data:
-    push ecx
-    push ebx
     mov eax, 0
     push eax
     mov ecx, 0
     mov ebx, 0
-    jmp breakpoint
-    jmp read_loop
+    ;jmp breakpoint
     return_label:
 
 
 read_loop:
+    push ebx
     mov dx, 0x1F0
     call portwin
+    pop ebx
     mov [0xEFFFFF + ebx], ax
     add ecx, 2
     add ebx, 2
     cmp ecx, 512
-    jnz inc_sector_count
+    je inc_sector_count
+    jne read_loop
 
 
 inc_sector_count:
@@ -141,6 +143,7 @@ select_read:
     pop dx
     pop ax
     mov ecx, 0
+    mov dx, 0x3F6
     jmp check_drq
 
 check_drq:
@@ -155,7 +158,7 @@ check_drq:
     inc ecx
     cmp ecx, 1000
     jne check_drq
-    jne no_drq
+    je no_drq
 
 WRITE db "Write selected     ", 0
 READ db "Read selected      ", 0

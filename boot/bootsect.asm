@@ -35,11 +35,11 @@ SECOND_STAGE:
     
     KERNEL_OFFSET equ 0xEFFFFF ; The same one we used when linking the kernel
 
-    mov bx, LOADED
+    ;mov bx, LOADED
 
-    call print
-    call print_nl
-    call clear_screen
+    ;call print
+    ;call print_nl
+    ;call clear_screen
     call switch_to_pm ; disable interrupts, load the GDT,  etc. Finally jumps to 'BEGIN_PM'
     jmp $
 
@@ -51,15 +51,17 @@ SECOND_STAGE:
         mov cx, 0xE0
         mov edx, 0
         call disk_op
-        breakpoint:
-        jmp read_loop
-        push ebx
-        mov ebx, DWORD [0xEFFFFF]
-        call print_string_pm
-        pop ebx
-        call KERNEL_OFFSET
+        ;jmp read_loop
+        ;push ebx
+        ;mov ebx, DWORD [0xEFFFFF]
+        ;call print_string_pm
+        ;pop ebx
+        ;call KERNEL_OFFSET
         cli
-        jmp $ ; hangs
+        jmp $ ; hang
+    
+    ;breakpoint:
+    ;        ret
     %include "boot/32bit-disk.asm"
     %include "boot/32bit-ports.asm"
     [bits 16]
