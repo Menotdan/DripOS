@@ -50,10 +50,12 @@ disk_op:
     pop ax
     jmp select_read
     handled:
+    pop ebx
+    pop ecx
     ;call breakpoint
     ; return to caller
     ;jmp breakpoint
-    ret
+    jmp die
 
 
 drq_set:
@@ -99,6 +101,8 @@ error_both:
     jmp handled
 
 read_data:
+    push ecx
+    push ebx
     mov eax, 0
     push eax
     mov ecx, 0
@@ -160,7 +164,7 @@ check_drq:
     jne check_drq
     je no_drq
 
-WRITE db "Write selected     ", 0
+WRITE db "Kill the kernel lol     ", 0
 READ db "Read selected      ", 0
 ERR_CYCLE db "Bad Cycle!",0
 ERR_BLOCK db "Bad block!",0
