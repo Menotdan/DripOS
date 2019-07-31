@@ -1,5 +1,5 @@
 //0xEFFFFF
-__asm__ (".pushsection .text.start\r\n" \
+asm(".pushsection .text.start\r\n" \
          "jmp main\r\n" \
          ".popsection\r\n"
          );

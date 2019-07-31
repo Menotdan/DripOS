@@ -18,6 +18,7 @@ os-image.bin: boot/bootsect.bin kernel.bin
 kernel.bin: ${OBJ} cpu/interrupt.o
 	i686-elf-ld -melf_i386 -Tlinker.ld -nostdlib --nmagic -o kernel.elf ${OBJ} cpu/interrupt.o
 	objcopy -O binary kernel.elf $@
+	hexdump -v -e '1/4 "%08x"' -e '"\n"' kernel.bin | xxd -r -p > kernel.bin.rev
 
 # Used for debugging purposes
 kernel.elf: boot/kernel_entry.o ${OBJ}

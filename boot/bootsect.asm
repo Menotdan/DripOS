@@ -33,7 +33,7 @@ SECOND_STAGE:
     [bits 16]
 
     
-    KERNEL_OFFSET equ 0xEFFFFF ; The same one we used when linking the kernel
+    KERNEL_OFFSET equ 0xf006c5 ; The same one we used when linking the kernel
     call switch_to_pm ; disable interrupts, load the GDT,  etc. Finally jumps to 'BEGIN_PM'
     jmp $
 
