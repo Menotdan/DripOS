@@ -66,7 +66,7 @@ _start:
 	in assembly as languages such as C cannot function without a stack.
 	*/
 	mov stack_top, esp
- 
+
 	/*
 	This is a good place to initialize crucial processor state before the
 	high-level kernel is entered. It's best to minimize the early
@@ -77,60 +77,44 @@ _start:
 	C++ features such as global constructors and exceptions will require
 	runtime support to work as well.
 	*/
-	/*[bits 32]
-	call _init
+
+	/*
+	GDT from the old DripOS bootloader, which was from the original
+	project (The OS tutorial)
+	*/
+
 	gdt_start:
-	    dd 0x0
-	    dd 0x0
 
+		.long 0x0
+		.long 0x0
+	
 	gdt_code: 
-	    dw 0xffff
-	    dw 0x0
-	    db 0x0
-	    db 10011010b
-	    db 11001111b
-	    db 0x0
-
+		.word 65535
+		.word 0x0
+		/*.byte 0x0
+		.byte 0x9A*/ /*10011010 in binary*/
+		/*.byte 0xCF*/ /*11001111 in binary*/
+		/*.byte 0x0*/
+	jmp $
 	gdt_data:
-	    dw 0xffff
-	    dw 0x0
-	    db 0x0
-	    db 10010010b
-	    db 11001111b
-	    db 0x0
+		.word 0xffff
+		.word 0x0
+		.byte 0x0
+		.byte 0x92 /*10010010 in binary*/
+		.byte 0xCF /*11001111 in binary*/
+		.byte 0x0
 
 	gdt_end:
 
-
 	gdt_descriptor:
-	    dw gdt_end - gdt_start - 1
-	    dd gdt_start
+		.word gdt_end - gdt_start - 1
+		.long gdt_start
 
-	CODE_SEG equ gdt_code - gdt_start
-	DATA_SEG equ gdt_data - gdt_start
-	lgdt [gdt_descriptor]*/
-	gdtr: 
-		.word 0
-		.byte 0
-	
-	setGdt:
-		MOV   EAX, [esp + 4]
-		MOV   [gdtr + 2], EAX
-		MOV   AX, [ESP + 8]
-		MOV   [gdtr], AX
-		LGDT  [gdtr]
-		RET
-	call setGdt
-	reloadSegments:
-		JMP   0x08:reload_CS
-	reload_CS:
-		MOV   AX, 0x10
-		MOV   DS, AX
-		MOV   ES, AX
-		MOV   FS, AX
-		MOV   GS, AX
-		MOV   SS, AX
-		RET
+	#CODE_SEG gdt_code - gdt_start
+	#DATA_SEG gdt_data - gdt_start
+
+	lgdt [gdt_descriptor]
+	jmp $
 	/*
 	Enter the high-level kernel. The ABI requires the stack is 16-byte
 	aligned at the time of the call instruction (which afterwards pushes

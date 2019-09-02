@@ -1,5 +1,5 @@
 //0xEFFFFF
-//asm(".pushsection .text.start\r\njmp main\r\n.popsection\r\n");
+asm(".pushsection .text._start\r\njmp main\r\n.popsection\r\n");
 
 #include "../cpu/isr.h"
 #include "../drivers/screen.h"
