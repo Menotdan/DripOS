@@ -10,16 +10,18 @@ GDB = gdb
 CFLAGS = -g #-m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra
 
 # First rule is run by default
-os-image.bin: boot/bootsect.bin kernel.bin
-	cat $^ > os-image.bin
+os-image.bin: boot.o kernel.bin
+	i686-elf-gcc -T arch/i386/linker.ld -o os-image.bin -ffreestanding -O2 -nostdlib boot.o ${OBJ} cpu/interrupt.o arch/i386/crti.o arch/i386/crtbegin.o arch/i386/crtend.o arch/i386/crtn.o -lgcc
+	grub-file --is-x86-multiboot os-image.bin
+	mkdir -p isodir/boot/grub
+	cp os-image.bin isodir/boot/os-image.bin
+	cp grub.cfg isodir/boot/grub/grub.cfg
+	grub-mkrescue -o DripOS.iso isodir
 
 # '--oformat binary' deletes all symbols as a collateral, so we don't need
 # to 'strip' them manually on this case
 kernel.bin: ${OBJ} cpu/interrupt.o
-	i686-elf-ld -melf_i386 -Tlinker.ld -nostdlib --nmagic -o kernel.elf ${OBJ} cpu/interrupt.o
-	objcopy -O binary kernel.elf $@
-	hexdump -v -e '1/4 "%08x"' -e '"\n"' kernel.bin | xxd -r -p > kernel.bin.rev
-
+	i686-elf-ld -melf_i386 -o kernel.elf ${OBJ} cpu/interrupt.o
 # Used for debugging purposes
 kernel.elf: boot/kernel_entry.o ${OBJ}
 	i686-elf-ld -o $@ -Ttext 0x1000 $^ 
@@ -28,7 +30,7 @@ run: os-image.bin
 	echo "------------NOTE----------------"
 	echo "Please select floppy drive as boot drive"
 	echo "------------NOTE----------------"
-	qemu-system-x86_64 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -fda boot/bootsect.bin -hdb dripdisk.img -hda kernel.bin
+	qemu-system-x86_64 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hdb dripdisk.img
 
 myos.iso: os-image.bin
 	dd if=/dev/zero of=floppy.img bs=1024 count=1440
@@ -46,10 +48,10 @@ debug: os-image.bin
 # Generic rules for wildcards
 # To make an object, always compile from its .c $< $@
 %.o: %.c ${HEADERS}
-	i686-elf-gcc -g -m32 -c -ffreestanding -o $@ $< -lgcc
+	i686-elf-gcc -O2 -g -MD -c $< -o $@ -std=gnu11
 
-%.o: %.asm
-	nasm -g -f elf32 -F dwarf -o $@ $<
+boot.o: boot.s
+	i686-elf-gcc -O2 -g -MD -c $< -o $@
 
 %.bin: %.asm
 	nasm -g -f elf32 -F dwarf -o bootsect.o $<
