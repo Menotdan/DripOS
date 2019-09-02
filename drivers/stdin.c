@@ -1,7 +1,7 @@
 #include "../kernel/kernel.h"
 #include "keyboard.h"
 #include "../libc/string.h"
-#include <stdint.h>
+#include "../libc/stdint.h"
 #include <stdbool.h>
 #include "../drivers/screen.h"
 

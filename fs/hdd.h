@@ -1,5 +1,5 @@
 #pragma once
-#include <stdint.h>
+#include "../libc/stdint.h"
 uint16_t ata_buffer[256];
 uint16_t ata_drive;
 uint32_t ata_controler;

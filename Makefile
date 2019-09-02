@@ -11,7 +11,7 @@ CFLAGS = -g #-m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostart
 
 # First rule is run by default
 os-image.bin: boot.o kernel.bin
-	i686-elf-gcc -T arch/i386/linker.ld -o os-image.bin -ffreestanding -O2 -nostdlib boot.o ${OBJ} cpu/interrupt.o arch/i386/crti.o arch/i386/crtbegin.o arch/i386/crtend.o arch/i386/crtn.o -lgcc
+	i686-elf-gcc -T linker.ld -o os-image.bin -ffreestanding -O2 -nostdlib boot.o ${OBJ} cpu/interrupt.o -lgcc
 	grub-file --is-x86-multiboot os-image.bin
 	mkdir -p isodir/boot/grub
 	cp os-image.bin isodir/boot/os-image.bin
@@ -53,11 +53,14 @@ debug: os-image.bin
 boot.o: boot.s
 	i686-elf-gcc -O2 -g -MD -c $< -o $@
 
+cpu/interrupt.o:
+	nasm -f elf cpu/interrupt.asm
+
 %.bin: %.asm
 	nasm -g -f elf32 -F dwarf -o bootsect.o $<
 	ld -melf_i386 -Ttext=0x7c00 -nostdlib --nmagic -o bootsect.elf bootsect.o
 	objcopy -O binary bootsect.elf $@
 
 clean:
-	rm -rf *.bin *.dis *.o os-image.bin *.elf
+	rm -rf *.bin *.dis *.o os-image.bin *.elf *.iso
 	rm -rf kernel/*.o boot/*.bin drivers/*.o boot/*.o cpu/*.o libc/*.o

@@ -7,7 +7,7 @@
 #include "../kernel/kernel.h"
 #include "stdin.h"
 #include <stdbool.h>
-#include <stdint.h>
+#include "../libc/stdint.h"
 
 #define BACKSPACE 0x0E
 #define ENTER 0x1C

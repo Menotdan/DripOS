@@ -1,8 +1,5 @@
 //0xEFFFFF
-asm(".pushsection .text.start\r\n" \
-         "jmp main\r\n" \
-         ".popsection\r\n"
-         );
+//asm(".pushsection .text.start\r\njmp main\r\n.popsection\r\n");
 
 #include "../cpu/isr.h"
 #include "../drivers/screen.h"
@@ -29,19 +26,19 @@ void main() {
 	irq_install();
 	init_timer(1);
 	clear_screen();
-	//empty_sector();
-	//ata_pio28(ata_controler, 1, ata_drive, 0x1);
-	//prevtick = tick;
+	empty_sector();
+	ata_pio28(ata_controler, 1, ata_drive, 0x1);
+	prevtick = tick;
 	logoDraw();
-	//wait(100);
-	//clear_screen();
+	wait(100);
+	clear_screen();
 	kprint("DripOS 0.0012\n"); //Version
-	//check_crash();
+	check_crash();
     kprint("Type help for commands\nType shutdown to shutdown\n> ");
-	//stdin_init();
-	//backspace(key_buffer);
-	//play_sound(500, 100);
-	//play_sound(300, 100);
+	stdin_init();
+	backspace(key_buffer);
+	play_sound(500, 100);
+	play_sound(300, 100);
 }
 
 void user_input(char *input) {

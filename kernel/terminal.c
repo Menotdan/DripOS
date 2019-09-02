@@ -7,7 +7,7 @@
 #include "../fs/hdd.h"
 #include "../fs/hddw.h"
 #include "../libc/stdio.h"
-#include <stdint.h>
+#include "../libc/stdint.h"
 
 int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
