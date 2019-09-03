@@ -77,7 +77,6 @@ _start:
 	C++ features such as global constructors and exceptions will require
 	runtime support to work as well.
 	*/
-
 	lgdt [gdt_descriptor] /* Load the GDT */
 	/*
 	Enter the high-level kernel. The ABI requires the stack is 16-byte
@@ -87,6 +86,15 @@ _start:
 	stack since (pushed 0 bytes so far) and the alignment is thus
 	preserved and the call is well defined.
 	*/
+	mov CODE_SEG, cs
+	mov DATA_SEG, ds
+	mov DATA_SEG, ss
+	mov DATA_SEG, es
+	mov DATA_SEG, fs
+	mov DATA_SEG, gs
+
+	mov ebp, 0x90000
+	mov esp, ebp
 	call main
  
 	/*
@@ -123,7 +131,7 @@ gdt_start:
 	.long 0x0
 
 gdt_code: 
-	.word 65535
+	.word 0xffff
 	.word 0x0
 	.byte 0x0
 	.byte 0x9A /*10011010 in binary*/
@@ -143,5 +151,5 @@ gdt_descriptor:
 	.word gdt_end - gdt_start - 1
 	.long gdt_start
 
-#CODE_SEG gdt_code - gdt_start
-#DATA_SEG gdt_data - gdt_start
+CODE_SEG = gdt_code - gdt_start
+DATA_SEG = gdt_data - gdt_start
