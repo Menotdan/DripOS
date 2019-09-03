@@ -86,16 +86,17 @@ _start:
 	stack since (pushed 0 bytes so far) and the alignment is thus
 	preserved and the call is well defined.
 	*/
-	mov CODE_SEG, cs
 	mov DATA_SEG, ds
 	mov DATA_SEG, ss
 	mov DATA_SEG, es
 	mov DATA_SEG, fs
 	mov DATA_SEG, gs
+	jmp 0x08:.kernel_call
 
-	mov ebp, 0x90000
-	mov esp, ebp
-	call main
+	.kernel_call:
+		mov ebp, 0x90000
+		mov esp, ebp
+		call main
  
 	/*
 	If the system has nothing more to do, put the computer into an
