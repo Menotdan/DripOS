@@ -78,43 +78,7 @@ _start:
 	runtime support to work as well.
 	*/
 
-	/*
-	GDT from the old DripOS bootloader, which was from the original
-	project (The OS tutorial)
-	*/
-
-	gdt_start:
-
-		.long 0x0
-		.long 0x0
-	
-	gdt_code: 
-		.word 65535
-		.word 0x0
-		/*.byte 0x0
-		.byte 0x9A*/ /*10011010 in binary*/
-		/*.byte 0xCF*/ /*11001111 in binary*/
-		/*.byte 0x0*/
-	jmp $
-	gdt_data:
-		.word 0xffff
-		.word 0x0
-		.byte 0x0
-		.byte 0x92 /*10010010 in binary*/
-		.byte 0xCF /*11001111 in binary*/
-		.byte 0x0
-
-	gdt_end:
-
-	gdt_descriptor:
-		.word gdt_end - gdt_start - 1
-		.long gdt_start
-
-	#CODE_SEG gdt_code - gdt_start
-	#DATA_SEG gdt_data - gdt_start
-
-	lgdt [gdt_descriptor]
-	jmp $
+	lgdt [gdt_descriptor] /* Load the GDT */
 	/*
 	Enter the high-level kernel. The ABI requires the stack is 16-byte
 	aligned at the time of the call instruction (which afterwards pushes
@@ -146,3 +110,38 @@ Set the size of the _start symbol to the current location '.' minus its start.
 This is useful when debugging or when you implement call tracing.
 */
 .size _start, . - _start
+
+
+/*
+GDT from the old DripOS bootloader, which was from the original
+project (The OS tutorial)
+*/
+
+gdt_start:
+
+	.long 0x0
+	.long 0x0
+
+gdt_code: 
+	.word 65535
+	.word 0x0
+	.byte 0x0
+	.byte 0x9A /*10011010 in binary*/
+	.byte 0xCF /*11001111 in binary*/
+	.byte 0x0
+gdt_data:
+	.word 0xffff
+	.word 0x0
+	.byte 0x0
+	.byte 0x92 /*10010010 in binary*/
+	.byte 0xCF /*11001111 in binary*/
+	.byte 0x0
+
+gdt_end:
+
+gdt_descriptor:
+	.word gdt_end - gdt_start - 1
+	.long gdt_start
+
+#CODE_SEG gdt_code - gdt_start
+#DATA_SEG gdt_data - gdt_start
