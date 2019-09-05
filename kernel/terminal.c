@@ -5,20 +5,22 @@
 #include "../drivers/sound.h"
 #include "../drivers/time.h"
 #include "../fs/hdd.h"
+#include "../fs/hddw.h"
 #include "../libc/stdio.h"
-#include <stdint.h>
+#include "../libc/stdint.h"
 
 int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
 
 void execute_command(char *input) {
-    if (strcmp(input, "shutdown") == 0) {
-		prompttype = 1;
-    } else if (strcmp(input, "panic") == 0) {
+	kprint("\n");
+  if (strcmp(input, "shutdown") == 0) {
+		shutdown();
+  } else if (strcmp(input, "panic") == 0) {
 		panic();
-    } else if (strcmp(input, "nmem") == 0) {
+  } else if (strcmp(input, "nmem") == 0) {
         memory();
-    } else if (strcmp(input, "help") == 0) {
+  } else if (strcmp(input, "help") == 0) {
 		kprint("Commands: nmem, help, shutdown, panic, print, clear, bgtask, bgoff, time, read\n");
 	} else if (strcmp(input, "clear") == 0){
 		clear_screen();
@@ -74,6 +76,15 @@ void execute_command(char *input) {
 		kprint("Not enough args!");
 	} else if ((match(input, "read") + 1) == 4) {
 		read_disk(atoi(afterSpace(input)));
+		//kprint(atoi(afterSpace(input)));
+	} else if (match("copy", input) == -2) {
+		kprint("Not enough args!");
+	} else if ((match(input, "copy") + 1) == 4) {
+		copy_sector(0, atoi(afterSpace(input)));
+	} else if (match("clearS", input) == -2) {
+		kprint("Not enough args!");
+	} else if ((match(input, "clearS") + 1) == 6) {
+		clear_sector(atoi(afterSpace(input)));
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);
@@ -96,11 +107,11 @@ void read_disk(uint32_t sector) {
 	char str1[32];
 	char str2[32];
 	kprint ("\nSector ");
-	kprint_int(sectornum);
+	kprint_int(sector);
 	kprint(" contents:\n\n");
  
 	//! read sector from disk
-	ata_pio28(ata_controler, 1, ata_drive, sector);
+	read(sector);
 	for (int l = 0; l<256; l++) {
 		//hex_to_ascii(sector[l] & 0xff, str1);
 		//hex_to_ascii((sector[l] >> 8), str2);
@@ -108,8 +119,8 @@ void read_disk(uint32_t sector) {
 		//kprint(" ");
 		//kprint(str1);
 		//kprint(" ");
-		hex_to_ascii(ata_buffer[l], str1);
-		kprint(str1);
+		hex_to_ascii(readOut[l], str2);
+		kprint(str2);
 		kprint(" ");
 		for (int i = 0; i<32; i++) {
 			str1[i] = 0;

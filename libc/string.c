@@ -1,7 +1,7 @@
 #include "string.h"
 #include "../cpu/types.h"
 #include "../drivers/screen.h"
-#include <stdint.h>
+#include "../libc/stdint.h"
 
 /**
  * K&R implementation
@@ -91,6 +91,16 @@ void append(char s[], char n) {
 void backspace(char s[]) {
     int len = strlen(s);
     s[len-1] = '\0';
+}
+
+/* Fix for a random bug that I don't know how to fix but i will try */
+void fixer(char s[]) {
+    int len = strlen(s);
+    for (int i = 0; i < len; i++) {
+        if (s[i] != '\0') {
+            s[i] = s[i];
+        }
+    }
 }
 
 /* K&R 

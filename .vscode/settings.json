@@ -3,6 +3,7 @@
         "timer.h": "c",
         "screen.h": "c",
         "idt.h": "c",
-        "sound.h": "c"
+        "sound.h": "c",
+        "hddw.h": "c"
     }
 }

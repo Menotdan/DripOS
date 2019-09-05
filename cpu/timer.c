@@ -9,6 +9,7 @@
 #include "../drivers/sound.h"
 #include "soundManager.h"
 #include "../libc/string.h"
+#include "../kernel/systemManager.h"
 
 uint32_t tick = 0; //Ticks
 uint32_t prev = 0; //Previous ticks for (unusable after boot) wait() function
@@ -17,10 +18,11 @@ int task = 0; //is task on?
 int pSnd = 0; //ticks before sound started
 int tMil = 0; // How many million ticks
 char tMilStr[12];
+uint32_t okok = 0;
 
-static void timer_callback(registers_t regs) {
-	sys_state_manager();
+static void timer_callback(registers_t *regs) {
     tick++;
+    kprint("");
     for (int i = 0; i < 256; i++) {
         if (keytimeout[i] > 0) {
             keytimeout[i] -= 1;
@@ -70,10 +72,16 @@ void init_timer(uint32_t freq) {
 }
 
 void wait(uint32_t ticks) {
-	prev = tick;
-    //kprint("Waiting...\n");
+	//prev = tick;
+    //char *eghagh;
+    //int_to_ascii(ticks, eghagh);
+    //kprint(eghagh);
 	while(tick - prev < ticks) {
-		
+		//logoDraw();
+        //okok += 1;
+        //int_to_ascii(okok, eghagh);
+        //append(eghagh, "\n");
+        //kprint(eghagh);
+        manage_sys();
 	}
-    //kprint("Finished waiting\n");
 }

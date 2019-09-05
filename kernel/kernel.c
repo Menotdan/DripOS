@@ -1,4 +1,6 @@
-//0x1000
+//0xEFFFFF
+asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
+
 #include "../cpu/isr.h"
 #include "../drivers/screen.h"
 #include "../drivers/sound.h"
@@ -10,6 +12,7 @@
 #include "../drivers/stdin.h"
 #include "../libc/stdio.h"
 #include "../fs/hdd.h"
+#include "../fs/hddw.h"
 //codes
 int prevtick = 0;
 int login = 1;
@@ -18,21 +21,25 @@ int state = 0;
 int uinlen = 0;
 int prompttype = 0;
 int stdinpass = 0;
-void main() {
+void kmain() {
 	isr_install();
 	irq_install();
 	init_timer(1);
 	clear_screen();
-	//ata_pio28(ata_controler, 1, ata_drive, 0x1);
+	empty_sector();
+	ata_pio28(ata_controler, 1, ata_drive, 0x1);
 	prevtick = tick;
 	logoDraw();
 	wait(100);
 	clear_screen();
 	kprint("DripOS 0.0012\n"); //Version
-    kprint("Type help for commands\nType shutdown to shutdown\n> ");
+	check_crash();
+	kprint("Type help for commands\nType shutdown to shutdown\n> ");
 	stdin_init();
-	play_sound(500, 100);
-	play_sound(300, 100);
+	backspace(key_buffer);
+	//play_sound(500, 100);
+	//play_sound(300, 100);
+	after_load();
 }
 
 void user_input(char *input) {
@@ -75,4 +82,20 @@ void memory() {
         kprint(", physical address: ");
         kprint(phys_str);
         kprint("\n");
+}
+
+void check_crash() {
+	//0x7263
+	read(128);
+	if (readOut[0] == 0x7263) {
+		kprint("NOTICE: Last time your OS stopped, it was from a crash.\n");
+	}
+	writeIn[0] = 0x0000;
+	writeFromBuffer(128);
+}
+
+void after_load() {
+	while (1 == 1) {
+		manage_sys();
+	}
 }
