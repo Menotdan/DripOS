@@ -15,5 +15,6 @@ char *strcpy(char *dest, const char *src);
 const char* afterSpace(const char* input);
 void kprint_int(int num);
 char to_hex(uint8_t nibble);
+void fixer(char s[]);
 
 #endif

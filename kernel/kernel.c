@@ -1,5 +1,5 @@
 //0xEFFFFF
-asm(".pushsection .text._start\r\njmp main\r\n.popsection\r\n");
+asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 
 #include "../cpu/isr.h"
 #include "../drivers/screen.h"
@@ -21,7 +21,7 @@ int state = 0;
 int uinlen = 0;
 int prompttype = 0;
 int stdinpass = 0;
-void main() {
+void kmain() {
 	isr_install();
 	irq_install();
 	init_timer(1);
@@ -34,11 +34,12 @@ void main() {
 	clear_screen();
 	kprint("DripOS 0.0012\n"); //Version
 	check_crash();
-    kprint("Type help for commands\nType shutdown to shutdown\n> ");
+	kprint("Type help for commands\nType shutdown to shutdown\n> ");
 	stdin_init();
 	backspace(key_buffer);
-	play_sound(500, 100);
-	play_sound(300, 100);
+	//play_sound(500, 100);
+	//play_sound(300, 100);
+	after_load();
 }
 
 void user_input(char *input) {
@@ -91,4 +92,10 @@ void check_crash() {
 	}
 	writeIn[0] = 0x0000;
 	writeFromBuffer(128);
+}
+
+void after_load() {
+	while (1 == 1) {
+		manage_sys();
+	}
 }

@@ -93,6 +93,16 @@ void backspace(char s[]) {
     s[len-1] = '\0';
 }
 
+/* Fix for a random bug that I don't know how to fix but i will try */
+void fixer(char s[]) {
+    int len = strlen(s);
+    for (int i = 0; i < len; i++) {
+        if (s[i] != '\0') {
+            s[i] = s[i];
+        }
+    }
+}
+
 /* K&R 
  * Returns <0 if s1<s2, 0 if s1==s2, >0 if s1>s2 */
 int strcmp(char s1[], char s2[]) {

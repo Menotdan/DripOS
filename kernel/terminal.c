@@ -13,13 +13,14 @@ int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
 
 void execute_command(char *input) {
-    if (strcmp(input, "shutdown") == 0) {
+	kprint("\n");
+  if (strcmp(input, "shutdown") == 0) {
 		shutdown();
-    } else if (strcmp(input, "panic") == 0) {
+  } else if (strcmp(input, "panic") == 0) {
 		panic();
-    } else if (strcmp(input, "nmem") == 0) {
+  } else if (strcmp(input, "nmem") == 0) {
         memory();
-    } else if (strcmp(input, "help") == 0) {
+  } else if (strcmp(input, "help") == 0) {
 		kprint("Commands: nmem, help, shutdown, panic, print, clear, bgtask, bgoff, time, read\n");
 	} else if (strcmp(input, "clear") == 0){
 		clear_screen();
@@ -75,7 +76,7 @@ void execute_command(char *input) {
 		kprint("Not enough args!");
 	} else if ((match(input, "read") + 1) == 4) {
 		read_disk(atoi(afterSpace(input)));
-		kprint(atoi(afterSpace(input)));
+		//kprint(atoi(afterSpace(input)));
 	} else if (match("copy", input) == -2) {
 		kprint("Not enough args!");
 	} else if ((match(input, "copy") + 1) == 4) {
@@ -85,7 +86,7 @@ void execute_command(char *input) {
 	} else if ((match(input, "clearS") + 1) == 6) {
 		clear_sector(atoi(afterSpace(input)));
 	} else {
-		kprint("\nUnknown command: ");
+		kprint("Unknown command: ");
 		kprint(input);
 		p_tone(100, 5);
 	}

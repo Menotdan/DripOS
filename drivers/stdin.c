@@ -39,6 +39,10 @@ void key_handler(uint8_t scancode, bool keyup) {
             kprint_backspace();
             uinlen -= 1;
         }
+    } else if (strcmp(sc_name[scancode], "Spacebar") == 0 && keyup != true) {
+        append(key_buffer, sc_ascii[scancode]);
+        kprint(" ");
+        uinlen++;
     } else if (strcmp(sc_name[scancode], "ERROR") == 0 && keyup != true) {
     } else if (strcmp(sc_name[scancode], "Lctrl") == 0 && keyup != true) {
     } else if (strcmp(sc_name[scancode], "LAlt") == 0 && keyup != true) {
@@ -51,15 +55,12 @@ void key_handler(uint8_t scancode, bool keyup) {
     } else if (strcmp(sc_name[scancode], "RShift") == 0 && keyup == true) {
         shift = 0;
     } else if (strcmp(sc_name[scancode], "Enter") == 0 && keyup != true) {
+        //fixer(key_buffer);
         user_input(key_buffer);
         for (int i = 0; i < uinlen; i++) {
             backspace(key_buffer);
         }
         uinlen = 0;
-    } else if (strcmp(sc_name[scancode], "Spacebar") == 0 && keyup != true) {
-        append(key_buffer, " ");
-        kprint(" ");
-        uinlen++;
     } else {
         if (shift == 0) {
             if (!keyup) {

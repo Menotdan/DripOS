@@ -5,4 +5,4 @@ cpu/timer.o: cpu/timer.c cpu/timer.h cpu/types.h cpu/../libc/stdint.h \
  cpu/../drivers/../cpu/types.h cpu/sysState.h cpu/../drivers/keyboard.h \
  cpu/../drivers/stdin.h cpu/../drivers/sound.h \
  cpu/../drivers/../libc/stdint.h cpu/soundManager.h cpu/../libc/string.h \
- cpu/../libc/../libc/stdint.h
+ cpu/../libc/../libc/stdint.h cpu/../kernel/systemManager.h

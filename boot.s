@@ -6,8 +6,8 @@
 .set FLAGS,    ALIGN | MEMINFO  /* this is the Multiboot 'flag' field */
 .set MAGIC,    0x1BADB002       /* 'magic number' lets bootloader find the header */
 .set CHECKSUM, -(MAGIC + FLAGS) /* checksum of above, to prove we are multiboot */
-
-/* 
+ 
+/*
 Declare a multiboot header that marks the program as a kernel. These are magic
 values that are documented in the multiboot standard. The bootloader will
 search for this signature in the first 8 KiB of the kernel file, aligned at a
@@ -19,6 +19,41 @@ forced to be within the first 8 KiB of the kernel file.
 .long MAGIC
 .long FLAGS
 .long CHECKSUM
+ 
+.section .data
+/*
+GDT from the old DripOS bootloader, which was from the original
+project (The OS tutorial)
+*/
+ 
+gdt_start:
+ 
+        .long 0x0
+        .long 0x0
+ 
+gdt_code:
+        .word 0xffff
+        .word 0x0
+        .byte 0x0
+        .byte 0x9A /*10011010 in binary*/
+        .byte 0xCF /*11001111 in binary*/
+        .byte 0x0
+gdt_data:
+        .word 0xffff
+        .word 0x0
+        .byte 0x0
+        .byte 0x92 /*10010010 in binary*/
+        .byte 0xCF /*11001111 in binary*/
+        .byte 0x0
+ 
+gdt_end:
+ 
+gdt_descriptor:
+        .word gdt_end - gdt_start - 1
+        .long gdt_start
+ 
+CODE_SEG = gdt_code - gdt_start
+DATA_SEG = gdt_data - gdt_start
  
 /*
 The multiboot standard does not define the value of the stack pointer register
@@ -47,110 +82,76 @@ doesn't make sense to return from this function as the bootloader is gone.
 .global _start
 .type _start, @function
 _start:
-	/*
-	The bootloader has loaded us into 32-bit protected mode on a x86
-	machine. Interrupts are disabled. Paging is disabled. The processor
-	state is as defined in the multiboot standard. The kernel has full
-	control of the CPU. The kernel can only make use of hardware features
-	and any code it provides as part of itself. There's no printf
-	function, unless the kernel provides its own <stdio.h> header and a
-	printf implementation. There are no security restrictions, no
-	safeguards, no debugging mechanisms, only what the kernel provides
-	itself. It has absolute and complete power over the
-	machine.
-	*/
+        /*
+        The bootloader has loaded us into 32-bit protected mode on a x86
+        machine. Interrupts are disabled. Paging is disabled. The processor
+        state is as defined in the multiboot standard. The kernel has full
+        control of the CPU. The kernel can only make use of hardware features
+        and any code it provides as part of itself. There's no printf
+        function, unless the kernel provides its own <stdio.h> header and a
+        printf implementation. There are no security restrictions, no
+        safeguards, no debugging mechanisms, only what the kernel provides
+        itself. It has absolute and complete power over the
+        machine.
+        */
  
-	/*
-	To set up a stack, we set the esp register to point to the top of the
-	stack (as it grows downwards on x86 systems). This is necessarily done
-	in assembly as languages such as C cannot function without a stack.
-	*/
-	mov stack_top, esp
-
-	/*
-	This is a good place to initialize crucial processor state before the
-	high-level kernel is entered. It's best to minimize the early
-	environment where crucial features are offline. Note that the
-	processor is not fully initialized yet: Features such as floating
-	point instructions and instruction set extensions are not initialized
-	yet. The GDT should be loaded here. Paging should be enabled here.
-	C++ features such as global constructors and exceptions will require
-	runtime support to work as well.
-	*/
-	lgdt [gdt_descriptor] /* Load the GDT */
-	/*
-	Enter the high-level kernel. The ABI requires the stack is 16-byte
-	aligned at the time of the call instruction (which afterwards pushes
-	the return pointer of size 4 bytes). The stack was originally 16-byte
-	aligned above and we've since pushed a multiple of 16 bytes to the
-	stack since (pushed 0 bytes so far) and the alignment is thus
-	preserved and the call is well defined.
-	*/
-	mov DATA_SEG, ds
-	mov DATA_SEG, ss
-	mov DATA_SEG, es
-	mov DATA_SEG, fs
-	mov DATA_SEG, gs
-	jmp 0x08:.kernel_call
-
-	.kernel_call:
-		mov ebp, 0x90000
-		mov esp, ebp
-		call main
+        /*
+        To set up a stack, we set the esp register to point to the top of the
+        stack (as it grows downwards on x86 systems). This is necessarily done
+        in assembly as languages such as C cannot function without a stack.
+        */
+        mov stack_top, esp
  
-	/*
-	If the system has nothing more to do, put the computer into an
-	infinite loop. To do that:
-	1) Disable interrupts with cli (clear interrupt enable in eflags).
-	   They are already disabled by the bootloader, so this is not needed.
-	   Mind that you might later enable interrupts and return from
-	   kernel_main (which is sort of nonsensical to do).
-	2) Wait for the next interrupt to arrive with hlt (halt instruction).
-	   Since they are disabled, this will lock up the computer.
-	3) Jump to the hlt instruction if it ever wakes up due to a
-	   non-maskable interrupt occurring or due to system management mode.
-	*/
-	cli
-1:	hlt
-	jmp 1b
+        /*
+        This is a good place to initialize crucial processor state before the
+        high-level kernel is entered. It's best to minimize the early
+        environment where crucial features are offline. Note that the
+        processor is not fully initialized yet: Features such as floating
+        point instructions and instruction set extensions are not initialized
+        yet. The GDT should be loaded here. Paging should be enabled here.
+        C++ features such as global constructors and exceptions will require
+        runtime support to work as well.
+        */
+        lgdt [gdt_descriptor] /* Load the GDT */
+        /*
+        Enter the high-level kernel. The ABI requires the stack is 16-byte
+        aligned at the time of the call instruction (which afterwards pushes
+        the return pointer of size 4 bytes). The stack was originally 16-byte
+        aligned above and we've since pushed a multiple of 16 bytes to the
+        stack since (pushed 0 bytes so far) and the alignment is thus
+        preserved and the call is well defined.
+        */
+		/* Credit goes to Michael Petch on StackOverflow for helping correctly write this*/
+    mov ax, DATA_SEG
+        mov ds, ax
+        mov es, ax
+        mov fs, ax
+        mov gs, ax
+    jmp CODE_SEG:.next /* JMP to next instruction but set CS! */
+.next:
+ 
+        /*mov ebp, 0x90000
+        mov esp, ebp*/
+        call kmain
+ 
+        /*
+        If the system has nothing more to do, put the computer into an
+        infinite loop. To do that:
+        1) Disable interrupts with cli (clear interrupt enable in eflags).
+           They are already disabled by the bootloader, so this is not needed.
+           Mind that you might later enable interrupts and return from
+           kernel_main (which is sort of nonsensical to do).
+        2) Wait for the next interrupt to arrive with hlt (halt instruction).
+           Since they are disabled, this will lock up the computer.
+        3) Jump to the hlt instruction if it ever wakes up due to a
+           non-maskable interrupt occurring or due to system management mode.
+        */
+        cli
+1:      hlt
+        jmp 1b
  
 /*
 Set the size of the _start symbol to the current location '.' minus its start.
 This is useful when debugging or when you implement call tracing.
 */
 .size _start, . - _start
-
-
-/*
-GDT from the old DripOS bootloader, which was from the original
-project (The OS tutorial)
-*/
-
-gdt_start:
-
-	.long 0x0
-	.long 0x0
-
-gdt_code: 
-	.word 0xffff
-	.word 0x0
-	.byte 0x0
-	.byte 0x9A /*10011010 in binary*/
-	.byte 0xCF /*11001111 in binary*/
-	.byte 0x0
-gdt_data:
-	.word 0xffff
-	.word 0x0
-	.byte 0x0
-	.byte 0x92 /*10010010 in binary*/
-	.byte 0xCF /*11001111 in binary*/
-	.byte 0x0
-
-gdt_end:
-
-gdt_descriptor:
-	.word gdt_end - gdt_start - 1
-	.long gdt_start
-
-CODE_SEG = gdt_code - gdt_start
-DATA_SEG = gdt_data - gdt_start
