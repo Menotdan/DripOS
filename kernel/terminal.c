@@ -85,6 +85,27 @@ void execute_command(char *input) {
 		kprint("Not enough args!");
 	} else if ((match(input, "clearS") + 1) == 6) {
 		clear_sector(atoi(afterSpace(input)));
+	} else if (strcmp("drives", input) == 0) {
+		if (mp == 0) {
+			kprint("Primary IDE, Master Drive: Online\n");
+		} else {
+			kprint("Primary IDE, Master Drive: Offline\n");
+		}
+		if (ms == 0) {
+			kprint("Primary IDE, Slave Drive: Online\n");
+		} else {
+			kprint("Primary IDE, Slave Drive: Offline\n");
+		}
+		if (sp == 0) {
+			kprint("Secondary IDE, Master Drive: Online\n");
+		} else {
+			kprint("Secondary IDE, Master Drive: Offline\n");
+		}
+		if (ss == 0) {
+			kprint("Secondary IDE, Slave Drive: Online\n");
+		} else {
+			kprint("Secondary IDE, Slave Drive: Offline\n");
+		}
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);

@@ -26,6 +26,7 @@ void kmain() {
 	isr_install();
 	irq_install();
 	init_timer(1);
+	drive_scan();
 	clear_screen();
 	empty_sector();
 	ata_pio28(ata_controler, 1, ata_drive, 0x1);

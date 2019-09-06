@@ -34,3 +34,8 @@ enum PIO {
 
 void clear_ata_buffer();
 int ata_pio28(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr);
+void drive_scan();
+int mp;
+int sp;
+int ms;
+int ss;
