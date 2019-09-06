@@ -20,7 +20,7 @@ isr_common_stub:
 	pop eax
 
     ; 3. Restore state
-	pop ebx 
+	pop eax 
 	mov ds, ax
 	mov es, ax
 	mov fs, ax

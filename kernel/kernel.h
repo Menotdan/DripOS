@@ -11,5 +11,6 @@ void shutdown();
 void panic();
 void memory();
 int stdinpass;
+int loaded;
 
 #endif

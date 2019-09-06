@@ -6,6 +6,7 @@
 #include "timer.h"
 #include "ports.h"
 #include "../fs/hdd.h"
+#include "../kernel/kernel.h"
 
 isr_t interrupt_handlers[256];
 
@@ -123,6 +124,11 @@ void isr_handler(registers_t *r) {
     int_to_ascii(r->int_no, s);
     kprint(s);
     kprint("\n");
+    kprint("error code: ");
+    char e[3];
+    int_to_ascii(r->err_code, s);
+    kprint(s);
+    kprint("\n");
     kprint(exception_messages[r->int_no]);
     kprint("\n");
 }
@@ -143,7 +149,9 @@ void irq_handler(registers_t *r) {
         handler(r);
     } 
     else {
-        kprint("Error! Unhandled interrupt!");
+        if (loaded == 1) {
+            kprint("Error! Unhandled interrupt!");
+        }
     }
 }
 

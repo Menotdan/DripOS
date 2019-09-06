@@ -21,6 +21,7 @@ int state = 0;
 int uinlen = 0;
 int prompttype = 0;
 int stdinpass = 0;
+int loaded = 0;
 void kmain() {
 	isr_install();
 	irq_install();
@@ -32,13 +33,14 @@ void kmain() {
 	logoDraw();
 	wait(100);
 	clear_screen();
-	kprint("DripOS 0.0012\n"); //Version
+	kprint("DripOS 0.0020\n"); //Version
 	check_crash();
 	kprint("Type help for commands\nType shutdown to shutdown\n> ");
 	stdin_init();
 	backspace(key_buffer);
 	//play_sound(500, 100);
 	//play_sound(300, 100);
+	loaded = 1;
 	after_load();
 }
 

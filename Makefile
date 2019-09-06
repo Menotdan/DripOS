@@ -19,7 +19,7 @@ myos.iso: kernel.elf
 	mkdir -p isodir/boot/grub
 	cp kernel.elf isodir/boot/os-image.bin
 	cp grub.cfg isodir/boot/grub/grub.cfg
-	grub-mkrescue -o myos.iso isodir
+	grub-mkrescue -o DripOS.iso isodir
  
 # '--oformat binary' deletes all symbols as a collateral, so we don't need
 # to 'strip' them manually on this case
@@ -31,13 +31,13 @@ kernel.elf: ${OBJ}
 	i686-elf-ld -melf_i386 -o $@ -T linker.ld $^
  
 run: myos.iso
-	qemu-system-x86_64 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom myos.iso
+	qemu-system-x86_64 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
  
 iso: myos.iso
 	cp myos.iso doneiso/
 # Open the connection to qemu and load our kernel-object file with symbols
 debug: myos.iso
-	qemu-system-x86_64 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom myos.iso &
+	qemu-system-x86_64 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom DripOS.iso -hda dripdisk.img &
 	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf"
  
 # Generic rules for wildcards
