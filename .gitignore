@@ -1,3 +1,7 @@
 **/*.o
 **/*.bin
 **/*.rev
+.vscode/*
+*.iso
+**/*.iso
+*.rev
