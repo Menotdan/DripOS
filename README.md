@@ -7,6 +7,15 @@ NOTE: This is based off of this tutorial: https://github.com/cfenollosa/os-tutor
 
 ## Usage:
 
+## Booting on real hardware:
+Note: I am not responsible for any damage to your system, although I don't expect any, as I test DripOS on real hardware quite a bit
+### Step One:
+Write DripOS.iso to a USB drive. On Linux, this is ```sudo dd if=DripOS.iso of=/dev/yourdrivehere```
+Make sure to select the correct drive, otherwise you may overwrite your main boot drive with DripOS code.
+### Step Two:
+Reboot your computer and enter the BIOS, then select the USB drive as the boot device.
+You can enter the BIOS on many systems by pressing DEL a bunch of times during startup.
+
 ## Linux:
 
 Install qemu for your distro
