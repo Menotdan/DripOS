@@ -24,7 +24,7 @@ static int prevcode = 0;
 static int times;
 static bool send = true;
 
-static void keyboard_callback(registers_t regs) {
+static void keyboard_callback(registers_t *regs) {
     /* The PIC leaves us the scancode in port 0x60 */
     uint8_t scancode = port_byte_in(0x60);
 	
