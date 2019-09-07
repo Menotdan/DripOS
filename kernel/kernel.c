@@ -25,49 +25,62 @@ int stdinpass = 0;
 int loaded = 0;
 uint32_t lowerMemSize;
 uint32_t upperMemSize;
-struct multiboot_mmap_entry_t* mmap;
+uint32_t largestUseableMem = 0;
+uint32_t memAddr = 0;
+multiboot_memory_map_t* mmap;
 void kmain(multiboot_info_t* mbd) {
+	char *key_buffer;
 	if (mbd->flags & MULTIBOOT_INFO_MEMORY)
     {
-		//char temp[25];
-		//int_to_ascii((uint32_t)mbd->mem_lower, temp);
 		lowerMemSize = (uint32_t)mbd->mem_lower;
-		//kprint("mem_lower = ");
-		//kprint(temp);
-		//kprint("KB, ");
-		//int_to_ascii((uint32_t)mbd->mem_upper, temp);
 		upperMemSize = (uint32_t)mbd->mem_upper;
-		//kprint("mem_upper = ");
-		//kprint(temp);
-		//kprint("KB\n");
     }
 
-    // if (mbd->flags & MULTIBOOT_INFO_MEM_MAP)
-    // {
-    //     vga_printf("mmap_addr = 0x%x, mmap_length = 0x%x\n",
-    //             (uint32_t)mbd->mmap_addr, (uint32_t)mbd->mmap_length);
-
-    //     for (mmap = (struct multiboot_mmap_entry*)mbd->mmap_addr;
-    //             (uint32_t)mmap < (mbd->mmap_addr + mbd->mmap_length);
-    //             mmap = (struct multiboot_mmap_entry*)((uint32_t)mmap
-    //                 + mmap->size + sizeof(mmap->size)))
-    //     {
-    //         vga_printf("base_addr_high = 0x%x, base_addr_low = 0x%x, "
-    //                 "length_high = 0x%x, length_low = 0x%x, type = 0x%x\n",
-    //                 mmap->addr >> 32,
-    //                 mmap->addr & 0xFFFFFFFF,
-    //                 mmap->len >> 32,
-    //                 mmap->len & 0xFFFFFFFF,
-    //                 (uint32_t)mmap->type);
-    //     }
-    // }
+    if (mbd->flags & MULTIBOOT_INFO_MEM_MAP)
+    {
+        for (mmap = (struct multiboot_mmap_entry*)mbd->mmap_addr; (uint32_t)mmap < (mbd->mmap_addr + mbd->mmap_length); mmap = (struct multiboot_mmap_entry*)((uint32_t)mmap + mmap->size + sizeof(mmap->size)))
+        {
+			uint32_t addrH = mmap->addr_high;
+            uint32_t addrL = mmap->addr_low;
+            uint32_t lenH = mmap->len_high;
+            uint32_t lenL = mmap->len_low;
+			uint8_t mType = mmap->type;
+			char temp[26];
+			int_to_ascii(addrH, temp);
+			kprint("ADDR_HIGH: ");
+			kprint(temp);
+			int_to_ascii(addrL, temp);
+			kprint(", ADDR_LOW: ");
+			kprint(temp);
+			kprint("\n");
+			int_to_ascii(lenH, temp);
+			kprint("LEN_HIGH: ");
+			kprint(temp);
+			int_to_ascii(lenL, temp);
+			kprint(", LEN_LOW: ");
+			kprint(temp);
+			int_to_ascii(mType, temp);
+			kprint(", MEM_TYPE: ");
+			kprint(temp);
+			kprint("\n");
+			if (mType == 1) {
+				if (lenL > largestUseableMem) {
+					largestUseableMem = lenL;
+					memAddr = addrL;
+				}
+			}
+        }
+		set_addr(memAddr, largestUseableMem);
+		uint32_t f = 0;
+		*key_buffer = kmalloc(0x2000, 1, &f);
+    }
 
 
 	isr_install();
 	irq_install();
 	init_timer(1);
 	drive_scan();
-	//wait(400);
+	wait(1000);
 	clear_screen();
 	empty_sector();
 	ata_pio28(ata_controler, 1, ata_drive, 0x1);
@@ -85,7 +98,7 @@ void kmain(multiboot_info_t* mbd) {
 	kprint("KB\n");
 	kprint("drip@DripOS> ");
 	stdin_init();
-	backspace(key_buffer);
+	backspace(*key_buffer);
 	//play_sound(500, 100);
 	//play_sound(300, 100);
 	loaded = 1;

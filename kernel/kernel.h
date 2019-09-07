@@ -12,5 +12,6 @@ void panic();
 void memory();
 int stdinpass;
 int loaded;
+char key_buffer;
 
 #endif

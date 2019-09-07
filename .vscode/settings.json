@@ -5,6 +5,8 @@
         "idt.h": "c",
         "sound.h": "c",
         "hddw.h": "c",
-        "multiboot.h": "c"
+        "multiboot.h": "c",
+        "stdio.h": "c",
+        "kernel.h": "c"
     }
 }

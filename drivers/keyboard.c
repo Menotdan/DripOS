@@ -23,6 +23,7 @@
 static int prevcode = 0;
 static int times;
 static bool send = true;
+static uint32_t pAddr;
 
 static void keyboard_callback(registers_t *regs) {
     /* The PIC leaves us the scancode in port 0x60 */
@@ -41,5 +42,5 @@ static void keyboard_callback(registers_t *regs) {
 }
 
 void init_keyboard() {
-   register_interrupt_handler(IRQ1, keyboard_callback); 
+	register_interrupt_handler(IRQ1, keyboard_callback);
 }

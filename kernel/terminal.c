@@ -8,20 +8,32 @@
 #include "../fs/hddw.h"
 #include "../libc/stdio.h"
 #include <stdint.h>
+#include "../libc/mem.h"
 
 int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
 
 void execute_command(char *input) {
 	kprint("\n");
+  char *testy;
   if (strcmp(input, "shutdown") == 0) {
 		shutdown();
   } else if (strcmp(input, "panic") == 0) {
 		panic();
-  } else if (strcmp(input, "nmem") == 0) {
-        memory();
+  } else if (strcmp(input, "fmem") == 0) {
+        free(testy, 0x1000);
+  } else if (strcmp(input, "free") == 0) {
+        char temp[25];
+		int_to_ascii(memoryRemaining, temp);
+		kprint("Memory available: ");
+		kprint(temp);
+		kprint(" bytes\n");
+		int_to_ascii(usedMem, temp);
+		kprint("Memory used: ");
+		kprint(temp);
+		kprint(" bytes");
   } else if (strcmp(input, "help") == 0) {
-		kprint("Commands: nmem, help, shutdown, panic, print, clear, bgtask, bgoff, time, read, drives\n");
+		kprint("Commands: fmem, help, shutdown, panic, print, clear, bgtask, bgoff, time, read, drives, select, testMem, free\n");
 	} else if (strcmp(input, "clear") == 0){
 		clear_screen();
 	} else if (match("print", input) == -2) {
@@ -43,9 +55,15 @@ void execute_command(char *input) {
 		task = 0;
 	} else if (strcmp(input, "testMem") == 0) {
 		uint32_t pAddr;
-		char *testy = kmalloc(0x1000, 1, &pAddr);
+		*testy = kmalloc(0x1000, 1, &pAddr);
 		strcpy(testy, "ok this is a test\0");
 		kprint(testy);
+		char temp[25];
+		int_to_ascii(memoryRemaining, temp);
+		kprint("\nMemory Remaining: ");
+		kprint(temp);
+		kprint(" bytes");
+		free(testy, 0x1000);
 	} else if (strcmp(input, "time") == 0) {
 		read_rtc();
 		kprint_int(year);

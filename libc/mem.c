@@ -13,10 +13,18 @@ void memory_set(uint8_t *dest, uint8_t val, uint32_t len) {
     for ( ; len != 0; len--) *temp++ = val;
 }
 
-/* This should be computed at link time, but a hardcoded
- * value is fine for now. Remember that our kernel starts
- * at 0x1000 as defined on the Makefile */
-uint32_t free_mem_addr = 0xf10000;
+
+
+/* This should be computed at link time (NO) 
+ * This is calculated by memory map parsing.
+ */
+uint32_t free_mem_addr = 0;
+uint32_t memoryRemaining = 0;
+uint32_t usedMem = 0;
+void set_addr(uint32_t addr, uint32_t memSize) {
+    free_mem_addr = addr;
+    memoryRemaining = memSize;
+}
 /* Implementation is just a pointer to some free memory which
  * keeps growing */
 uint32_t kmalloc(uint32_t size, int align, uint32_t *phys_addr) {
@@ -30,9 +38,14 @@ uint32_t kmalloc(uint32_t size, int align, uint32_t *phys_addr) {
 
     uint32_t ret = free_mem_addr;
     free_mem_addr += size; /* Remember to increment the pointer */
+    memoryRemaining -= size;
+    usedMem += size;
     return ret;
 }
 
-//void free() {
-//
-//}
+void free(uint32_t address, uint32_t size) {
+    memory_set(address, 0, size);
+    memoryRemaining += size;
+    usedMem -= size;
+    free_mem_addr -= size;
+}

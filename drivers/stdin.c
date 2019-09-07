@@ -4,13 +4,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "../drivers/screen.h"
+#include "../libc/mem.h"
 
 #define LSHIFT 0x2A
 #define RSHIFT 0x36
 #define KEY_DEL 2
-
-static char *key_buffer;
-
 const char *sc_name[] = { "ERROR", "Esc", "1", "2", "3", "4", "5", "6", 
     "7", "8", "9", "0", "-", "=", "Backspace", "Tab", "Q", "W", "E", 
         "R", "T", "Y", "U", "I", "O", "P", "[", "]", "Enter", "Lctrl", 
