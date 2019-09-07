@@ -1,6 +1,7 @@
 //0xEFFFFF
 asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 
+#include "../multiboot.h"
 #include "../cpu/isr.h"
 #include "../drivers/screen.h"
 #include "../drivers/sound.h"
@@ -22,11 +23,51 @@ int uinlen = 0;
 int prompttype = 0;
 int stdinpass = 0;
 int loaded = 0;
-void kmain() {
+uint32_t lowerMemSize;
+uint32_t upperMemSize;
+struct multiboot_mmap_entry_t* mmap;
+void kmain(multiboot_info_t* mbd) {
+	if (mbd->flags & MULTIBOOT_INFO_MEMORY)
+    {
+		//char temp[25];
+		//int_to_ascii((uint32_t)mbd->mem_lower, temp);
+		lowerMemSize = (uint32_t)mbd->mem_lower;
+		//kprint("mem_lower = ");
+		//kprint(temp);
+		//kprint("KB, ");
+		//int_to_ascii((uint32_t)mbd->mem_upper, temp);
+		upperMemSize = (uint32_t)mbd->mem_upper;
+		//kprint("mem_upper = ");
+		//kprint(temp);
+		//kprint("KB\n");
+    }
+
+    // if (mbd->flags & MULTIBOOT_INFO_MEM_MAP)
+    // {
+    //     vga_printf("mmap_addr = 0x%x, mmap_length = 0x%x\n",
+    //             (uint32_t)mbd->mmap_addr, (uint32_t)mbd->mmap_length);
+
+    //     for (mmap = (struct multiboot_mmap_entry*)mbd->mmap_addr;
+    //             (uint32_t)mmap < (mbd->mmap_addr + mbd->mmap_length);
+    //             mmap = (struct multiboot_mmap_entry*)((uint32_t)mmap
+    //                 + mmap->size + sizeof(mmap->size)))
+    //     {
+    //         vga_printf("base_addr_high = 0x%x, base_addr_low = 0x%x, "
+    //                 "length_high = 0x%x, length_low = 0x%x, type = 0x%x\n",
+    //                 mmap->addr >> 32,
+    //                 mmap->addr & 0xFFFFFFFF,
+    //                 mmap->len >> 32,
+    //                 mmap->len & 0xFFFFFFFF,
+    //                 (uint32_t)mmap->type);
+    //     }
+    // }
+
+
 	isr_install();
 	irq_install();
 	init_timer(1);
 	drive_scan();
+	//wait(400);
 	clear_screen();
 	empty_sector();
 	ata_pio28(ata_controler, 1, ata_drive, 0x1);
@@ -36,7 +77,13 @@ void kmain() {
 	clear_screen();
 	kprint("DripOS 0.0020\n"); //Version
 	check_crash();
-	kprint("Type help for commands\nType shutdown to shutdown\n> ");
+	kprint("Type help for commands\nType shutdown to shutdown\n\n");
+	kprint("Memory available: ");
+	char test[25];
+	int_to_ascii(upperMemSize, test);
+	kprint(test);
+	kprint("KB\n");
+	kprint("drip@DripOS> ");
 	stdin_init();
 	backspace(key_buffer);
 	//play_sound(500, 100);

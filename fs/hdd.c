@@ -1,5 +1,5 @@
 #include "hdd.h"
-#include "../libc/stdint.h"
+#include <stdint.h>
 #include <stddef.h>
 #include "../cpu/ports.h"
 #include "../drivers/screen.h"

@@ -1,7 +1,7 @@
 #ifndef SOUND_H
 #define SOUND_H
 
-#include  "../libc/stdint.h"
+#include  <stdint.h>
 //#include "../cpu/types.h"
 
 void play_sound(uint32_t nFrequence, uint32_t ticks);

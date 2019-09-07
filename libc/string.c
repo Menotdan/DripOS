@@ -1,7 +1,7 @@
 #include "string.h"
 #include "../cpu/types.h"
 #include "../drivers/screen.h"
-#include "../libc/stdint.h"
+#include <stdint.h>
 
 /**
  * K&R implementation

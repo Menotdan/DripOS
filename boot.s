@@ -129,7 +129,7 @@ _start:
         mov gs, ax
     jmp CODE_SEG:.next /* JMP to next instruction but set CS! */
 .next:
- 
+        push ebx
         /*mov ebp, 0x90000
         mov esp, ebp*/
         call kmain

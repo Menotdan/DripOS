@@ -8,11 +8,13 @@ S_SOURCES = $(wildcard kernel/*.s drivers/*.s cpu/*.s libc/*.s fs/*.s *.s)
 OBJ = ${C_SOURCES:.c=.o}  ${NASM_SOURCES:.asm=.o} ${S_SOURCES:.s=.o}
  
 # Change this if your cross-compiler is somewhere else
-CC = /usr/bin/i686-elf-gcc
+CC = ~/Desktop/Compiler/bin/i686-elf-gcc
+LINKER = ~/Desktop/Compiler/bin/i686-elf-ld
 GDB = gdb
+MEM = 1G # Memory for qemu
 # -g: Use debugging symbols in gcc
 CFLAGS = -g #-m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra
- 
+
 # First rule is run by default
 myos.iso: kernel.elf
 	grub-file --is-x86-multiboot kernel.elf
@@ -28,25 +30,25 @@ kernel.bin: kernel.elf
  
 # Used for debugging purposes
 kernel.elf: ${OBJ}
-	i686-elf-ld -melf_i386 -o $@ -T linker.ld $^
+	${LINKER} -melf_i386 -o $@ -T linker.ld $^
  
 run: myos.iso
-	qemu-system-x86_64 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+	qemu-system-x86_64 -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
  
 iso: myos.iso
 	cp myos.iso doneiso/
 # Open the connection to qemu and load our kernel-object file with symbols
 debug: myos.iso
-	qemu-system-x86_64 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom DripOS.iso -hda dripdisk.img &
+	qemu-system-x86_64 -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom DripOS.iso -hda dripdisk.img &
 	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf"
  
 # Generic rules for wildcards
 # To make an object, always compile from its .c $< $@
 %.o: %.c ${HEADERS}
-	i686-elf-gcc -O2 -g -MD -c $< -o $@ -std=gnu11
+	${CC} -O2 -g -MD -c $< -o $@ -std=gnu99 -ffreestanding
  
 %.o: %.s
-	i686-elf-gcc -O2 -g -MD -c $< -o $@
+	${CC} -O2 -g -MD -c $< -o $@
  
 %.o: %.asm
 	nasm -g -f elf32 -F dwarf -o $@ $<

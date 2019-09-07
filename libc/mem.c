@@ -1,5 +1,6 @@
 #include "mem.h"
 
+
 void memory_copy(uint8_t *source, uint8_t *dest, int nbytes) {
     int i;
     for (i = 0; i < nbytes; i++) {
@@ -15,7 +16,7 @@ void memory_set(uint8_t *dest, uint8_t val, uint32_t len) {
 /* This should be computed at link time, but a hardcoded
  * value is fine for now. Remember that our kernel starts
  * at 0x1000 as defined on the Makefile */
-uint32_t free_mem_addr = 0x10000;
+uint32_t free_mem_addr = 0xf10000;
 /* Implementation is just a pointer to some free memory which
  * keeps growing */
 uint32_t kmalloc(uint32_t size, int align, uint32_t *phys_addr) {
@@ -31,3 +32,7 @@ uint32_t kmalloc(uint32_t size, int align, uint32_t *phys_addr) {
     free_mem_addr += size; /* Remember to increment the pointer */
     return ret;
 }
+
+//void free() {
+//
+//}

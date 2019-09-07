@@ -1,6 +1,6 @@
 #include "soundManager.h"
 #include "../drivers/sound.h"
-#include "../libc/stdint.h"
+#include <stdint.h>
 
 bool sound_en = false;
 bool sound_dis = true;

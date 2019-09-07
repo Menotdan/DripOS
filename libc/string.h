@@ -1,6 +1,6 @@
 #ifndef STRINGS_H
 #define STRINGS_H
-#include "../libc/stdint.h"
+#include <stdint.h>
 void int_to_ascii(int n, char str[]);
 void itoa_s(int i,char* buf);
 void hex_to_ascii(int n, char str[]);

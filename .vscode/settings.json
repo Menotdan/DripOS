@@ -4,6 +4,7 @@
         "screen.h": "c",
         "idt.h": "c",
         "sound.h": "c",
-        "hddw.h": "c"
+        "hddw.h": "c",
+        "multiboot.h": "c"
     }
 }

@@ -1,5 +1,5 @@
 #pragma once
-#include "../libc/stdint.h"
+#include <stdint.h>
 uint16_t ata_buffer[256];
 uint16_t ata_drive;
 uint32_t ata_controler;
@@ -39,3 +39,4 @@ int mp;
 int sp;
 int ms;
 int ss;
+int nodrives;
