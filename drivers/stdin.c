@@ -31,6 +31,7 @@ int shift = 0;
 int first = 1;
 
 void key_handler(uint8_t scancode, bool keyup) {
+    //kprint(sc_name[scancode]);
     if (strcmp(sc_name[scancode], "Backspace") == 0 && keyup != true) {
         if (uinlen > 0) {
             backspace(key_buffer);
@@ -55,10 +56,10 @@ void key_handler(uint8_t scancode, bool keyup) {
     } else if (strcmp(sc_name[scancode], "Enter") == 0 && keyup != true) {
         //fixer(key_buffer);
         user_input(key_buffer);
-        for (int i = 0; i < uinlen; i++) {
-            backspace(key_buffer);
-        }
-        backspace(key_buffer);
+        //for (int i = 0; i < uinlen; i++) {
+        //    backspace(key_buffer);
+        //}
+        memory_set32(key_buffer, 0, 0x2000);
         uinlen = 0;
     } else {
         if (shift == 0) {

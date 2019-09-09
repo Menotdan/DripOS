@@ -78,9 +78,10 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 		set_addr(memAddr, largestUseableMem);
 		uint32_t f = 0;
 		
-		*key_buffer = (char *)kmalloc(0x2000);
+		key_buffer = (char *)kmalloc(0x2000);
 		kprint("\nKey buffer address: ");
-		kprint_uint(&key_buffer);
+		kprint_uint(key_buffer);
+		//memory_set(key_buffer, 0, 0x2000);
 		kprint("\n");
     }
 
@@ -90,7 +91,7 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	init_timer(1);
 	//new_scan();
 	drive_scan();
-	wait(1000);
+	//wait(1000);
 	clear_screen();
 	empty_sector();
 	//ata_pio28(ata_controler, 1, ata_drive, 0x1);
@@ -98,6 +99,10 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	logoDraw();
 	wait(100);
 	clear_screen();
+	stdin_init();
+	key_handler(28, false);
+	clear_screen();
+	key_handler(28, true);
 	kprint("DripOS 0.0020\n"); //Version
 	check_crash();
 	kprint("Type help for commands\nType shutdown to shutdown\n\n");
@@ -107,11 +112,10 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	kprint(test);
 	kprint(" bytes\n");
 	kprint("drip@DripOS> ");
-	stdin_init();
 	//user_input("testMem");
-	backspace(*key_buffer);
 	//play_sound(500, 100);
 	//play_sound(300, 100);
+	//clear_screen();
 	loaded = 1;
 	after_load();
 }

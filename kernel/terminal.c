@@ -56,7 +56,20 @@ void execute_command(char *input) {
 	} else if (strcmp(input, "testMem") == 0) {
 		uint32_t pAddr;
 		for (int c = 0; c < 10000; c++) {
-			*testy = (char *)kmalloc(0x1000);
+			testy = (char *)kmalloc(0x1000);
+			strcpy(testy, "ok this is a test\0");
+			kprint(testy);
+			char temp[25];
+			int_to_ascii(memoryRemaining, temp);
+			kprint("\nMemory Remaining: ");
+			kprint(temp);
+			kprint(" bytes\n");
+		}
+		free(testy, 0x1000);
+	} else if (strcmp(input, "testMemLess") == 0) {
+		uint32_t pAddr;
+		for (int c = 0; c < 1; c++) {
+			testy = (char *)kmalloc(0x1000);
 			strcpy(testy, "ok this is a test\0");
 			kprint(testy);
 			char temp[25];
