@@ -38,7 +38,7 @@ void key_handler(uint8_t scancode, bool keyup) {
             uinlen -= 1;
         }
     } else if (strcmp(sc_name[scancode], "Spacebar") == 0 && keyup != true) {
-        append(key_buffer, sc_ascii[scancode]);
+        appendp(key_buffer, sc_ascii[scancode]);
         kprint(" ");
         uinlen++;
     } else if (strcmp(sc_name[scancode], "ERROR") == 0 && keyup != true) {
@@ -58,12 +58,13 @@ void key_handler(uint8_t scancode, bool keyup) {
         for (int i = 0; i < uinlen; i++) {
             backspace(key_buffer);
         }
+        backspace(key_buffer);
         uinlen = 0;
     } else {
         if (shift == 0) {
             if (!keyup) {
                 if (scancode < SC_MAX){
-                    append(key_buffer, sc_ascii[scancode]);
+                    appendp(key_buffer, sc_ascii[scancode]);
                     char str[2] = {sc_ascii[scancode], '\0'};
                     kprint(str);
                     uinlen++;
@@ -72,7 +73,7 @@ void key_handler(uint8_t scancode, bool keyup) {
         } else if (shift == 1) {
             if (!keyup) {
                 if (scancode < SC_MAX){
-                    append(key_buffer, sc_ascii_uppercase[scancode]);
+                    appendp(key_buffer, sc_ascii_uppercase[scancode]);
                     char str[2] = {sc_ascii_uppercase[scancode], '\0'};
                     kprint(str);
                     uinlen++;

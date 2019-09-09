@@ -14,14 +14,14 @@ int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
 
 void execute_command(char *input) {
+	char *testy;
 	kprint("\n");
-  char *testy;
   if (strcmp(input, "shutdown") == 0) {
 		shutdown();
   } else if (strcmp(input, "panic") == 0) {
 		panic();
   } else if (strcmp(input, "fmem") == 0) {
-        free(testy, 0x1000);
+	  	free(*testy, 0x1000);
   } else if (strcmp(input, "free") == 0) {
         char temp[25];
 		int_to_ascii(memoryRemaining, temp);
@@ -33,7 +33,7 @@ void execute_command(char *input) {
 		kprint(temp);
 		kprint(" bytes");
   } else if (strcmp(input, "help") == 0) {
-		kprint("Commands: fmem, help, shutdown, panic, print, clear, bgtask, bgoff, time, read, drives, select, testMem, free\n");
+		kprint("Commands: scan, testDrive, fmem, help, shutdown, panic, print, clear, bgtask, bgoff, time, read, drives, select, testMem, free\n");
 	} else if (strcmp(input, "clear") == 0){
 		clear_screen();
 	} else if (match("print", input) == -2) {
@@ -55,14 +55,16 @@ void execute_command(char *input) {
 		task = 0;
 	} else if (strcmp(input, "testMem") == 0) {
 		uint32_t pAddr;
-		*testy = kmalloc(0x1000, 1, &pAddr);
-		strcpy(testy, "ok this is a test\0");
-		kprint(testy);
-		char temp[25];
-		int_to_ascii(memoryRemaining, temp);
-		kprint("\nMemory Remaining: ");
-		kprint(temp);
-		kprint(" bytes");
+		for (int c = 0; c < 10000; c++) {
+			*testy = (char *)kmalloc(0x1000);
+			strcpy(testy, "ok this is a test\0");
+			kprint(testy);
+			char temp[25];
+			int_to_ascii(memoryRemaining, temp);
+			kprint("\nMemory Remaining: ");
+			kprint(temp);
+			kprint(" bytes\n");
+		}
 		free(testy, 0x1000);
 	} else if (strcmp(input, "time") == 0) {
 		read_rtc();
@@ -95,6 +97,16 @@ void execute_command(char *input) {
 			kprint(":0");
 			kprint_int(second);
 		}
+	} else if (strcmp(input, "scan") == 0) {
+		drive_scan();
+	} else if (match("testDrive", input) == -2) {
+		kprint("Not enough args!");
+	} else if ((match(input, "testDrive") + 1) == 9) {
+		writeIn[0] = 0x1111;
+		writeFromBuffer(atoi(afterSpace(input)));
+		kprint("Writing 0x1111 to sector ");
+		kprint_int(atoi(afterSpace(input)));
+		kprint("\n");
 	} else if (match("read", input) == -2) {
 		kprint("Not enough args!");
 	} else if ((match(input, "read") + 1) == 4) {
@@ -109,6 +121,11 @@ void execute_command(char *input) {
 				ata_drive = MASTER_DRIVE;
 				ata_controler = PRIMARY_IDE;
 				nodrives = 0;
+			} else if (mp48 == 0) {
+				ata_drive = MASTER_DRIVE_PIO48;
+				ata_controler = PRIMARY_IDE;
+				ata_pio = 1;
+				nodrives = 0;
 			} else {
 				kprint("That drive is offline!\n");
 			}
@@ -116,6 +133,11 @@ void execute_command(char *input) {
 			if (ms == 0) {
 				ata_drive = SLAVE_DRIVE;
 				ata_controler = PRIMARY_IDE;
+				nodrives = 0;
+			} else if (ms48 == 0) {
+				ata_drive = SLAVE_DRIVE_PIO48;
+				ata_controler = PRIMARY_IDE;
+				ata_pio = 1;
 				nodrives = 0;
 			} else {
 				kprint("That drive is offline!\n");
@@ -125,6 +147,11 @@ void execute_command(char *input) {
 				ata_drive = MASTER_DRIVE;
 				ata_controler = SECONDARY_IDE;
 				nodrives = 0;
+			} else if (sp48 == 0) {
+				ata_drive = MASTER_DRIVE_PIO48;
+				ata_controler = SECONDARY_IDE;
+				ata_pio = 1;
+				nodrives = 0;
 			} else {
 				kprint("That drive is offline!\n");
 			}
@@ -132,6 +159,12 @@ void execute_command(char *input) {
 			if (ss == 0) {
 				ata_drive = SLAVE_DRIVE;
 				ata_controler = SECONDARY_IDE;
+				ata_pio = 0;
+				nodrives = 0;
+			} else if (ss48 == 0) {
+				ata_drive = SLAVE_DRIVE_PIO48;
+				ata_controler = SECONDARY_IDE;
+				ata_pio = 1;
 				nodrives = 0;
 			} else {
 				kprint("That drive is offline!\n");
@@ -149,22 +182,22 @@ void execute_command(char *input) {
 	} else if ((match(input, "clearS") + 1) == 6) {
 		clear_sector(atoi(afterSpace(input)));
 	} else if (strcmp("drives", input) == 0) {
-		if (mp == 0) {
+		if (mp == 0 || mp48 == 0) {
 			kprint("Primary IDE, Master Drive (Drive 1): Online\n");
 		} else {
 			kprint("Primary IDE, Master Drive (Drive 1): Offline\n");
 		}
-		if (ms == 0) {
+		if (ms == 0 || ms48 == 0) {
 			kprint("Primary IDE, Slave Drive (Drive 2): Online\n");
 		} else {
 			kprint("Primary IDE, Slave Drive (Drive 2): Offline\n");
 		}
-		if (sp == 0) {
+		if (sp == 0 || sp48 == 0) {
 			kprint("Secondary IDE, Master Drive (Drive 3): Online\n");
 		} else {
 			kprint("Secondary IDE, Master Drive (Drive 3): Offline\n");
 		}
-		if (ss == 0) {
+		if (ss == 0 || ss48 == 0) {
 			kprint("Secondary IDE, Slave Drive (Drive 4): Online\n");
 		} else {
 			kprint("Secondary IDE, Slave Drive (Drive 4): Offline\n");

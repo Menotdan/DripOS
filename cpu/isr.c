@@ -150,7 +150,7 @@ void irq_handler(registers_t *r) {
     } 
     else {
         if (loaded == 1) {
-            kprint("Error! Unhandled interrupt!");
+            kprint("");
         }
     }
 }
@@ -162,4 +162,5 @@ void irq_install() {
     //init_timer(50);
     /* IRQ1: keyboard */
     init_keyboard();
+    init_hdd();
 }

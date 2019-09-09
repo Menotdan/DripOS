@@ -129,6 +129,9 @@ _start:
         mov gs, ax
     jmp CODE_SEG:.next /* JMP to next instruction but set CS! */
 .next:
+        .att_syntax
+        push $test
+        .intel_syntax noprefix
         push ebx
         /*mov ebp, 0x90000
         mov esp, ebp*/
@@ -155,3 +158,4 @@ Set the size of the _start symbol to the current location '.' minus its start.
 This is useful when debugging or when you implement call tracing.
 */
 .size _start, . - _start
+test:

@@ -10,6 +10,7 @@ OBJ = ${C_SOURCES:.c=.o}  ${NASM_SOURCES:.asm=.o} ${S_SOURCES:.s=.o}
 # Change this if your cross-compiler is somewhere else
 CC = ~/Desktop/Compiler/bin/i686-elf-gcc
 LINKER = ~/Desktop/Compiler/bin/i686-elf-ld
+incPath = ~/DripOS/include
 GDB = gdb
 MEM = 1G # Memory for qemu
 # -g: Use debugging symbols in gcc
@@ -45,7 +46,7 @@ debug: myos.iso
 # Generic rules for wildcards
 # To make an object, always compile from its .c $< $@
 %.o: %.c ${HEADERS}
-	${CC} -O2 -g -MD -c $< -o $@ -std=gnu99 -ffreestanding
+	${CC} -Iinclude -O2 -g -MD -c $< -o $@ -std=gnu99 -ffreestanding
  
 %.o: %.s
 	${CC} -O2 -g -MD -c $< -o $@

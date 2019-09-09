@@ -13,7 +13,11 @@ void empty_sector() {
 }
 
 void read(uint32_t sector) {
-    ata_pio28(ata_controler, 1, ata_drive, sector); // Read disk into ata_buffer
+    if (ata_pio == 0) {
+        ata_pio28(ata_controler, 1, ata_drive, sector); // Read disk into ata_buffer
+    } else {
+        ata_pio48(ata_controler, 1, ata_drive, sector); // Read disk into ata_buffer
+    }
     for(int i = 0; i < 256; i++)
     {
         readOut[i] = ata_buffer[i];
@@ -32,7 +36,11 @@ void writeFromBuffer(uint32_t sector) {
     {
         ata_buffer[i] = writeIn[i];
     }
-    ata_pio28(ata_controler, 2, ata_drive, sector);
+    if (ata_pio == 0) {
+        ata_pio28(ata_controler, 2, ata_drive, sector);
+    } else {
+        ata_pio48(ata_controler, 2, ata_drive, sector);
+    }
     clear_ata_buffer();
     for(int i = 0; i < 256; i++)
     {

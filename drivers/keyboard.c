@@ -36,8 +36,11 @@ static void keyboard_callback(registers_t *regs) {
 		iskeyup = true;
 		scancode -= KEYUPOFFSET;
 	}
-
+	//kprint("\nKey Buffer before: ");
+	//kprint(key_buffer);
 	key_handler(scancode, iskeyup);
+	//kprint("\nKey Buffer after: ");
+	//kprint(key_buffer);
     UNUSED(regs);
 }
 

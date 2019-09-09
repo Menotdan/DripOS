@@ -8,7 +8,7 @@
  */
 void int_to_ascii(int n, char str[]) {
     int i, sign;
-    if ((sign = n) < 0) n = -n;
+    if ((sign = n) < 0) n = -n; // if number is less than 0, invert it
     i = 0;
     do {
         str[i++] = n % 10 + '0';
@@ -19,6 +19,19 @@ void int_to_ascii(int n, char str[]) {
 
     reverse(str);
 }
+
+void uint_to_ascii(unsigned int n, char str[]) {
+    int i;
+    i = 0;
+    do {
+        str[i++] = n % 10 + '0';
+    } while ((n /= 10) > 0);
+
+    str[i] = '\0';
+
+    reverse(str);
+}
+
 void itoa_s(int i,char* buf) {
    if (i < 0) {
       *buf++ = '-';
@@ -75,6 +88,12 @@ void kprint_int(int num) {
     kprint(toprint);
 }
 
+void kprint_uint(unsigned int num) {
+    char toprint[33];
+    uint_to_ascii(num, toprint);
+    kprint(toprint);
+}
+
 /* K&R */
 int strlen(char s[]) {
     int i = 0;
@@ -83,6 +102,12 @@ int strlen(char s[]) {
 }
 
 void append(char s[], char n) {
+    int len = strlen(s);
+    s[len] = n;
+    s[len+1] = '\0';
+}
+
+void appendp(char *s, char n) {
     int len = strlen(s);
     s[len] = n;
     s[len+1] = '\0';

@@ -1,6 +1,8 @@
 //0xEFFFFF
 asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 
+#include <stdio.h>
+#include <libc.h>
 #include "../multiboot.h"
 #include "../cpu/isr.h"
 #include "../drivers/screen.h"
@@ -10,10 +12,6 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include "../libc/mem.h"
 #include "../cpu/timer.h"
 #include "terminal.h"
-#include "../drivers/stdin.h"
-#include "../libc/stdio.h"
-#include "../fs/hdd.h"
-#include "../fs/hddw.h"
 //codes
 int prevtick = 0;
 int login = 1;
@@ -28,7 +26,7 @@ uint32_t upperMemSize;
 uint32_t largestUseableMem = 0;
 uint32_t memAddr = 0;
 multiboot_memory_map_t* mmap;
-void kmain(multiboot_info_t* mbd) {
+void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	char *key_buffer;
 	if (mbd->flags & MULTIBOOT_INFO_MEMORY)
     {
@@ -65,25 +63,37 @@ void kmain(multiboot_info_t* mbd) {
 			kprint("\n");
 			if (mType == 1) {
 				if (lenL > largestUseableMem) {
-					largestUseableMem = lenL;
-					memAddr = addrL;
+					largestUseableMem = abs(lenL - abs(endOfCode-addrL));
+					memAddr = abs(addrL + abs(endOfCode-addrL));
+					kprint("\n\nMemory base: ");
+					kprint_uint(abs(addrL + abs(endOfCode-addrL)));
+					kprint("\nMemory length: ");
+					kprint_uint(abs(lenL - abs(endOfCode-addrL)));
+					kprint("\nEnd of code: ");
+					kprint_uint(endOfCode);
+					kprint("\n");
 				}
 			}
         }
 		set_addr(memAddr, largestUseableMem);
 		uint32_t f = 0;
-		*key_buffer = kmalloc(0x2000, 1, &f);
+		
+		*key_buffer = (char *)kmalloc(0x2000);
+		kprint("\nKey buffer address: ");
+		kprint_uint(&key_buffer);
+		kprint("\n");
     }
 
 
 	isr_install();
 	irq_install();
 	init_timer(1);
+	//new_scan();
 	drive_scan();
 	wait(1000);
 	clear_screen();
 	empty_sector();
-	ata_pio28(ata_controler, 1, ata_drive, 0x1);
+	//ata_pio28(ata_controler, 1, ata_drive, 0x1);
 	prevtick = tick;
 	logoDraw();
 	wait(100);
@@ -93,11 +103,12 @@ void kmain(multiboot_info_t* mbd) {
 	kprint("Type help for commands\nType shutdown to shutdown\n\n");
 	kprint("Memory available: ");
 	char test[25];
-	int_to_ascii(upperMemSize, test);
+	int_to_ascii(memoryRemaining, test);
 	kprint(test);
-	kprint("KB\n");
+	kprint(" bytes\n");
 	kprint("drip@DripOS> ");
 	stdin_init();
+	//user_input("testMem");
 	backspace(*key_buffer);
 	//play_sound(500, 100);
 	//play_sound(300, 100);
@@ -135,7 +146,7 @@ int getstate() {
 void memory() {
 	/* Lesson 22: Code to test kmalloc, the rest is unchanged */
         uint32_t phys_addr;
-        uint32_t page = kmalloc(1000, 1, &phys_addr);
+        uint32_t page = kmalloc(0x1000);
         char page_str[16] = "";
         hex_to_ascii(page, page_str);
         char phys_str[16] = "";
