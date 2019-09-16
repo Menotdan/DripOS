@@ -3,6 +3,7 @@
 #include "../libc/string.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include <serial.h>
 #include "../drivers/screen.h"
 #include "../libc/mem.h"
 
@@ -59,7 +60,10 @@ void key_handler(uint8_t scancode, bool keyup) {
         //for (int i = 0; i < uinlen; i++) {
         //    backspace(key_buffer);
         //}
-        memory_set32(key_buffer, 0, 0x2000);
+        sprintd("Clearing keyboard buffer...");
+        memory_set(key_buffer, 0, 0x2000);
+        sprintd("Clean.");
+        sprintd(key_buffer);
         uinlen = 0;
     } else {
         if (shift == 0) {

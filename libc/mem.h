@@ -20,4 +20,13 @@ void free(void * address, uint32_t size);
 /* Get a pointer from an address */
 void *get_pointer(addr);
 
+typedef struct block_move_data
+{
+    uint32_t chain_next;
+    uint32_t next_block_size;
+    uint32_t usedBlock;
+    uint32_t usedBlockSize;
+}__attribute__((packed)) blockData_t;
+
+
 #endif

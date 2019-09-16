@@ -7,6 +7,8 @@
         "hddw.h": "c",
         "multiboot.h": "c",
         "stdio.h": "c",
-        "kernel.h": "c"
+        "kernel.h": "c",
+        "serial.h": "c",
+        "stdint.h": "c"
     }
 }

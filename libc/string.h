@@ -18,5 +18,8 @@ void kprint_int(int num);
 void kprint_uint(unsigned int num);
 char to_hex(uint8_t nibble);
 void fixer(char s[]);
+void sprint_int(int num);
+void sprint_uint(unsigned int num);
+char *mstrcpy(uint32_t dest, const char *src);
 
 #endif

@@ -2,6 +2,8 @@
 #include "../cpu/types.h"
 #include "../drivers/screen.h"
 #include <stdint.h>
+#include <serial.h>
+#include <libc.h>
 
 /**
  * K&R implementation
@@ -88,10 +90,22 @@ void kprint_int(int num) {
     kprint(toprint);
 }
 
+void sprint_int(int num) {
+    char toprint[33];
+    int_to_ascii(num, toprint);
+    sprint(toprint);
+}
+
 void kprint_uint(unsigned int num) {
     char toprint[33];
     uint_to_ascii(num, toprint);
     kprint(toprint);
+}
+
+void sprint_uint(unsigned int num) {
+    char toprint[33];
+    uint_to_ascii(num, toprint);
+    sprint(toprint);
 }
 
 /* K&R */
@@ -163,6 +177,22 @@ char *strcpy(char *dest, const char *src)
   dest[i]= '\0';
 
   return dest;
+}
+
+char *mstrcpy(uint32_t dest, const char *src)
+{
+  unsigned i;
+  char *current;
+  for (i=0; src[i] != '\0'; ++i) {
+    current = (char *)get_pointer(dest + i);
+    *current = src[i];
+  }
+
+  //Ensure trailing null byte is copied
+  current = (char *)get_pointer(dest + i);
+  *current = '\0';
+
+  return (char *)get_pointer(dest);
 }
 
 const char* afterSpace(const char* input) {

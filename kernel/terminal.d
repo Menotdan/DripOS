@@ -7,4 +7,5 @@ kernel/terminal.o: kernel/terminal.c kernel/kernel.h \
  kernel/../cpu/timer.h kernel/../cpu/types.h kernel/../drivers/sound.h \
  kernel/../drivers/time.h kernel/../fs/hdd.h kernel/../fs/hddw.h \
  kernel/../libc/stdio.h kernel/../libc/mem.h \
- kernel/../libc/../cpu/types.h
+ kernel/../libc/../cpu/types.h include/serial.h \
+ include/../drivers/serial.h

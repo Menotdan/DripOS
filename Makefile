@@ -32,15 +32,18 @@ kernel.bin: kernel.elf
 # Used for debugging purposes
 kernel.elf: ${OBJ}
 	${LINKER} -melf_i386 -o $@ -T linker.ld $^
- 
+
+lol: ${OBJ}
+	~/Desktop/Compiler/bin/i686-elf-ld -melf_i386 -o helllo -T linker.ld hello $^
+
 run: myos.iso
-	qemu-system-x86_64 -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+	qemu-system-x86_64 -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
  
 iso: myos.iso
 	cp myos.iso doneiso/
 # Open the connection to qemu and load our kernel-object file with symbols
 debug: myos.iso
-	qemu-system-x86_64 -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom DripOS.iso -hda dripdisk.img &
+	qemu-system-x86_64 -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom DripOS.iso -hda dripdisk.img &
 	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf"
  
 # Generic rules for wildcards
