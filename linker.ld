@@ -37,7 +37,8 @@ SECTIONS
 		*(COMMON)
 		*(.bss)
 	}
- 
+    
 	/* The compiler may produce other sections, by default it will put them in
 	   a segment with the same name. Simply add stuff here as needed. */
+	__kernel_end = .; /* Marker so that the memory allocater doesn't eat the OS alive */
 }

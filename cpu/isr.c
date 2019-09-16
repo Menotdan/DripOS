@@ -1,3 +1,5 @@
+#include <serial.h>
+#include <libc.h>
 #include "isr.h"
 #include "idt.h"
 #include "../drivers/screen.h"
@@ -140,19 +142,27 @@ void register_interrupt_handler(uint8_t n, isr_t handler) {
 void irq_handler(registers_t *r) {
     /* After every interrupt we need to send an EOI to the PICs
      * or they will not send another interrupt again */
-    if (r->int_no >= 40) port_byte_out(0xA0, 0x20); /* slave */
-    port_byte_out(0x20, 0x20); /* master */
-
+    
+    //sprint("Address: ");
+    //sprint_uint((uint32_t)r);
+    //sprint("\n");
     /* Handle the interrupt in a more modular way */
     if (interrupt_handlers[r->int_no] != 0) {
         isr_t handler = interrupt_handlers[r->int_no];
+        //uint32_t *test = kmalloc(0x1000);
+
         handler(r);
+
+        //free(test, 0x1000);
+        //sprint("Done handling\n");
     } 
     else {
         if (loaded == 1) {
             kprint("");
         }
     }
+    if (r->int_no >= 40) port_byte_out(0xA0, 0x20); /* slave */
+    port_byte_out(0x20, 0x20); /* master */
 }
 
 void irq_install() {

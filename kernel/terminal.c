@@ -59,7 +59,7 @@ void execute_command(char *input) {
 		uint32_t pAddr;
 		for (int c = 0; c < 10000; c++) {
 			testy = (char *)kmalloc(0x1000);
-			strcpy(testy, "ok this is a test\0");
+			//strcpy(testy, "ok this is a test\0");
 			sprint(*testy);
 			char temp[25];
 			int_to_ascii(memoryRemaining, temp);
@@ -70,12 +70,10 @@ void execute_command(char *input) {
 		free(testy, 0x1000);
 	} else if (strcmp(input, "testMemLess") == 0) {
 		uint32_t pAddr;
-		//testy = (char *)kmalloc(0x1000);
 		uint32_t *test1 = kmalloc(0x1000);
 		uint32_t *test2 = kmalloc(0x1000);
 		*test2 = 255;
 		*test1 = 256;
-		//memory_copy(test1, test2, 1);//ok this is a testok this is a testok this is a testok this is a testok this is a testok this is a testok this is a testok this is a testok this is a testok this is a testok this is a testok this is a testok this is a testok this is a test\n\0");
 		sprintd("Data test:");
 		sprint_uint(*test1);
 		sprint("\n");
@@ -88,57 +86,33 @@ void execute_command(char *input) {
 		sprint(" bytes\n");
 		free(test1, 0x1000);
 		free(test2, 0x1000);
-		sprintd("EXECUTION COMPLETE");
 	} else if (strcmp(input, "testMemBlocks") == 0) {
 		uint32_t pAddr;
 		for (int c = 0; c < 1; c++) {
 			sprintd("Allocating 4096 bytes...");
-			char *testy1 = (char *)kmalloc(0x1000);
+			uint32_t *testy1 = (uint32_t *)kmalloc(0x1000);
 			sprintd("Allocating 4096 bytes...");
-			char *testy2 = (char *)kmalloc(0x1000);
+			uint32_t *testy2 = (uint32_t *)kmalloc(0x1000);
 			sprintd("Moving data...");
-			strcpy(testy1, "ok this is a test\n\0");
+			*testy1 = 12345;
 			sprintd("Data:");
-			sprint(*testy1);
-			//sprint(testy1);
-			sprintd("Waiting...");
-			wait(100); // wait 1
-			sprintd("Memory data:");
-			sprint("\nMemory Remaining: ");
-			sprint_uint(memoryRemaining);
-			sprint(" bytes\n");
-			sprintd("Moving more data...");
-			strcpy(testy2, "ok this is a test\n\0");
+			sprint_uint(*testy1);
+			*testy2 = 123456;
 			sprintd("Data:");
-			sprint(*testy2);
-			sprintd("Waiting...");
-			wait(100); // wait 2
-			sprintd("Memory data:");
-			sprint("\nMemory Remaining: ");
-			sprint_uint(memoryRemaining);
-			sprint(" bytes\n");
-			sprintd("Waiting...");
-			wait(100); // wait 1
+			sprint_uint(*testy2);
 			sprintd("Freeing memory...");
 			free(testy1, 0x1000);
-			sprintd("Waiting...");
-			wait(100); // wait 1
 			sprintd("Allocating 4096 bytes...");
-			char *testy3 = (char *)kmalloc(0x1000);
+			uint32_t *testy3 = (uint32_t *)kmalloc(0x1000);
 			sprintd("Moving data...");
-			strcpy(testy3, "ok this is a test\n\0");
+			*testy3 = 1234567;
 			sprintd("Data:");
-			sprint(*testy3);
-			sprintd("Memory data:");
-			sprint("\nMemory Remaining: ");
-			sprint_uint(memoryRemaining);
-			sprint(" bytes\n\n");
+			sprint_uint(*testy3);
 			sprintd("Freeing memory...");
 			free(testy2, 0x1000);
 			sprintd("Freeing memory...");
 			free(testy3, 0x1000);
 		}
-		//free(testy, 0x1000);
 	} else if (strcmp(input, "time") == 0) {
 		read_rtc();
 		kprint_int(year);

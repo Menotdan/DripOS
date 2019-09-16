@@ -70,7 +70,8 @@ undefined behavior.
 .section .bss
 .align 16
 stack_bottom:
-.skip 16384 # 16 KiB
+.skip 32768 /* 32 KiB of kernel stack, stack for other processes will
+allocated when they are created */
 stack_top:
  
 /*
@@ -130,7 +131,7 @@ _start:
     jmp CODE_SEG:.next /* JMP to next instruction but set CS! */
 .next:
         .att_syntax
-        push $test
+        push $__kernel_end
         .intel_syntax noprefix
         push ebx
         /*mov ebp, 0x90000
@@ -158,4 +159,3 @@ Set the size of the _start symbol to the current location '.' minus its start.
 This is useful when debugging or when you implement call tracing.
 */
 .size _start, . - _start
-test:
