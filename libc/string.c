@@ -121,14 +121,34 @@ void append(char s[], char n) {
     s[len+1] = '\0';
 }
 
-void appendp(char *s, char n) {
+void appendp(char s[], char n, uint32_t position) {
     int len = strlen(s);
-    s[len] = n;
+    uint32_t i;
+    char z = n;
+    char tempf;
+    for (i = position; i < len + 1; i++)
+    {
+        tempf = s[i];
+        s[i] = z;
+        z = tempf;
+    }
     s[len+1] = '\0';
 }
 
 void backspace(char s[]) {
     int len = strlen(s);
+    s[len-1] = '\0';
+}
+
+void backspacep(char s[], uint32_t pos) {
+    int len = strlen(s);
+    char prev = "\0";
+    char tempE;
+    for (uint32_t x = len; x > pos-2; x--) {
+        tempE = s[x];
+        s[x] = prev;
+        prev = tempE;
+    }
     s[len-1] = '\0';
 }
 

@@ -14,8 +14,9 @@
 int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
 
-void execute_command(char *input) {
+void execute_command(char input[]) {
 	char *testy;
+	sprintd(input);
 	sprintd("Command recieved");
 	kprint("\n");
   if (strcmp(input, "shutdown") == 0) {
@@ -34,8 +35,79 @@ void execute_command(char *input) {
 		kprint("Memory used: ");
 		kprint(temp);
 		kprint(" bytes");
+  } else if (strcmp(input, "uptime") == 0) {
+	  	uint32_t tempTick = tick;
+	  	uint32_t uptimeSeconds = 0;//tempTick / 100;
+		while (tempTick >= 100)
+		{
+			tempTick -= 100;
+			uptimeSeconds += 1;
+		}
+		uint32_t uptimeMinutes = uptimeSeconds / 60;
+		uint32_t uptimeHours = uptimeMinutes / 60;
+		uint32_t uptimeDays = uptimeHours / 24;
+
+		//tempTick -= uptimeSeconds * 100;
+		uptimeSeconds += uptimeSeconds % 60;
+		uptimeSeconds -= uptimeMinutes * 60;
+		uptimeMinutes += uptimeMinutes % 60;
+		uptimeMinutes -= uptimeHours * 60;
+		uptimeHours += uptimeHours % 24;
+		uptimeHours -= uptimeDays * 24;
+		
+		uptimeSeconds /= 2;
+
+		while (uptimeSeconds >= 60)
+		{
+			uptimeSeconds -= 60;
+			uptimeMinutes += 1;
+		}
+		
+		uptimeMinutes /= 2;
+
+		while (uptimeMinutes >= 60)
+		{
+			uptimeMinutes -= 60;
+			uptimeHours += 1;
+		}
+
+		uptimeHours /= 2;
+
+		while (uptimeHours >= 24)
+		{
+			uptimeHours -= 24;
+			uptimeDays += 1;
+		}
+
+		uptimeDays /= 2;
+
+		kprint("Up ");
+		kprint_uint(uptimeDays);
+		if (uptimeDays == 1) {
+			kprint(" day, ");
+		} else {
+			kprint(" days, ");
+		}
+		kprint_uint(uptimeHours);
+		if (uptimeHours == 1) {
+			kprint(" hour, ");
+		} else {
+			kprint(" hours, ");
+		}
+		kprint_uint(uptimeMinutes);
+		if (uptimeMinutes == 1) {
+			kprint(" minute, ");
+		} else {
+			kprint(" minutes, ");
+		}
+		kprint_uint(uptimeSeconds);
+		if (uptimeSeconds == 1) {
+			kprint(" second");
+		} else {
+			kprint(" seconds");
+		}
   } else if (strcmp(input, "help") == 0) {
-		kprint("Commands: scan, testDrive, fmem, help, shutdown, panic, print, clear, bgtask, bgoff, time, read, drives, select, testMem, free\n");
+		kprint("Commands: uptime, scan, testDrive, fmem, help, shutdown, panic, print, clear, bgtask, bgoff, read, drives, select, testMem, free\n");
 	} else if (strcmp(input, "clear") == 0){
 		clear_screen();
 	} else if (match("print", input) == -2) {
@@ -72,8 +144,8 @@ void execute_command(char *input) {
 		uint32_t pAddr;
 		uint32_t *test1 = kmalloc(0x1000);
 		uint32_t *test2 = kmalloc(0x1000);
-		*test2 = 255;
-		*test1 = 256;
+		*test2 = 33;
+		*test1 = 33;
 		sprintd("Data test:");
 		sprint_uint(*test1);
 		sprint("\n");
@@ -94,10 +166,10 @@ void execute_command(char *input) {
 			sprintd("Allocating 4096 bytes...");
 			uint32_t *testy2 = (uint32_t *)kmalloc(0x1000);
 			sprintd("Moving data...");
-			*testy1 = 12345;
+			*testy1 = 33;
 			sprintd("Data:");
 			sprint_uint(*testy1);
-			*testy2 = 123456;
+			*testy2 = 33;
 			sprintd("Data:");
 			sprint_uint(*testy2);
 			sprintd("Freeing memory...");
@@ -105,7 +177,7 @@ void execute_command(char *input) {
 			sprintd("Allocating 4096 bytes...");
 			uint32_t *testy3 = (uint32_t *)kmalloc(0x1000);
 			sprintd("Moving data...");
-			*testy3 = 1234567;
+			*testy3 = 33;
 			sprintd("Data:");
 			sprint_uint(*testy3);
 			sprintd("Freeing memory...");
@@ -114,36 +186,37 @@ void execute_command(char *input) {
 			free(testy3, 0x1000);
 		}
 	} else if (strcmp(input, "time") == 0) {
-		read_rtc();
-		kprint_int(year);
-		kprint("/");
-		kprint_int(month);
-		kprint("/");
-		kprint_int(day);
-		if (hour - 5 < 0) {
-			kprint(" ");
-			kprint_int(24 + (hour - 5));
-		} else if(hour - 5 <= 10) {
-			kprint(" 0");
-			kprint_int(hour - 5);
-		} else {
-			kprint(" ");
-			kprint_int(hour - 5);
-		}
-		if (minute > 9) {
-			kprint(":");
-			kprint_int(minute);
-		} else {
-			kprint(":0");
-			kprint_int(minute);
-		}
-		if (second > 9) {
-			kprint(":");
-			kprint_int(second);
-		} else {
-			kprint(":0");
-			kprint_int(second);
-		}
+		// read_rtc();
+		// kprint_int(year);
+		// kprint("/");
+		// kprint_int(month);
+		// kprint("/");
+		// kprint_int(day);
+		// if (hour - 5 < 0) {
+		// 	kprint(" ");
+		// 	kprint_int(24 + (hour - 5));
+		// } else if(hour - 5 <= 10) {
+		// 	kprint(" 0");
+		// 	kprint_int(hour - 5);
+		// } else {
+		// 	kprint(" ");
+		// 	kprint_int(hour - 5);
+		// }
+		// if (minute > 9) {
+		// 	kprint(":");
+		// 	kprint_int(minute);
+		// } else {
+		// 	kprint(":0");
+		// 	kprint_int(minute);
+		// }
+		// if (second > 9) {
+		// 	kprint(":");
+		// 	kprint_int(second);
+		// } else {
+		// 	kprint(":0");
+		// 	kprint_int(second);
+		// }
+		kprint("Currently broken. Also you are a hacker for finding this command.");
 	} else if (strcmp(input, "scan") == 0) {
 		drive_scan();
 	} else if (match("testDrive", input) == -2) {

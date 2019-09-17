@@ -65,7 +65,6 @@ void set_addr(uint32_t addr, uint32_t memSize) {
 
 /* Recursive function to find the best fitting block of mem to use */
 void * bestFit(uint32_t size, uint32_t curFit, uint32_t curAddr, uint32_t curFitBlock) {
-    sprintd("Calling bestFit");
     uint32_t *nextFreeBlock = get_pointer(curAddr);
     uint32_t *freeSize = get_pointer(curAddr+4);
     uint32_t fit = curFit;
@@ -87,29 +86,20 @@ void * bestFit(uint32_t size, uint32_t curFit, uint32_t curAddr, uint32_t curFit
                     block = *nextFreeBlock;
                 }
             }
-            sprintd("Calling bestFit again.");
             return bestFit(s, fit, *nextFreeBlock, block);
         } else
         {
-            //kprint("Memory not valid...");
-            sprintd("Returning pointer to best address.");
             return get_pointer(curFitBlock);
         }
         
     } else
     {
-        sprintd("Returning from the end of the chain.");
         return get_pointer(curFitBlock);
     }
     
 }
 
 void block_move(blockData_t *d) {
-    // Current is the current free block to read from, equal to addr
-    // Size is the size of the current block
-    // pAddr is the address to pass to the next call
-    // pSize is the size to pass to the next call
-    sprintd("Calling block_move");
     uint32_t current = d->chain_next;
     uint32_t *current_ptr = get_pointer(current);
     uint32_t *current_ptr_offset = get_pointer(current+4);
@@ -148,16 +138,8 @@ uint32_t kmalloc_int(uint32_t size, int align) {
         free_mem_addr &= 0xFFFFF000;
         free_mem_addr += 0x1000;
     }
-    /* Save also the physical address */
-    //if (phys_addr) *phys_addr = free_mem_addr;
-    //uint32_t *address_ptr = get_pointer(free_mem_addr);
-    //memory_set32(get_pointer(free_mem_addr), 0, size);
-    sprint("\n\n\n\n\n\n");
     void * bFit = bestFit(size, MAX - free_mem_addr, free_mem_addr, free_mem_addr);
     uint32_t ret = bFit;
-    sprint("\n\nBest fitting mem as determined: ");
-    sprint_uint(ret);
-    sprint("\n");
     blockData_t *param;
     uint32_t *f1 = get_pointer(free_mem_addr);
     uint32_t *f2 = get_pointer(free_mem_addr+4);
@@ -165,20 +147,10 @@ uint32_t kmalloc_int(uint32_t size, int align) {
     param->next_block_size = f2;
     param->usedBlock = ret;
     param->usedBlockSize = size;
-    sprint("\n\n\n\n\n\n");
     block_move(param);
     if (ret == free_mem_addr) {
-        sprintd("okok");
-        sprint("\n");
-        sprint_uint(ret);
-        sprint("\n");
-        sprint_uint(free_mem_addr);
-        sprint("\n");
         free_mem_addr += size; /* Remember to increment the pointer */
     }
-    sprintd("Free mem addr:");
-    sprint_uint(free_mem_addr);
-    sprint("\n");
     memoryRemaining -= size;
     usedMem += size;
     return ret;
@@ -186,7 +158,6 @@ uint32_t kmalloc_int(uint32_t size, int align) {
 
 void * kmalloc(uint32_t size) {
     void * t = get_pointer(kmalloc_int(size, 0));
-    //kprint_uint(t);
     return t;
 }
 
@@ -201,10 +172,7 @@ void free(void * addr, uint32_t size) {
 
     if (address + size == free_mem_addr) {
         /* Add new block to the chain */
-        sprintd("Shrinking the memory pointer");
         memory_set(address, 0, size);
-        //*free_ptr = address;
-        //*free_ptr_offset = size;
         uint32_t lastAddr = *free_ptr;
         uint32_t lastSize = *free_ptr_offset;
         free_mem_addr -= size;
@@ -212,56 +180,15 @@ void free(void * addr, uint32_t size) {
         free_ptr_offset = get_pointer(free_mem_addr + 4);
         *free_ptr = lastAddr;
         *free_ptr_offset = lastSize;
-        sprint("\n\nTest address: ");
-        sprint_uint(*free_ptr);
-        sprint("\nTest size: ");
-        sprint_uint(*free_ptr_offset);
-        sprint("\n");
     } else {
-        sprintd("Not shrinking memory pointer");
         memory_set(address, 0, size);
         *addr_base = curAddr;
         *addr_size = curSize;
         *free_ptr = address;
         *free_ptr_offset = size;
     }
-    
 
-
-    sprint("Address param: ");
-    sprint_uint(address);
-    sprint("\nAddress of new free mem: ");
-    char free_mem_addr_tmp[20];
-    hex_to_ascii(*free_ptr, free_mem_addr_tmp);
-    sprint(free_mem_addr_tmp);
-    
-    //sprintd("Free memory address:");
-    //sprint_uint(free_mem_addr);
-    //sprint("\n");
-
-
-    sprint("\nAddress of new free mem, but not hex: ");
-    sprint_uint(*free_ptr);
-    sprint("\nCurrent free mem pointer: ");
-    sprint_uint(free_mem_addr);
-    sprint("\nSize: ");
-    sprint_uint(*free_ptr_offset);
-
-    sprint("\nSize pointer: ");
-    sprint_uint(free_ptr_offset);
-    sprint("\nAddress pointer: ");
-    sprint_uint(free_ptr);
-    
-    sprintd("\nFree memory address:");
-    sprint_uint(free_mem_addr);
-    sprint("\n");
-
-
-    sprint("\nSize, but from the param: ");
-    sprint_uint(size);
-    sprint("\n");
     memoryRemaining += size;
     usedMem -= size;
 
-    sprint("\n\n\n");
 }

@@ -18,7 +18,8 @@ int prevtick = 0;
 int login = 1;
 int passin = 0;
 int state = 0;
-int uinlen = 0;
+uint32_t uinlen = 0;
+uint32_t position = 0;
 int prompttype = 0;
 int stdinpass = 0;
 int loaded = 0;
@@ -27,8 +28,11 @@ uint32_t upperMemSize;
 uint32_t largestUseableMem = 0;
 uint32_t memAddr = 0;
 multiboot_memory_map_t* mmap;
+char key_buffer[2000];
+char key_buffer_up[2000];
+char key_buffer_down[2000];
 void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
-	char *key_buffer;
+	//char *key_buffer;
 	init_serial();
 	if (mbd->flags & MULTIBOOT_INFO_MEMORY)
     {
@@ -78,13 +82,6 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 			}
         }
 		set_addr(memAddr, largestUseableMem);
-		uint32_t f = 0;
-		
-		key_buffer = (char *)kmalloc(0x2000);
-		sprint("\nKey buffer address: ");
-		sprint_uint(key_buffer);
-		//memory_set(key_buffer, 0, 0x2000);
-		sprint("\n");
     }
 	sprint("\n[DripOS]: Memory initialized successfully\n");
 	isr_install();
@@ -94,25 +91,22 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	sprint("[DripOS]: Interrupts enabled\n");
 	init_timer(1);
 	sprint("[DripOS]: Timer enabled\n");
-	//new_scan();
 	sprintd("Scanning for drives...");
 	drive_scan();
 	sprintd("Drive scan finished");
 	sprintd("Running memory test...");
-	char *testOnStart = (char *)kmalloc(0x1000);
+	uint32_t *testOnStart = (uint32_t *)kmalloc(0x1000);
 	sprintd("Memory allocated for test...");
-	strcpy(*testOnStart, "testing testing 123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789\n\0");
+	*testOnStart = 33;
 	sprintd("Moved data...");
 	sprintd("Data:");
-	sprint(*testOnStart);
+	sprint_uint(*testOnStart);
 	sprintd("Freeing memory...");
 	free(testOnStart, 0x1000);
 	sprintd("Memory freed, test done.");
-	//wait(1000);
 	sprintd("Clearing screen...");
 	clear_screen();
 	empty_sector();
-	//ata_pio28(ata_controler, 1, ata_drive, 0x1);
 	prevtick = tick;
 	sprintd("Drawing logo");
 	logoDraw();
@@ -121,11 +115,6 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	clear_screen();
 	stdin_init();
 	sprintd("Standard input initialized");
-	sprintd("Clearing keyboard buffer bcuz some weird bug");
-	key_handler(28, false);
-	clear_screen();
-	key_handler(28, true);
-	sprintd("Keyboard buffer clean");
 	kprint("DripOS 0.0020\n"); //Version
 	sprintd("DripOS 0.0020 loaded"); //Version
 	sprintd("Checking for crashes");
@@ -137,16 +126,15 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	kprint(test);
 	kprint(" bytes\n");
 	kprint("drip@DripOS> ");
-	//user_input("testMem");
-	//play_sound(500, 100);
-	//play_sound(300, 100);
-	//clear_screen();
+	play_sound(500, 100);
+	play_sound(300, 100);
 	sprintd("Entering multitask/system management loop");
 	loaded = 1;
 	after_load();
 }
 
-void user_input(char *input) {
+void user_input(char input[]) {
+	//sprintd(input);
 	if (stdinpass == 0){
 		execute_command(input);
 	}
@@ -200,6 +188,6 @@ void check_crash() {
 
 void after_load() {
 	while (1 == 1) {
-		manage_sys();
+		
 	}
 }
