@@ -58,7 +58,7 @@ void readToBuffer(uint32_t sector) {
     {
         uint16_t in = readOut[i];
         uint8_t first = (uint8_t)in >> 8;
-        uint8_t second = (uint8_t)in&0xffff;
+        uint8_t second = (uint8_t)in&0xff;
         *ptr = first;
         ptr++;
         *ptr = sector;

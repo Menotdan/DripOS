@@ -281,7 +281,6 @@ void new_scan() {
 void drive_scan() {
     // Detect primary controller
     port_byte_out(ATA_PORT_PRIMARY_DETECT, MAGIC_DETECT);
-    //uint8_t readBB;
     readB = port_byte_in(ATA_PORT_PRIMARY_DETECT);
     if (readB == 0x88) {
         // Primary controller exists
@@ -289,18 +288,17 @@ void drive_scan() {
         // Detect Master Drive
         port_byte_out(ATA_PORT_PRIMARY_DRIVE_DETECT, MASTER_DRIVE_DETECT);
         wait(1);
-        //uint16_t tmp;
         tmp = port_byte_in(ATA_PORT_PRIMARY_STATUS);
         if (tmp & 0x40) {
             // Master drive exists
             mp = 0;
             mp28 = ata_pio28(0x1F0, ATA_READ, 0xE0, 0x0);
             mp48 = ata_pio48(0x1F0, ATA_READ, 0x40, 0x0);
-            if (mp28 == 0) {
+            if (mp48 == 0) {
                 ata_drive = MASTER_DRIVE;
                 ata_controler = PRIMARY_IDE;
                 ata_pio = 0;
-            } else if (mp48 == 0) {
+            } else if (mp28 == 0) {
                 ata_drive = MASTER_DRIVE_PIO48;
                 ata_controler = PRIMARY_IDE;
                 ata_pio = 1;
@@ -321,11 +319,11 @@ void drive_scan() {
             ms = 0;
             ms28 = ata_pio28(0x1F0, ATA_READ, 0xF0, 0x0);
             ms48 = ata_pio48(0x1F0, ATA_READ, 0x50, 0x0);
-            if (ms28 == 0) {
+            if (ms48 == 0) {
                 ata_drive = SLAVE_DRIVE;
                 ata_controler = PRIMARY_IDE;
                 ata_pio = 0;
-            } else if (ms48 == 0) {
+            } else if (ms28 == 0) {
                 ata_drive = SLAVE_DRIVE_PIO48;
                 ata_controler = PRIMARY_IDE;
                 ata_pio = 1;
@@ -339,7 +337,6 @@ void drive_scan() {
     }
     // Detect secondary controller
     port_byte_out(ATA_PORT_SECONDARY_DETECT, MAGIC_DETECT);
-    //uint8_t readBB;
     readB = port_byte_in(ATA_PORT_SECONDARY_DETECT);
     if (readB == 0x88) {
         // Secondary controller exists
@@ -347,18 +344,17 @@ void drive_scan() {
         // Detect Master Drive
         port_byte_out(ATA_PORT_SECONDARY_DRIVE_DETECT, MASTER_DRIVE_DETECT);
         wait(1);
-        //uint16_t tmp;
         tmp = port_byte_in(ATA_PORT_SECONDARY_STATUS);
         if (tmp & 0x40) {
             // Master drive exists
             sp = 0;
             sp28 = ata_pio28(0x170, ATA_READ, 0xE0, 0x0);
             sp48 = ata_pio48(0x170, ATA_READ, 0x40, 0x0);
-            if (sp28 == 0) {
+            if (sp48 == 0) {
                 ata_drive = MASTER_DRIVE;
                 ata_controler = SECONDARY_IDE;
                 ata_pio = 0;
-            } else if (sp48 == 0) {
+            } else if (sp28 == 0) {
                 ata_drive = MASTER_DRIVE_PIO48;
                 ata_controler = SECONDARY_IDE;
                 ata_pio = 1;
@@ -372,18 +368,17 @@ void drive_scan() {
         // Detect Slave Drive
         port_byte_out(ATA_PORT_SECONDARY_DRIVE_DETECT, SLAVE_DRIVE_DETECT);
         wait(1);
-        //uint16_t tmp;
         tmp = port_byte_in(ATA_PORT_SECONDARY_STATUS);
         if (tmp & 0x40) {
             // Slave drive exists
             ss = 0;
             ss28 = ata_pio28(0x170, ATA_READ, 0xF0, 0x0);
             ss48 = ata_pio48(0x170, ATA_READ, 0x50, 0x0);
-            if (ss28 == 0) {
+            if (ss48 == 0) {
                 ata_drive = SLAVE_DRIVE;
                 ata_controler = SECONDARY_IDE;
                 ata_pio = 0;
-            } else if (ss48 == 0) {
+            } else if (ss28 == 0) {
                 ata_drive = SLAVE_DRIVE_PIO48;
                 ata_controler = SECONDARY_IDE;
                 ata_pio = 1;
