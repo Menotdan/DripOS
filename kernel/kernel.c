@@ -94,6 +94,9 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	sprintd("Scanning for drives...");
 	drive_scan();
 	sprintd("Drive scan finished");
+	sprintd("Initalizing HDD driver");
+	init_hddw();
+	sprintd("Done");
 	sprintd("Running memory test...");
 	uint32_t *testOnStart = (uint32_t *)kmalloc(0x1000);
 	sprintd("Memory allocated for test...");
@@ -106,7 +109,6 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	sprintd("Memory freed, test done.");
 	sprintd("Clearing screen...");
 	clear_screen();
-	empty_sector();
 	prevtick = tick;
 	sprintd("Drawing logo");
 	logoDraw();

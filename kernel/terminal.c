@@ -24,7 +24,7 @@ void execute_command(char input[]) {
   } else if (strcmp(input, "panic") == 0) {
 		panic();
   } else if (strcmp(input, "fmem") == 0) {
-	  	free(*testy, 0x1000);
+	  	kprint("No!");
   } else if (strcmp(input, "free") == 0) {
         char temp[25];
 		int_to_ascii(memoryRemaining, temp);
@@ -132,14 +132,15 @@ void execute_command(char input[]) {
 		for (int c = 0; c < 10000; c++) {
 			testy = (char *)kmalloc(0x1000);
 			//strcpy(testy, "ok this is a test\0");
-			sprint(*testy);
+			*testy = 100;
+			sprint_uint(*testy);
 			char temp[25];
 			int_to_ascii(memoryRemaining, temp);
 			sprint("\nMemory Remaining: ");
 			sprint(temp);
 			sprint(" bytes\n");
+			free(testy, 0x1000);
 		}
-		free(testy, 0x1000);
 	} else if (strcmp(input, "testMemLess") == 0) {
 		uint32_t pAddr;
 		uint32_t *test1 = kmalloc(0x1000);
