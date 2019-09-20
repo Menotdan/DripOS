@@ -43,6 +43,8 @@
 
 #define ATA_PIO28 0
 #define ATA_PIO48 1
+
+#define CMD_GET_SECTORS 0xF8
 int ata_pio = 0;
 uint16_t ata_drive = MASTER_DRIVE;
 uint32_t ata_controler = PRIMARY_IDE;
@@ -294,11 +296,11 @@ void drive_scan() {
             mp = 0;
             mp28 = ata_pio28(0x1F0, ATA_READ, 0xE0, 0x0);
             mp48 = ata_pio48(0x1F0, ATA_READ, 0x40, 0x0);
-            if (mp48 == 0) {
+            if (mp28 == 0) {
                 ata_drive = MASTER_DRIVE;
                 ata_controler = PRIMARY_IDE;
                 ata_pio = 0;
-            } else if (mp28 == 0) {
+            } else if (mp48 == 0) {
                 ata_drive = MASTER_DRIVE_PIO48;
                 ata_controler = PRIMARY_IDE;
                 ata_pio = 1;
@@ -319,11 +321,11 @@ void drive_scan() {
             ms = 0;
             ms28 = ata_pio28(0x1F0, ATA_READ, 0xF0, 0x0);
             ms48 = ata_pio48(0x1F0, ATA_READ, 0x50, 0x0);
-            if (ms48 == 0) {
+            if (ms28 == 0) {
                 ata_drive = SLAVE_DRIVE;
                 ata_controler = PRIMARY_IDE;
                 ata_pio = 0;
-            } else if (ms28 == 0) {
+            } else if (ms48 == 0) {
                 ata_drive = SLAVE_DRIVE_PIO48;
                 ata_controler = PRIMARY_IDE;
                 ata_pio = 1;
@@ -350,11 +352,11 @@ void drive_scan() {
             sp = 0;
             sp28 = ata_pio28(0x170, ATA_READ, 0xE0, 0x0);
             sp48 = ata_pio48(0x170, ATA_READ, 0x40, 0x0);
-            if (sp48 == 0) {
+            if (sp28 == 0) {
                 ata_drive = MASTER_DRIVE;
                 ata_controler = SECONDARY_IDE;
                 ata_pio = 0;
-            } else if (sp28 == 0) {
+            } else if (sp48 == 0) {
                 ata_drive = MASTER_DRIVE_PIO48;
                 ata_controler = SECONDARY_IDE;
                 ata_pio = 1;
@@ -374,11 +376,11 @@ void drive_scan() {
             ss = 0;
             ss28 = ata_pio28(0x170, ATA_READ, 0xF0, 0x0);
             ss48 = ata_pio48(0x170, ATA_READ, 0x50, 0x0);
-            if (ss48 == 0) {
+            if (ss28 == 0) {
                 ata_drive = SLAVE_DRIVE;
                 ata_controler = SECONDARY_IDE;
                 ata_pio = 0;
-            } else if (ss28 == 0) {
+            } else if (ss48 == 0) {
                 ata_drive = SLAVE_DRIVE_PIO48;
                 ata_controler = SECONDARY_IDE;
                 ata_pio = 1;
@@ -392,6 +394,20 @@ void drive_scan() {
     }
     clear_ata_buffer();
     if (mp == 0) {
+        if (mp28 == 0) {
+            ata_drive = MASTER_DRIVE;
+            ata_controler = PRIMARY_IDE;
+            ata_pio = 0;
+        } else if (mp48 == 0) {
+            ata_drive = MASTER_DRIVE_PIO48;
+            ata_controler = PRIMARY_IDE;
+            ata_pio = 1;
+        } else {
+            // Default to PIO28
+            ata_drive = MASTER_DRIVE;
+            ata_controler = PRIMARY_IDE;
+            ata_pio = 0;
+        }
         return 0;
     } else if (ms == 0) {
         return 0;
@@ -404,4 +420,35 @@ void drive_scan() {
         return 1;
     }
 
+}
+
+hdd_size_t drive_sectors(uint8_t devP, uint8_t controllerP) {
+    hdd_size_t size;
+    uint16_t controller = 0x170 + controllerP*0x80;
+    uint16_t deviceBit = (devP << 4) + (1 << 6);
+
+    read(0, 0); // Start drive
+    while (port_byte_in(controller+7) & 0x40 == 0); // Wait for the drive to be ready
+    if (ata_pio == 0) {
+        port_byte_out(controller + 7, 0xF8); // Send the command
+        while (port_byte_in(controller + 7) & 0x80 != 0); // Wait for BSY to clear
+        size.MAX_LBA = (uint32_t)port_byte_in(controller+3);
+        size.MAX_LBA += (uint32_t)port_byte_in(controller+4) <<8;
+        size.MAX_LBA += (uint32_t)port_byte_in(controller+5) <<16;
+        size.MAX_LBA += ((uint32_t)port_byte_in(controller+6) & 0xF) <<24;
+    } else {
+        port_byte_out(controller + 7, 0x27); // Send the command
+        while (port_byte_in(controller + 7) & 0x80 != 0); // Wait for BSY to clear
+        size.MAX_LBA =  (uint32_t)port_byte_in(controller+3);
+        size.MAX_LBA += (uint32_t)port_byte_in(controller+4) <<8;
+        size.MAX_LBA += (uint32_t)port_byte_in(controller+5) <<16;
+
+        outportb(controller+2, 0x80); // Set HOB to 1
+
+        size.MAX_LBA += (uint32_t)port_byte_in(controller+3)<<24;
+        size.MAX_LBA_HIGH = (uint32_t)port_byte_in(controller+4);
+        size.MAX_LBA_HIGH += (uint32_t)port_byte_in(controller+5) << 8;
+        size.HIGH_USED = 1;
+    }
+    return size;
 }

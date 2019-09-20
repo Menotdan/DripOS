@@ -72,11 +72,11 @@ void init_timer(uint32_t freq) {
 }
 
 void wait(uint32_t ticks) {
-	//prev = tick;
+	prev = tick;
     //char *eghagh;
     //int_to_ascii(ticks, eghagh);
     //kprint(eghagh);
-	while(tick - prev < ticks) {
+	while(tick < ticks + prev) {
 		//logoDraw();
         //okok += 1;
         //int_to_ascii(okok, eghagh);

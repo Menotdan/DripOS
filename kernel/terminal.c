@@ -38,24 +38,14 @@ void execute_command(char input[]) {
   } else if (strcmp(input, "uptime") == 0) {
 	  	uint32_t tempTick = tick;
 	  	uint32_t uptimeSeconds = 0;//tempTick / 100;
+		uint32_t uptimeMinutes = 0;
+		uint32_t uptimeHours = 0;
+		uint32_t uptimeDays = 0;
 		while (tempTick >= 100)
 		{
 			tempTick -= 100;
 			uptimeSeconds += 1;
 		}
-		uint32_t uptimeMinutes = uptimeSeconds / 60;
-		uint32_t uptimeHours = uptimeMinutes / 60;
-		uint32_t uptimeDays = uptimeHours / 24;
-
-		//tempTick -= uptimeSeconds * 100;
-		uptimeSeconds += uptimeSeconds % 60;
-		uptimeSeconds -= uptimeMinutes * 60;
-		uptimeMinutes += uptimeMinutes % 60;
-		uptimeMinutes -= uptimeHours * 60;
-		uptimeHours += uptimeHours % 24;
-		uptimeHours -= uptimeDays * 24;
-		
-		uptimeSeconds /= 2;
 
 		while (uptimeSeconds >= 60)
 		{
@@ -63,7 +53,6 @@ void execute_command(char input[]) {
 			uptimeMinutes += 1;
 		}
 		
-		uptimeMinutes /= 2;
 
 		while (uptimeMinutes >= 60)
 		{
@@ -71,7 +60,6 @@ void execute_command(char input[]) {
 			uptimeHours += 1;
 		}
 
-		uptimeHours /= 2;
 
 		while (uptimeHours >= 24)
 		{
@@ -79,7 +67,6 @@ void execute_command(char input[]) {
 			uptimeDays += 1;
 		}
 
-		uptimeDays /= 2;
 
 		kprint("Up ");
 		kprint_uint(uptimeDays);
@@ -224,7 +211,7 @@ void execute_command(char input[]) {
 		kprint("Not enough args!");
 	} else if ((match(input, "testDrive") + 1) == 9) {
 		writeIn[0] = 0x1111;
-		writeFromBuffer(atoi(afterSpace(input)));
+		write(atoi(afterSpace(input)));
 		kprint("Writing 0x1111 to sector ");
 		kprint_int(atoi(afterSpace(input)));
 		kprint("\n");
@@ -349,7 +336,7 @@ void read_disk(uint32_t sector) {
 	kprint(" contents:\n\n");
  
 	//! read sector from disk
-	read(sector);
+	read(sector, 0);
 	for (int l = 0; l<256; l++) {
 		//hex_to_ascii(sector[l] & 0xff, str1);
 		//hex_to_ascii((sector[l] >> 8), str2);

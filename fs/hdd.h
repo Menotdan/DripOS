@@ -35,13 +35,20 @@ enum PIO {
     p48 = 1
 };
 
+typedef struct hdd_size
+{
+    uint32_t MAX_LBA;
+    uint16_t MAX_LBA_HIGH;
+    uint8_t HIGH_USED;
+} __attribute__ ((packed)) hdd_size_t;
+
 
 void clear_ata_buffer();
 int ata_pio28(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr);
 int ata_pio48(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr);
 void init_hdd();
 void drive_scan();
-void new_scan();
+hdd_size_t drive_sectors(uint8_t devP, uint8_t controllerP);
 
 int mp;
 int sp;

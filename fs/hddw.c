@@ -1,8 +1,12 @@
 #include <stdbool.h>
 #include <libc.h>
+#include <time.h>
+#include <serial.h>
+#include <stdio.h>
 #include "hdd.h"
 #include "hddw.h"
 uint8_t *readBuffer;
+uint8_t *writeBuffer;
 uint16_t readOut[256];
 uint16_t writeIn[256];
 uint16_t emptySector[256];
@@ -13,9 +17,10 @@ void init_hddw() {
         emptySector[i] = 0x0;
     }
     readBuffer = (uint8_t *)kmalloc(512);
+    writeBuffer = (uint8_t *)kmalloc(512);
 }
 
-void read(uint32_t sector) {
+void read(uint32_t sector, uint32_t sector_high) {
     if (ata_pio == 0) {
         ata_pio28(ata_controler, 1, ata_drive, sector); // Read disk into ata_buffer
     } else {
@@ -33,11 +38,9 @@ void read(uint32_t sector) {
     if (f == false) {
         // Sometimes the drive shuts off, so we need to wait for it to turn on
         int l = 0;
-        for (int i = 0; i < 10000; i++)
-        {
-            l++; // Delay
-        }
-        
+        uint32_t delayStart = tick;
+        int i;
+        wait(10);
         if (ata_pio == 0) {
             ata_pio28(ata_controler, 1, ata_drive, sector); // Read disk into ata_buffer
         } else {
@@ -53,18 +56,40 @@ void read(uint32_t sector) {
 
 void readToBuffer(uint32_t sector) {
     uint8_t *ptr = readBuffer;
-    read(sector);
+    read(sector, 0);
+    //sprint("F: ");
     for (uint32_t i = 0; i < 256; i++)
     {
         uint16_t in = readOut[i];
-        uint8_t first = (uint8_t)in >> 8;
-        uint8_t second = (uint8_t)in&0xff;
+        uint8_t first = (uint8_t)(in >> 8);
+        uint8_t second = (uint8_t)(in&0xff);
+        //sprint_uint(first);
+        //sprint(" S: ");
+        //sprint_uint(second);
+        //sprint(" F: ");
+        *ptr = second;
+        ptr++;
         *ptr = first;
         ptr++;
-        *ptr = sector;
-        ptr++;
     }
-    
+    //sprint("\n");
+}
+
+void writeFromBuffer(uint32_t sector) {
+    uint8_t *ptr = writeBuffer;
+    for (uint32_t i = 0; i < 256; i++)
+    {
+        uint8_t second = *ptr;
+        ptr++;
+        uint8_t first = *ptr;
+        ptr++;
+        uint16_t wd;
+        wd = ((uint16_t)first << 8) | second;
+        //sprint_uint(wd);
+        //sprint("\n");
+        writeIn[i] = wd;
+    }
+    write(sector);
 }
 
 void copy_sector(uint32_t sector1, uint32_t sector2) {
@@ -73,7 +98,8 @@ void copy_sector(uint32_t sector1, uint32_t sector2) {
     clear_ata_buffer();
 }
 
-void writeFromBuffer(uint32_t sector) {
+void write(uint32_t sector) {
+    read(sector, 0); // Start the drive
     for(int i = 0; i < 256; i++)
     {
         ata_buffer[i] = writeIn[i];

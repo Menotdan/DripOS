@@ -160,20 +160,14 @@ void key_handler(uint8_t scancode, bool keyup) {
         shift = 0;
     } else if (strcmp(sc_name[scancode], "Enter") == 0 && keyup != true) {
         //fixer(key_buffer);
-        user_input(key_buffer);
+        //user_input(key_buffer);
         for (int q = 0; q < uinlen; q++) {
             key_buffer_up[q] = key_buffer[q];
             key_buffer_up[q+1] = '\0';
         }
-        for (int i = 0; i < uinlen; i++) {
-            backspace(key_buffer);
-        }
-        //sprintd("Clearing keyboard buffer...");
-        //memory_set(key_buffer, 0, 0x2000);
-        //sprintd("Clean.");
-        sprintd(key_buffer);
-        uinlen = 0;
-        position = 0;
+        uint32_t l = strlen(key_buffer);
+        key_buffer[l] = 3;
+        key_buffer[l+1] = "\0";
     } else {
         if (shift == 0) {
             if (!keyup) {

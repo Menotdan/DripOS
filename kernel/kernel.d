@@ -10,4 +10,4 @@ kernel/kernel.o: kernel/kernel.c include/stdio.h \
  kernel/../multiboot.h kernel/../cpu/isr.h kernel/../cpu/types.h \
  kernel/../drivers/screen.h kernel/../drivers/sound.h kernel/kernel.h \
  kernel/../libc/string.h kernel/../libc/mem.h kernel/../cpu/timer.h \
- kernel/terminal.h
+ kernel/terminal.h kernel/../fs/fat32.h

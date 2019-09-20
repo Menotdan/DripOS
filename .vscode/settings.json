@@ -10,5 +10,6 @@
         "kernel.h": "c",
         "serial.h": "c",
         "stdint.h": "c"
-    }
+    },
+    "VSCodeCounter.showInStatusBar": true
 }

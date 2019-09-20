@@ -13,6 +13,7 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include "../libc/mem.h"
 #include "../cpu/timer.h"
 #include "terminal.h"
+#include "../fs/fat32.h"
 //codes
 int prevtick = 0;
 int login = 1;
@@ -97,6 +98,10 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	sprintd("Initalizing HDD driver");
 	init_hddw();
 	sprintd("Done");
+	sprintd("Formatting drive...");
+	user_input("select 1");
+	format();
+	sprintd("Done");
 	sprintd("Running memory test...");
 	uint32_t *testOnStart = (uint32_t *)kmalloc(0x1000);
 	sprintd("Memory allocated for test...");
@@ -113,7 +118,8 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	sprintd("Drawing logo");
 	logoDraw();
 	sprintd("Waiting...");
-	wait(100);
+	play_sound(300, 50);
+	play_sound(500, 50);
 	clear_screen();
 	stdin_init();
 	sprintd("Standard input initialized");
@@ -128,8 +134,6 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	kprint(test);
 	kprint(" bytes\n");
 	kprint("drip@DripOS> ");
-	play_sound(500, 100);
-	play_sound(300, 100);
 	sprintd("Entering multitask/system management loop");
 	loaded = 1;
 	after_load();
@@ -180,16 +184,35 @@ void memory() {
 
 void check_crash() {
 	//0x7263
-	read(128);
+	read(128, 0);
 	if (readOut[0] == 0x7263) {
 		kprint("NOTICE: Last time your OS stopped, it was from a crash.\n");
 	}
 	writeIn[0] = 0x0000;
-	writeFromBuffer(128);
+	write(128);
 }
 
 void after_load() {
 	while (1 == 1) {
-		
+		uint32_t l = strlen(key_buffer);
+		// sprint(key_buffer[uinlen]);
+		// sprint("\n");
+		// sprint(key_buffer[l]);
+		// sprint("\n");
+		// sprint(key_buffer[l-1]);
+		// sprint("\n");
+		if (key_buffer[uinlen] == 3) {
+			backspace(key_buffer);
+			user_input(key_buffer);
+			for (int i = 0; i < uinlen; i++) {
+				backspace(key_buffer);
+			}
+			//sprintd("Clearing keyboard buffer...");
+			//memory_set(key_buffer, 0, 0x2000);
+			//sprintd("Clean.");
+			sprintd(key_buffer);
+			uinlen = 0;
+			position = 0;
+		}
 	}
 }
