@@ -3,8 +3,10 @@
 
 #include <stdint.h>
 
-#define FAT_SECTORS 200
+#define FAT_SECTORS 300
 #define OTHER_SECTORS 3
+#define MAX_ENTRIES 5485
+#define ENTRIES_PER_DIR 109;
 
 typedef struct fat32_bpb // BIOS parameter block to be written to the drive
 {
@@ -70,8 +72,9 @@ typedef struct dir_entry
 
 typedef struct fat
 {
-    dir_entry_t entries[3657];
+    uint32_t cchain[(FAT_SECTORS/32)];
 } __attribute__ ((packed)) fat_t;
 
 void format();
+void init_fat();
 #endif

@@ -32,6 +32,7 @@ multiboot_memory_map_t* mmap;
 char key_buffer[2000];
 char key_buffer_up[2000];
 char key_buffer_down[2000];
+int32_t path_clusters[50]; // Cluster pointers so the kernel knows what directory it is in
 void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	//char *key_buffer;
 	init_serial();
@@ -101,6 +102,7 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	sprintd("Formatting drive...");
 	user_input("select 1");
 	format();
+	init_fat();
 	sprintd("Done");
 	sprintd("Running memory test...");
 	uint32_t *testOnStart = (uint32_t *)kmalloc(0x1000);
@@ -126,7 +128,7 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	kprint("DripOS 0.0020\n"); //Version
 	sprintd("DripOS 0.0020 loaded"); //Version
 	sprintd("Checking for crashes");
-	check_crash();
+	//check_crash();
 	kprint("Type help for commands\nType shutdown to shutdown\n\n");
 	kprint("Memory available: ");
 	char test[25];
@@ -182,15 +184,15 @@ void memory() {
         kprint("\n");
 }
 
-void check_crash() {
-	//0x7263
-	read(128, 0);
-	if (readOut[0] == 0x7263) {
-		kprint("NOTICE: Last time your OS stopped, it was from a crash.\n");
-	}
-	writeIn[0] = 0x0000;
-	write(128);
-}
+// void check_crash() {
+// 	//0x7263
+// 	read(128, 0);
+// 	if (readOut[0] == 0x7263) {
+// 		kprint("NOTICE: Last time your OS stopped, it was from a crash.\n");
+// 	}
+// 	writeIn[0] = 0x0000;
+// 	write(128);
+// }
 
 void after_load() {
 	while (1 == 1) {
@@ -201,7 +203,7 @@ void after_load() {
 		// sprint("\n");
 		// sprint(key_buffer[l-1]);
 		// sprint("\n");
-		if (key_buffer[uinlen] == 3) {
+		if (key_buffer[l] == 3 || key_buffer[l-1] == 3) {
 			backspace(key_buffer);
 			user_input(key_buffer);
 			for (int i = 0; i < uinlen; i++) {

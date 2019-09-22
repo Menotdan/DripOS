@@ -225,8 +225,35 @@ const char* afterSpace(const char* input) {
    return starting;
  } 
 
-char to_hex(uint8_t nibble)
-{
+char to_hex(uint8_t nibble) {
    static const char hex[] = "0123456789ABCDEF";
    return hex[nibble];
+}
+
+char remove_null(char s[]) {
+    char ret = s[0];
+    //sprintd("testing to see if my code broke");
+    return ret;
+}
+
+void nntn(char i[], char o[], uint32_t inLen) { // No null to null, basically just adds a null byte
+    for (uint32_t f = 0; f<inLen; f++) {
+        o[f] = i[f];
+    }
+    o[inLen] = 0;
+}
+
+void copy_no_null(char i[], char o[]) {
+    uint32_t l = strlen(i);
+    uint32_t offset = 0;
+    for (uint32_t f = 0; i<l; i++) {
+        if (i[f] != 0)
+        {
+            o[f-offset] = i[f];
+        } else
+        {
+            offset += 1;
+        }
+        
+    }
 }

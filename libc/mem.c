@@ -153,6 +153,7 @@ uint32_t kmalloc_int(uint32_t size, int align) {
     }
     memoryRemaining -= size;
     usedMem += size;
+    memory_set(ret, 0, size);
     return ret;
 }
 

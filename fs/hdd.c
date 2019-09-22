@@ -443,7 +443,7 @@ hdd_size_t drive_sectors(uint8_t devP, uint8_t controllerP) {
         size.MAX_LBA += (uint32_t)port_byte_in(controller+4) <<8;
         size.MAX_LBA += (uint32_t)port_byte_in(controller+5) <<16;
 
-        outportb(controller+2, 0x80); // Set HOB to 1
+        port_byte_out(controller+2, 0x80); // Set HOB to 1
 
         size.MAX_LBA += (uint32_t)port_byte_in(controller+3)<<24;
         size.MAX_LBA_HIGH = (uint32_t)port_byte_in(controller+4);

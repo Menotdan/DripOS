@@ -10,6 +10,8 @@ uint8_t *writeBuffer;
 uint16_t readOut[256];
 uint16_t writeIn[256];
 uint16_t emptySector[256];
+uint32_t driveUseTick;
+uint32_t lastSector = 0;
 
 void init_hddw() {
     for(int i = 0; i < 256; i++)
@@ -35,7 +37,7 @@ void read(uint32_t sector, uint32_t sector_high) {
         readOut[i] = ata_buffer[i];
     }
     clear_ata_buffer();
-    if (f == false) {
+    if (f == false && (tick-driveUseTick >= 500 || abs(sector-lastSector) > 50)) {
         // Sometimes the drive shuts off, so we need to wait for it to turn on
         int l = 0;
         uint32_t delayStart = tick;
@@ -52,6 +54,8 @@ void read(uint32_t sector, uint32_t sector_high) {
             readOut[i] = ata_buffer[i];
         }
     }
+    driveUseTick = tick;
+    lastSector = sector;
 }
 
 void readToBuffer(uint32_t sector) {
@@ -61,15 +65,15 @@ void readToBuffer(uint32_t sector) {
     for (uint32_t i = 0; i < 256; i++)
     {
         uint16_t in = readOut[i];
-        uint8_t first = (uint8_t)(in >> 8);
-        uint8_t second = (uint8_t)(in&0xff);
+        uint8_t f = (uint8_t)(in >> 8); // Default is f
+        uint8_t s = (uint8_t)(in&0xff); // Default is s
         //sprint_uint(first);
         //sprint(" S: ");
         //sprint_uint(second);
         //sprint(" F: ");
-        *ptr = second;
+        *ptr = s;
         ptr++;
-        *ptr = first;
+        *ptr = f;
         ptr++;
     }
     //sprint("\n");
@@ -79,12 +83,12 @@ void writeFromBuffer(uint32_t sector) {
     uint8_t *ptr = writeBuffer;
     for (uint32_t i = 0; i < 256; i++)
     {
-        uint8_t second = *ptr;
+        uint8_t s = *ptr; // Default is s
         ptr++;
-        uint8_t first = *ptr;
+        uint8_t f = *ptr; // Default is f
         ptr++;
         uint16_t wd;
-        wd = ((uint16_t)first << 8) | second;
+        wd = ((uint16_t)f << 8) | s;
         //sprint_uint(wd);
         //sprint("\n");
         writeIn[i] = wd;
@@ -114,6 +118,7 @@ void write(uint32_t sector) {
     {
         writeIn[i] = emptySector[i];
     }
+    lastSector = sector;
 }
 
 void clear_sector(uint32_t sector) {

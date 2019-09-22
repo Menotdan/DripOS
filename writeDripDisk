@@ -1,0 +1,3 @@
+sudo dd if=/dev/zero of=/dev/$1 count=20 bs=1M
+sudo dd if=dripdisk.img of=/dev/$1
+

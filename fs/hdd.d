@@ -8,6 +8,6 @@ fs/hdd.o: fs/hdd.c \
  include/../cpu/ports.h include/../fs/hdd.h include/../fs/hddw.h \
  include/../drivers/stdin.h include/libc.h include/../libc/mem.h \
  include/../libc/../cpu/types.h include/../libc/string.h \
- include/../libc/function.h include/time.h include/../cpu/timer.h \
- include/../cpu/types.h include/../drivers/time.h fs/../cpu/isr.h \
- fs/../cpu/types.h
+ include/../libc/function.h include/../libc/list.h include/time.h \
+ include/../cpu/timer.h include/../cpu/types.h include/../drivers/time.h \
+ fs/../cpu/isr.h fs/../cpu/types.h

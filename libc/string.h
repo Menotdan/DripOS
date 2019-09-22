@@ -23,5 +23,8 @@ void fixer(char s[]);
 void sprint_int(int num);
 void sprint_uint(unsigned int num);
 char *mstrcpy(uint32_t dest, const char *src);
+char remove_null(char s[]);
+void nntn(char i[], char o[], uint32_t inLen);
+void copy_no_null(char i[], char o[]);
 
 #endif
