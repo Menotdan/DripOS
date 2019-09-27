@@ -2475,6 +2475,851 @@
                     "filename": "writeOS"
                 }
             ]
+        },
+        {
+            "version": "0.1.7",
+            "counttime": "2019-09-26 17:34:31",
+            "filesum": 133,
+            "codesum": 4007,
+            "commentsum": 770,
+            "blanksum": 493,
+            "filelist": [
+                {
+                    "blank": 0,
+                    "code": 5,
+                    "comment": 4,
+                    "filename": ".gitignore"
+                },
+                {
+                    "blank": 0,
+                    "code": 1,
+                    "comment": 0,
+                    "filename": "_config.yml"
+                },
+                {
+                    "filename": "boot.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 14,
+                    "code": 62,
+                    "comment": 85,
+                    "filename": "boot.s"
+                },
+                {
+                    "blank": 1,
+                    "code": 13,
+                    "comment": 2,
+                    "filename": "cpu/idt.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 4,
+                    "comment": 0,
+                    "filename": "cpu/idt.d"
+                },
+                {
+                    "blank": 8,
+                    "code": 21,
+                    "comment": 10,
+                    "filename": "cpu/idt.h"
+                },
+                {
+                    "filename": "cpu/idt.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 55,
+                    "code": 364,
+                    "comment": 0,
+                    "filename": "cpu/interrupt.asm"
+                },
+                {
+                    "blank": 0,
+                    "code": 1,
+                    "comment": 0,
+                    "filename": "cpu/interrupt.d"
+                },
+                {
+                    "filename": "cpu/interrupt.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 16,
+                    "code": 141,
+                    "comment": 19,
+                    "filename": "cpu/isr.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 11,
+                    "comment": 0,
+                    "filename": "cpu/isr.d"
+                },
+                {
+                    "blank": 7,
+                    "code": 79,
+                    "comment": 3,
+                    "filename": "cpu/isr.h"
+                },
+                {
+                    "filename": "cpu/isr.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 3,
+                    "code": 16,
+                    "comment": 16,
+                    "filename": "cpu/ports.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 1,
+                    "comment": 0,
+                    "filename": "cpu/ports.d"
+                },
+                {
+                    "blank": 0,
+                    "code": 4,
+                    "comment": 0,
+                    "filename": "cpu/ports.h"
+                },
+                {
+                    "filename": "cpu/ports.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 3,
+                    "code": 18,
+                    "comment": 0,
+                    "filename": "cpu/soundManager.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 5,
+                    "comment": 0,
+                    "filename": "cpu/soundManager.d"
+                },
+                {
+                    "blank": 1,
+                    "code": 7,
+                    "comment": 0,
+                    "filename": "cpu/soundManager.h"
+                },
+                {
+                    "filename": "cpu/soundManager.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 1,
+                    "code": 19,
+                    "comment": 7,
+                    "filename": "cpu/sysState.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 7,
+                    "comment": 0,
+                    "filename": "cpu/sysState.d"
+                },
+                {
+                    "blank": 2,
+                    "code": 4,
+                    "comment": 0,
+                    "filename": "cpu/sysState.h"
+                },
+                {
+                    "filename": "cpu/sysState.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 5,
+                    "code": 59,
+                    "comment": 29,
+                    "filename": "cpu/timer.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 8,
+                    "comment": 0,
+                    "filename": "cpu/timer.d"
+                },
+                {
+                    "blank": 3,
+                    "code": 10,
+                    "comment": 0,
+                    "filename": "cpu/timer.h"
+                },
+                {
+                    "filename": "cpu/timer.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 4,
+                    "code": 35,
+                    "comment": 0,
+                    "filename": "cpu/types.h"
+                },
+                {
+                    "filename": "dripdisk.img",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "filename": "DripOS.iso",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "filename": "dripprev1.png",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 2,
+                    "code": 9,
+                    "comment": 0,
+                    "filename": "drivers/colors.h"
+                },
+                {
+                    "blank": 8,
+                    "code": 33,
+                    "comment": 6,
+                    "filename": "drivers/keyboard.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 8,
+                    "comment": 0,
+                    "filename": "drivers/keyboard.d"
+                },
+                {
+                    "blank": 1,
+                    "code": 10,
+                    "comment": 1,
+                    "filename": "drivers/keyboard.h"
+                },
+                {
+                    "filename": "drivers/keyboard.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 34,
+                    "code": 184,
+                    "comment": 55,
+                    "filename": "drivers/screen.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 9,
+                    "comment": 0,
+                    "filename": "drivers/screen.d"
+                },
+                {
+                    "blank": 5,
+                    "code": 31,
+                    "comment": 11,
+                    "filename": "drivers/screen.h"
+                },
+                {
+                    "filename": "drivers/screen.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 8,
+                    "code": 34,
+                    "comment": 7,
+                    "filename": "drivers/serial.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 9,
+                    "comment": 0,
+                    "filename": "drivers/serial.d"
+                },
+                {
+                    "blank": 2,
+                    "code": 7,
+                    "comment": 0,
+                    "filename": "drivers/serial.h"
+                },
+                {
+                    "filename": "drivers/serial.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 8,
+                    "code": 42,
+                    "comment": 1,
+                    "filename": "drivers/sound.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 5,
+                    "comment": 0,
+                    "filename": "drivers/sound.d"
+                },
+                {
+                    "blank": 3,
+                    "code": 7,
+                    "comment": 1,
+                    "filename": "drivers/sound.h"
+                },
+                {
+                    "filename": "drivers/sound.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 12,
+                    "code": 185,
+                    "comment": 43,
+                    "filename": "drivers/stdin.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 9,
+                    "comment": 0,
+                    "filename": "drivers/stdin.d"
+                },
+                {
+                    "blank": 0,
+                    "code": 4,
+                    "comment": 0,
+                    "filename": "drivers/stdin.h"
+                },
+                {
+                    "filename": "drivers/stdin.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 2,
+                    "code": 86,
+                    "comment": 1,
+                    "filename": "drivers/time.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 1,
+                    "comment": 0,
+                    "filename": "drivers/time.d"
+                },
+                {
+                    "blank": 0,
+                    "code": 16,
+                    "comment": 0,
+                    "filename": "drivers/time.h"
+                },
+                {
+                    "filename": "drivers/time.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 30,
+                    "code": 228,
+                    "comment": 48,
+                    "filename": "fs/fat32.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 12,
+                    "comment": 0,
+                    "filename": "fs/fat32.d"
+                },
+                {
+                    "blank": 11,
+                    "code": 70,
+                    "comment": 35,
+                    "filename": "fs/fat32.h"
+                },
+                {
+                    "filename": "fs/fat32.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 31,
+                    "code": 395,
+                    "comment": 59,
+                    "filename": "fs/hdd.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 14,
+                    "comment": 0,
+                    "filename": "fs/hdd.d"
+                },
+                {
+                    "blank": 8,
+                    "code": 53,
+                    "comment": 0,
+                    "filename": "fs/hdd.h"
+                },
+                {
+                    "filename": "fs/hdd.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 8,
+                    "code": 117,
+                    "comment": 18,
+                    "filename": "fs/hddw.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 12,
+                    "comment": 0,
+                    "filename": "fs/hddw.d"
+                },
+                {
+                    "blank": 0,
+                    "code": 13,
+                    "comment": 0,
+                    "filename": "fs/hddw.h"
+                },
+                {
+                    "filename": "fs/hddw.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "filename": "glob",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 0,
+                    "code": 9,
+                    "comment": 2,
+                    "filename": "glob.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 3,
+                    "comment": 0,
+                    "filename": "grub.cfg"
+                },
+                {
+                    "filename": "grub/grub-2.04.tar.gz",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "filename": "helllo",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "filename": "hello",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 0,
+                    "code": 7,
+                    "comment": 0,
+                    "filename": "hello.d"
+                },
+                {
+                    "blank": 0,
+                    "code": 4,
+                    "comment": 0,
+                    "filename": "include/debug.h"
+                },
+                {
+                    "blank": 2,
+                    "code": 8,
+                    "comment": 0,
+                    "filename": "include/libc.h"
+                },
+                {
+                    "blank": 2,
+                    "code": 4,
+                    "comment": 0,
+                    "filename": "include/serial.h"
+                },
+                {
+                    "blank": 0,
+                    "code": 8,
+                    "comment": 0,
+                    "filename": "include/stdio.h"
+                },
+                {
+                    "blank": 0,
+                    "code": 5,
+                    "comment": 0,
+                    "filename": "include/time.h"
+                },
+                {
+                    "blank": 0,
+                    "code": 3,
+                    "comment": 0,
+                    "filename": "isodir/boot/grub/grub.cfg"
+                },
+                {
+                    "filename": "isodir/boot/os-image.bin",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "filename": "kernel.bin.rev",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "filename": "kernel.elf",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 0,
+                    "code": 3,
+                    "comment": 1,
+                    "filename": "kernel/debug.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 1,
+                    "comment": 0,
+                    "filename": "kernel/debug.d"
+                },
+                {
+                    "filename": "kernel/debug.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 10,
+                    "code": 185,
+                    "comment": 27,
+                    "filename": "kernel/kernel.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 14,
+                    "comment": 0,
+                    "filename": "kernel/kernel.d"
+                },
+                {
+                    "blank": 3,
+                    "code": 19,
+                    "comment": 0,
+                    "filename": "kernel/kernel.h"
+                },
+                {
+                    "filename": "kernel/kernel.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 1,
+                    "code": 5,
+                    "comment": 0,
+                    "filename": "kernel/systemManager.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 2,
+                    "comment": 0,
+                    "filename": "kernel/systemManager.d"
+                },
+                {
+                    "blank": 1,
+                    "code": 2,
+                    "comment": 0,
+                    "filename": "kernel/systemManager.h"
+                },
+                {
+                    "filename": "kernel/systemManager.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 12,
+                    "code": 304,
+                    "comment": 44,
+                    "filename": "kernel/terminal.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 10,
+                    "comment": 0,
+                    "filename": "kernel/terminal.d"
+                },
+                {
+                    "blank": 0,
+                    "code": 2,
+                    "comment": 1,
+                    "filename": "kernel/terminal.h"
+                },
+                {
+                    "filename": "kernel/terminal.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 2,
+                    "code": 4,
+                    "comment": 2,
+                    "filename": "libc/function.h"
+                },
+                {
+                    "blank": 1,
+                    "code": 8,
+                    "comment": 0,
+                    "filename": "libc/libc.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 7,
+                    "comment": 0,
+                    "filename": "libc/libc.d"
+                },
+                {
+                    "filename": "libc/libc.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 15,
+                    "code": 148,
+                    "comment": 22,
+                    "filename": "libc/list.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 10,
+                    "comment": 0,
+                    "filename": "libc/list.d"
+                },
+                {
+                    "blank": 7,
+                    "code": 39,
+                    "comment": 0,
+                    "filename": "libc/list.h"
+                },
+                {
+                    "filename": "libc/list.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 18,
+                    "code": 152,
+                    "comment": 26,
+                    "filename": "libc/mem.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 11,
+                    "comment": 0,
+                    "filename": "libc/mem.d"
+                },
+                {
+                    "blank": 9,
+                    "code": 19,
+                    "comment": 4,
+                    "filename": "libc/mem.h"
+                },
+                {
+                    "filename": "libc/mem.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 2,
+                    "code": 19,
+                    "comment": 0,
+                    "filename": "libc/stdio.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 6,
+                    "comment": 0,
+                    "filename": "libc/stdio.d"
+                },
+                {
+                    "blank": 0,
+                    "code": 4,
+                    "comment": 0,
+                    "filename": "libc/stdio.h"
+                },
+                {
+                    "filename": "libc/stdio.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 38,
+                    "code": 204,
+                    "comment": 21,
+                    "filename": "libc/string.c"
+                },
+                {
+                    "blank": 0,
+                    "code": 10,
+                    "comment": 0,
+                    "filename": "libc/string.d"
+                },
+                {
+                    "blank": 1,
+                    "code": 28,
+                    "comment": 1,
+                    "filename": "libc/string.h"
+                },
+                {
+                    "filename": "libc/string.o",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 4,
+                    "code": 17,
+                    "comment": 0,
+                    "filename": "LICENSE"
+                },
+                {
+                    "blank": 6,
+                    "code": 24,
+                    "comment": 14,
+                    "filename": "linker.ld"
+                },
+                {
+                    "blank": 6,
+                    "code": 23,
+                    "comment": 14,
+                    "filename": "lol.ld"
+                },
+                {
+                    "blank": 0,
+                    "code": 2,
+                    "comment": 62,
+                    "filename": "Makefile"
+                },
+                {
+                    "blank": 51,
+                    "code": 160,
+                    "comment": 66,
+                    "filename": "multiboot.h"
+                },
+                {
+                    "filename": "os-image.bin",
+                    "isbinaryfile": true,
+                    "blank": 0,
+                    "code": 0,
+                    "comment": 0
+                },
+                {
+                    "blank": 1,
+                    "code": 5,
+                    "comment": 0,
+                    "filename": "programs/hello.c"
+                },
+                {
+                    "blank": 4,
+                    "code": 7,
+                    "comment": 2,
+                    "filename": "README.md"
+                },
+                {
+                    "blank": 1,
+                    "code": 2,
+                    "comment": 0,
+                    "filename": "writeDripDisk"
+                },
+                {
+                    "blank": 0,
+                    "code": 2,
+                    "comment": 0,
+                    "filename": "writeOS"
+                }
+            ]
         }
     ]
 }

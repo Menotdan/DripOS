@@ -6,5 +6,6 @@ libc/mem.o: libc/mem.c include/stdio.h include/../drivers/screen.h \
  include/../cpu/ports.h include/../fs/hdd.h include/../fs/hddw.h \
  include/../drivers/stdin.h include/libc.h include/../libc/mem.h \
  include/../libc/../cpu/types.h include/../libc/string.h \
- include/../libc/function.h include/../libc/list.h include/serial.h \
+ include/../libc/function.h include/../libc/list.h \
+ include/../libc/../fs/fat32.h include/serial.h \
  include/../drivers/serial.h libc/mem.h

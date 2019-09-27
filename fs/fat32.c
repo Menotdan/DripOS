@@ -15,6 +15,84 @@ uint32_t clusters_on_drive;
 uint32_t fat_sectors_used;
 uint32_t fat_sector_loaded;
 
+uint32_t cluster_to_sector(uint32_t clusterP) {
+    sprint("\nclusterP: ");
+
+    return (fat_sectors_used + OTHER_SECTORS + (clusterP*sectors_per_cluster));
+}
+
+uint32_t get_cluster_value(uint32_t cluster) {
+    uint32_t temp = cluster;
+    uint32_t to_load = 0;
+    uint32_t *tmp = new_table;
+    //sprintd("Starting loop...");
+    //sprint("\nTemp: ");
+    //sprint_uint(temp);
+    //sprint("\n");
+    while (temp >= 128) {
+        temp -= 128;
+        to_load += 1;
+        //sprint("\nArray pos: ");
+        //sprint_uint(temp);
+        //sprint("\n");
+    }
+
+    //if (fat_sector_loaded != to_load) {
+        fat_sector_loaded = to_load;
+        //sprint("\nReading from sector: ");
+        //sprint_uint((OTHER_SECTORS+fat_sector_loaded));
+        //sprint("\n");
+        //sprint("\nReading from array pos: ");
+        //sprint_uint(temp);
+        //sprint("\n");
+
+        readToBuffer((OTHER_SECTORS+fat_sector_loaded)); // Read the FAT, starting at the FAT's location
+        memory_copy(readBuffer, new_table, 512); // Write the read data to the table
+        wait(2);
+        // while (new_table[1] == 0) {
+        //     readToBuffer((OTHER_SECTORS+fat_sector_loaded)); // Read the FAT, starting at the FAT's location
+        //     memory_copy(readBuffer, new_table, 512); // Write the read data to the table
+        //     wait(2);
+        // }
+    //}
+    temp -= 1;
+    //for (uint32_t i = 0; i < 128; i++) {
+    //    sprint("\nData: ");
+    //    sprint_uint(new_table[i]);
+    //    sprint(" I: ");
+    //    sprint_uint(i);
+    //}
+    //sprint("\nSector: ");
+    //sprint_uint((OTHER_SECTORS+fat_sector_loaded));
+    return new_table[temp];
+}
+
+list_t *get_chain(uint32_t cluster_start) {
+    sprintd("Getting chain");
+    uint32_t value; // Setup value
+    value = get_cluster_value(cluster_start);
+    list_t *cluster_list = new_list(value);
+    sprint("\nTest: ");
+    sprint_uint(value);
+    sprint("\n");
+    if (value == 0 || value >= 0x0FFFFFF8 || value == 0x0FFFFFF7) {
+        sprintd("REEE");
+    }
+    while (value != 0 && value < 0x0FFFFFF7) {
+        //sprintd("Test code");
+        value = get_cluster_value(value);
+        sprint("\nTest Loop: ");
+        sprint_uint(value);
+        sprint("\n");
+        add_at_end(value, cluster_list);
+    }
+    //remove_at_end(cluster_list);
+    sprint("\nTest: ");
+    sprint_uint(value);
+    sprint("\n");
+    return cluster_list;
+}
+
 void format() {
     sprintd("Formatting drive...");
 
@@ -57,6 +135,7 @@ void format() {
     BPB->bytes_per_sector = 512;
     BPB->sectors_per_cluster = 3;
     get_drive_clusters(BPB->sectors_per_cluster);
+    sectors_per_cluster = BPB->sectors_per_cluster;
     BPB->res_sectors = fat_sectors_used + OTHER_SECTORS;
     BPB->number_of_fats = 1;
     BPB->directory_entries = 1;
@@ -121,7 +200,9 @@ void format() {
     new_table[1] = 3;
     new_table[2] = 0x0FFFFFF8; // End of chain
 
-    // Write the table
+    uint32_t start_sector = cluster_to_sector(2);
+    uint32_t last_sector = cluster_to_sector(3) + sectors_per_cluster;
+    // Write table
     write_table(new_table);
     // Drive has been formatted
     sprintd("The drive has been formatted");
@@ -148,25 +229,12 @@ void init_fat() {
 
     uint32_t ok = get_cluster_value(2);
 
+    list_t *root_dir = get_chain(2);
+
     sprintd("Drive loaded");
-    //sprint("\nSecond cluster data: ");
-    //sprint_uint(new_table[1]);
-    //sprint("\n");
-    //sprint("\nFirst entry cluster: ");
-    //sprint_uint(table->entries[0].clusterlow);
-    //sprint("\n");
-    //char n[9];
-    //nntn(table->entries[0].name, n, 8);
-    //sprint("First entry name: ");
-    //sprint(n);
-    //sprint("\n");
-    //kprint("\nFirst entry name: ");
-    //kprint(n);
-    //kprint("\n");
-    //wait(100);
 }
 
-void setup_entry(fat_t *tablep, uint32_t entrynum, char name[], uint32_t cluster) {
+void setup_entry_dir(dir_entry_t *entry, char name[], uint32_t cluster) {
     for (uint32_t i = 0; i < strlen(name); i++)
     {
         char toset;
@@ -175,25 +243,26 @@ void setup_entry(fat_t *tablep, uint32_t entrynum, char name[], uint32_t cluster
         } else {
             toset = name[i];
         }
-        //tablep->entries[entrynum].name[i] = toset;
+        entry->name[i] = toset;
     }
 
     if (strlen(name) < 8) {
         uint8_t dif = 8-strlen(name);
         for (uint32_t i = 8-dif; i < 8; i++)
         {
-            //tablep->entries[entrynum].name[i] = remove_null(" ");
+            entry->name[i] = remove_null(" ");
         } 
     }
-    //tablep->entries[entrynum].clusterlow = (uint16_t)(cluster & 0xFFFF);
-    //tablep->entries[entrynum].clusterhigh = (uint16_t)(cluster >> 16);
+    entry->clusterlow = (uint16_t)(cluster & 0xFFFF);
+    entry->clusterhigh = (uint16_t)(cluster >> 16);
+    entry->attrib = 0x10;
 }
 
 void write_table(uint32_t *tablep) {
     wait(10);
     uint32_t *tmp = tablep;
     memory_copy(tmp, writeBuffer, 512); // Copy the table to memory
-    writeFromBuffer((OTHER_SECTORS+fat_sector_loaded)-1); // Read the FAT, starting at the FAT's location
+    writeFromBuffer((OTHER_SECTORS+fat_sector_loaded)); // Read the FAT, starting at the FAT's location
 }
 
 void get_drive_size() {
@@ -233,40 +302,3 @@ void get_drive_clusters(uint32_t spc) {
     fat_sectors_used = temp_fat_sectors;
 }
 
-list_t *get_chain(uint32_t cluster_start) {
-    uint32_t value; // Setup value
-    value = get_cluster_value(cluster_start);
-    list_t *cluster_list = new_list(value);
-    while (value < 0x0FFFFFF8 && value != 0x0FFFFFF7) {
-        value = get_cluster_value(value);
-        add_at_end(value, cluster_list);
-    }
-    return cluster_list;
-}
-
-uint32_t cluster_to_sector(uint32_t cluster){
-    return (fat_sectors_used + (cluster*sectors_per_cluster));
-}
-
-uint32_t get_cluster_value(uint32_t cluster) {
-    uint32_t temp = cluster;
-    uint32_t to_load = 0;
-    uint32_t *tmp = new_table;
-
-    while (temp <= 128) {
-        temp -= 128;
-        to_load += 1;
-    }
-
-    if (fat_sector_loaded != to_load) {
-        fat_sector_loaded = to_load;
-        readToBuffer((OTHER_SECTORS+fat_sector_loaded)-1); // Read the FAT, starting at the FAT's location
-        memory_copy(readBuffer, tmp, 512); // Write the read data to the table
-    }
-    if (temp > 0){
-        return new_table[temp-1];
-    } else {
-        return new_table[temp];
-    }
-    return;
-}

@@ -13,6 +13,7 @@ LINKER = ~/Desktop/Compiler/bin/i686-elf-ld
 incPath = ~/DripOS/include
 GDB = gdb
 MEM = 1G # Memory for qemu
+O_LEVEL = 2
 # -g: Use debugging symbols in gcc
 CFLAGS = -g #-m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra
 
@@ -49,7 +50,7 @@ debug: myos.iso
 # Generic rules for wildcards
 # To make an object, always compile from its .c $< $@
 %.o: %.c ${HEADERS}
-	${CC} -Iinclude -O2 -g -MD -c $< -o $@ -std=gnu99 -ffreestanding
+	${CC} -Iinclude -O${O_LEVEL} -g -MD -c $< -o $@ -std=gnu99 -ffreestanding
  
 %.o: %.s
 	${CC} -O2 -g -MD -c $< -o $@

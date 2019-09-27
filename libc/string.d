@@ -6,4 +6,5 @@ libc/string.o: libc/string.c libc/string.h \
  libc/../drivers/screen.h libc/../drivers/../cpu/types.h include/serial.h \
  include/../drivers/serial.h include/libc.h include/../libc/mem.h \
  include/../libc/../cpu/types.h include/../libc/string.h \
- include/../libc/function.h include/../libc/list.h
+ include/../libc/function.h include/../libc/list.h \
+ include/../libc/../fs/fat32.h

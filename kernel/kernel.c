@@ -32,7 +32,17 @@ multiboot_memory_map_t* mmap;
 char key_buffer[2000];
 char key_buffer_up[2000];
 char key_buffer_down[2000];
-int32_t path_clusters[50]; // Cluster pointers so the kernel knows what directory it is in
+//int32_t path_clusters[50]; // Cluster pointers so the kernel knows what directory it is in
+
+void Log(char *message, int type) {
+	if (type == 1) { // Info
+		kprint("\n[");
+		kprint_color("INFO", 0x01);
+		kprint("]: ");
+		kprint_color(message, 0x09);
+	}
+}
+
 void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	//char *key_buffer;
 	init_serial();
@@ -86,25 +96,37 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 		set_addr(memAddr, largestUseableMem);
     }
 	sprint("\n[DripOS]: Memory initialized successfully\n");
+	Log("Loaded memory", 1);
 	isr_install();
 	sprint("[DripOS]: ISR Enabled\n");
+	Log("ISR Enabled", 1);
 	irq_install();
 	sprint("[DripOS]: IRQ Enabled\n");
+	Log("IRQ Enabled", 1);
 	sprint("[DripOS]: Interrupts enabled\n");
+	Log("Interrupts Enabled", 1);
 	init_timer(1);
 	sprint("[DripOS]: Timer enabled\n");
+	Log("Timer enabled", 1);
 	sprintd("Scanning for drives...");
+	Log("Scanning for drives", 1);
 	drive_scan();
 	sprintd("Drive scan finished");
+	Log("Drive scan done", 1);
 	sprintd("Initalizing HDD driver");
+	Log("Starting the HDD driver", 1);
 	init_hddw();
 	sprintd("Done");
+	Log("Done", 1);
 	sprintd("Formatting drive...");
+	Log("Formatting drive...", 1);
 	user_input("select 1");
 	format();
 	init_fat();
 	sprintd("Done");
+	Log("Done", 1);
 	sprintd("Running memory test...");
+	Log("Testing memory", 1);
 	uint32_t *testOnStart = (uint32_t *)kmalloc(0x1000);
 	sprintd("Memory allocated for test...");
 	*testOnStart = 33;
@@ -114,7 +136,10 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	sprintd("Freeing memory...");
 	free(testOnStart, 0x1000);
 	sprintd("Memory freed, test done.");
+	Log("Test done", 1);
 	sprintd("Clearing screen...");
+	Log("Clearing screen...", 1);
+	wait(50);
 	clear_screen();
 	prevtick = tick;
 	sprintd("Drawing logo");

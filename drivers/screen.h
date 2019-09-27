@@ -43,5 +43,7 @@ int get_offset_row(int offset);
 int get_offset(int col, int row);
 void set_cursor_offset(int offset);
 int get_cursor_offset();
+void kprint_color(char *message, char color);
+
 
 #endif

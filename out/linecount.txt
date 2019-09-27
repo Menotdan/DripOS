@@ -423,3 +423,148 @@ README.md, code is 7, comment is 2, blank is 4.
 writeDripDisk, code is 2, comment is 0, blank is 1.
 writeOS, code is 2, comment is 0, blank is 0.
 ===============================================================================
+===============================================================================
+EXTENSION NAME : linecount
+EXTENSION VERSION : 0.1.7
+-------------------------------------------------------------------------------
+count time : 2019-09-26 17:34:31
+count workspace : /home/aforsyth/DripOS
+total files : 133
+total code lines : 4007
+total comment lines : 770
+total blank lines : 493
+
+.gitignore, code is 5, comment is 4, blank is 0.
+_config.yml, code is 1, comment is 0, blank is 0.
+boot.o, it is a binary file.
+boot.s, code is 62, comment is 85, blank is 14.
+cpu/idt.c, code is 13, comment is 2, blank is 1.
+cpu/idt.d, code is 4, comment is 0, blank is 0.
+cpu/idt.h, code is 21, comment is 10, blank is 8.
+cpu/idt.o, it is a binary file.
+cpu/interrupt.asm, code is 364, comment is 0, blank is 55.
+cpu/interrupt.d, code is 1, comment is 0, blank is 0.
+cpu/interrupt.o, it is a binary file.
+cpu/isr.c, code is 141, comment is 19, blank is 16.
+cpu/isr.d, code is 11, comment is 0, blank is 0.
+cpu/isr.h, code is 79, comment is 3, blank is 7.
+cpu/isr.o, it is a binary file.
+cpu/ports.c, code is 16, comment is 16, blank is 3.
+cpu/ports.d, code is 1, comment is 0, blank is 0.
+cpu/ports.h, code is 4, comment is 0, blank is 0.
+cpu/ports.o, it is a binary file.
+cpu/soundManager.c, code is 18, comment is 0, blank is 3.
+cpu/soundManager.d, code is 5, comment is 0, blank is 0.
+cpu/soundManager.h, code is 7, comment is 0, blank is 1.
+cpu/soundManager.o, it is a binary file.
+cpu/sysState.c, code is 19, comment is 7, blank is 1.
+cpu/sysState.d, code is 7, comment is 0, blank is 0.
+cpu/sysState.h, code is 4, comment is 0, blank is 2.
+cpu/sysState.o, it is a binary file.
+cpu/timer.c, code is 59, comment is 29, blank is 5.
+cpu/timer.d, code is 8, comment is 0, blank is 0.
+cpu/timer.h, code is 10, comment is 0, blank is 3.
+cpu/timer.o, it is a binary file.
+cpu/types.h, code is 35, comment is 0, blank is 4.
+dripdisk.img, it is a binary file.
+DripOS.iso, it is a binary file.
+dripprev1.png, it is a binary file.
+drivers/colors.h, code is 9, comment is 0, blank is 2.
+drivers/keyboard.c, code is 33, comment is 6, blank is 8.
+drivers/keyboard.d, code is 8, comment is 0, blank is 0.
+drivers/keyboard.h, code is 10, comment is 1, blank is 1.
+drivers/keyboard.o, it is a binary file.
+drivers/screen.c, code is 184, comment is 55, blank is 34.
+drivers/screen.d, code is 9, comment is 0, blank is 0.
+drivers/screen.h, code is 31, comment is 11, blank is 5.
+drivers/screen.o, it is a binary file.
+drivers/serial.c, code is 34, comment is 7, blank is 8.
+drivers/serial.d, code is 9, comment is 0, blank is 0.
+drivers/serial.h, code is 7, comment is 0, blank is 2.
+drivers/serial.o, it is a binary file.
+drivers/sound.c, code is 42, comment is 1, blank is 8.
+drivers/sound.d, code is 5, comment is 0, blank is 0.
+drivers/sound.h, code is 7, comment is 1, blank is 3.
+drivers/sound.o, it is a binary file.
+drivers/stdin.c, code is 185, comment is 43, blank is 12.
+drivers/stdin.d, code is 9, comment is 0, blank is 0.
+drivers/stdin.h, code is 4, comment is 0, blank is 0.
+drivers/stdin.o, it is a binary file.
+drivers/time.c, code is 86, comment is 1, blank is 2.
+drivers/time.d, code is 1, comment is 0, blank is 0.
+drivers/time.h, code is 16, comment is 0, blank is 0.
+drivers/time.o, it is a binary file.
+fs/fat32.c, code is 228, comment is 48, blank is 30.
+fs/fat32.d, code is 12, comment is 0, blank is 0.
+fs/fat32.h, code is 70, comment is 35, blank is 11.
+fs/fat32.o, it is a binary file.
+fs/hdd.c, code is 395, comment is 59, blank is 31.
+fs/hdd.d, code is 14, comment is 0, blank is 0.
+fs/hdd.h, code is 53, comment is 0, blank is 8.
+fs/hdd.o, it is a binary file.
+fs/hddw.c, code is 117, comment is 18, blank is 8.
+fs/hddw.d, code is 12, comment is 0, blank is 0.
+fs/hddw.h, code is 13, comment is 0, blank is 0.
+fs/hddw.o, it is a binary file.
+glob, it is a binary file.
+glob.c, code is 9, comment is 2, blank is 0.
+grub.cfg, code is 3, comment is 0, blank is 0.
+grub/grub-2.04.tar.gz, it is a binary file.
+helllo, it is a binary file.
+hello, it is a binary file.
+hello.d, code is 7, comment is 0, blank is 0.
+include/debug.h, code is 4, comment is 0, blank is 0.
+include/libc.h, code is 8, comment is 0, blank is 2.
+include/serial.h, code is 4, comment is 0, blank is 2.
+include/stdio.h, code is 8, comment is 0, blank is 0.
+include/time.h, code is 5, comment is 0, blank is 0.
+isodir/boot/grub/grub.cfg, code is 3, comment is 0, blank is 0.
+isodir/boot/os-image.bin, it is a binary file.
+kernel.bin.rev, it is a binary file.
+kernel.elf, it is a binary file.
+kernel/debug.c, code is 3, comment is 1, blank is 0.
+kernel/debug.d, code is 1, comment is 0, blank is 0.
+kernel/debug.o, it is a binary file.
+kernel/kernel.c, code is 185, comment is 27, blank is 10.
+kernel/kernel.d, code is 14, comment is 0, blank is 0.
+kernel/kernel.h, code is 19, comment is 0, blank is 3.
+kernel/kernel.o, it is a binary file.
+kernel/systemManager.c, code is 5, comment is 0, blank is 1.
+kernel/systemManager.d, code is 2, comment is 0, blank is 0.
+kernel/systemManager.h, code is 2, comment is 0, blank is 1.
+kernel/systemManager.o, it is a binary file.
+kernel/terminal.c, code is 304, comment is 44, blank is 12.
+kernel/terminal.d, code is 10, comment is 0, blank is 0.
+kernel/terminal.h, code is 2, comment is 1, blank is 0.
+kernel/terminal.o, it is a binary file.
+libc/function.h, code is 4, comment is 2, blank is 2.
+libc/libc.c, code is 8, comment is 0, blank is 1.
+libc/libc.d, code is 7, comment is 0, blank is 0.
+libc/libc.o, it is a binary file.
+libc/list.c, code is 148, comment is 22, blank is 15.
+libc/list.d, code is 10, comment is 0, blank is 0.
+libc/list.h, code is 39, comment is 0, blank is 7.
+libc/list.o, it is a binary file.
+libc/mem.c, code is 152, comment is 26, blank is 18.
+libc/mem.d, code is 11, comment is 0, blank is 0.
+libc/mem.h, code is 19, comment is 4, blank is 9.
+libc/mem.o, it is a binary file.
+libc/stdio.c, code is 19, comment is 0, blank is 2.
+libc/stdio.d, code is 6, comment is 0, blank is 0.
+libc/stdio.h, code is 4, comment is 0, blank is 0.
+libc/stdio.o, it is a binary file.
+libc/string.c, code is 204, comment is 21, blank is 38.
+libc/string.d, code is 10, comment is 0, blank is 0.
+libc/string.h, code is 28, comment is 1, blank is 1.
+libc/string.o, it is a binary file.
+LICENSE, code is 17, comment is 0, blank is 4.
+linker.ld, code is 24, comment is 14, blank is 6.
+lol.ld, code is 23, comment is 14, blank is 6.
+Makefile, code is 2, comment is 62, blank is 0.
+multiboot.h, code is 160, comment is 66, blank is 51.
+os-image.bin, it is a binary file.
+programs/hello.c, code is 5, comment is 0, blank is 1.
+README.md, code is 7, comment is 2, blank is 4.
+writeDripDisk, code is 2, comment is 0, blank is 1.
+writeOS, code is 2, comment is 0, blank is 0.
+===============================================================================

@@ -133,6 +133,10 @@ void kprint(char *message) {
     kprint_at(message, -1, -1);
 }
 
+void kprint_color(char *message, char color) {
+    kprint_at_col(message, -1, -1, color);
+}
+
 //void drip() {
 //	kprint_at_blue("#",  32, 0);
 //	kprint_at_blue("#",  32, 1);

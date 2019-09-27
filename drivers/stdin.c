@@ -63,6 +63,7 @@ void key_handler(uint8_t scancode, bool keyup) {
             key_buffer[loop] = key_buffer_up[loop];
             loop++;
         }
+        key_buffer[strlen(key_buffer_up)] = "\0";
 
         uint32_t offsetTemp = get_cursor_offset();
         int cOffset = get_cursor_offset();
