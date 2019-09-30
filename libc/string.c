@@ -239,6 +239,10 @@ char remove_null(char s[]) {
 void nntn(char i[], char o[], uint32_t inLen) { // No null to null, basically just adds a null byte
     for (uint32_t f = 0; f<inLen; f++) {
         o[f] = i[f];
+        char r[2];
+        r[0] = i[f];
+        r[1] = 0;
+        sprintd(r);
     }
     o[inLen] = 0;
 }
