@@ -3,6 +3,7 @@
 **/*.rev
 .vscode/*
 *.iso
+*.img
 **/*.iso
 *.rev
 write*
