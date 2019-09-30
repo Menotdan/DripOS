@@ -1,4 +1,5 @@
 **/*.o
+**/*.d
 **/*.bin
 **/*.rev
 .vscode/*
@@ -7,3 +8,4 @@
 **/*.iso
 *.rev
 write*
+*.elf
