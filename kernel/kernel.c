@@ -128,6 +128,12 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	uint32_t *data_to_read = kmalloc(512);
 	*data_to_write = 1234;
 	new_file("test", "txt", new_file_created, 512);
+	sprint("\nAttrib: ");
+    sprint_uint(new_file_created->attrib);
+    sprint("\nSize: ");
+    sprint_uint(new_file_created->filesize);
+    sprint("\nCluster: ");
+    sprint_uint(new_file_created->clusterlow);
 	write_data_to_entry(new_file_created, data_to_write, 512);
 	read_data_from_entry(new_file_created, data_to_read);
 	sprint("\nData read from ");

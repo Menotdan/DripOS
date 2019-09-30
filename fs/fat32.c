@@ -372,6 +372,13 @@ void read_data_from_entry(dir_entry_t *file, uint32_t *data_out) {
         sectors_to_read += 1;
     }
     
+    sprint("\nCluster: ");
+    sprint_uint(cluster);
+    sprint("\nTo read: ");
+    sprint_uint(sectors_to_read);
+    sprint("\nFile size: ");
+    sprint_uint(file->filesize);
+
     for (uint32_t i = 0; i < sectors_to_read; i++)
     {
         readToBuffer(cur_sector);
@@ -392,8 +399,7 @@ void write_data_to_entry(dir_entry_t *file, uint32_t *data_in, uint32_t toWrite)
         sectors_to_read += 1;
     }
     
-    for (uint32_t i = 0; i < sectors_to_read; i++)
-    {
+    for (uint32_t i = 0; i < sectors_to_read; i++) {
         memory_copy(tmp_out, writeBuffer, 512);
         writeFromBuffer(cur_sector);
         tmp_out += 512;
