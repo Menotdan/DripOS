@@ -1,2 +1,0 @@
-sudo dd if=/dev/zero of=/dev/$1 count=10 bs=1M
-sudo dd if=DripOS.iso of=/dev/$1

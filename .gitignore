@@ -5,3 +5,4 @@
 *.iso
 **/*.iso
 *.rev
+write*
