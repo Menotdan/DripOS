@@ -26,5 +26,6 @@ char *mstrcpy(uint32_t dest, const char *src);
 char remove_null(char s[]);
 void nntn(char i[], char o[], uint32_t inLen);
 void copy_no_null(char i[], char o[]);
+void fat_str(char name[], char ext[], char o[]);
 
 #endif

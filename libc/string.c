@@ -239,12 +239,33 @@ char remove_null(char s[]) {
 void nntn(char i[], char o[], uint32_t inLen) { // No null to null, basically just adds a null byte
     for (uint32_t f = 0; f<inLen; f++) {
         o[f] = i[f];
-        char r[2];
-        r[0] = i[f];
-        r[1] = 0;
-        sprintd(r);
     }
     o[inLen] = 0;
+}
+
+void fat_str(char name[], char ext[], char o[]) {
+    char new_name[9];
+    char new_ext[4];
+    nntn(name, new_name, 8);
+    nntn(ext, new_ext, 3);
+    for (uint32_t i = 0; i < 8; i++) {
+        if ((uint32_t)new_name[i] == (uint32_t)(remove_null(" "))) {
+            new_name[i] = 0;
+        }
+    }
+    for (uint32_t i = 0; i < 3; i++) {
+        if ((uint32_t)new_ext[i] == (uint32_t)(remove_null(" "))) {
+            new_ext[i] = 0;
+        }
+    }
+    
+    for (uint32_t pos = 0; pos < strlen(new_name); pos++) {
+        o[pos] = new_name[pos];
+    }
+    o[strlen(new_name)] = remove_null(".");
+    for (uint32_t pos = 0; pos < strlen(new_ext); pos++) {
+        o[pos+strlen(new_name)+1] = new_ext[pos];
+    }
 }
 
 void copy_no_null(char i[], char o[]) {

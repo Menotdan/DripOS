@@ -44,7 +44,7 @@ void Log(char *message, int type) {
 }
 
 void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
-	//char *key_buffer;
+	// Read memory map
 	init_serial();
 	if (mbd->flags & MULTIBOOT_INFO_MEMORY)
     {
@@ -95,84 +95,62 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
         }
 		set_addr(memAddr, largestUseableMem);
     }
-	sprint("\n[DripOS]: Memory initialized successfully\n");
+	// Initialize everything with a startup log
 	Log("Loaded memory", 1);
 	isr_install();
-	sprint("[DripOS]: ISR Enabled\n");
 	Log("ISR Enabled", 1);
 	irq_install();
-	sprint("[DripOS]: IRQ Enabled\n");
-	Log("IRQ Enabled", 1);
-	sprint("[DripOS]: Interrupts enabled\n");
 	Log("Interrupts Enabled", 1);
 	init_timer(1);
-	sprint("[DripOS]: Timer enabled\n");
 	Log("Timer enabled", 1);
-	sprintd("Scanning for drives...");
+
 	Log("Scanning for drives", 1);
 	drive_scan();
-	sprintd("Drive scan finished");
 	Log("Drive scan done", 1);
-	sprintd("Initalizing HDD driver");
+
 	Log("Starting the HDD driver", 1);
 	init_hddw();
-	sprintd("Done");
 	Log("Done", 1);
-	sprintd("Formatting drive...");
+
 	Log("Formatting drive...", 1);
 	user_input("select 1");
 	format();
 	init_fat();
+
 	dir_entry_t *new_file_created = kmalloc(sizeof(dir_entry_t));
 	uint32_t *data_to_write = kmalloc(512);
 	uint32_t *data_to_read = kmalloc(512);
-	*data_to_write = 1234;
-	new_file("test", "txt", new_file_created, 512);
-	sprint("\nAttrib: ");
-    sprint_uint(new_file_created->attrib);
-    sprint("\nSize: ");
-    sprint_uint(new_file_created->filesize);
-    sprint("\nCluster: ");
-    sprint_uint(new_file_created->clusterlow);
+	*data_to_write = 123456789;
+	new_file("test", "txt", &new_file_created, 512);
 	write_data_to_entry(new_file_created, data_to_write, 512);
 	read_data_from_entry(new_file_created, data_to_read);
 	sprint("\nData read from ");
-	char filename[9];
-	nntn(new_file_created->name, filename, 8);
+	char filename[13];
+	fat_str(new_file_created->name, new_file_created->ext, filename);
 	sprint(filename);
 	sprint(": ");
 	sprint_uint(*data_to_read);
 	sprint("\n");
-	sprintd("Done");
+
 	Log("Done", 1);
-	sprintd("Running memory test...");
+
 	Log("Testing memory", 1);
 	uint32_t *testOnStart = (uint32_t *)kmalloc(0x1000);
-	sprintd("Memory allocated for test...");
 	*testOnStart = 33;
-	sprintd("Moved data...");
-	sprintd("Data:");
-	sprint_uint(*testOnStart);
-	sprintd("Freeing memory...");
 	free(testOnStart, 0x1000);
-	sprintd("Memory freed, test done.");
 	Log("Test done", 1);
-	sprintd("Clearing screen...");
+
 	Log("Clearing screen...", 1);
 	wait(50);
 	clear_screen();
 	prevtick = tick;
-	sprintd("Drawing logo");
 	logoDraw();
-	sprintd("Waiting...");
 	play_sound(300, 50);
 	play_sound(500, 50);
 	clear_screen();
 	stdin_init();
-	sprintd("Standard input initialized");
 	kprint("DripOS 0.0020\n"); //Version
 	sprintd("DripOS 0.0020 loaded"); //Version
-	sprintd("Checking for crashes");
 	//check_crash();
 	kprint("Type help for commands\nType shutdown to shutdown\n\n");
 	kprint("Memory available: ");

@@ -66,38 +66,23 @@ uint32_t get_cluster_value(uint32_t cluster) {
 }
 
 list_t *get_chain(uint32_t cluster_start) {
-    sprintd("Getting chain");
     uint32_t value; // Setup value
     value = get_cluster_value(cluster_start);
     list_t *cluster_list = new_list(value);
-    sprint("\nTest: ");
-    sprint_uint(value);
-    sprint("\n");
     if (value == 0 || value >= 0x0FFFFFF8 || value == 0x0FFFFFF7) {
-        sprintd("REEE");
+        sprintd("Nice chain");
     }
     while (value != 0 && value < 0x0FFFFFF7) {
         //sprintd("Test code");
         value = get_cluster_value(value);
-        sprint("\nTest Loop: ");
-        sprint_uint(value);
-        sprint("\n");
         add_at_end(value, cluster_list);
     }
-    //remove_at_end(cluster_list);
-    sprint("\nTest: ");
-    sprint_uint(value);
-    sprint("\n");
     return cluster_list;
 }
 
 void format() {
-    sprintd("Formatting drive...");
 
     fat32_bpb_t *BPB = kmalloc(sizeof(fat32_bpb_t));
-    sprint("Size of table: ");
-    sprint_uint(sizeof(fat32_bpb_t));
-    sprint(" bytes\n");
     BPB->skip_vol_info_high = 0xEBFE;
     BPB->skip_vol_info_low = 0x90;
     BPB->oem_name[0] = remove_null("D");
@@ -179,15 +164,6 @@ void format() {
     fat32_bpb_t *tmp2 = kmalloc(sizeof(fat32_bpb_t));
     readToBuffer(0);
     memory_copy(readBuffer, tmp2, 512);
-    sprint("\nBytes per sector: ");
-    sprint_uint(tmp2->bytes_per_sector);
-    sprint("\nLarge sector count: ");
-    sprint_uint(tmp2->large_sector_count);
-    sprint("\nVolume serial: ");
-    sprint_uint(tmp2->volume_serial);
-    sprint("\nBoot signature: ");
-    sprint_uint(tmp2->boot_sig);
-    sprint("\n");
     free(tmp2, sizeof(fat32_bpb_t));
 
     // FSInfo and BPB written, now for creation of the root directory
@@ -206,13 +182,10 @@ void format() {
     // Write table
     write_table(new_table);
     // Drive has been formatted
-    sprintd("The drive has been formatted");
     free(new_table, 512);
 }
 
 void init_fat() {
-    sprintd("Loading drive...");
-
     // Read the BIOS parameter block for drive info
     drive_data = kmalloc(sizeof(fat32_bpb_t));
     readToBuffer(0);
@@ -231,8 +204,6 @@ void init_fat() {
     uint32_t ok = get_cluster_value(2);
 
     list_t *root_dir = get_chain(2);
-
-    sprintd("Drive loaded");
 }
 
 void setup_entry_dir(dir_entry_t *entry, char name[], uint32_t cluster, uint32_t sector_to_write, uint32_t entry_to_write) {
@@ -291,10 +262,10 @@ void setup_entry_file(dir_entry_t *entry, char name[], char ext[], uint32_t clus
     for (uint32_t i = 0; i < strlen(ext); i++)
     {
         char toset;
-        if (name[i] == 0) {
+        if (ext[i] == 0) {
             toset = remove_null(" ");
         } else {
-            toset = name[i];
+            toset = ext[i];
         }
         entry->ext[i] = toset;
     }
@@ -371,13 +342,7 @@ void read_data_from_entry(dir_entry_t *file, uint32_t *data_out) {
     if (file->filesize % 512 != 0) {
         sectors_to_read += 1;
     }
-    
-    sprint("\nCluster: ");
-    sprint_uint(cluster);
-    sprint("\nTo read: ");
-    sprint_uint(sectors_to_read);
-    sprint("\nFile size: ");
-    sprint_uint(file->filesize);
+
 
     for (uint32_t i = 0; i < sectors_to_read; i++)
     {
@@ -408,14 +373,17 @@ void write_data_to_entry(dir_entry_t *file, uint32_t *data_in, uint32_t toWrite)
 }
 
 /* Create a new file */
-void new_file(char *name, char *ext, dir_entry_t *out, uint32_t size) {
+void new_file(char *name, char *ext, uint32_t pointer, uint32_t size) {
+    uint32_t *address = (uint32_t *)get_pointer(pointer);
+    dir_entry_t *entry_to_write;
     uint32_t cur_sector = cluster_to_sector(2); // Get 
     uint32_t cur_entry = 0;
     for (uint32_t i = 0; i < ENTRIES_PER_DIR; i++) {
-        out = get_entry(cur_sector, cur_entry);
+        free(address, sizeof(dir_entry_t));
+        entry_to_write = get_entry(cur_sector, cur_entry);
+        *address = entry_to_write;
 
-        if (out->filesize == 0 && (out->attrib & 0x10) == 0) {
-            sprintd("Found empty");
+        if (entry_to_write->filesize == 0 && (entry_to_write->attrib & 0x10) == 0) {
             break;
         }
 
@@ -426,21 +394,18 @@ void new_file(char *name, char *ext, dir_entry_t *out, uint32_t size) {
             cur_entry++;
         }
     }
-    setup_entry_file(out, name, ext, 3, size, cur_sector, cur_entry);
-    sprint("\nAttrib: ");
-    sprint_uint(out->attrib);
-    sprint("\nSize: ");
-    sprint_uint(out->filesize);
-    sprint("\nCluster: ");
-    sprint_uint(out->clusterlow);
+    setup_entry_file(entry_to_write, name, ext, 3, size, cur_sector, cur_entry);
 }
 
 /* Get the entryth entry in the clusterth cluster on the currently selected drive */
 dir_entry_t *get_entry(uint32_t sector, uint32_t entry) {
-    dir_entry_t *ret = kmalloc(512);
+    dir_entry_t *sector_data = kmalloc(512);
+    dir_entry_t *ret = kmalloc(sizeof(dir_entry_t));
     uint32_t sector_to_read = sector;
     readToBuffer(sector_to_read);
-    memory_copy(readBuffer, ret, 512);
-    ret += (entry * sizeof(dir_entry_t));
+    memory_copy(readBuffer, sector_data, 512);
+    sector_data += (entry * sizeof(dir_entry_t));
+    memory_copy(sector_data, ret, sizeof(dir_entry_t));
+    free(sector_data, 512);
     return ret;
 }

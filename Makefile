@@ -53,7 +53,7 @@ debug: myos.iso
 	${CC} -Iinclude -O${O_LEVEL} -g -MD -c $< -o $@ -std=gnu99 -ffreestanding
  
 %.o: %.s
-	${CC} -O2 -g -MD -c $< -o $@
+	${CC} -Werror -Wall -Wextra -O2 -g -MD -c $< -o $@
  
 %.o: %.asm
 	nasm -g -f elf32 -F dwarf -o $@ $<
