@@ -4,19 +4,8 @@
 #include "mem.h"
 
 void *get_pointer(uint32_t addr) {
-  //sprintd("Getting pointer to address: ");
-  //sprint_uint(addr);
-  //sprint("\n");
   volatile uintptr_t iptr = addr;
   unsigned int *ptr = (unsigned int*)iptr;
-  /* ... */
-  
-  /*kprint("\nPointer address: ");
-  kprint_uint(&ptr);
-  kprint("\nIPointer address: ");
-  kprint_uint(iptr);
-  kprint("\nAddress pointed to: ");
-  kprint_uint(ptr);*/
   return (void *)ptr;
 }
 
@@ -63,40 +52,28 @@ void set_addr(uint32_t addr, uint32_t memSize) {
     memory_set32(t, 0, 8);
 }
 
-/* Recursive function to find the best fitting block of mem to use */
+/* Unrecursive function to find the best fitting block of mem to use */
 void * bestFit(uint32_t size, uint32_t curFit, uint32_t curAddr, uint32_t curFitBlock) {
     uint32_t *nextFreeBlock = get_pointer(curAddr);
     uint32_t *freeSize = get_pointer(curAddr+4);
     uint32_t fit = curFit;
     uint32_t block = curFitBlock;
     uint32_t s = size;
-    if (*nextFreeBlock != 0 && *freeSize != 0 && *nextFreeBlock >= MIN && *nextFreeBlock + s <= MAX) {
+    while (*nextFreeBlock != 0 && *freeSize != 0 && *nextFreeBlock >= MIN && *nextFreeBlock + s <= MAX) {
         /* There is actually memory here */
-        uint32_t data = 180; // Random test value
-        uint32_t *ptr = get_pointer(*nextFreeBlock+8);
-        *ptr = data;
-        uint32_t inputD = *ptr;
-        if (inputD == data) {
-            /* Cool, the memory works */
-            //kprint("Memory works!");
-            if (size <= *freeSize) {
-                uint32_t dif = abs(*freeSize-size);
-                if (dif < curFit) {
-                    fit = dif;
-                    block = *nextFreeBlock;
-                }
+        /* Cool, the memory works */
+        if (size <= *freeSize) {
+            uint32_t dif = abs(*freeSize-size);
+            if (dif < curFit) {
+                fit = dif;
+                block = *nextFreeBlock;
             }
-            return bestFit(s, fit, *nextFreeBlock, block);
-        } else
-        {
-            return get_pointer(curFitBlock);
         }
-        
-    } else
-    {
-        return get_pointer(curFitBlock);
+        nextFreeBlock = get_pointer(*nextFreeBlock);
+        freeSize = get_pointer(*nextFreeBlock+4);
+
     }
-    
+    return get_pointer(block);
 }
 
 void block_move(blockData_t *d) {

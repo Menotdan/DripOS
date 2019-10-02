@@ -342,7 +342,10 @@ void read_data_from_entry(dir_entry_t *file, uint32_t *data_out) {
     if (file->filesize % 512 != 0) {
         sectors_to_read += 1;
     }
-
+    sprint("\nCluster: ");
+    sprint_uint(file->clusterlow);
+    sprint("\nSize: ");
+    sprint_uint(file->filesize);
 
     for (uint32_t i = 0; i < sectors_to_read; i++)
     {
@@ -383,7 +386,11 @@ void new_file(char *name, char *ext, uint32_t pointer, uint32_t size) {
         entry_to_write = get_entry(cur_sector, cur_entry);
         *address = entry_to_write;
 
-        if (entry_to_write->filesize == 0 && (entry_to_write->attrib & 0x10) == 0) {
+        if (entry_to_write->filesize == 0 && (entry_to_write->attrib & 0x10) == 0 && (entry_to_write->clusterlow == 0 && entry_to_write->clusterhigh == 0)) {
+            sprint("\nUsing entry: ");
+            sprint_uint(cur_entry);
+            sprint("\nOn sector: ");
+            sprint_uint(cur_sector);
             break;
         }
 
@@ -395,6 +402,11 @@ void new_file(char *name, char *ext, uint32_t pointer, uint32_t size) {
         }
     }
     setup_entry_file(entry_to_write, name, ext, 3, size, cur_sector, cur_entry);
+    *address = entry_to_write;
+    sprint("\nCluster: ");
+    sprint_uint(entry_to_write->clusterlow);
+    sprint("\nSize: ");
+    sprint_uint(entry_to_write->filesize);
 }
 
 /* Get the entryth entry in the clusterth cluster on the currently selected drive */

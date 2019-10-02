@@ -121,18 +121,20 @@ char *exception_messages[] = {
 };
 
 void isr_handler(registers_t *r) {
-    kprint("received interrupt: ");
-    char s[3];
-    int_to_ascii(r->int_no, s);
-    kprint(s);
-    kprint("\n");
-    kprint("error code: ");
-    char e[3];
-    int_to_ascii(r->err_code, s);
-    kprint(s);
-    kprint("\n");
-    kprint(exception_messages[r->int_no]);
-    kprint("\n");
+    // kprint("received interrupt: ");
+    // char s[3];
+    // int_to_ascii(r->int_no, s);
+    // kprint(s);
+    // kprint("\n");
+    // kprint("error code: ");
+    // char e[3];
+    // int_to_ascii(r->err_code, s);
+    // kprint(s);
+    // kprint("\n");
+    // kprint(exception_messages[r->int_no]);
+    // kprint("\n");
+    crash_screen(r);
+    while (1);
 }
 
 void register_interrupt_handler(uint8_t n, isr_t handler) {

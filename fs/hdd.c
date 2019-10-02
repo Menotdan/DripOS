@@ -151,6 +151,7 @@ int ata_pio28(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr) {
         return 0;
     } else {
         kprint("No drives found on this system!");
+        return 1;
     }
 }
 
@@ -218,6 +219,7 @@ int ata_pio48(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr) {
         return 0;
     } else {
         kprint("No drives found on this system!");
+        return 1;
     }
 }
 

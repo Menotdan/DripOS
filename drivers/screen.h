@@ -2,6 +2,7 @@
 #define SCREEN_H
 
 #include "../cpu/types.h"
+#include "../cpu/isr.h"
 typedef unsigned char *va_list;
 /* width of stack == width of int */
 #define	STACKITEM	int
@@ -44,6 +45,7 @@ int get_offset(int col, int row);
 void set_cursor_offset(int offset);
 int get_cursor_offset();
 void kprint_color(char *message, char color);
+void crash_screen(registers_t *crash_state);
 
 
 #endif

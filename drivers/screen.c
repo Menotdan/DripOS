@@ -5,6 +5,7 @@
 #include "../libc/mem.h"
 #include "colors.h"
 #include "../libc/string.h"
+#include "../cpu/isr.h"
 
 /* Declaration of private functions */
 int get_cursor_offset();
@@ -135,6 +136,42 @@ void kprint(char *message) {
 
 void kprint_color(char *message, char color) {
     kprint_at_col(message, -1, -1, color);
+}
+
+void crash_screen(registers_t *crash_state) {
+    clear_screen();
+    set_cursor_offset(get_offset(35, 0));
+    kprint_color("ERROR", 0x0C);
+    set_cursor_offset(get_offset(15, 1));
+    kprint("The system has been halted to prevent damage");
+    set_cursor_offset(get_offset(30, 11));
+    kprint("eip: ");
+    kprint_uint(crash_state->eip);
+    set_cursor_offset(get_offset(5, 12));
+    kprint("eax: ");
+    kprint_uint(crash_state->eax);
+    kprint("   ebx: ");
+    kprint_uint(crash_state->ebx);
+    kprint("   ecx: ");
+    kprint_uint(crash_state->ecx);
+    kprint("   edx: ");
+    kprint_uint(crash_state->edx);
+    set_cursor_offset(get_offset(5, 13));
+    kprint("edi: ");
+    kprint_uint(crash_state->edi);
+    kprint("   esi: ");
+    kprint_uint(crash_state->esi);
+    kprint("   esp: ");
+    kprint_uint(crash_state->esp);
+    kprint("   ebp: ");
+    kprint_uint(crash_state->ebp);
+    set_cursor_offset(get_offset(14, 14));
+    kprint("cs: ");
+    kprint_uint(crash_state->cs);
+    kprint("   ds: ");
+    kprint_uint(crash_state->ds);
+    kprint("   ss: ");
+    kprint_uint(crash_state->ss);
 }
 
 //void drip() {

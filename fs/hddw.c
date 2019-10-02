@@ -37,7 +37,7 @@ void read(uint32_t sector, uint32_t sector_high) {
         readOut[i] = ata_buffer[i];
     }
     clear_ata_buffer();
-    if (f == false && (tick-driveUseTick >= 500 || abs(sector-lastSector) > 50)) {
+    if (f == false && (abs(sector-lastSector) > 50)) {
         // Sometimes the drive shuts off, so we need to wait for it to turn on
         int l = 0;
         uint32_t delayStart = tick;

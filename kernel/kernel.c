@@ -61,40 +61,32 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
             uint32_t lenH = mmap->len_high;
             uint32_t lenL = mmap->len_low;
 			uint8_t mType = mmap->type;
-			char temp[26];
-			int_to_ascii(addrH, temp);
-			sprint("ADDR_HIGH: ");
-			sprint(temp);
-			int_to_ascii(addrL, temp);
-			sprint(", ADDR_LOW: ");
-			sprint(temp);
-			sprint("\n");
-			int_to_ascii(lenH, temp);
-			sprint("LEN_HIGH: ");
-			sprint(temp);
-			int_to_ascii(lenL, temp);
-			sprint(", LEN_LOW: ");
-			sprint(temp);
-			int_to_ascii(mType, temp);
-			sprint(", MEM_TYPE: ");
-			sprint(temp);
-			sprint("\n");
+			kprint("\n\n");
+			kprint("ADDR_HIGH: ");
+			kprint_uint(addrH);
+			kprint(", ADDR_LOW: ");
+			kprint_uint(addrL);
+			kprint("\n");
+			kprint("LEN_HIGH: ");
+			kprint_uint(lenH);
+			kprint(", LEN_LOW: ");
+			kprint_uint(lenL);
+			kprint(", MEM_TYPE: ");
+			kprint_uint(mType);
 			if (mType == 1) {
 				if (lenL > largestUseableMem) {
 					largestUseableMem = abs(lenL - abs(endOfCode-addrL));
 					memAddr = abs(addrL + abs(endOfCode-addrL));
-					sprint("\n\nMemory base: ");
-					sprint_uint(abs(addrL + abs(endOfCode-addrL)));
-					sprint("\nMemory length: ");
-					sprint_uint(abs(lenL - abs(endOfCode-addrL)));
-					sprint("\nEnd of code: ");
-					sprint_uint(endOfCode);
-					sprint("\n");
 				}
 			}
         }
+		kprint("\nEnd of code: ");
+		kprint_uint(endOfCode);
+		kprint("\nCalculated address: ");
+		kprint_uint(memAddr);
 		set_addr(memAddr, largestUseableMem);
     }
+	clear_screen();
 	// Initialize everything with a startup log
 	Log("Loaded memory", 1);
 	isr_install();
@@ -112,7 +104,7 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	init_hddw();
 	Log("Done", 1);
 
-	Log("Formatting drive...", 1);
+	/*Log("Formatting drive...", 1);
 	user_input("select 1");
 	format();
 	init_fat();
@@ -131,8 +123,11 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	sprint(": ");
 	sprint_uint(*data_to_read);
 	sprint("\n");
+	free(data_to_write, 512);
+	free(data_to_read, 512);
+	free(new_file_created, sizeof(dir_entry_t));
 
-	Log("Done", 1);
+	Log("Done", 1); */
 
 	Log("Testing memory", 1);
 	uint32_t *testOnStart = (uint32_t *)kmalloc(0x1000);
