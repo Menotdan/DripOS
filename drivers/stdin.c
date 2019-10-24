@@ -52,20 +52,19 @@ void key_handler(uint8_t scancode, bool keyup) {
     } else if (scancode == UPARROW && keyup != true){
         uint32_t loop = 0;
         uint32_t loop2 = 0;
-        while (loop2 < strlen(key_buffer))
+        while (loop2 < (uint32_t)strlen(key_buffer))
         {
             key_buffer_down[loop] = key_buffer[loop];
             loop2++;
         }
         
-        while (loop < strlen(key_buffer_up))
+        while (loop < (uint32_t)strlen(key_buffer_up))
         {
             key_buffer[loop] = key_buffer_up[loop];
             loop++;
         }
-        key_buffer[strlen(key_buffer_up)] = "\0";
+        key_buffer[strlen(key_buffer_up)] = remove_null("\0");
 
-        uint32_t offsetTemp = get_cursor_offset();
         int cOffset = get_cursor_offset();
         set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
         for (uint32_t g = 0; g < uinlen; g++)
@@ -162,20 +161,19 @@ void key_handler(uint8_t scancode, bool keyup) {
     } else if (strcmp(sc_name[scancode], "Enter") == 0 && keyup != true) {
         //fixer(key_buffer);
         //user_input(key_buffer);
-        for (int q = 0; q < uinlen; q++) {
+        for (uint32_t q = 0; q < uinlen; q++) {
             key_buffer_up[q] = key_buffer[q];
             key_buffer_up[q+1] = '\0';
         }
         uint32_t l = strlen(key_buffer);
         key_buffer[l] = 3;
-        key_buffer[l+1] = "\0";
+        key_buffer[l+1] = remove_null("\0");
     } else {
         if (shift == 0) {
             if (!keyup) {
                 if (scancode < SC_MAX){
                     appendp(key_buffer, sc_ascii[scancode], position);
-                    char str[2] = {sc_ascii[scancode], '\0'};
-                    //kprint(str);
+
                     uint32_t offsetTemp = get_cursor_offset();
                     int cOffset = get_cursor_offset();
                     breakA();
@@ -205,9 +203,7 @@ void key_handler(uint8_t scancode, bool keyup) {
         } else if (shift == 1) {
             if (!keyup) {
                 if (scancode < SC_MAX){
-                    //append(key_buffer, sc_ascii_uppercase[scancode]);
                     appendp(key_buffer, sc_ascii_uppercase[scancode], position);
-                    char str[2] = {sc_ascii_uppercase[scancode], '\0'};
 
                     uint32_t offsetTemp = get_cursor_offset();
                     int cOffset = get_cursor_offset();

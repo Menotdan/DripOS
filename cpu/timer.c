@@ -28,7 +28,7 @@ static void timer_callback(registers_t *regs) {
             keytimeout[i] -= 1;
         }
     }
-    if (tick - pSnd > lSnd) {
+    if (tick - (uint32_t)pSnd > (uint32_t)lSnd) {
         nosound();
         //kprint("Timed out");
     }

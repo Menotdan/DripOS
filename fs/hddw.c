@@ -23,6 +23,9 @@ void init_hddw() {
 }
 
 void read(uint32_t sector, uint32_t sector_high) {
+    if (sector_high == 1) {
+
+    }
     if (ata_pio == 0) {
         ata_pio28(ata_controler, 1, ata_drive, sector); // Read disk into ata_buffer
     } else {
@@ -37,12 +40,9 @@ void read(uint32_t sector, uint32_t sector_high) {
         readOut[i] = ata_buffer[i];
     }
     clear_ata_buffer();
-    if (f == false && (abs(sector-lastSector) > 50)) {
+    if (f == false && (tick-driveUseTick > 5000 || abs(sector-lastSector) > 50)) {
         // Sometimes the drive shuts off, so we need to wait for it to turn on
-        int l = 0;
-        uint32_t delayStart = tick;
-        int i;
-        wait(10);
+        wait(2000);
         if (ata_pio == 0) {
             ata_pio28(ata_controler, 1, ata_drive, sector); // Read disk into ata_buffer
         } else {
@@ -112,6 +112,23 @@ void write(uint32_t sector) {
         ata_pio28(ata_controler, 2, ata_drive, sector);
     } else {
         ata_pio48(ata_controler, 2, ata_drive, sector);
+    }
+    uint8_t bad = 1;
+    while (bad != 0) {
+        //kprint("\ntest");
+        //kprint_uint(bad);
+        if (ata_pio == 0) {
+            ata_pio28(ata_controler, 2, ata_drive, sector);
+        } else {
+            ata_pio48(ata_controler, 2, ata_drive, sector);
+        }
+        read(sector, 0);
+        bad = 0;
+        for (int i = 0; i < 256; i++) {
+            if (writeIn[i] != readOut[i]) {
+                bad++;
+            }
+        }
     }
     clear_ata_buffer();
     for(int i = 0; i < 256; i++)

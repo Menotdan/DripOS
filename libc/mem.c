@@ -64,7 +64,7 @@ void * bestFit(uint32_t size, uint32_t curFit, uint32_t curAddr, uint32_t curFit
         /* Cool, the memory works */
         if (size <= *freeSize) {
             uint32_t dif = abs(*freeSize-size);
-            if (dif < curFit) {
+            if (dif < fit) {
                 fit = dif;
                 block = *nextFreeBlock;
             }
@@ -81,9 +81,8 @@ void block_move(blockData_t *d) {
     uint32_t *current_ptr = get_pointer(current);
     uint32_t *current_ptr_offset = get_pointer(current+4);
     uint32_t usedMemBlock = d->usedBlock;
-    uint32_t usedBlockSize = d->usedBlockSize;
 
-    if (*current_ptr != 0 && *current_ptr_offset != 0 && *current_ptr >= MIN && (*current_ptr + *current_ptr_offset) <= MAX) {
+    while (*current_ptr != 0 && *current_ptr_offset != 0 && *current_ptr >= MIN && (*current_ptr + *current_ptr_offset) <= MAX) {
         // New pointer exists
         d->chain_next = *current_ptr;
         d->next_block_size = *current_ptr_offset;
@@ -99,12 +98,11 @@ void block_move(blockData_t *d) {
             return;
         } else
         {
-            return block_move(d);
+            return;
         }
         
-    } else {
-        return;
     }
+    return;
 }
 
 /* Implementation is just an address which
@@ -116,21 +114,23 @@ uint32_t kmalloc_int(uint32_t size, int align) {
         free_mem_addr += 0x1000;
     }
     void * bFit = bestFit(size, MAX - free_mem_addr, free_mem_addr, free_mem_addr);
-    uint32_t ret = bFit;
-    blockData_t *param;
+    uint32_t ret = (uint32_t)bFit;
+    blockData_t param;
     uint32_t *f1 = get_pointer(free_mem_addr);
     uint32_t *f2 = get_pointer(free_mem_addr+4);
-    param->chain_next = f1;
-    param->next_block_size = f2;
-    param->usedBlock = ret;
-    param->usedBlockSize = size;
-    block_move(param);
+    param.chain_next = (uint32_t)f1;
+    param.next_block_size = (uint32_t)f2;
+    param.usedBlock = ret;
+    param.usedBlockSize = size;
+    block_move((blockData_t *)get_pointer((uint32_t)&param));
     if (ret == free_mem_addr) {
         free_mem_addr += size; /* Remember to increment the pointer */
     }
     memoryRemaining -= size;
     usedMem += size;
-    memory_set(ret, 0, size);
+    memory_set((uint8_t *)ret, 0, size);
+    sprint("\nReturning address: ");
+    sprint_uint(ret);
     return ret;
 }
 
@@ -140,15 +140,15 @@ void * kmalloc(uint32_t size) {
 }
 
 void free(void * addr, uint32_t size) {
-    void *address = get_pointer(addr);
+    void *address = get_pointer((uint32_t)addr);
     uint32_t *free_ptr = get_pointer(free_mem_addr);
     uint32_t *free_ptr_offset = get_pointer(free_mem_addr + 4);
     uint32_t curAddr = *free_ptr;
     uint32_t curSize = *free_ptr_offset;
-    uint32_t *addr_base = get_pointer(address);
-    uint32_t *addr_size = get_pointer(address+4);
+    uint32_t *addr_base = get_pointer((uint32_t)address);
+    uint32_t *addr_size = get_pointer((uint32_t)address+4);
 
-    if (address + size == free_mem_addr) {
+    if ((uint32_t)address + size == free_mem_addr) {
         /* Add new block to the chain */
         memory_set(address, 0, size);
         uint32_t lastAddr = *free_ptr;
@@ -162,7 +162,7 @@ void free(void * addr, uint32_t size) {
         memory_set(address, 0, size);
         *addr_base = curAddr;
         *addr_size = curSize;
-        *free_ptr = address;
+        *free_ptr = (uint32_t)address;
         *free_ptr_offset = size;
     }
 

@@ -126,7 +126,7 @@ void remove_at_end_dir(dir_list_t *l) {
         }
     }
     if (new_head == l->tail) {
-        destroy_list(l);
+        destroy_list_dir(l);
         return;
     }
     if (new_head->next) {

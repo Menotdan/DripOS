@@ -4,6 +4,7 @@
 #include "../cpu/timer.h"
 #include "../drivers/sound.h"
 #include "../drivers/time.h"
+#include "../drivers/screen.h"
 #include "../fs/hdd.h"
 #include "../fs/hddw.h"
 #include "../fs/fat32.h"
@@ -14,6 +15,31 @@
 
 int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
+
+void read_disk(uint32_t sector) {
+	char str2[32];
+	kprint ("\nSector ");
+	kprint_int(sector);
+	kprint(" contents:\n\n");
+ 
+	//! read sector from disk
+	read(sector, 0);
+	for (int l = 0; l<256; l++) {
+		hex_to_ascii(readOut[l], str2);
+		kprint(str2);
+		kprint(" ");
+		for (int i = 0; i<32; i++) {
+			str2[i] = 0;
+		}
+	}
+	clear_ata_buffer();
+}
+
+void p_tone(uint32_t soundin, int len) {
+	play(soundin);
+	lSnd = tick;
+	pSnd = len;
+}
 
 void execute_command(char input[]) {
 	char *testy;
@@ -116,12 +142,11 @@ void execute_command(char input[]) {
 		kprint("Background task stopped!");
 		task = 0;
 	} else if (strcmp(input, "testMem") == 0) {
-		uint32_t pAddr;
 		for (int c = 0; c < 10000; c++) {
 			//kprint("Starting...");
 			testy = (char *)kmalloc(0x1000);
 			//kprint("Alocated\n");
-			kprint_uint(testy);
+			kprint_uint((uint32_t)testy);
 			kprint("\n");
 			//strcpy(testy, "ok this is a test\0");
 			for (uint32_t i = 0; i < 0x1000; i++) {
@@ -133,7 +158,6 @@ void execute_command(char input[]) {
 			//free(testy, 0x1000);
 		}
 	} else if (strcmp(input, "testMemLess") == 0) {
-		uint32_t pAddr;
 		uint32_t *test1 = kmalloc(0x1000);
 		uint32_t *test2 = kmalloc(0x1000);
 		*test2 = 33;
@@ -151,7 +175,6 @@ void execute_command(char input[]) {
 		free(test1, 0x1000);
 		free(test2, 0x1000);
 	} else if (strcmp(input, "testMemBlocks") == 0) {
-		uint32_t pAddr;
 		for (int c = 0; c < 1; c++) {
 			sprintd("Allocating 4096 bytes...");
 			uint32_t *testy1 = (uint32_t *)kmalloc(0x1000);
@@ -319,7 +342,7 @@ void execute_command(char input[]) {
 		uint32_t *data_to_write = kmalloc(512);
 		uint32_t *data_to_read = kmalloc(512);
 		*data_to_write = 123456789;
-		new_file("test", "txt", &new_file_created, 512);
+		new_file("test", "txt", (uint32_t)(&new_file_created), 512);
 		write_data_to_entry(new_file_created, data_to_write, 512);
 		read_data_from_entry(new_file_created, data_to_read);
 		sprint("\nData read from ");
@@ -344,41 +367,4 @@ void execute_command(char input[]) {
 	}
 	kprint("\n");
 	kprint("drip@DripOS> ");
-}
-
-void p_tone(uint32_t soundin, int len) {
-	play(soundin);
-	lSnd = tick;
-	pSnd = len;
-}
-
-void read_disk(uint32_t sector) {
-	uint32_t sectornum;
-	uint16_t nom;
-	sectornum = 0;
-	char str1[32];
-	char str2[32];
-	kprint ("\nSector ");
-	kprint_int(sector);
-	kprint(" contents:\n\n");
- 
-	//! read sector from disk
-	read(sector, 0);
-	for (int l = 0; l<256; l++) {
-		//hex_to_ascii(sector[l] & 0xff, str1);
-		//hex_to_ascii((sector[l] >> 8), str2);
-		//kprint(str2);
-		//kprint(" ");
-		//kprint(str1);
-		//kprint(" ");
-		hex_to_ascii(readOut[l], str2);
-		kprint(str2);
-		kprint(" ");
-		for (int i = 0; i<32; i++) {
-			str1[i] = 0;
-			str2[i] = 0;
-		}
-	}
-	clear_ata_buffer();
-	//kprint_int(sizeof(ata_buffer));
 }

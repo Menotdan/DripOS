@@ -18,7 +18,7 @@ uint32_t usedMem;
 void free(void * address, uint32_t size);
 
 /* Get a pointer from an address */
-void *get_pointer(addr);
+void *get_pointer(uint32_t addr);
 
 typedef struct block_move_data
 {

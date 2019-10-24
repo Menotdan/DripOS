@@ -15,54 +15,149 @@ uint32_t clusters_on_drive;
 uint32_t fat_sectors_used;
 uint32_t fat_sector_loaded;
 
+void get_drive_size() {
+    if (ata_controler == PRIMARY_IDE)
+    {
+        if (ata_drive == MASTER_DRIVE)
+        {
+            driveSize = drive_sectors(1,1);
+        } else
+        {
+            driveSize = drive_sectors(0,1);
+        }
+        
+    } else
+    {
+        if (ata_drive == MASTER_DRIVE)
+        {
+            driveSize = drive_sectors(1,0);
+        } else
+        {
+            driveSize = drive_sectors(0,0);
+        }
+    }
+}
+
+void get_drive_clusters(uint32_t spc) {
+    get_drive_size();
+    clusters_on_drive = (driveSize.MAX_LBA / spc);
+    if (driveSize.MAX_LBA % spc != 0) {
+        clusters_on_drive += 1;
+    }
+    uint32_t temp_fat_sectors = (clusters_on_drive*sizeof(uint32_t))/512;
+    if ((clusters_on_drive*sizeof(uint32_t)) % 512 != 0)
+    {
+        temp_fat_sectors += 1;
+    }
+    fat_sectors_used = temp_fat_sectors;
+}
+
 uint32_t cluster_to_sector(uint32_t clusterP) {
     return (fat_sectors_used + OTHER_SECTORS + (clusterP*sectors_per_cluster));
+}
+
+void write_table(uint32_t *tablep) {
+    wait(10);
+    uint32_t *tmp = tablep;
+    memory_copy((uint8_t *)tmp, writeBuffer, 512);
+    writeFromBuffer((OTHER_SECTORS+fat_sector_loaded));
 }
 
 uint32_t get_cluster_value(uint32_t cluster) {
     uint32_t temp = cluster;
     uint32_t to_load = 0;
-    uint32_t *tmp = new_table;
-    //sprintd("Starting loop...");
-    //sprint("\nTemp: ");
-    //sprint_uint(temp);
-    //sprint("\n");
     while (temp >= 128) {
         temp -= 128;
         to_load += 1;
-        //sprint("\nArray pos: ");
-        //sprint_uint(temp);
-        //sprint("\n");
+    }
+    fat_sector_loaded = to_load;
+    readToBuffer((OTHER_SECTORS+fat_sector_loaded)); // Read the FAT, starting at the FAT's location
+    memory_copy(readBuffer, (uint8_t *)new_table, 512); // Write the read data to the table
+    wait(2);
+    temp -= 1;
+    return new_table[temp];
+}
+
+void setup_entry_dir(dir_entry_t *entry, char name[], uint32_t cluster, uint32_t sector_to_write, uint32_t entry_to_write) {
+    for (uint32_t i = 0; i < (uint32_t)strlen(name); i++)
+    {
+        char toset;
+        if (name[i] == 0) {
+            toset = remove_null(" ");
+        } else {
+            char temp[2];
+            temp[0] = name[i];
+            temp[1] = 0;
+            toset = remove_null(temp);
+        }
+        entry->name[i] = toset;
     }
 
-    //if (fat_sector_loaded != to_load) {
-        fat_sector_loaded = to_load;
-        //sprint("\nReading from sector: ");
-        //sprint_uint((OTHER_SECTORS+fat_sector_loaded));
-        //sprint("\n");
-        //sprint("\nReading from array pos: ");
-        //sprint_uint(temp);
-        //sprint("\n");
+    if (strlen(name) < 8) {
+        uint8_t dif = 8-strlen(name);
+        for (uint32_t i = 8-dif; i < 8; i++)
+        {
+            entry->name[i] = remove_null(" ");
+        } 
+    }
+    entry->clusterlow = (uint16_t)(cluster & 0xFFFF);
+    entry->clusterhigh = (uint16_t)(cluster >> 16);
+    entry->attrib = (entry->attrib | 0x10);
+    dir_entry_t *buffer_offset = (dir_entry_t *)writeBuffer;
+    buffer_offset += (entry_to_write*sizeof(dir_entry_t));
+    memory_copy((uint8_t *)entry, (uint8_t *)buffer_offset, sizeof(dir_entry_t));
+    writeFromBuffer(sector_to_write);
+}
 
-        readToBuffer((OTHER_SECTORS+fat_sector_loaded)); // Read the FAT, starting at the FAT's location
-        memory_copy(readBuffer, new_table, 512); // Write the read data to the table
-        wait(2);
-        // while (new_table[1] == 0) {
-        //     readToBuffer((OTHER_SECTORS+fat_sector_loaded)); // Read the FAT, starting at the FAT's location
-        //     memory_copy(readBuffer, new_table, 512); // Write the read data to the table
-        //     wait(2);
-        // }
-    //}
-    temp -= 1;
-    //for (uint32_t i = 0; i < 128; i++) {
-    //    sprint("\nData: ");
-    //    sprint_uint(new_table[i]);
-    //    sprint(" I: ");
-    //    sprint_uint(i);
-    //}
-    //sprint("\nSector: ");
-    //sprint_uint((OTHER_SECTORS+fat_sector_loaded));
-    return new_table[temp];
+void setup_entry_file(dir_entry_t *entry, char name[], char ext[], uint32_t cluster, uint32_t size, uint32_t sector_to_write, uint32_t entry_to_write) {
+    for (uint32_t i = 0; i < (uint32_t)strlen(name); i++)
+    {
+        char toset; // Temporary storage for the next char in the name
+        if (name[i] == 0) {
+            toset = remove_null(" "); // If we found a null byte
+        } else {
+            char temp[2];
+            temp[0] = name[i];
+            temp[1] = 0;
+            toset = remove_null(temp);
+        }
+        entry->name[i] = toset; // Set the data
+    }
+    if (strlen(name) < 8) { // If the string is shorter than the supported size, pad it with spaces
+        uint8_t dif = 8-strlen(name);
+        for (uint32_t i = 8-dif; i < 8; i++)
+        {
+            entry->name[i+0] = remove_null(" ");
+        } 
+    }
+
+    for (uint32_t i = 0; i < (uint32_t)strlen(ext); i++)
+    {
+        char toset;
+        if (ext[i] == 0) {
+            toset = remove_null(" ");
+        } else {
+            toset = ext[i];
+        }
+        entry->ext[i] = toset;
+    }
+
+    if (strlen(name) < 3) {
+        uint8_t dif = 3-strlen(name);
+        for (uint32_t i = 3-dif; i < 3; i++)
+        {
+            entry->ext[i] = remove_null(" ");
+        } 
+    }
+
+    entry->clusterlow = (uint16_t)(cluster & 0xFFFF);
+    entry->clusterhigh = (uint16_t)(cluster >> 16);
+    entry->attrib = 0x0;
+    entry->filesize = size;
+    dir_entry_t *buffer_offset = (dir_entry_t *)writeBuffer;
+    buffer_offset += (entry_to_write*sizeof(dir_entry_t));
+    memory_copy((uint8_t *)entry, (uint8_t *)buffer_offset, sizeof(dir_entry_t));
+    writeFromBuffer(sector_to_write);
 }
 
 list_t *get_chain(uint32_t cluster_start) {
@@ -146,37 +241,34 @@ void format() {
     }
     
 
-    memory_copy(BPB, writeBuffer, 512);
+    memory_copy((uint8_t *)BPB, writeBuffer, 512);
     writeFromBuffer(0);
     fat32_fsinfo_t *fsinfo = kmalloc(sizeof(fat32_fsinfo_t));
     fsinfo->signature = 0x41615252;
     fsinfo->signature2 = 0x61417272;
     fsinfo->free_cluster_count = 0xFFFFFFFF;
     fsinfo->cluster_check_location = 0xFFFFFFFF;
-    for (uint32_t i; i<480; i++) {
+    for (uint32_t i = 0; i<480; i++) {
         fsinfo->reserved[i] = 0;
     }
-    memory_copy(fsinfo, writeBuffer, 512);
+    memory_copy((uint8_t *)fsinfo, writeBuffer, 512);
     writeFromBuffer(1);
     free(fsinfo, sizeof(fat32_fsinfo_t));
     free(BPB, sizeof(fat32_bpb_t));
     wait(2);
     fat32_bpb_t *tmp2 = kmalloc(sizeof(fat32_bpb_t));
     readToBuffer(0);
-    memory_copy(readBuffer, tmp2, 512);
+    memory_copy(readBuffer, (uint8_t *)tmp2, 512);
     free(tmp2, sizeof(fat32_bpb_t));
 
     // FSInfo and BPB written, now for creation of the root directory
     
     new_table = kmalloc(512); // Allocates 512 bytes so we can read 128 clusters at a time
-    uint32_t ok = get_cluster_value(2);
     // Allocate two clusters for root directory
     new_table[1] = 3;
     new_table[2] = 0x0FFFFFF8; // End of chain
 
     uint32_t start_sector = cluster_to_sector(2);
-    uint32_t last_sector = cluster_to_sector(3) + sectors_per_cluster;
-    uint32_t cur_sector = start_sector;
     dir_entry_t *directories = kmalloc(sizeof(dir_entry_t) * ENTRIES_PER_SECTOR);
     setup_entry_dir(directories, "/", 2, start_sector, 0);
     // Write table
@@ -189,10 +281,11 @@ void init_fat() {
     // Read the BIOS parameter block for drive info
     drive_data = kmalloc(sizeof(fat32_bpb_t));
     readToBuffer(0);
-    memory_copy(readBuffer, drive_data, 512);
+    memory_copy(readBuffer, (uint8_t *)drive_data, 512);
     while (drive_data->large_sector_count == 0) {
+        kprint("\nWorking...");
         readToBuffer(0);
-        memory_copy(readBuffer, drive_data, 512);
+        memory_copy(readBuffer, (uint8_t *)drive_data, 512);
         //sprintd("Still loading drive...");
     }
     get_drive_clusters(drive_data->sectors_per_cluster);
@@ -200,137 +293,9 @@ void init_fat() {
 
     // Load FAT
     new_table = kmalloc(512);
-
-    uint32_t ok = get_cluster_value(2);
-
-    list_t *root_dir = get_chain(2);
 }
 
-void setup_entry_dir(dir_entry_t *entry, char name[], uint32_t cluster, uint32_t sector_to_write, uint32_t entry_to_write) {
-    for (uint32_t i = 0; i < strlen(name); i++)
-    {
-        char toset;
-        if (name[i] == 0) {
-            toset = remove_null(" ");
-        } else {
-            char temp[2];
-            temp[0] = name[i];
-            temp[1] = 0;
-            toset = remove_null(temp);
-        }
-        entry->name[i] = toset;
-    }
 
-    if (strlen(name) < 8) {
-        uint8_t dif = 8-strlen(name);
-        for (uint32_t i = 8-dif; i < 8; i++)
-        {
-            entry->name[i] = remove_null(" ");
-        } 
-    }
-    entry->clusterlow = (uint16_t)(cluster & 0xFFFF);
-    entry->clusterhigh = (uint16_t)(cluster >> 16);
-    entry->attrib = (entry->attrib | 0x10);
-    dir_entry_t *buffer_offset = writeBuffer;
-    buffer_offset += (entry_to_write*sizeof(dir_entry_t));
-    memory_copy(entry, buffer_offset, sizeof(dir_entry_t));
-    writeFromBuffer(sector_to_write);
-}
-
-void setup_entry_file(dir_entry_t *entry, char name[], char ext[], uint32_t cluster, uint32_t size, uint32_t sector_to_write, uint32_t entry_to_write) {
-    for (uint32_t i = 0; i < strlen(name); i++)
-    {
-        char toset; // Temporary storage for the next char in the name
-        if (name[i] == 0) {
-            toset = remove_null(" "); // If we found a null byte
-        } else {
-            char temp[2];
-            temp[0] = name[i];
-            temp[1] = 0;
-            toset = remove_null(temp);
-        }
-        entry->name[i] = toset; // Set the data
-    }
-    if (strlen(name) < 8) { // If the string is shorter than the supported size, pad it with spaces
-        uint8_t dif = 8-strlen(name);
-        for (uint32_t i = 8-dif; i < 8; i++)
-        {
-            entry->name[i] = remove_null(" ");
-        } 
-    }
-
-    for (uint32_t i = 0; i < strlen(ext); i++)
-    {
-        char toset;
-        if (ext[i] == 0) {
-            toset = remove_null(" ");
-        } else {
-            toset = ext[i];
-        }
-        entry->ext[i] = toset;
-    }
-
-    if (strlen(name) < 3) {
-        uint8_t dif = 3-strlen(name);
-        for (uint32_t i = 3-dif; i < 3; i++)
-        {
-            entry->ext[i] = remove_null(" ");
-        } 
-    }
-
-    entry->clusterlow = (uint16_t)(cluster & 0xFFFF);
-    entry->clusterhigh = (uint16_t)(cluster >> 16);
-    entry->attrib = 0x0;
-    entry->filesize = size;
-    dir_entry_t *buffer_offset = writeBuffer;
-    buffer_offset += (entry_to_write*sizeof(dir_entry_t));
-    memory_copy(entry, buffer_offset, sizeof(dir_entry_t));
-    writeFromBuffer(sector_to_write);
-}
-
-void write_table(uint32_t *tablep) {
-    wait(10);
-    uint32_t *tmp = tablep;
-    memory_copy(tmp, writeBuffer, 512);
-    writeFromBuffer((OTHER_SECTORS+fat_sector_loaded));
-}
-
-void get_drive_size() {
-    if (ata_controler == PRIMARY_IDE)
-    {
-        if (ata_drive == MASTER_DRIVE)
-        {
-            driveSize = drive_sectors(1,1);
-        } else
-        {
-            driveSize = drive_sectors(0,1);
-        }
-        
-    } else
-    {
-        if (ata_drive == MASTER_DRIVE)
-        {
-            driveSize = drive_sectors(1,0);
-        } else
-        {
-            driveSize = drive_sectors(0,0);
-        }
-    }
-}
-
-void get_drive_clusters(uint32_t spc) {
-    get_drive_size();
-    clusters_on_drive = (driveSize.MAX_LBA / spc);
-    if (driveSize.MAX_LBA % spc != 0) {
-        clusters_on_drive += 1;
-    }
-    uint32_t temp_fat_sectors = (clusters_on_drive*sizeof(uint32_t))/512;
-    if ((clusters_on_drive*sizeof(uint32_t)) % 512 != 0)
-    {
-        temp_fat_sectors += 1;
-    }
-    fat_sectors_used = temp_fat_sectors;
-}
 
 /* Use an entry to get a files contents */
 void read_data_from_entry(dir_entry_t *file, uint32_t *data_out) {
@@ -350,7 +315,7 @@ void read_data_from_entry(dir_entry_t *file, uint32_t *data_out) {
     for (uint32_t i = 0; i < sectors_to_read; i++)
     {
         readToBuffer(cur_sector);
-        memory_copy(readBuffer, tmp_out, 512);
+        memory_copy(readBuffer, (uint8_t *)tmp_out, 512);
         tmp_out += 512;
         cur_sector++;
     }
@@ -368,7 +333,7 @@ void write_data_to_entry(dir_entry_t *file, uint32_t *data_in, uint32_t toWrite)
     }
     
     for (uint32_t i = 0; i < sectors_to_read; i++) {
-        memory_copy(tmp_out, writeBuffer, 512);
+        memory_copy((uint8_t *)tmp_out, writeBuffer, 512);
         writeFromBuffer(cur_sector);
         tmp_out += 512;
         cur_sector++;
@@ -384,7 +349,7 @@ void new_file(char *name, char *ext, uint32_t pointer, uint32_t size) {
     for (uint32_t i = 0; i < ENTRIES_PER_DIR; i++) {
         free(address, sizeof(dir_entry_t));
         entry_to_write = get_entry(cur_sector, cur_entry);
-        *address = entry_to_write;
+        *address = (uint32_t)entry_to_write;
 
         if (entry_to_write->filesize == 0 && (entry_to_write->attrib & 0x10) == 0 && (entry_to_write->clusterlow == 0 && entry_to_write->clusterhigh == 0)) {
             sprint("\nUsing entry: ");
@@ -402,7 +367,7 @@ void new_file(char *name, char *ext, uint32_t pointer, uint32_t size) {
         }
     }
     setup_entry_file(entry_to_write, name, ext, 3, size, cur_sector, cur_entry);
-    *address = entry_to_write;
+    *address = (uint32_t)entry_to_write;
     sprint("\nCluster: ");
     sprint_uint(entry_to_write->clusterlow);
     sprint("\nSize: ");
@@ -415,9 +380,9 @@ dir_entry_t *get_entry(uint32_t sector, uint32_t entry) {
     dir_entry_t *ret = kmalloc(sizeof(dir_entry_t));
     uint32_t sector_to_read = sector;
     readToBuffer(sector_to_read);
-    memory_copy(readBuffer, sector_data, 512);
+    memory_copy(readBuffer, (uint8_t *)sector_data, 512);
     sector_data += (entry * sizeof(dir_entry_t));
-    memory_copy(sector_data, ret, sizeof(dir_entry_t));
+    memory_copy((uint8_t *)sector_data, (uint8_t *)ret, sizeof(dir_entry_t));
     free(sector_data, 512);
     return ret;
 }

@@ -70,7 +70,7 @@ undefined behavior.
 .section .bss
 .align 16
 stack_bottom:
-.skip 32768 /* 32 KiB of kernel stack, stack for other processes will
+.skip 65536 /* 64 KiB of kernel stack, stack for other processes will
 allocated when they are created */
 stack_top:
  

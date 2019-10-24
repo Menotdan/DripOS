@@ -11,11 +11,11 @@ void backspace(char s[]);
 void backspacep(char s[], uint32_t pos);
 void append(char s[], char n);
 void appendp(char s[], char n, uint32_t position);
-int strcmp(char s1[], char s2[]);
+int strcmp(const char s1[], char s2[]);
 int match(char s1[], char s2[]);
 //int first_space(char s1[]);
 char *strcpy(char *dest, const char *src);
-const char* afterSpace(const char* input);
+char* afterSpace(char* input);
 void kprint_int(int num);
 void kprint_uint(unsigned int num);
 char to_hex(uint8_t nibble);
@@ -27,5 +27,6 @@ char remove_null(char s[]);
 void nntn(char i[], char o[], uint32_t inLen);
 void copy_no_null(char i[], char o[]);
 void fat_str(char name[], char ext[], char o[]);
+int atoi(char *str);
 
 #endif

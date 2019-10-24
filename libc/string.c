@@ -126,7 +126,7 @@ void appendp(char s[], char n, uint32_t position) {
     uint32_t i;
     char z = n;
     char tempf;
-    for (i = position; i < len + 1; i++)
+    for (i = position; i < (uint32_t)(len + 1); i++)
     {
         tempf = s[i];
         s[i] = z;
@@ -142,7 +142,7 @@ void backspace(char s[]) {
 
 void backspacep(char s[], uint32_t pos) {
     int len = strlen(s);
-    char prev = "\0";
+    char prev = remove_null("\0");
     char tempE;
     for (uint32_t x = len; x > pos-2; x--) {
         tempE = s[x];
@@ -164,7 +164,7 @@ void fixer(char s[]) {
 
 /* K&R 
  * Returns <0 if s1<s2, 0 if s1==s2, >0 if s1>s2 */
-int strcmp(char s1[], char s2[]) {
+int strcmp(const char s1[], char s2[]) {
     int i;
     for (i = 0; s1[i] == s2[i]; i++) {
         if (s1[i] == '\0') return 0;
@@ -173,12 +173,12 @@ int strcmp(char s1[], char s2[]) {
 }
 
 int match(char s1[], char s2[]) { //how many characters match, before the first unmatching character
-    int ret;
+    int ret = 0;
     for (int i = 0; s1[i] == s2[i]; i++) {
         //char hello[100];
         //int_to_ascii(i, hello);
         //kprint(hello);
-        if (s1[i] == "\0" || s2[i] == "\0") return i - 1;
+        if (s1[i] == remove_null("\0") || s2[i] == remove_null("\0")) return i - 1;
         ret = i;
     }
     if (strcmp(s1, s2) == 0) {
@@ -214,9 +214,8 @@ char *mstrcpy(uint32_t dest, const char *src)
 
   return (char *)get_pointer(dest);
 }
-
-const char* afterSpace(const char* input) {
-   const char* starting = input;
+char* afterSpace(char* input) {
+   char* starting = input;
    while (*starting != ' ') {
      starting++;
    }
@@ -259,11 +258,11 @@ void fat_str(char name[], char ext[], char o[]) {
         }
     }
     
-    for (uint32_t pos = 0; pos < strlen(new_name); pos++) {
+    for (uint32_t pos = 0; pos < (uint32_t)strlen(new_name); pos++) {
         o[pos] = new_name[pos];
     }
     o[strlen(new_name)] = remove_null(".");
-    for (uint32_t pos = 0; pos < strlen(new_ext); pos++) {
+    for (uint32_t pos = 0; pos < (uint32_t)strlen(new_ext); pos++) {
         o[pos+strlen(new_name)+1] = new_ext[pos];
     }
 }
@@ -271,7 +270,7 @@ void fat_str(char name[], char ext[], char o[]) {
 void copy_no_null(char i[], char o[]) {
     uint32_t l = strlen(i);
     uint32_t offset = 0;
-    for (uint32_t f = 0; i<l; i++) {
+    for (uint32_t f = 0; f<l; f++) {
         if (i[f] != 0)
         {
             o[f-offset] = i[f];

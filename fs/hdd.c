@@ -276,10 +276,10 @@ void new_scan() {
     } else {
         clear_ata_buffer();
         nodrives = 1;
-        return 1;
+        return;
     }
     clear_ata_buffer();
-    return 0;
+    return;
 }
 
 void drive_scan() {
@@ -410,16 +410,16 @@ void drive_scan() {
             ata_controler = PRIMARY_IDE;
             ata_pio = 0;
         }
-        return 0;
+        return;
     } else if (ms == 0) {
-        return 0;
+        return;
     } else if (sp == 0) {
-        return 0;
+        return;
     } else if (ss == 0) {
-        return 0;
+        return;
     } else {
         nodrives = 1;
-        return 1;
+        return;
     }
 
 }
@@ -428,19 +428,21 @@ hdd_size_t drive_sectors(uint8_t devP, uint8_t controllerP) {
     hdd_size_t size;
     uint16_t controller = 0x170 + controllerP*0x80;
     uint16_t deviceBit = (devP << 4) + (1 << 6);
+    if (deviceBit == 0) {
 
+    }
     read(0, 0); // Start drive
-    while (port_byte_in(controller+7) & 0x40 == 0); // Wait for the drive to be ready
+    while ((port_byte_in(controller+7) & 0x40) == 0); // Wait for the drive to be ready
     if (ata_pio == 0) {
         port_byte_out(controller + 7, 0xF8); // Send the command
-        while (port_byte_in(controller + 7) & 0x80 != 0); // Wait for BSY to clear
+        while ((port_byte_in(controller + 7) & 0x80) != 0); // Wait for BSY to clear
         size.MAX_LBA = (uint32_t)port_byte_in(controller+3);
         size.MAX_LBA += (uint32_t)port_byte_in(controller+4) <<8;
         size.MAX_LBA += (uint32_t)port_byte_in(controller+5) <<16;
         size.MAX_LBA += ((uint32_t)port_byte_in(controller+6) & 0xF) <<24;
     } else {
         port_byte_out(controller + 7, 0x27); // Send the command
-        while (port_byte_in(controller + 7) & 0x80 != 0); // Wait for BSY to clear
+        while ((port_byte_in(controller + 7) & 0x80) != 0); // Wait for BSY to clear
         size.MAX_LBA =  (uint32_t)port_byte_in(controller+3);
         size.MAX_LBA += (uint32_t)port_byte_in(controller+4) <<8;
         size.MAX_LBA += (uint32_t)port_byte_in(controller+5) <<16;

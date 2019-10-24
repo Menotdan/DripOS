@@ -19,9 +19,6 @@ unsigned int  year;
 	port_byte_out(cmos_address, reg);
 	return port_byte_in(cmos_data);
 }
- void format_time(char *string_buf, int len) {
-	
-}
  void read_rtc() {
 	unsigned char century;
 	unsigned char last_second;
@@ -39,6 +36,7 @@ unsigned int  year;
 	day = get_RTC_register(0x07);
 	month = get_RTC_register(0x08);
 	year = get_RTC_register(0x09);
+	century = 0;
  	if(century_register != 0) {
 		century = get_RTC_register(century_register);
 	}
