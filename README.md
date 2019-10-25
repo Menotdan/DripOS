@@ -1,5 +1,8 @@
 # DripOS
+[![][discord_image]][discord_link]
+
 An OS made for fun.
+
 NOTE: This is based off of this tutorial: https://github.com/cfenollosa/os-tutorial
 
 
@@ -27,9 +30,9 @@ qemu-system-i386 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -
 
 ## Windows:
 
-Download and install qemu:
+Download and install qemu (pick 32 or 64 bit version):
 
-https://qemu.weilnetz.de/w64/qemu-w64-setup-20180815.exe
+https://qemu.weilnetz.de/
 
 Go to **qemu** directory
 
@@ -42,3 +45,5 @@ and to run the emulator with **DripOS**:
 ```batch
 qemu-system-i386.exe -m 256 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -fda /path/to/Downloads/DripOS-master/DripOS/os-image.bin
 ```
+[discord_image]:https://img.shields.io/badge/discord-DripOS-738bd7.svg?style=square
+[discord_link]:https://discord.gg/E9ZXZWn
