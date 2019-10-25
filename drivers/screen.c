@@ -200,7 +200,7 @@ void logoDraw() {
                 kprint_at_col(" ", x + xOff, y, BLACK_ON_BLACK);
             } else if(logo[y][x] == 2) {                kprint_at_col(" ", x + xOff, y, CYAN_ON_CYAN);
             } else if(logo[y][x] == 3) {
-                kprint_at_col(" ", x + xOff, y, WHITE_ON_WHITE);
+                kprint_at_col(" ", x + xOff, y, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_WHITE));
             } else {
                 kprint_at_col(" ", x + xOff, y, WHITE_ON_BLACK);
             }

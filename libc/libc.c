@@ -1,9 +1,6 @@
 #include <libc.h>
 
 unsigned int abs(int num) {
-    int temp;
-    unsigned int ret;
-    if ((temp = num) < 0) temp = -temp;
-    ret = (uint32_t)temp;
-    return ret;
+    if ((num) < 0) return (uint32_t)-num;
+    return (uint32_t)num;
 }
