@@ -50,10 +50,10 @@ debug: myos.iso
 # Generic rules for wildcards
 # To make an object, always compile from its .c $< $@
 %.o: %.c ${HEADERS}
-	${CC} -Iinclude -O${O_LEVEL} -g -Werror -Wall -Wextra -fno-omit-frame-pointer -MD -c $< -o $@ -std=gnu99 -ffreestanding
+	${CC} -Iinclude -O${O_LEVEL} -g -Werror -Wall -Wextra -Wpedantic -fno-omit-frame-pointer -MD -c $< -o $@ -std=gnu11 -ffreestanding
  
 %.o: %.s
-	${CC} -Werror -Wall -Wextra -O2 -g -MD -c $< -o $@
+	${CC} -Werror -Wall -Wextra -Wpedantic -O2 -g -MD -c $< -o $@
  
 %.o: %.asm
 	nasm -g -f elf32 -F dwarf -o $@ $<
