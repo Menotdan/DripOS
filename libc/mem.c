@@ -93,8 +93,10 @@ void block_move(blockData_t *d) {
             uint32_t *used_ptr_offset = get_pointer(usedMemBlock + 4);
             uint32_t used_pointing = *used_ptr;
             uint32_t used_pointing_size = *used_ptr_offset;
-            *current_ptr = used_pointing;
-            *current_ptr_offset = used_pointing_size;
+            if (used_pointing != 0 && used_pointing_size != 0 && used_pointing >= MIN && (used_pointing + used_pointing_size) <= MAX) {
+                *current_ptr = used_pointing;
+                *current_ptr_offset = used_pointing_size;
+            }
             return;
         } else
         {
