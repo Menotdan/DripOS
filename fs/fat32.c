@@ -282,13 +282,8 @@ void init_fat() {
     drive_data = kmalloc(sizeof(fat32_bpb_t));
     readToBuffer(0);
     memory_copy(readBuffer, (uint8_t *)drive_data, 512);
-    while (drive_data->large_sector_count == 0) {
-        kprint("\nWorking...");
-        readToBuffer(0);
-        memory_copy(readBuffer, (uint8_t *)drive_data, 512);
-        //sprintd("Still loading drive...");
-    }
     get_drive_clusters(drive_data->sectors_per_cluster);
+    sprint_uint(clusters_on_drive);
     sectors_per_cluster = drive_data->sectors_per_cluster;
 
     // Load FAT

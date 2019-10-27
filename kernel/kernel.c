@@ -139,12 +139,12 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	Log("Done", 1);
 	//breakA();
 
-	// Log("Formatting drive...", 1);
-	// //user_input("select 1");
-	// format();
-	// Log("Formatted", 1);
-	// init_fat();
-	// Log("Initialized", 1);
+	Log("Formatting drive...", 1);
+	user_input("select 1");
+	format();
+	Log("Formatted", 1);
+	init_fat();
+	Log("Initialized", 1);
 
 	// dir_entry_t *new_file_created = kmalloc(sizeof(dir_entry_t));
 	// uint32_t *data_to_write = kmalloc(512);
