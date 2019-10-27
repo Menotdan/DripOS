@@ -45,7 +45,7 @@ int get_offset(int col, int row);
 void set_cursor_offset(int offset);
 int get_cursor_offset();
 void kprint_color(char *message, char color);
-void crash_screen(registers_t *crash_state);
+void crash_screen(registers_t *crash_state, char *msg, uint8_t printReg);
 
 
 #endif

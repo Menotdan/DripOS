@@ -1,4 +1,5 @@
 #include "kernel.h"
+#include "debug.h"
 #include "../libc/string.h"
 #include "../cpu/soundManager.h"
 #include "../cpu/timer.h"
@@ -142,19 +143,13 @@ void execute_command(char input[]) {
 		kprint("Background task stopped!");
 		task = 0;
 	} else if (strcmp(input, "testMem") == 0) {
+		breakA();
+		//asserta(0, "t");
 		for (int c = 0; c < 10000; c++) {
-			//kprint("Starting...");
 			testy = (char *)kmalloc(0x1000);
-			//kprint("Alocated\n");
 			kprint_uint((uint32_t)testy);
 			kprint("\n");
-			//strcpy(testy, "ok this is a test\0");
-			for (uint32_t i = 0; i < 0x1000; i++) {
-				*testy = 100;
-				//kprint("Set memory\n");
-				testy++;
-				//kprint("Increment the pointer\n");
-			}
+			*testy = 100;
 			//free(testy, 0x1000);
 		}
 	} else if (strcmp(input, "testMemLess") == 0) {

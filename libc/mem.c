@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <debug.h>
 #include <libc.h>
 #include <serial.h>
 #include "mem.h"
@@ -122,15 +123,20 @@ uint32_t kmalloc_int(uint32_t size, int align) {
     uint32_t *f2 = get_pointer(free_mem_addr+4);
     param.chain_next = (uint32_t)f1;
     param.next_block_size = (uint32_t)f2;
-    param.usedBlock = ret;
+    param.usedBlock = ret+size;
     param.usedBlockSize = size;
     block_move((blockData_t *)get_pointer((uint32_t)&param));
     if (ret == free_mem_addr) {
         free_mem_addr += size; /* Remember to increment the pointer */
+        uint32_t *f3 = get_pointer(free_mem_addr);
+        uint32_t *f4 = f3+1;
+        *f3 = (uint32_t)f1;
+        *f4 = 1;
     }
     memoryRemaining -= size;
     usedMem += size;
-    memory_set((uint8_t *)ret, 0, size);
+    
+    //memory_set((uint8_t *)ret, 0, size);
     sprint("\nReturning address: ");
     sprint_uint(ret);
     return ret;

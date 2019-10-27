@@ -105,7 +105,7 @@ char *exception_messages[] = {
     "Alignment Check",
     "Machine Check",
     "Reserved",
-    "Reserved",
+    "Assert Error",
     "Reserved",
     "Reserved",
     "Reserved",
@@ -133,7 +133,7 @@ void isr_handler(registers_t *r) {
     // kprint("\n");
     // kprint(exception_messages[r->int_no]);
     // kprint("\n");
-    crash_screen(r);
+    crash_screen(r, exception_messages[r->int_no], 1);
     while (1);
 }
 

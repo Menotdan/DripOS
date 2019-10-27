@@ -82,7 +82,7 @@ void key_handler(uint8_t scancode, bool keyup) {
         uinlen = strlen(key_buffer_up);
         position = uinlen;
     } 
-    // else if (scancode == DOWNARROW && keyup != true){
+    // else if (scancode == DOWNARROW && keyup != true) {
     //     uint32_t loop = 0;
     //     uint32_t loop2 = 0;
 
