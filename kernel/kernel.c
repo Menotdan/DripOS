@@ -13,7 +13,6 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include "../libc/mem.h"
 #include "../cpu/timer.h"
 #include "terminal.h"
-#include "../fs/fat32.h"
 #include "debug.h"
 //codes
 int prevtick = 0;
@@ -37,17 +36,7 @@ char key_buffer_down[2000];
 
 void after_load() {
 	while (1 == 1) {
-		uint32_t l = strlen(key_buffer);
-		if (key_buffer[l] == 3 || key_buffer[l-1] == 3) {
-			backspace(key_buffer);
-			user_input(key_buffer);
-			for (uint32_t i = 0; i < 2000; i++) {
-				key_buffer[i] = 0;
-			}
-			sprintd(key_buffer);
-			uinlen = 0;
-			position = 0;
-		}
+		
 	}
 }
 
@@ -57,14 +46,22 @@ void Log(char *message, int type) {
 		kprint_color("INFO", 0x01);
 		kprint("]: ");
 		kprint_color(message, 0x09);
+	} else if (type == 2) { // Warn
+		kprint("\n[");
+		kprint_color("WARN", 0x0e);
+		kprint("]: ");
+		kprint_color(message, 0x06);
+	} else if (type == 3) { // Good
+		kprint("\n[");
+		kprint_color("SUCCESS", 0x02);
+		kprint("]: ");
+		kprint_color(message, 0x0a);
 	}
 }
 
 void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	// Read memory map
-	//breakA();
 	init_serial();
-	//breakA();
 	if (mbd->flags & MULTIBOOT_INFO_MEMORY)
     {
 		lowerMemSize = (uint32_t)mbd->mem_lower;
@@ -105,72 +102,42 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 		kprint_uint(memAddr);
 		set_addr(memAddr, largestUseableMem);
     }
-	//breakA();
 	clear_screen();
-	//breakA();
 	// Initialize everything with a startup log
 	Log("Loaded memory", 1);
-	//breakA();
 	isr_install();
-	//breakA();
 	Log("ISR Enabled", 1);
-	//breakA();
 	irq_install();
-	//breakA();
 	Log("Interrupts Enabled", 1);
-	//breakA();
 	init_timer(1);
-	//breakA();
 	Log("Timer enabled", 1);
-	//breakA();
 
-	//breakA();
 	Log("Scanning for drives", 1);
-	//breakA();
 	drive_scan();
-	//breakA();
 	Log("Drive scan done", 1);
-	//breakA();
 
 	Log("Starting the HDD driver", 1);
-	//breakA();
 	init_hddw();
-	//breakA();
 	Log("Done", 1);
-	//breakA();
 
-	Log("Formatting drive...", 1);
-	user_input("select 1");
-	format();
-	Log("Formatted", 1);
-	init_fat();
-	Log("Initialized", 1);
-
-	// dir_entry_t *new_file_created = kmalloc(sizeof(dir_entry_t));
-	// uint32_t *data_to_write = kmalloc(512);
-	// uint32_t *data_to_read = kmalloc(512);
-	// *data_to_write = 123456789;
-	// new_file("test", "txt", (uint32_t)&new_file_created, 512);
-	// write_data_to_entry(new_file_created, data_to_write, 512);
-	// read_data_from_entry(new_file_created, data_to_read);
-	// sprint("\nData read from ");
-	// char filename[13];
-	// fat_str(new_file_created->name, new_file_created->ext, filename);
-	// sprint(filename);
-	// sprint(": ");
-	// sprint_uint(*data_to_read);
-	// sprint("\n");
-	// free(data_to_write, 512);
-	// free(data_to_read, 512);
-	// free(new_file_created, sizeof(dir_entry_t));
-
-	// Log("Done", 1);
+	// Log("Formatting drive...", 1);
+	// user_input("select 1");
+	// format();
+	// Log("Formatted", 1);
+	// init_fat();
+	// Log("Initialized", 1);
 
 	Log("Testing mem", 1);
 	uint32_t *testOnStart = (uint32_t *)kmalloc(0x1000);
 	*testOnStart = 33;
-	free(testOnStart, 0x1000);
+	if (*testOnStart == 33) {
+		Log("Test passed!", 3);
+	} else {
+		Log("Test failed!", 2);
+	}
 	Log("Test done", 1);
+
+	free(testOnStart, 0x1000);
 
 	Log("Clearing screen...", 1);
 	wait(50);

@@ -9,3 +9,4 @@
 *.rev
 write*
 *.elf
+**/*.old*

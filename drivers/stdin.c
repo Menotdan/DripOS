@@ -165,9 +165,15 @@ void key_handler(uint8_t scancode, bool keyup) {
             key_buffer_up[q] = key_buffer[q];
             key_buffer_up[q+1] = '\0';
         }
-        uint32_t l = strlen(key_buffer);
-        key_buffer[l] = 3;
-        key_buffer[l+1] = remove_null("\0");
+        user_input(key_buffer);
+        for (uint32_t i = 0; i < 2000; i++) {
+			key_buffer[i] = 0;
+		}
+        uinlen = 0;
+		position = 0;
+        //uint32_t l = strlen(key_buffer);
+        //key_buffer[l] = 3;
+        //key_buffer[l+1] = remove_null("\0");
     } else {
         if (shift == 0) {
             if (!keyup) {
