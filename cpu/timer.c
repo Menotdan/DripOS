@@ -23,11 +23,6 @@ uint32_t okok = 0;
 static void timer_callback(registers_t *regs) {
     tick++;
     kprint("");
-    for (int i = 0; i < 256; i++) {
-        if (keytimeout[i] > 0) {
-            keytimeout[i] -= 1;
-        }
-    }
     if (tick - (uint32_t)pSnd > (uint32_t)lSnd) {
         nosound();
         //kprint("Timed out");
