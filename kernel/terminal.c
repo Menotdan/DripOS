@@ -337,7 +337,7 @@ void execute_command(char input[]) {
 		uint32_t *data_to_write = kmalloc(512);
 		uint32_t *data_to_read = kmalloc(512);
 		*data_to_write = 123456789;
-		new_file("test", "txt", (uint32_t)(&new_file_created), 512);
+		new_file("test", "txt", (uint32_t)(&new_file_created), 512, 1);
 		write_data_to_entry(new_file_created, data_to_write, 512);
 		read_data_from_entry(new_file_created, data_to_read);
 		sprint("\nData read from ");

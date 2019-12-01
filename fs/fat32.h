@@ -78,7 +78,7 @@ typedef struct fat
 
 void format();
 void init_fat();
-void new_file(char *name, char *ext, uint32_t out, uint32_t size);
+void new_file(char *name, char *ext, uint32_t pointer, uint32_t size, uint32_t cluster);
 void write_data_to_entry(dir_entry_t *file, uint32_t *data_in, uint32_t toWrite);
 void read_data_from_entry(dir_entry_t *file, uint32_t *data_out);
 dir_entry_t *get_entry(uint32_t sector, uint32_t entry);

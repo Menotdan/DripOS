@@ -110,6 +110,9 @@ void setup_entry_dir(dir_entry_t *entry, char name[], uint32_t cluster, uint32_t
 }
 
 void setup_entry_file(dir_entry_t *entry, char name[], char ext[], uint32_t cluster, uint32_t size, uint32_t sector_to_write, uint32_t entry_to_write) {
+    uint8_t *cur_drive_data = kmalloc(512);
+    readToBuffer(sector_to_write);
+    memory_copy(readBuffer, cur_drive_data, 512);
     for (uint32_t i = 0; i < (uint32_t)strlen(name); i++)
     {
         char toset; // Temporary storage for the next char in the name
@@ -154,9 +157,10 @@ void setup_entry_file(dir_entry_t *entry, char name[], char ext[], uint32_t clus
     entry->clusterhigh = (uint16_t)(cluster >> 16);
     entry->attrib = 0x0;
     entry->filesize = size;
-    dir_entry_t *buffer_offset = (dir_entry_t *)writeBuffer;
-    buffer_offset += (entry_to_write*sizeof(dir_entry_t));
+    dir_entry_t *buffer_offset = (dir_entry_t *)cur_drive_data;
+    buffer_offset += (entry_to_write);
     memory_copy((uint8_t *)entry, (uint8_t *)buffer_offset, sizeof(dir_entry_t));
+    memory_copy((uint8_t *)cur_drive_data, writeBuffer, 512);
     writeFromBuffer(sector_to_write);
 }
 
@@ -286,7 +290,7 @@ void init_fat() {
     sprint_uint(clusters_on_drive);
     sectors_per_cluster = drive_data->sectors_per_cluster;
 
-    // Load FAT
+    // Initialize memory for FAT
     new_table = kmalloc(512);
 }
 
@@ -336,7 +340,7 @@ void write_data_to_entry(dir_entry_t *file, uint32_t *data_in, uint32_t toWrite)
 }
 
 /* Create a new file */
-void new_file(char *name, char *ext, uint32_t pointer, uint32_t size) {
+void new_file(char *name, char *ext, uint32_t pointer, uint32_t size, uint32_t cluster) {
     uint32_t *address = (uint32_t *)get_pointer(pointer);
     dir_entry_t *entry_to_write;
     uint32_t cur_sector = cluster_to_sector(2); // Get 
@@ -346,7 +350,7 @@ void new_file(char *name, char *ext, uint32_t pointer, uint32_t size) {
         entry_to_write = get_entry(cur_sector, cur_entry);
         *address = (uint32_t)entry_to_write;
 
-        if (entry_to_write->filesize == 0 && (entry_to_write->attrib & 0x10) == 0 && (entry_to_write->clusterlow == 0 && entry_to_write->clusterhigh == 0)) {
+        if (entry_to_write->filesize == 0 && (entry_to_write->attrib) == 0 && (entry_to_write->clusterlow == 0 && entry_to_write->clusterhigh == 0)) {
             sprint("\nUsing entry: ");
             sprint_uint(cur_entry);
             sprint("\nOn sector: ");
@@ -361,7 +365,7 @@ void new_file(char *name, char *ext, uint32_t pointer, uint32_t size) {
             cur_entry++;
         }
     }
-    setup_entry_file(entry_to_write, name, ext, 3, size, cur_sector, cur_entry);
+    setup_entry_file(entry_to_write, name, ext, cluster+2, size, cur_sector, cur_entry);
     *address = (uint32_t)entry_to_write;
     sprint("\nCluster: ");
     sprint_uint(entry_to_write->clusterlow);
@@ -369,7 +373,7 @@ void new_file(char *name, char *ext, uint32_t pointer, uint32_t size) {
     sprint_uint(entry_to_write->filesize);
 }
 
-/* Get the entryth entry in the clusterth cluster on the currently selected drive */
+/* Get the entryth entry in the sectorth sector on the currently selected drive */
 dir_entry_t *get_entry(uint32_t sector, uint32_t entry) {
     dir_entry_t *sector_data = kmalloc(512);
     dir_entry_t *ret = kmalloc(sizeof(dir_entry_t));
