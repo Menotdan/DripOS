@@ -206,16 +206,18 @@ int ata_pio48(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr) {
             return 2;
         }
 
-        for (int idx = 0; idx < 256; idx++)
-        {
-            if(type==ATA_READ) {
+        if(type==ATA_READ) {
+            for (int idx = 0; idx < 256; idx++)
+            {
                 ata_buffer[idx] = port_word_in(base + ATA_PORT_DATA);
             }
-            else {
+        }
+        else {
+            for (int idx = 0; idx < 256; idx++)
+            {
                 port_word_out(base + ATA_PORT_DATA, ata_buffer[idx]);
             }
         }
-
         return 0;
     } else {
         kprint("No drives found on this system!");

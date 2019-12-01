@@ -187,14 +187,15 @@ int match(char s1[], char s2[]) { //how many characters match, before the first 
     return ret;
 }
 
-char *strcpy(char *dest, const char *src)
+char *strcpy(char *dest, char *src)
 {
-  unsigned i;
-  for (i=0; src[i] != '\0'; ++i)
-    dest[i] = src[i];
-
-  //Ensure trailing null byte is copied
-  dest[i]= '\0';
+  char *temp = dest;
+  char *src_temp = src;
+  while (*temp != '\0') {
+      *temp = *src_temp;
+      temp++;
+      src_temp++;
+  }
 
   return dest;
 }

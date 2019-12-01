@@ -14,7 +14,7 @@ void appendp(char s[], char n, uint32_t position);
 int strcmp(const char s1[], char s2[]);
 int match(char s1[], char s2[]);
 //int first_space(char s1[]);
-char *strcpy(char *dest, const char *src);
+char *strcpy(char *dest, char *src);
 char* afterSpace(char* input);
 void kprint_int(int num);
 void kprint_uint(unsigned int num);

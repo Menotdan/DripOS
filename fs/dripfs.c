@@ -1,38 +1,33 @@
-// This is the DripFS specification
+// Drip FS
 
-// Each drive's first sector must be in the following format:
+// A garbage FS written by Menotdan
 
-// uint32 Sector count
-// A char[20] (null terminated) for the volume name
-// uint32 Sector of root dir
-// Rest is reserved (char[484])
+#include "hddw.h"
+#include "hdd.h"
+#include "dripfs.h"
+#include "../libc/mem.h"
+#include "../include/debug.h"
+#include "../libc/string.h"
 
+void dfs_format(char *volume_name, uint8_t dev, uint8_t controller) {
+    dripfs_boot_sect_t *boot_sect = kmalloc(512); // Allocate one sector in memory for the boot sector
+    hdd_size_t driveSize = drive_sectors(dev, controller); // Get the drive size
+    boot_sect->sector_count = driveSize.MAX_LBA; // Set sector_count property
+    asserta(strlen(volume_name) < 20, "Volume name too long!"); // Make sure volume name is short enough
+    strcpy(boot_sect->volume_name, volume_name); // Copy volume name to the boot sector
+    boot_sect->root_dir_sector = 1; // Root directory sector
+    boot_sect->first_table_sector = 2; // First table of tables (the core space waster of Drip FS lol)
+    boot_sect->boot_sig = 0x55aa;
 
-// The sector of the root dir (and other folders on the drive) contains the following:
-
-// char[50] (null terminated) for the folder name
-// uint32 for the Sector where the associated Folder file sector reference table lives
-// uint32 Sector of parent dir
-// Reserved (char[450])
-
-
-// Folder file sector reference table:
-
-// The folder file sector reference table is simply a table of sector numbers which contain sectors where a table of sector numbers for accessing files exists
-
-// uint32[128] Sector numbers
-
-// The file reference table is the same thing, but for referencing file entries
-
-// This means that you can have 16384 files in a directory
-
-// File entries shall be structured like this:
-
-// char[50] (null terminated) Name
-// uint32 Sector of file chunk table table table (a table of tables of file chunk tables, and each file chunk table contains 128 file chunk sectors)
-// uint32 Parent folder sector
-// Reserved (char[450])
-
-// This 128 table times 128 table times 128 table times 512 bytes per sector results in a max file size of 1073741824 bytes, and uses 8389120 bytes when storing the max file size
-
-// Each sector on the drive used as a table sector must have the value 0xbbddccaa at the beginning if it is not in use, so that you can use that to find used table sectors
+    /* Write the table signature to all sectors */
+    uint32_t *drive_buffer = (uint32_t *) writeBuffer;
+    for (uint32_t x = 0; x<128; x++) {
+        *(drive_buffer + x) = 0;
+    }
+    for (uint32_t i = 0; i<driveSize.MAX_LBA; i++) {
+        *drive_buffer = TABLE_CONSTANT;
+        writeFromBuffer(i);
+    }
+    memory_copy((uint8_t *)boot_sect, writeBuffer, 512);
+    writeFromBuffer(0);
+}

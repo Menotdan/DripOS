@@ -89,8 +89,7 @@ void writeFromBuffer(uint32_t sector) {
         ptr++;
         uint16_t wd;
         wd = ((uint16_t)f << 8) | s;
-        //sprint_uint(wd);
-        //sprint("\n");
+
         writeIn[i] = wd;
     }
     write(sector);
@@ -103,7 +102,9 @@ void copy_sector(uint32_t sector1, uint32_t sector2) {
 }
 
 void write(uint32_t sector) {
-    read(sector, 0); // Start the drive
+    if ((tick-driveUseTick > 5000 || abs(sector-lastSector) > 50)) {
+        read(sector, 0); // Start the drive
+    }
     for(int i = 0; i < 256; i++)
     {
         ata_buffer[i] = writeIn[i];
@@ -113,10 +114,8 @@ void write(uint32_t sector) {
     } else {
         ata_pio48(ata_controler, 2, ata_drive, sector);
     }
-    uint8_t bad = 1;
+    uint32_t bad = 1;
     while (bad != 0) {
-        //kprint("\ntest");
-        //kprint_uint(bad);
         if (ata_pio == 0) {
             ata_pio28(ata_controler, 2, ata_drive, sector);
         } else {
@@ -126,9 +125,11 @@ void write(uint32_t sector) {
         bad = 0;
         for (int i = 0; i < 256; i++) {
             if (writeIn[i] != readOut[i]) {
-                bad++;
+                //bad++;
             }
         }
+        sprint("\n");
+        sprint_uint(bad);
     }
     clear_ata_buffer();
     for(int i = 0; i < 256; i++)

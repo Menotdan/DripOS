@@ -1,4 +1,7 @@
+#pragma once
 #include <stdint.h>
+
+#define TABLE_CONSTANT 0xAA12BB34
 
 typedef struct dripfs_boot_sect
 {
@@ -6,7 +9,8 @@ typedef struct dripfs_boot_sect
     char volume_name[20];
     uint32_t root_dir_sector;
     uint32_t first_table_sector;
-    char reserved[480];
+    char reserved[478];
+    uint16_t boot_sig;
 } dripfs_boot_sect_t;
 
 typedef struct dripfs_dir_entry
@@ -29,3 +33,6 @@ typedef struct dripfs_file_entry
     uint32_t parent_dir_entry_sector;
     char reserved[450];
 } dripfs_file_entry_t;
+
+
+void dfs_format(char *volume_name, uint8_t dev, uint8_t controller);

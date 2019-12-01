@@ -14,6 +14,7 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include "../cpu/timer.h"
 #include "terminal.h"
 #include "debug.h"
+#include "../fs/dripfs.h"
 //codes
 int prevtick = 0;
 int login = 1;
@@ -32,7 +33,6 @@ multiboot_memory_map_t* mmap;
 char key_buffer[2000];
 char key_buffer_up[2000];
 char key_buffer_down[2000];
-//int32_t path_clusters[50]; // Cluster pointers so the kernel knows what directory it is in
 
 void after_load() {
 	while (1 == 1) {
@@ -120,6 +120,7 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	init_hddw();
 	Log("Done", 1);
 
+	dfs_format("DripOS", 1, 1);
 	// Log("Formatting drive...", 1);
 	// user_input("select 1");
 	// format();
@@ -201,3 +202,4 @@ int getstate() {
 // 	write(128);
 // }
 
+// ^ this was use in old time for bad thing
