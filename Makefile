@@ -2,10 +2,10 @@
 C_SOURCES = $(wildcard kernel/*.c drivers/*.c cpu/*.c libc/*.c fs/*.c)
 NASM_SOURCES = $(wildcard kernel/*.asm drivers/*.asm cpu/*.asm libc/*.asm fs/*.asm)
 HEADERS = $(wildcard kernel/*.h drivers/*.h cpu/*.h libc/*.h fs/*.h)
+BIG_S_SOURCES = $(wildcard kernel/*.S drivers/*.S cpu/*.S libc/*.S fs/*.S *.S)
 S_SOURCES = $(wildcard kernel/*.s drivers/*.s cpu/*.s libc/*.s fs/*.s *.s)
- 
 # Nice syntax for file extension replacement
-OBJ = ${C_SOURCES:.c=.o}  ${NASM_SOURCES:.asm=.o} ${S_SOURCES:.s=.o}
+OBJ = ${C_SOURCES:.c=.o}  ${NASM_SOURCES:.asm=.o} ${S_SOURCES:.s=.o} ${BIG_S_SOURCES:.S=.o} cpu/switch.o
  
 # Change this if your cross-compiler is somewhere else
 CC = ~/Desktop/Compiler/bin/i686-elf-gcc
@@ -52,12 +52,16 @@ debug: myos.iso
  
 # Generic rules for wildcards
 # To make an object, always compile from its .c $< $@
+cpu/switch.o: cpu/switch.s
+	${CC} -Werror -Wall -Wextra -Wpedantic -O2 -g -MD -c $< -o $@
 %.o: %.c ${HEADERS}
 	${CC} -Iinclude -O${O_LEVEL} -g -Werror -Wall -Wextra -Wpedantic -fno-omit-frame-pointer -MD -c $< -o $@ -std=gnu11 -ffreestanding
  
 %.o: %.s
 	${CC} -Werror -Wall -Wextra -Wpedantic -O2 -g -MD -c $< -o $@
- 
+%.o: %.S
+	${CC} -Werror -Wall -Wextra -Wpedantic -O2 -g -MD -c $< -o $@
+
 %.o: %.asm
 	nasm -g -f elf32 -F dwarf -o $@ $<
  

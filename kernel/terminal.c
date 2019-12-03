@@ -13,9 +13,20 @@
 #include <stdint.h>
 #include "../libc/mem.h"
 #include <serial.h>
+#include "../cpu/task.h"
 
 int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
+Task bg_task_timer;
+void bg_task() {
+	while (1)
+	{
+		char done[24];
+		int_to_ascii((int)tick, done);
+		kprint_no_move(done, 0, 0);
+		yield();
+	}
+}
 
 void read_disk(uint32_t sector) {
 	char str2[32];
@@ -142,10 +153,15 @@ void execute_command(char input[]) {
 		kprint(test);
 		p_tone(atoi(afterSpace(input)), 100);
 	} else if (strcmp(input, "bgtask") == 0) {
-		kprint("Background task started!");
-		task = 1;
+		if (task == 0) {
+			task = createTask(&bg_task_timer, bg_task);
+			kprint("Background task started!");
+		} else {
+			kprint("Nope");
+		}
 	} else if (strcmp(input, "bgoff") == 0) {
-		kprint("Background task stopped!");
+		kill_task(task); // task is the Timer task's PID
+		kprint("Stopped task");
 		task = 0;
 	} else if (strcmp(input, "testMem") == 0) {
 		breakA();

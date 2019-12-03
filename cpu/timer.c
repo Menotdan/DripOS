@@ -10,6 +10,7 @@
 #include "soundManager.h"
 #include "../libc/string.h"
 #include "../kernel/systemManager.h"
+#include "task.h"
 
 uint32_t tick = 0; //Ticks
 uint32_t prev = 0; //Previous ticks for (unusable after boot) wait() function
@@ -30,11 +31,6 @@ static void timer_callback(registers_t *regs) {
     if((int)tick == 1000000) {
         tMil += 1;
     }
-    if (task == 1) {
-        char tottick[24];
-        int_to_ascii((int)tick, tottick);
-        kprint_no_move(tottick, 0, 0);
-    }
     //char done[24];
     //int_to_ascii((int)tick, done);
     //kprint(done);
@@ -45,6 +41,7 @@ static void timer_callback(registers_t *regs) {
     //    kprint(done);
     //}
     //key_handler();
+    runningTask->ticks_cpu_time++;
     UNUSED(regs);
 }
 

@@ -15,6 +15,7 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include "terminal.h"
 #include "debug.h"
 #include "../fs/dripfs.h"
+#include "../cpu/task.h"
 //codes
 int prevtick = 0;
 int login = 1;
@@ -120,9 +121,9 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	init_hddw();
 	Log("Done", 1);
 
-	Log("Formatting drive with Drip FS", 1);
-	dfs_format("DripOS", 1, 1);
-	Log("Done!", 3);
+	//Log("Formatting drive with Drip FS", 1);
+	//dfs_format("DripOS", 1, 1);
+	//Log("Done!", 3);
 	// Log("Formatting drive...", 1);
 	// user_input("select 1");
 	// format();
@@ -141,7 +142,6 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	Log("Test done", 1);
 
 	free(testOnStart, 0x1000);
-
 	Log("Clearing screen...", 1);
 	wait(100);
 	clear_screen();
@@ -162,8 +162,9 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	kprint(" bytes\n");
 	kprint("drip@DripOS> ");
 	sprintd("Entering multitask/system management loop");
+	Log("Starting multitasking and leaving kernel main...", 1);
 	loaded = 1;
-	after_load();
+	initTasking();
 }
 
 void user_input(char input[]) {
