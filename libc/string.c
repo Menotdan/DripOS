@@ -187,17 +187,18 @@ int match(char s1[], char s2[]) { //how many characters match, before the first 
     return ret;
 }
 
-char *strcpy(char *dest, char *src)
-{
-  char *temp = dest;
-  char *src_temp = src;
-  while (*temp != '\0') {
-      *temp = *src_temp;
-      temp++;
-      src_temp++;
-  }
+char *strcpy(char *dest, char *src) {
+    char *temp = dest;
+    char *src_temp = src;
+    while (*src_temp != '\0') {
+        *temp = *src_temp;
+        temp++;
+        src_temp++;
+    }
 
-  return dest;
+    *temp = '\0';
+
+    return dest;
 }
 
 char *mstrcpy(uint32_t dest, const char *src)

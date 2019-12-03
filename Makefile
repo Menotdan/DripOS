@@ -39,7 +39,10 @@ lol: ${OBJ}
 
 run: myos.iso
 	qemu-system-x86_64 -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
- 
+
+run-kvm: myos.iso
+	sudo qemu-system-x86_64 -enable-kvm -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+
 iso: myos.iso
 	cp myos.iso doneiso/
 # Open the connection to qemu and load our kernel-object file with symbols

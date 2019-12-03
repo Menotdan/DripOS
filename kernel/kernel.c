@@ -109,7 +109,7 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	Log("ISR Enabled", 1);
 	irq_install();
 	Log("Interrupts Enabled", 1);
-	init_timer(1);
+	init_timer(100);
 	Log("Timer enabled", 1);
 
 	Log("Scanning for drives", 1);
@@ -120,7 +120,9 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	init_hddw();
 	Log("Done", 1);
 
+	Log("Formatting drive with Drip FS", 1);
 	dfs_format("DripOS", 1, 1);
+	Log("Done!", 3);
 	// Log("Formatting drive...", 1);
 	// user_input("select 1");
 	// format();
@@ -141,7 +143,7 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	free(testOnStart, 0x1000);
 
 	Log("Clearing screen...", 1);
-	wait(50);
+	wait(100);
 	clear_screen();
 	prevtick = tick;
 	logoDraw();

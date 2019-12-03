@@ -21,7 +21,7 @@ void sys_state_manager() {
 		//Uh Oh!!!! Kernel Panic!!!! Display Error then HALT the CPU
 		//0x7263
 		writeIn[0] = 0x7263;
-		write(128);
+		write(128, 0);
 		port_byte_out(0xf4, 0x00);
 	}
 }

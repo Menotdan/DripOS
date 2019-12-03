@@ -5,7 +5,6 @@
 #include <time.h>
 #include "../cpu/isr.h"
 
-
 #define IDE_MASTER 0
 #define IDE_SLAVE  1
 
@@ -304,15 +303,18 @@ void drive_scan() {
                 ata_drive = MASTER_DRIVE;
                 ata_controler = PRIMARY_IDE;
                 ata_pio = 0;
+                current_drive = 1;
             } else if (mp48 == 0) {
                 ata_drive = MASTER_DRIVE_PIO48;
                 ata_controler = PRIMARY_IDE;
                 ata_pio = 1;
+                current_drive = 1;
             } else {
                 // Default to PIO28
                 ata_drive = MASTER_DRIVE;
                 ata_controler = PRIMARY_IDE;
                 ata_pio = 0;
+                current_drive = 1;
             }
         }
         // Detect Slave Drive
@@ -329,15 +331,18 @@ void drive_scan() {
                 ata_drive = SLAVE_DRIVE;
                 ata_controler = PRIMARY_IDE;
                 ata_pio = 0;
+                current_drive = 2;
             } else if (ms48 == 0) {
                 ata_drive = SLAVE_DRIVE_PIO48;
                 ata_controler = PRIMARY_IDE;
                 ata_pio = 1;
+                current_drive = 2;
             } else {
                 // Default to PIO28
                 ata_drive = SLAVE_DRIVE;
                 ata_controler = PRIMARY_IDE;
                 ata_pio = 0;
+                current_drive = 2;
             }
         }
     }
@@ -360,15 +365,18 @@ void drive_scan() {
                 ata_drive = MASTER_DRIVE;
                 ata_controler = SECONDARY_IDE;
                 ata_pio = 0;
+                current_drive = 3;
             } else if (sp48 == 0) {
                 ata_drive = MASTER_DRIVE_PIO48;
                 ata_controler = SECONDARY_IDE;
                 ata_pio = 1;
+                current_drive = 3;
             } else {
                 // Default to PIO28
                 ata_drive = MASTER_DRIVE;
                 ata_controler = SECONDARY_IDE;
                 ata_pio = 0;
+                current_drive = 3;
             }
         }
         // Detect Slave Drive
@@ -384,15 +392,18 @@ void drive_scan() {
                 ata_drive = SLAVE_DRIVE;
                 ata_controler = SECONDARY_IDE;
                 ata_pio = 0;
+                current_drive = 4;
             } else if (ss48 == 0) {
                 ata_drive = SLAVE_DRIVE_PIO48;
                 ata_controler = SECONDARY_IDE;
                 ata_pio = 1;
+                current_drive = 4;
             } else {
                 // Default to PIO28
                 ata_drive = SLAVE_DRIVE;
                 ata_controler = SECONDARY_IDE;
                 ata_pio = 0;
+                current_drive = 4;
             }
         }
     }

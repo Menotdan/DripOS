@@ -12,6 +12,7 @@ uint16_t writeIn[256];
 uint16_t emptySector[256];
 uint32_t driveUseTick;
 uint32_t lastSector = 0;
+uint8_t current_drive = 1;
 
 void init_hddw() {
     for(int i = 0; i < 256; i++)
@@ -20,6 +21,73 @@ void init_hddw() {
     }
     readBuffer = (uint8_t *)kmalloc(512);
     writeBuffer = (uint8_t *)kmalloc(512);
+}
+
+void select_drive(uint8_t driveToSet) {
+    if (driveToSet == 1) {
+        if (mp == 0) {
+            ata_drive = MASTER_DRIVE;
+            ata_controler = PRIMARY_IDE;
+            nodrives = 0;
+            current_drive = driveToSet;
+        } else if (mp48 == 0) {
+            ata_drive = MASTER_DRIVE_PIO48;
+            ata_controler = PRIMARY_IDE;
+            ata_pio = 1;
+            nodrives = 0;
+            current_drive = driveToSet;
+        } else {
+            kprint("That drive is offline!\n");
+        }
+    } else if (driveToSet == 2) {
+        if (ms == 0) {
+            ata_drive = SLAVE_DRIVE;
+            ata_controler = PRIMARY_IDE;
+            nodrives = 0;
+            current_drive = driveToSet;
+        } else if (ms48 == 0) {
+            ata_drive = SLAVE_DRIVE_PIO48;
+            ata_controler = PRIMARY_IDE;
+            ata_pio = 1;
+            nodrives = 0;
+            current_drive = driveToSet;
+        } else {
+            kprint("That drive is offline!\n");
+        }
+    } else if (driveToSet == 3) {
+        if (sp == 0) {
+            ata_drive = MASTER_DRIVE;
+            ata_controler = SECONDARY_IDE;
+            nodrives = 0;
+            current_drive = driveToSet;
+        } else if (sp48 == 0) {
+            ata_drive = MASTER_DRIVE_PIO48;
+            ata_controler = SECONDARY_IDE;
+            ata_pio = 1;
+            nodrives = 0;
+            current_drive = driveToSet;
+        } else {
+            kprint("That drive is offline!\n");
+        }
+    } else if (driveToSet == 4) {
+        if (ss == 0) {
+            ata_drive = SLAVE_DRIVE;
+            ata_controler = SECONDARY_IDE;
+            ata_pio = 0;
+            nodrives = 0;
+            current_drive = driveToSet;
+        } else if (ss48 == 0) {
+            ata_drive = SLAVE_DRIVE_PIO48;
+            ata_controler = SECONDARY_IDE;
+            ata_pio = 1;
+            nodrives = 0;
+            current_drive = driveToSet;
+        } else {
+            kprint("That drive is offline!\n");
+        }
+    } else {
+        kprint("Not a valid drive!\n");
+    }
 }
 
 void read(uint32_t sector, uint32_t sector_high) {
@@ -65,8 +133,8 @@ void readToBuffer(uint32_t sector) {
     for (uint32_t i = 0; i < 256; i++)
     {
         uint16_t in = readOut[i];
-        uint8_t f = (uint8_t)(in >> 8); // Default is f
-        uint8_t s = (uint8_t)(in&0xff); // Default is s
+        uint8_t s = (uint8_t)(in >> 8); // Default is f
+        uint8_t f = (uint8_t)(in&0xff); // Default is s
         //sprint_uint(first);
         //sprint(" S: ");
         //sprint_uint(second);
@@ -79,20 +147,20 @@ void readToBuffer(uint32_t sector) {
     //sprint("\n");
 }
 
-void writeFromBuffer(uint32_t sector) {
+void writeFromBuffer(uint32_t sector, uint8_t badcheck) {
     uint8_t *ptr = writeBuffer;
     for (uint32_t i = 0; i < 256; i++)
     {
-        uint8_t s = *ptr; // Default is s
+        uint8_t f = *ptr; // Default is s
         ptr++;
-        uint8_t f = *ptr; // Default is f
+        uint8_t s = *ptr; // Default is f
         ptr++;
         uint16_t wd;
         wd = ((uint16_t)f << 8) | s;
 
         writeIn[i] = wd;
     }
-    write(sector);
+    write(sector, badcheck);
 }
 
 void copy_sector(uint32_t sector1, uint32_t sector2) {
@@ -101,7 +169,7 @@ void copy_sector(uint32_t sector1, uint32_t sector2) {
     clear_ata_buffer();
 }
 
-void write(uint32_t sector) {
+void write(uint32_t sector, uint8_t badcheck) {
     if ((tick-driveUseTick > 5000 || abs(sector-lastSector) > 50)) {
         read(sector, 0); // Start the drive
     }
@@ -125,11 +193,15 @@ void write(uint32_t sector) {
         bad = 0;
         for (int i = 0; i < 256; i++) {
             if (writeIn[i] != readOut[i]) {
-                //bad++;
+                if (badcheck == 1) {
+                    bad++;
+                }
             }
         }
-        sprint("\n");
-        sprint_uint(bad);
+        if (badcheck == 1) {
+            sprint("\n");
+            sprint_uint(bad);
+        }
     }
     clear_ata_buffer();
     for(int i = 0; i < 256; i++)

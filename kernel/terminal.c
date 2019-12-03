@@ -24,9 +24,14 @@ void read_disk(uint32_t sector) {
 	kprint(" contents:\n\n");
  
 	//! read sector from disk
-	read(sector, 0);
+	readToBuffer(sector);
+	uint8_t *temp = readBuffer;
 	for (int l = 0; l<256; l++) {
-		hex_to_ascii(readOut[l], str2);
+		uint16_t good = *temp;
+		temp++;
+		good += (uint16_t) (*temp << 8);
+		temp++;
+		hex_to_ascii(good, str2);
 		kprint(str2);
 		kprint(" ");
 		for (int i = 0; i<32; i++) {
@@ -233,7 +238,7 @@ void execute_command(char input[]) {
 		kprint("Not enough args!");
 	} else if ((match(input, "testDrive") + 1) == 9) {
 		writeIn[0] = 0x1111;
-		write(atoi(afterSpace(input)));
+		write(atoi(afterSpace(input)), 0);
 		kprint("Writing 0x1111 to sector ");
 		kprint_int(atoi(afterSpace(input)));
 		kprint("\n");
