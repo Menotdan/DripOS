@@ -1,5 +1,18 @@
-#pragma once
+#ifndef TASK_H
+#define TASK_H
 #include <stdint.h>
+#include "isr.h"
+
+/* Task states */
+#define RUNNING 0
+#define BLOCKED 1
+#define SLEEPING 2
+#define IRQ_WAIT 3
+/* Priorities */
+#define HIGH 3
+#define NORMAL 2
+#define LOW 1
+#define VERY_LOW 0
 
 extern void initTasking();
  
@@ -11,12 +24,18 @@ typedef struct Task {
     Registers regs;
     uint32_t ticks_cpu_time;
     struct Task *next;
-    uint32_t pid;
+    uint8_t priority;
+    uint32_t pid; // Process id of the task
+    uint8_t state; // The state the task is in
+    uint32_t waiting; // If state is SLEEPING, this is the tick to restart the task, if the state is IRQ_WAIT, this is the IRQ that it is waiting for
 } Task;
- 
+
 void initTasking();
-extern uint32_t createTask(Task *task, void (*main)());//, uint32_t*); No paging yet
-extern int32_t kill_task(uint32_t pid);
-extern void yield(); // Switch task frontend
+extern uint32_t createTask(Task *task, void (*main)());
+extern int32_t kill_task(uint32_t pid); // 
+extern void yield(); // Yield, will be optional
 extern void switchTask(Registers *old, Registers *new); // The function which actually switches
+extern void print_tasks();
+extern void timer_switch_task(registers_t *from, Task *to);
 Task *runningTask;
+#endif

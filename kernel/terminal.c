@@ -17,6 +17,7 @@
 
 int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
+uint32_t task2 = 0;
 Task bg_task_timer;
 void bg_task() {
 	while (1)
@@ -24,7 +25,18 @@ void bg_task() {
 		char done[24];
 		int_to_ascii((int)tick, done);
 		kprint_no_move(done, 0, 0);
-		yield();
+		//yield();
+	}
+}
+
+Task bg_task_timer2;
+void bg_task2() {
+	while (1)
+	{
+		char done[24];
+		int_to_ascii((int)tick, done);
+		kprint_no_move(done, 18, 0);
+		//yield();
 	}
 }
 
@@ -138,7 +150,7 @@ void execute_command(char input[]) {
 			kprint(" seconds");
 		}
   } else if (strcmp(input, "help") == 0) {
-		kprint("Commands: uptime, scan, testDrive, fmem, help, shutdown, panic, print, clear, bgtask, bgoff, read, drives, select, testMem, free\n");
+		kprint("Commands: ps, kill, uptime, scan, testDrive, fmem, help, shutdown, panic, print, clear, bgtask, bgoff, read, drives, select, testMem, free\n");
 	} else if (strcmp(input, "clear") == 0){
 		clear_screen();
 	} else if (match("print", input) == -2) {
@@ -153,18 +165,31 @@ void execute_command(char input[]) {
 		kprint(test);
 		p_tone(atoi(afterSpace(input)), 100);
 	} else if (strcmp(input, "bgtask") == 0) {
-		if (task == 0) {
-			task = createTask(&bg_task_timer, bg_task);
+		//if (task == 0) {
+			task = createTask(kmalloc(sizeof(Task)), bg_task);
+			task2 = createTask(kmalloc(sizeof(Task)), bg_task2);
 			kprint("Background task started!");
+		//} else {
+		//	kprint("Nope");
+		//}
+	} else if (strcmp(input, "ps") == 0) {
+		print_tasks();
+	} else if (match("kill", input) == -2) {
+		kprint("Not enough args!");
+	} else if ((match(input, "kill") + 1) == 4) {
+		uint32_t taskToKill = atoi(afterSpace(input));
+		int32_t returnVal = kill_task(taskToKill);
+		if (returnVal == 0) {
+			kprint("\nKilled ");
+			kprint_uint(taskToKill);
+			kprint("!");
 		} else {
-			kprint("Nope");
+			kprint("\nKilling task ");
+			kprint_uint(taskToKill);
+			kprint(" failed!");
 		}
-	} else if (strcmp(input, "bgoff") == 0) {
-		kill_task(task); // task is the Timer task's PID
-		kprint("Stopped task");
-		task = 0;
 	} else if (strcmp(input, "testMem") == 0) {
-		breakA();
+		//breakA();
 		//asserta(0, "t");
 		for (int c = 0; c < 10000; c++) {
 			testy = (char *)kmalloc(0x1000);

@@ -16,6 +16,7 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include "debug.h"
 #include "../fs/dripfs.h"
 #include "../cpu/task.h"
+#include "../drivers/vga.h"
 //codes
 int prevtick = 0;
 int login = 1;
@@ -61,6 +62,7 @@ void Log(char *message, int type) {
 }
 
 void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
+	//set_text_mode(1);
 	// Read memory map
 	init_serial();
 	if (mbd->flags & MULTIBOOT_INFO_MEMORY)
@@ -68,7 +70,6 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 		lowerMemSize = (uint32_t)mbd->mem_lower;
 		upperMemSize = (uint32_t)mbd->mem_upper;
     }
-	breakA();
     if (mbd->flags & MULTIBOOT_INFO_MEM_MAP)
     {
         for (mmap = (struct multiboot_mmap_entry*)mbd->mmap_addr; (uint32_t)mmap < (mbd->mmap_addr + mbd->mmap_length); mmap = (struct multiboot_mmap_entry*)((uint32_t)mmap + mmap->size + sizeof(mmap->size)))
@@ -110,7 +111,7 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	Log("ISR Enabled", 1);
 	irq_install();
 	Log("Interrupts Enabled", 1);
-	init_timer(100);
+	init_timer(10000);
 	Log("Timer enabled", 1);
 
 	Log("Scanning for drives", 1);
@@ -162,8 +163,9 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	kprint(" bytes\n");
 	kprint("drip@DripOS> ");
 	sprintd("Entering multitask/system management loop");
-	Log("Starting multitasking and leaving kernel main...", 1);
-	loaded = 1;
+	//Log("Starting multitasking and leaving kernel main...", 1);
+	//loaded = 1;
+	breakA();
 	initTasking();
 }
 

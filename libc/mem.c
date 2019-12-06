@@ -10,6 +10,23 @@ void *get_pointer(uint32_t addr) {
   return (void *)ptr;
 }
 
+void pokeb(uint32_t seg, uint32_t offset, char data) {
+    *(char*) ((seg * 0x10) + offset) = data;
+}
+
+char peekb(uint32_t seg, uint32_t offset) {
+    return *(char*) ((seg * 0x10) + offset);
+}
+
+void pokew(uint32_t seg, uint32_t offset, unsigned data) {
+    *(unsigned*) ((seg * 0x10) + offset) = data;
+}
+
+unsigned peekw(uint32_t seg, uint32_t offset) {
+    return *(unsigned*) ((seg * 0x10) + offset);
+}
+
+
 void memory_copy(uint8_t *source, uint8_t *dest, int nbytes) {
     int i;
     for (i = 0; i < nbytes; i++) {

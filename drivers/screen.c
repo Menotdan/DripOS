@@ -6,6 +6,7 @@
 #include "colors.h"
 #include "../libc/string.h"
 #include "../cpu/isr.h"
+#include "../cpu/task.h"
 
 /* Declaration of private functions */
 int get_cursor_offset();
@@ -176,6 +177,16 @@ void crash_screen(registers_t *crash_state, char *msg, uint8_t printReg) {
         kprint_uint(crash_state->ds);
         kprint("   ss: ");
         kprint_uint(crash_state->ss);
+        kprint("\nTask eip: ");
+        kprint_uint(runningTask->regs.eip);
+        kprint("\nTask eax: ");
+        kprint_uint(runningTask->regs.eax);
+        kprint("\nTask ebx: ");
+        kprint_uint(runningTask->regs.ebx);
+        kprint("\nTask ecx: ");
+        kprint_uint(runningTask->regs.ecx);
+        kprint("\nTask edx: ");
+        kprint_uint(runningTask->regs.edx);
     }
 }
 

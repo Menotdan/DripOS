@@ -2,6 +2,8 @@
 #include "../libc/mem.h"
 #include "../drivers/screen.h"
 #include "../libc/string.h"
+#include "../kernel/kernel.h"
+#include "../kernel/terminal.h"
 
 Task *runningTask;
 static Task mainTask;
@@ -13,14 +15,14 @@ uint32_t pid_max = 0;
 static void otherMain() {
     while (1) {
         //kprint("\nHello multitasking world!");
-        yield();
+        //yeild();
     }
 }
 
 static void otherMain2() {
     while (1) {
         //kprint("\nHello!");
-        yield();
+        //yield();
     }
 }
 
@@ -35,6 +37,8 @@ void initTasking() {
     otherTask.next = &mainTask; // Tail of task list
  
     runningTask = &otherTask;
+    execute_command("bgtask");
+    loaded = 1;
     otherMain();
 }
  
@@ -56,6 +60,8 @@ uint32_t createTask(Task *task, void (*main)()) {//, uint32_t *pagedir) { // No 
     mainTask.next = task;
     task->pid = pid_max;
     task->ticks_cpu_time = 0;
+    task->state = RUNNING;
+    task->priority = NORMAL;
     pid_max++;
     return task->pid;
 }
@@ -74,7 +80,19 @@ int32_t kill_task(uint32_t pid) {
     Task *temp_kill = &mainTask;
     Task *to_kill = 0;
     Task *prev_task;
+    uint32_t loop = 0;
+    //kprint("\nPID to find: ");
+    //kprint_uint(pid);
+    //kprint("\nMax PID: ");
+    //kprint_uint(pid_max);
     while (1) {
+        //kprint("\nLoop: ");
+        //kprint_uint(loop);
+        if (loop > pid_max) {
+            break;
+        }
+        //kprint("\nCurrent pid: ");
+        //kprint_uint(temp_kill->next->pid);
         if (temp_kill->next->pid == pid) {
             to_kill = temp_kill->next; // Process to kill
             prev_task = temp_kill; // Process before
@@ -84,10 +102,44 @@ int32_t kill_task(uint32_t pid) {
         if (temp_kill->next->pid == 0) {
             return 1; // Task not found, looped back to 0
         }
+        loop++;
+        temp_kill = temp_kill->next;
     }
     if ((uint32_t)to_kill == 0) {
         return 1; // This should never be reached but eh, safety first
     }
     prev_task->next = temp_kill; // Remove killed task from the chain
     return 0; // Worked... hopefully lol
+}
+
+void print_tasks() {
+    Task *temp_list = &mainTask;
+    uint32_t oof = 1;
+    while (1) {
+        if (temp_list == &mainTask && oof != 1) {
+            break;
+        }
+        kprint("\n");
+        kprint_uint(temp_list->pid);
+        kprint("  ");
+        kprint_uint(temp_list->ticks_cpu_time);
+        temp_list = temp_list->next;
+        oof = 0;
+    }
+}
+
+void timer_switch_task(registers_t *from, Task *to) {
+    Registers *regs = &runningTask->regs;
+    regs->eflags = from->eflags;
+    regs->eax = from->eax;
+    regs->ebx = from->ebx;
+    regs->ecx = from->ecx;
+    regs->edx = from->edx;
+    regs->edi = from->edi;
+    regs->esi = from->esi;
+    regs->eip = from->eip;
+    regs->esp = from->esp;
+    regs->ebp = from->ebp;
+    runningTask = to;
+    switchTask(&runningTask->regs, &to->regs);
 }

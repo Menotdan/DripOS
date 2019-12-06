@@ -182,21 +182,21 @@ void key_handler(uint8_t scancode, bool keyup) {
 
                     uint32_t offsetTemp = get_cursor_offset();
                     int cOffset = get_cursor_offset();
-                    breakA();
+                    //breakA();
                     set_cursor_offset(get_offset(get_offset_col(cOffset)+(uinlen-position), get_offset_row(cOffset)));
-                    breakA();
+                    //breakA();
                     cOffset = get_cursor_offset();
                     for (uint32_t g = 0; g < uinlen; g++)
                     {
                         //set_cursor_offset(get_offset(get_offset_col(cOffset)+(uinlen-position) - g, get_offset_row(cOffset)));
                         kprint_backspace();
                         //kprint_at(0x08, -1, -1);
-                        breakA();
+                        //breakA();
                     }
                     //kprint_backspace();
                     //kprint_backspace();
                     
-                    breakA();
+                    //breakA();
                     if (key_buffer != 0) {
                         kprint(key_buffer);
                     }

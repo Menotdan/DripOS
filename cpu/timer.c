@@ -10,39 +10,46 @@
 #include "soundManager.h"
 #include "../libc/string.h"
 #include "../kernel/systemManager.h"
+#include "../kernel/kernel.h"
 #include "task.h"
 
 uint32_t tick = 0; //Ticks
-uint32_t prev = 0; //Previous ticks for (unusable after boot) wait() function
+uint32_t prev = 0; //Previous ticks for wait() function
 int lSnd = 0; //Length of sound
 int task = 0; //is task on?
 int pSnd = 0; //ticks before sound started
 int tMil = 0; // How many million ticks
 char tMilStr[12];
 uint32_t okok = 0;
+uint32_t timesliceleft = 1;
 
 static void timer_callback(registers_t *regs) {
     tick++;
+    if (loaded == 1) {
+        timesliceleft--;
+    }
     kprint("");
     if (tick - (uint32_t)pSnd > (uint32_t)lSnd) {
         nosound();
-        //kprint("Timed out");
     }
     if((int)tick == 1000000) {
         tMil += 1;
     }
-    //char done[24];
-    //int_to_ascii((int)tick, done);
-    //kprint(done);
-    //kprint("\n");
-    //if (sound_en == true) {
-    //    char done[24];
-    //    int_to_ascii((int)tick, done);
-    //    kprint(done);
-    //}
-    //key_handler();
+
     runningTask->ticks_cpu_time++;
     UNUSED(regs);
+    if (timesliceleft == 0 && loaded == 1) {
+        if (runningTask->next->priority == NORMAL) {
+            timesliceleft = 160; // 16 ms
+        }
+        if (runningTask->next->priority == HIGH) {
+            timesliceleft = 240; // 24 ms
+        }
+        if (runningTask->next->priority == LOW) {
+            timesliceleft = 80; // 8 ms
+        }
+        timer_switch_task(regs, runningTask->next); // Switch task
+    }
 }
 
 void config_timer(uint32_t time) {
@@ -63,12 +70,12 @@ void init_timer(uint32_t freq) {
     config_timer(freq);
 }
 
-void wait(uint32_t ticks) {
+void wait(uint32_t ms) {
 	prev = tick;
     //char *eghagh;
     //int_to_ascii(ticks, eghagh);
     //kprint(eghagh);
-	while(tick < ticks + prev) {
+	while(tick < ms*100 + prev) {
 		//logoDraw();
         //okok += 1;
         //int_to_ascii(okok, eghagh);
