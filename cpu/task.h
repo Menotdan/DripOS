@@ -17,8 +17,9 @@
 extern void initTasking();
  
 typedef struct {
+// eax off   0    4    8    12   16   20   24   28   32   36      40
     uint32_t eax, ebx, ecx, edx, esi, edi, esp, ebp, eip, eflags, cr3;
-} Registers;
+} __attribute__((__packed__)) Registers;
  
 typedef struct Task {
     Registers regs;
@@ -34,8 +35,10 @@ void initTasking();
 extern uint32_t createTask(Task *task, void (*main)());
 extern int32_t kill_task(uint32_t pid); // 
 extern void yield(); // Yield, will be optional
-extern void switchTask(Registers *old, Registers *new); // The function which actually switches
+extern void switchTask(Registers *new); // The function which actually switches
 extern void print_tasks();
 extern void timer_switch_task(registers_t *from, Task *to);
 Task *runningTask;
+void store_global(registers_t *ok);
+void irq_schedule();
 #endif

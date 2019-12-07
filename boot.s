@@ -69,11 +69,12 @@ undefined behavior.
 */
 .section .bss
 .align 16
+.global stack_top
 stack_bottom:
 .skip 65536 /* 64 KiB of kernel stack, stack for other processes will
 allocated when they are created */
 stack_top:
- 
+
 /*
 The linker script specifies _start as the entry point to the kernel and the
 bootloader will jump to this position once the kernel has been loaded. It

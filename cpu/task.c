@@ -4,6 +4,8 @@
 #include "../libc/string.h"
 #include "../kernel/kernel.h"
 #include "../kernel/terminal.h"
+#include "../cpu/isr.h"
+#include "../drivers/serial.h"
 
 Task *runningTask;
 static Task mainTask;
@@ -11,6 +13,7 @@ static Task otherTask;
 static Task temp;
 Task *next_temp;
 uint32_t pid_max = 0;
+registers_t *global_regs;
 
 static void otherMain() {
     while (1) {
@@ -44,7 +47,7 @@ void initTasking() {
  
 uint32_t createTask(Task *task, void (*main)()) {//, uint32_t *pagedir) { // No paging yet
     asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(temp.regs.cr3)::"%eax"); // No paging yet
-    asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(temp.regs.eflags)::"%eax");
+    asm volatile("cli; pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl; sti;":"=m"(temp.regs.eflags)::"%eax");
     task->regs.eax = 0;
     task->regs.ebx = 0;
     task->regs.ecx = 0;
@@ -55,6 +58,7 @@ uint32_t createTask(Task *task, void (*main)()) {//, uint32_t *pagedir) { // No 
     task->regs.eip = (uint32_t) main;
     task->regs.cr3 = (uint32_t)temp.regs.cr3; // No paging yet
     task->regs.esp = (uint32_t) kmalloc(0x4000) + 0x4000; // Allocate 16KB for the process stack
+    task->regs.ebp = 0;
     next_temp = mainTask.next;
     task->next = next_temp;
     mainTask.next = task;
@@ -67,9 +71,9 @@ uint32_t createTask(Task *task, void (*main)()) {//, uint32_t *pagedir) { // No 
 }
  
 void yield() {
-    Task *last = runningTask;
+    //Task *last = runningTask;
     runningTask = runningTask->next;
-    switchTask(&last->regs, &runningTask->regs);
+    switchTask(&runningTask->regs);
     //kprint("\nswitchTask call didn't work, execution returned");
 }
 
@@ -129,6 +133,7 @@ void print_tasks() {
 }
 
 void timer_switch_task(registers_t *from, Task *to) {
+    //free(test, 0x1000);
     Registers *regs = &runningTask->regs;
     regs->eflags = from->eflags;
     regs->eax = from->eax;
@@ -141,5 +146,39 @@ void timer_switch_task(registers_t *from, Task *to) {
     regs->esp = from->esp;
     regs->ebp = from->ebp;
     runningTask = to;
-    switchTask(&runningTask->regs, &to->regs);
+    switchTask(&to->regs);
+}
+
+void schedule(registers_t *from) {
+    Registers *regs = &runningTask->regs; // Get registers
+    /* Set old registers */
+    regs->eflags = from->eflags;
+    regs->eax = from->eax;
+    regs->ebx = from->ebx;
+    regs->ecx = from->ecx;
+    regs->edx = from->edx;
+    regs->edi = from->edi;
+    regs->esi = from->esi;
+    regs->eip = from->eip;
+    regs->esp = from->esp;
+    regs->ebp = from->ebp;
+    // Select new running task
+    runningTask = runningTask->next;
+    while (runningTask->state != RUNNING) {
+        runningTask = runningTask->next;
+    }
+    // Switch
+    //sprint_uint(3);
+    switchTask(&runningTask->regs);
+}
+void irq_schedule() {
+    //sprint_uint(2);
+    schedule(global_regs);
+}
+void store_global(registers_t *ok) {
+    sprint("\n");
+    sprint_uint(ok->eip);
+    sprint("\n");
+    sprint_uint(ok->esp);
+    global_regs = ok;
 }

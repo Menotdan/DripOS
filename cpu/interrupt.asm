@@ -1,6 +1,9 @@
 ; Defined in isr.c
 [extern isr_handler]
 [extern irq_handler]
+[extern switch_task]
+[extern irq_schedule]
+[extern store_global]
 
 ; Common ISR code
 isr_common_stub:
@@ -13,11 +16,13 @@ isr_common_stub:
 	mov es, ax
 	mov fs, ax
 	mov gs, ax
+    mov eax, dr6
+    push eax
 	push esp
 
     ; 2. Call C handler
 	call isr_handler
-	pop eax
+    add esp, 8
 
     ; 3. Restore state
 	pop eax 
@@ -42,12 +47,17 @@ irq_common_stub:
     mov es, ax
     mov fs, ax
     mov gs, ax
+    mov eax, dr6
+    push eax
     push esp                 ; At this point ESP is a pointer to where DS (and the rest
                              ; of the interrupt handler state resides)
                              ; Push ESP as 1st parameter as it's a 
                              ; pointer to a registers_t  
     call irq_handler
-    pop ebx                  ; Remove the saved ESP on the stack. Efficient to just pop it 
+    mov eax, [switch_task]
+    cmp eax, 1
+    je changeTasks
+    add esp, 8                 ; Remove the saved ESP on the stack. Efficient to just pop it 
                              ; into any register. You could have done: add esp, 4 as well
     pop ebx
     mov ds, bx
@@ -58,7 +68,14 @@ irq_common_stub:
     add esp, 8
     sti
     iret
-	
+
+changeTasks:
+    mov eax, 0
+    mov [switch_task], eax
+    call store_global ; Set a global variable with C
+    add esp, 72 ; "Pop" 18 values off the stack
+    jmp irq_schedule ; Switch task
+
 ; We don't get information about which interrupt was caller
 ; when the handler is run, so we will need to have a different handler
 ; for every interrupt.

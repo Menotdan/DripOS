@@ -22,8 +22,11 @@ int tMil = 0; // How many million ticks
 char tMilStr[12];
 uint32_t okok = 0;
 uint32_t timesliceleft = 1;
+registers_t *temp;
+uint32_t switch_task = 0;
 
 static void timer_callback(registers_t *regs) {
+    temp = regs;
     tick++;
     if (loaded == 1) {
         timesliceleft--;
@@ -48,7 +51,8 @@ static void timer_callback(registers_t *regs) {
         if (runningTask->next->priority == LOW) {
             timesliceleft = 80; // 8 ms
         }
-        timer_switch_task(regs, runningTask->next); // Switch task
+        //timer_switch_task(temp, runningTask->next); // Switch task
+        switch_task = 1;
     }
 }
 

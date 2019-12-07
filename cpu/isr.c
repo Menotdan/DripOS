@@ -9,8 +9,13 @@
 #include "ports.h"
 #include "../fs/hdd.h"
 #include "../kernel/kernel.h"
+#include "task.h"
 
 isr_t interrupt_handlers[256];
+isr_t handler;
+uint32_t *test;
+uint32_t *prev_stack;
+registers_t *data;
 
 /* Can't do this with a loop because we need the address
  * of the function names */
@@ -142,6 +147,7 @@ void register_interrupt_handler(uint8_t n, isr_t handler) {
 }
 
 void irq_handler(registers_t *r) {
+    data = r;
     /* After every interrupt we need to send an EOI to the PICs
      * or they will not send another interrupt again */
     if (r->int_no >= 40) port_byte_out(0xA0, 0x20); /* slave */
@@ -151,11 +157,18 @@ void irq_handler(registers_t *r) {
     //sprint("\n");
     /* Handle the interrupt in a more modular way */
     if (interrupt_handlers[r->int_no] != 0) {
-        isr_t handler = interrupt_handlers[r->int_no];
-        //uint32_t *test = kmalloc(0x1000);
-
-        handler(r);
-
+        handler = interrupt_handlers[r->int_no];
+        //test = kmalloc(0x1000);
+        //sprint("\nRunning handler");
+        handler(data);
+        sprint("\nReturned");
+        /*if (switch_task == 1) {
+            sprint("\nSwitching task");
+            switch_task = 0;
+            sprint("Set switch task");
+            timer_switch_task(temp, runningTask->next);
+            sprint("Wait, thats illegal");
+        }*/
         //free(test, 0x1000);
         //sprint("Done handling\n");
     } 

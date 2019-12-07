@@ -73,6 +73,7 @@ extern void irq15();
 
 /* Struct which aggregates many registers */
 typedef struct {
+   uint32_t dr6;
    uint32_t ds; /* Data segment selector */
    uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax; /* Pushed by pusha. */
    uint32_t int_no, err_code; /* Interrupt number and error code (if applicable) */
@@ -85,5 +86,7 @@ void irq_install();
 
 typedef void (*isr_t)(registers_t*);
 void register_interrupt_handler(uint8_t n, isr_t handler);
+
+uint32_t *test;
 
 #endif

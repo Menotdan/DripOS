@@ -187,6 +187,10 @@ void crash_screen(registers_t *crash_state, char *msg, uint8_t printReg) {
         kprint_uint(runningTask->regs.ecx);
         kprint("\nTask edx: ");
         kprint_uint(runningTask->regs.edx);
+        kprint("\nDebug 6: ");
+        kprint_uint(crash_state->dr6);
+        kprint("\nEFLAGS: ");
+        kprint_uint(crash_state->eflags);
     }
 }
 

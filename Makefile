@@ -13,7 +13,7 @@ LINKER = ~/Desktop/Compiler/bin/i686-elf-ld
 incPath = ~/DripOS/include
 GDB = gdb
 MEM = 1G # Memory for qemu
-O_LEVEL = 0
+O_LEVEL = 2
 # -g: Use debugging symbols in gcc
 CFLAGS = -g #-m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra
 
@@ -48,19 +48,19 @@ iso: myos.iso
 # Open the connection to qemu and load our kernel-object file with symbols
 debug: myos.iso
 	qemu-system-x86_64 -vga std -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom DripOS.iso -hda dripdisk.img &
-	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf" -x ~/gdbcommands -batch > gdbout.log
+	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf"
  
 # Generic rules for wildcards
 # To make an object, always compile from its .c $< $@
 cpu/switch.o: cpu/switch.s
-	${CC} -Werror -Wall -Wextra -Wpedantic -O2 -g -MD -c $< -o $@
+	${CC} -Werror -Wall -Wextra -Wpedantic -O${O_LEVEL} -g -MD -c $< -o $@
 %.o: %.c ${HEADERS}
 	${CC} -Iinclude -O${O_LEVEL} -g -Werror -Wall -Wextra -Wpedantic -fno-omit-frame-pointer -MD -c $< -o $@ -std=gnu11 -ffreestanding
  
 %.o: %.s
-	${CC} -Werror -Wall -Wextra -Wpedantic -O2 -g -MD -c $< -o $@
+	${CC} -Werror -Wall -Wextra -Wpedantic -O${O_LEVEL} -g -MD -c $< -o $@
 %.o: %.S
-	${CC} -Werror -Wall -Wextra -Wpedantic -O2 -g -MD -c $< -o $@
+	${CC} -Werror -Wall -Wextra -Wpedantic -O${O_LEVEL} -g -MD -c $< -o $@
 
 %.o: %.asm
 	nasm -g -f elf32 -F dwarf -o $@ $<
