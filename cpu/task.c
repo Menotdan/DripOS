@@ -14,6 +14,8 @@ static Task temp;
 Task *next_temp;
 uint32_t pid_max = 0;
 registers_t *global_regs;
+uint32_t call_counter = 0;
+Registers *regs;
 
 static void otherMain() {
     while (1) {
@@ -38,10 +40,11 @@ void initTasking() {
     createTask(&mainTask, otherMain2);
     mainTask.next = &otherTask; // Head of task list
     otherTask.next = &mainTask; // Tail of task list
- 
+    global_regs = kmalloc(sizeof(registers_t));
     runningTask = &otherTask;
     execute_command("bgtask");
     loaded = 1;
+    call_counter = sizeof(registers_t) + 4;
     otherMain();
 }
  
@@ -169,16 +172,79 @@ void schedule(registers_t *from) {
     }
     // Switch
     //sprint_uint(3);
+    /*sprint("\nFrom eip: ");
+    sprint_uint(from->eip);
+    sprint("\nFrom esp: ");
+    sprint_uint(from->esp);
+    sprint("\nRunning eip: ");
+    sprint_uint(runningTask->regs.eip);
+    sprint("\nRunning esp: ");
+    sprint_uint(runningTask->regs.esp);*/
     switchTask(&runningTask->regs);
 }
 void irq_schedule() {
-    //sprint_uint(2);
-    schedule(global_regs);
+    regs = &runningTask->regs; // Get registers
+    /* Set old registers */
+    regs->eflags = global_regs->eflags;
+    regs->eax = global_regs->eax;
+    regs->ebx = global_regs->ebx;
+    regs->ecx = global_regs->ecx;
+    regs->edx = global_regs->edx;
+    regs->edi = global_regs->edi;
+    regs->esi = global_regs->esi;
+    regs->eip = global_regs->eip;
+    regs->esp = global_regs->esp;
+    regs->ebp = global_regs->ebp;
+    // Select new running task
+    runningTask = runningTask->next;
+    while (runningTask->state != RUNNING) {
+        runningTask = runningTask->next;
+    }
+    // Switch
+    //sprint_uint(3);
+    sprint("\nFrom eip: ");
+    sprint_uint(global_regs->eip);
+    sprint("\nFrom esp: ");
+    sprint_uint(global_regs->esp);
+    sprint("\nRunning eip: ");
+    sprint_uint(runningTask->regs.eip);
+    sprint("\nRunning esp: ");
+    sprint_uint(runningTask->regs.esp);
+    switchTask(&runningTask->regs);
 }
-void store_global(registers_t *ok) {
-    sprint("\n");
+void store_global(uint32_t f, registers_t *ok) {
+    sprint("\nEIP: ");
     sprint_uint(ok->eip);
-    sprint("\n");
+    sprint("\nEAX: ");
+    sprint_uint(ok->eax);
+    sprint("\nEBX: ");
+    sprint_uint(ok->ebx);
+    sprint("\nEDX: ");
+    sprint_uint(ok->edx);
+    sprint("\nESP: ");
     sprint_uint(ok->esp);
-    global_regs = ok;
+    sprint("\nADDR: ");
+    sprint_uint((uint32_t)ok);
+    sprint("\nF: ");
+    sprint_uint((uint32_t)f);
+    
+    /* Set all 17 */
+    //global_regs->dr6 = f;
+    global_regs->cs = ok->cs;
+    global_regs->ds = ok->ds;
+    global_regs->ecx = ok->ecx;
+    global_regs->eax = ok->eax;
+    global_regs->ebx = ok->ebx;
+    global_regs->edx = ok->edx;
+    global_regs->esp = ok->esp;
+    global_regs->ebp = ok->ebp;
+    global_regs->eip = ok->eip;
+    global_regs->esi = ok->esi;
+    global_regs->eflags = ok->eflags;
+    global_regs->edi = ok->edi;
+    global_regs->useresp = ok->useresp;
+    global_regs->err_code = ok->err_code;
+    global_regs->ss = ok->ss;
+    global_regs->int_no = ok->int_no;
+    global_regs->dr6 = ok->dr6;
 }

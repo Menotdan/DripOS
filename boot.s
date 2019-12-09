@@ -131,10 +131,9 @@ _start:
         mov gs, ax
     jmp CODE_SEG:.next /* JMP to next instruction but set CS! */
 .next:
-        .att_syntax
-        push $__kernel_end
+        mov edx, [__kernel_end]
         .intel_syntax noprefix
-        push ebx
+        mov eax, ebx
         /*mov ebp, 0x90000
         mov esp, ebp*/
         call kmain

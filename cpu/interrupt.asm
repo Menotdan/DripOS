@@ -4,6 +4,7 @@
 [extern switch_task]
 [extern irq_schedule]
 [extern store_global]
+[extern call_counter]
 
 ; Common ISR code
 isr_common_stub:
@@ -18,14 +19,14 @@ isr_common_stub:
 	mov gs, ax
     mov eax, dr6
     push eax
-	push esp
+	mov eax, esp
 
     ; 2. Call C handler
 	call isr_handler
-    add esp, 8
+    add esp, 4
 
     ; 3. Restore state
-	pop eax 
+	pop eax
 	mov ds, ax
 	mov es, ax
 	mov fs, ax
@@ -49,16 +50,15 @@ irq_common_stub:
     mov gs, ax
     mov eax, dr6
     push eax
-    push esp                 ; At this point ESP is a pointer to where DS (and the rest
+    mov eax, esp                 ; At this point ESP is a pointer to where DS (and the rest
                              ; of the interrupt handler state resides)
                              ; Push ESP as 1st parameter as it's a 
                              ; pointer to a registers_t  
     call irq_handler
-    mov eax, [switch_task]
-    cmp eax, 1
+    mov ebx, [switch_task]
+    cmp ebx, 1
     je changeTasks
-    add esp, 8                 ; Remove the saved ESP on the stack. Efficient to just pop it 
-                             ; into any register. You could have done: add esp, 4 as well
+    add esp, 4
     pop ebx
     mov ds, bx
     mov es, bx
@@ -70,10 +70,14 @@ irq_common_stub:
     iret
 
 changeTasks:
-    mov eax, 0
-    mov [switch_task], eax
+    mov eax, 1234567
+    mov ebx, 0
+    mov [switch_task], ebx
+    mov ecx, 0
+    mov edx, esp
     call store_global ; Set a global variable with C
-    add esp, 72 ; "Pop" 18 values off the stack
+    mov eax, [call_counter]
+    add esp, eax ; "Pop" 18 values off the stack
     jmp irq_schedule ; Switch task
 
 ; We don't get information about which interrupt was caller

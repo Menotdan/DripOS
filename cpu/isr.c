@@ -138,6 +138,8 @@ void isr_handler(registers_t *r) {
     // kprint("\n");
     // kprint(exception_messages[r->int_no]);
     // kprint("\n");
+    sprint("\nCalls to switch: ");
+    sprint_uint(call_counter);
     crash_screen(r, exception_messages[r->int_no], 1);
     while (1);
 }
@@ -147,21 +149,23 @@ void register_interrupt_handler(uint8_t n, isr_t handler) {
 }
 
 void irq_handler(registers_t *r) {
-    data = r;
+    //data = r;
     /* After every interrupt we need to send an EOI to the PICs
      * or they will not send another interrupt again */
     if (r->int_no >= 40) port_byte_out(0xA0, 0x20); /* slave */
     port_byte_out(0x20, 0x20); /* master */
-    //sprint("Address: ");
-    //sprint_uint((uint32_t)r);
-    //sprint("\n");
+    sprint("Address: ");
+    sprint_uint((uint32_t)r);
+    sprint("\n");
     /* Handle the interrupt in a more modular way */
     if (interrupt_handlers[r->int_no] != 0) {
         handler = interrupt_handlers[r->int_no];
         //test = kmalloc(0x1000);
         //sprint("\nRunning handler");
-        handler(data);
-        sprint("\nReturned");
+        //sprint("\nData esp: ");
+        //sprint_uint(r->esp);
+        handler(r);
+        //sprint("\nReturned");
         /*if (switch_task == 1) {
             sprint("\nSwitching task");
             switch_task = 0;

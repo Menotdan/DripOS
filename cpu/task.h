@@ -39,6 +39,7 @@ extern void switchTask(Registers *new); // The function which actually switches
 extern void print_tasks();
 extern void timer_switch_task(registers_t *from, Task *to);
 Task *runningTask;
-void store_global(registers_t *ok);
+void store_global(uint32_t f, registers_t *ok);
 void irq_schedule();
+uint32_t call_counter;
 #endif

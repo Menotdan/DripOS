@@ -26,13 +26,12 @@ registers_t *temp;
 uint32_t switch_task = 0;
 
 static void timer_callback(registers_t *regs) {
-    temp = regs;
     tick++;
     if (loaded == 1) {
         timesliceleft--;
     }
     kprint("");
-    if (tick - (uint32_t)pSnd > (uint32_t)lSnd) {
+    if (tick - (uint32_t)pSnd > (uint32_t)lSnd*10) {
         nosound();
     }
     if((int)tick == 1000000) {
@@ -43,13 +42,13 @@ static void timer_callback(registers_t *regs) {
     UNUSED(regs);
     if (timesliceleft == 0 && loaded == 1) {
         if (runningTask->next->priority == NORMAL) {
-            timesliceleft = 160; // 16 ms
+            timesliceleft = 16; // 16 ms
         }
         if (runningTask->next->priority == HIGH) {
-            timesliceleft = 240; // 24 ms
+            timesliceleft = 24; // 24 ms
         }
         if (runningTask->next->priority == LOW) {
-            timesliceleft = 80; // 8 ms
+            timesliceleft = 8; // 8 ms
         }
         //timer_switch_task(temp, runningTask->next); // Switch task
         switch_task = 1;
@@ -79,7 +78,7 @@ void wait(uint32_t ms) {
     //char *eghagh;
     //int_to_ascii(ticks, eghagh);
     //kprint(eghagh);
-	while(tick < ms*100 + prev) {
+	while(tick < ms*10 + prev) {
 		//logoDraw();
         //okok += 1;
         //int_to_ascii(okok, eghagh);

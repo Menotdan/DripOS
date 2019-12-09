@@ -111,7 +111,8 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	Log("ISR Enabled", 1);
 	irq_install();
 	Log("Interrupts Enabled", 1);
-	init_timer(10000);
+	//init_timer(10000);
+	init_timer(1000);
 	Log("Timer enabled", 1);
 
 	Log("Scanning for drives", 1);
