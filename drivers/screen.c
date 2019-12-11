@@ -191,6 +191,14 @@ void crash_screen(registers_t *crash_state, char *msg, uint8_t printReg) {
         kprint_uint(crash_state->dr6);
         kprint("\nEFLAGS: ");
         kprint_uint(crash_state->eflags);
+        kprint("\nOOF: ");
+        kprint_uint(oof);
+        kprint(" EAX: ");
+        kprint_uint(eax);
+        kprint(" ESP: ");
+        kprint_uint(esp);
+        kprint("\nEIP: ");
+        kprint_uint(eip);
     }
 }
 

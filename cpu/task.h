@@ -35,11 +35,16 @@ void initTasking();
 extern uint32_t createTask(Task *task, void (*main)());
 extern int32_t kill_task(uint32_t pid); // 
 extern void yield(); // Yield, will be optional
-extern void switchTask(Registers *new); // The function which actually switches
+extern void switchTask(); // The function which actually switches
 extern void print_tasks();
 extern void timer_switch_task(registers_t *from, Task *to);
 Task *runningTask;
 void store_global(uint32_t f, registers_t *ok);
 void irq_schedule();
 uint32_t call_counter;
+uint32_t oof;
+uint32_t eax;
+uint32_t eip;
+uint32_t esp;
+registers_t *temp_data1;
 #endif

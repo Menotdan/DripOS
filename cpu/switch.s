@@ -1,16 +1,21 @@
 .section .text
 .global switchTask
+.extern oof
+.extern eax
+.extern eip
+.extern esp
 
 switchTask:
-    cli #Clear interrupt flag, to prevent an interrupt from firing while task is switching
     #mov 4(%esp), %eax # Move the address of the struct to eax
     #pop %ebx # Clean up after caller
+    mov oof, %eax
     mov 4(%eax), %ebx # EBX
     mov 8(%eax), %ecx # ECX
     mov 12(%eax), %edx # EDX
     mov 16(%eax), %esi # ESI
     mov 20(%eax), %edi # EDI
     mov 24(%eax), %esp # ESP
+    mov %esp, esp
     push %eax # Save eax
     mov 32(%eax), %eax # Move EIP to EAX
     # Move the new EIP value into esp, and eax is returned to its previous state

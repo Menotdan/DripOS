@@ -16,6 +16,11 @@ uint32_t pid_max = 0;
 registers_t *global_regs;
 uint32_t call_counter = 0;
 Registers *regs;
+registers_t *temp_data1;
+uint32_t oof = 0;
+uint32_t eax = 0;
+uint32_t eip = 0;
+uint32_t esp = 0;
 
 static void otherMain() {
     while (1) {
@@ -44,7 +49,7 @@ void initTasking() {
     runningTask = &otherTask;
     execute_command("bgtask");
     loaded = 1;
-    call_counter = sizeof(registers_t) + 4;
+    call_counter = sizeof(registers_t);
     otherMain();
 }
  
@@ -76,7 +81,6 @@ uint32_t createTask(Task *task, void (*main)()) {//, uint32_t *pagedir) { // No 
 void yield() {
     //Task *last = runningTask;
     runningTask = runningTask->next;
-    switchTask(&runningTask->regs);
     //kprint("\nswitchTask call didn't work, execution returned");
 }
 
@@ -149,7 +153,6 @@ void timer_switch_task(registers_t *from, Task *to) {
     regs->esp = from->esp;
     regs->ebp = from->ebp;
     runningTask = to;
-    switchTask(&to->regs);
 }
 
 void schedule(registers_t *from) {
@@ -180,7 +183,6 @@ void schedule(registers_t *from) {
     sprint_uint(runningTask->regs.eip);
     sprint("\nRunning esp: ");
     sprint_uint(runningTask->regs.esp);*/
-    switchTask(&runningTask->regs);
 }
 void irq_schedule() {
     regs = &runningTask->regs; // Get registers
@@ -202,6 +204,7 @@ void irq_schedule() {
     }
     // Switch
     //sprint_uint(3);
+    regs = &(runningTask->regs);
     sprint("\nFrom eip: ");
     sprint_uint(global_regs->eip);
     sprint("\nFrom esp: ");
@@ -210,7 +213,10 @@ void irq_schedule() {
     sprint_uint(runningTask->regs.eip);
     sprint("\nRunning esp: ");
     sprint_uint(runningTask->regs.esp);
-    switchTask(&runningTask->regs);
+    oof = (uint32_t)&(runningTask->regs);
+    sprint("\nOOF: ");
+    sprint_uint(oof);
+    switchTask();
 }
 void store_global(uint32_t f, registers_t *ok) {
     sprint("\nEIP: ");

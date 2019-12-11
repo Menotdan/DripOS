@@ -5,6 +5,7 @@
 [extern irq_schedule]
 [extern store_global]
 [extern call_counter]
+[extern temp_data1]
 
 ; Common ISR code
 isr_common_stub:
@@ -43,11 +44,6 @@ irq_common_stub:
     pushad
     mov ax, ds
     push eax
-    mov ax, 0x10 ;0x10
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
     mov eax, dr6
     push eax
     mov eax, esp                 ; At this point ESP is a pointer to where DS (and the rest
@@ -58,12 +54,7 @@ irq_common_stub:
     mov ebx, [switch_task]
     cmp ebx, 1
     je changeTasks
-    add esp, 4
-    pop ebx
-    mov ds, bx
-    mov es, bx
-    mov fs, bx
-    mov gs, bx
+    add esp, 8
     popad
     add esp, 8
     sti
