@@ -65,7 +65,7 @@ uint32_t createTask(Task *task, void (*main)()) {//, uint32_t *pagedir) { // No 
     task->regs.eflags = temp.regs.eflags;
     task->regs.eip = (uint32_t) main;
     task->regs.cr3 = (uint32_t)temp.regs.cr3; // No paging yet
-    task->regs.esp = (uint32_t) kmalloc(0x4000) + 0x4000; // Allocate 16KB for the process stack
+    task->regs.esp = ((uint32_t)kmalloc(0x4000) & (~0xf)) + 0x4000; // Allocate 16KB for the process stack
     task->regs.ebp = 0;
     next_temp = mainTask.next;
     task->next = next_temp;

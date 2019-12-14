@@ -13,16 +13,17 @@ isr_common_stub:
 	pushad ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
 	mov ax, ds ; Lower 16-bits of eax = ds.
 	push eax ; save the data segment descriptor
-	mov ax, 0x10  ; kernel data segment descriptor
-	mov ds, ax
-	mov es, ax
-	mov fs, ax
-	mov gs, ax
+	;mov ax, 0x10  ; kernel data segment descriptor
+	;mov ds, ax
+	;mov es, ax
+	;mov fs, ax
+	;mov gs, ax
     mov eax, dr6
     push eax
 	mov eax, esp
 
     ; 2. Call C handler
+    cld
 	call isr_handler
     add esp, 4
 
@@ -49,7 +50,8 @@ irq_common_stub:
     mov eax, esp                 ; At this point ESP is a pointer to where DS (and the rest
                              ; of the interrupt handler state resides)
                              ; Push ESP as 1st parameter as it's a 
-                             ; pointer to a registers_t  
+                             ; pointer to a registers_t
+    cld
     call irq_handler
     mov ebx, [switch_task]
     cmp ebx, 1
@@ -66,9 +68,11 @@ changeTasks:
     mov [switch_task], ebx
     mov ecx, 0
     mov edx, esp
+    cld
     call store_global ; Set a global variable with C
-    mov eax, [call_counter]
-    add esp, eax ; "Pop" 18 values off the stack
+    mov eax, 68
+    add esp, eax ; "Pop" 17 values off the stack
+    cld
     jmp irq_schedule ; Switch task
 
 ; We don't get information about which interrupt was caller
