@@ -6,10 +6,11 @@
 #include "../kernel/terminal.h"
 #include "../cpu/isr.h"
 #include "../drivers/serial.h"
+#include <debug.h>
 
 Task *runningTask;
-static Task mainTask;
-static Task otherTask;
+Task mainTask;
+Task otherTask;
 static Task temp;
 Task *next_temp;
 uint32_t pid_max = 0;
@@ -21,17 +22,22 @@ uint32_t oof = 0;
 uint32_t eax = 0;
 uint32_t eip = 0;
 uint32_t esp = 0;
+uint32_t just_started = 1;
 
 static void otherMain() {
+    loaded = 1;
     while (1) {
-        //kprint("\nHello multitasking world!");
+        oof++;
+        sprint("\n");
+        sprint_uint(oof);
+        //kprint("\nHello! 2");
         //yeild();
     }
 }
 
 static void otherMain2() {
     while (1) {
-        //kprint("\nHello!");
+        //kprint("\nHello! 1");
         //yield();
     }
 }
@@ -47,8 +53,7 @@ void initTasking() {
     otherTask.next = &mainTask; // Tail of task list
     global_regs = kmalloc(sizeof(registers_t));
     runningTask = &otherTask;
-    execute_command("bgtask");
-    loaded = 1;
+    //execute_command("bgtask");
     call_counter = sizeof(registers_t);
     otherMain();
 }
@@ -67,6 +72,28 @@ uint32_t createTask(Task *task, void (*main)()) {//, uint32_t *pagedir) { // No 
     task->regs.cr3 = (uint32_t)temp.regs.cr3; // No paging yet
     task->regs.esp = ((uint32_t)kmalloc(0x4000) & (~0xf)) + 0x4000; // Allocate 16KB for the process stack
     task->regs.ebp = 0;
+
+    registers_t tempregs;
+    tempregs.eax = 0;
+    tempregs.ebx = 0;
+    tempregs.ecx = 0;
+    tempregs.edx = 0;
+    tempregs.esi = 0;
+    tempregs.edi = 0;
+    tempregs.eflags = temp.regs.cr3;
+    tempregs.eip = (uint32_t) main;
+    tempregs.ebp = 0;
+    tempregs.cs = 0x8;
+    tempregs.ds = 0x10;
+    tempregs.esp = task->regs.esp;
+    tempregs.dr6 = 0;
+    tempregs.err_code = 0;
+    tempregs.int_no = 1234;
+    uint8_t *stack_insert_buffer = get_pointer(task->regs.esp);
+    task->regs.esp -= sizeof(registers_t);
+    memory_copy((uint8_t *)&tempregs, stack_insert_buffer, sizeof(registers_t));
+    //breakA();
+
     next_temp = mainTask.next;
     task->next = next_temp;
     mainTask.next = task;
@@ -184,6 +211,63 @@ void schedule(registers_t *from) {
     sprint("\nRunning esp: ");
     sprint_uint(runningTask->regs.esp);*/
 }
+
+void swap_values(registers_t *r) {
+    //sprint("\n");
+    //sprint_uint(r->useresp);
+    //sprint("\n");
+    //sprint_uint(r->esp);
+    regs = &runningTask->regs; // Get registers
+    /* Set old registers */
+    regs->eflags = r->eflags;
+    regs->eax = r->eax;
+    regs->ebx = r->ebx;
+    regs->ecx = r->ecx;
+    regs->edx = r->edx;
+    regs->edi = r->edi;
+    regs->esi = r->esi;
+    regs->eip = r->eip;
+    regs->esp = r->esp;
+    regs->ebp = r->ebp;
+    // Select new running task
+    runningTask = runningTask->next;
+    while (runningTask->state != RUNNING) {
+        runningTask = runningTask->next;
+    }
+
+    // Set values for context switch
+    regs = &runningTask->regs;
+    r->eflags = regs->eflags;
+    r->eflags = r->eflags | 0x200;
+    r->eax = regs->eax;
+    r->ebx = regs->ebx;
+    r->ecx = regs->ecx;
+    r->edx = regs->edx;
+    r->edi = regs->edi;
+    r->esi = regs->esi;
+    r->eip = regs->eip;
+    call_counter = regs->esp;
+    //r->task_esp = regs->esp;
+    //r->useresp = regs->esp;
+    //r->esp = regs->esp;
+    r->ebp = regs->ebp;
+    //sprint("\nDone switching\n");
+    //sprint_uint(r->esp);
+    //sprint("\n");
+    //sprint_uint(r->eip);
+    //sprint("\n");
+    //sprint_uint(r->eip);
+    //sprint("\n");
+    //sprint_uint(r->esp);
+    //sprint("\n");
+    //sprint_uint(r->useresp);
+    //sprint("\n");
+    //sprint_uint(r->ebp);
+    //sprint("\n");
+    //sprint_uint(r->eax);
+    breakA();
+}
+
 void irq_schedule() {
     regs = &runningTask->regs; // Get registers
     /* Set old registers */
@@ -248,9 +332,13 @@ void store_global(uint32_t f, registers_t *ok) {
     global_regs->esi = ok->esi;
     global_regs->eflags = ok->eflags;
     global_regs->edi = ok->edi;
-    global_regs->useresp = ok->useresp;
+    //global_regs->useresp = ok->useresp;
     global_regs->err_code = ok->err_code;
-    global_regs->ss = ok->ss;
+    //global_regs->ss = ok->ss;
     global_regs->int_no = ok->int_no;
     global_regs->dr6 = ok->dr6;
+}
+
+void print_stuff() {
+    sprint("\nMade it to the end... this is it I guess...");
 }

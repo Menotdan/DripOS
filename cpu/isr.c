@@ -10,6 +10,7 @@
 #include "../fs/hdd.h"
 #include "../kernel/kernel.h"
 #include "task.h"
+#include <debug.h>
 
 isr_t interrupt_handlers[256];
 isr_t handler;
@@ -154,16 +155,16 @@ void irq_handler(registers_t *r) {
      * or they will not send another interrupt again */
     if (r->int_no >= 40) port_byte_out(0xA0, 0x20); /* slave */
     port_byte_out(0x20, 0x20); /* master */
-    sprint("\nAddress: ");
-    sprint_uint((uint32_t)r);
-    sprint("\nOOF: ");
-    sprint_uint((uint32_t)oof);
-    sprint("\nEAX: ");
-    sprint_uint((uint32_t)eax);
-    sprint("\nESP: ");
-    sprint_uint((uint32_t)esp);
-    sprint("\nEIP: ");
-    sprint_uint((uint32_t)eip);
+    // sprint("\nAddress: ");
+    // sprint_uint((uint32_t)r);
+    // sprint("\nOOF: ");
+    // sprint_uint((uint32_t)oof);
+    // sprint("\nEAX: ");
+    // sprint_uint((uint32_t)eax);
+    // sprint("\nESP: ");
+    // sprint_uint(r->esp);
+    // sprint("\nEIP: ");
+    // sprint_uint(r->eip);
     /* Handle the interrupt in a more modular way */
     if (interrupt_handlers[r->int_no] != 0) {
         handler = interrupt_handlers[r->int_no];
@@ -182,6 +183,7 @@ void irq_handler(registers_t *r) {
         }*/
         //free(test, 0x1000);
         //sprint("Done handling\n");
+        //breakA();
     } 
     else {
         if (loaded == 1) {

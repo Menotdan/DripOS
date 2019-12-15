@@ -30,7 +30,7 @@ static void timer_callback(registers_t *regs) {
     if (loaded == 1) {
         timesliceleft--;
     }
-    kprint("");
+    //kprint("");
     if (tick - (uint32_t)pSnd > (uint32_t)lSnd*10) {
         nosound();
     }

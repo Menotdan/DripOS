@@ -6,18 +6,14 @@
 [extern store_global]
 [extern call_counter]
 [extern temp_data1]
-
+[extern swap_values]
+[extern print_stuff]
 ; Common ISR code
 isr_common_stub:
     ; 1. Save CPU state
 	pushad ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
 	mov ax, ds ; Lower 16-bits of eax = ds.
 	push eax ; save the data segment descriptor
-	;mov ax, 0x10  ; kernel data segment descriptor
-	;mov ds, ax
-	;mov es, ax
-	;mov fs, ax
-	;mov gs, ax
     mov eax, dr6
     push eax
 	mov eax, esp
@@ -25,15 +21,9 @@ isr_common_stub:
     ; 2. Call C handler
     cld
 	call isr_handler
-    add esp, 4
-
-    ; 3. Restore state
-	pop eax
-	mov ds, ax
-	mov es, ax
-	mov fs, ax
-	mov gs, ax
+    add esp, 8
 	popad
+    ;pop esp
 	add esp, 8 ; Cleans up the pushed error code and pushed ISR number
 	sti
 	iret ; pops 5 things at once: CS, EIP, EFLAGS, SS, and ESP
@@ -42,38 +32,36 @@ isr_common_stub:
 ; Common IRQ code. Identical to ISR code except for the 'call' 
 ; and the 'pop ebx'
 irq_common_stub:
+    ;push esp
     pushad
     mov ax, ds
     push eax
+
     mov eax, dr6
     push eax
     mov eax, esp                 ; At this point ESP is a pointer to where DS (and the rest
                              ; of the interrupt handler state resides)
                              ; Push ESP as 1st parameter as it's a 
                              ; pointer to a registers_t
-    cld
     call irq_handler
     mov ebx, [switch_task]
     cmp ebx, 1
-    je changeTasks
-    add esp, 8
-    popad
-    add esp, 8
-    sti
-    iret
-
-changeTasks:
-    mov eax, 1234567
+    jne testLabel
     mov ebx, 0
     mov [switch_task], ebx
-    mov ecx, 0
-    mov edx, esp
-    cld
-    call store_global ; Set a global variable with C
-    mov eax, 68
-    add esp, eax ; "Pop" 17 values off the stack
-    cld
-    jmp irq_schedule ; Switch task
+    mov eax, esp ; Safety, irq_handler probably changed eax
+    call swap_values ; Change context stored on stack
+    mov esp, [call_counter]
+testLabel:
+    add esp, 8 ; DR6 and ss
+
+    popad
+    add esp, 8 ; IRQ code and error code
+    sti ; Set interrupt flag
+    iret ; Ret
+
+
+return_stub:
 
 ; We don't get information about which interrupt was caller
 ; when the handler is run, so we will need to have a different handler

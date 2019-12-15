@@ -61,6 +61,10 @@ void Log(char *message, int type) {
 	}
 }
 
+void interrupt_test() {
+	asm("int $32");
+}
+
 void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	//set_text_mode(1);
 	// Read memory map
@@ -111,9 +115,9 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	Log("ISR Enabled", 1);
 	irq_install();
 	Log("Interrupts Enabled", 1);
-	//init_timer(10000);
+	//interrupt_test();
 	init_timer(1000);
-	Log("Timer enabled", 1);
+	//Log("Timer enabled", 1);
 
 	Log("Scanning for drives", 1);
 	drive_scan();
@@ -166,7 +170,7 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	sprintd("Entering multitask/system management loop");
 	//Log("Starting multitasking and leaving kernel main...", 1);
 	//loaded = 1;
-	breakA();
+	//breakA();
 	initTasking();
 }
 

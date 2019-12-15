@@ -175,8 +175,8 @@ void crash_screen(registers_t *crash_state, char *msg, uint8_t printReg) {
         kprint_uint(crash_state->cs);
         kprint("   ds: ");
         kprint_uint(crash_state->ds);
-        kprint("   ss: ");
-        kprint_uint(crash_state->ss);
+        //kprint("   ss: ");
+        //kprint_uint(crash_state->ss);
         kprint("\nTask eip: ");
         kprint_uint(runningTask->regs.eip);
         kprint("\nTask eax: ");
@@ -199,25 +199,11 @@ void crash_screen(registers_t *crash_state, char *msg, uint8_t printReg) {
         kprint_uint(esp);
         kprint("\nEIP: ");
         kprint_uint(eip);
+        kprint("\nError code: ");
+        kprint_uint(crash_state->err_code);
     }
+    asm("hlt");
 }
-
-//void drip() {
-//	kprint_at_blue("#",  32, 0);
-//	kprint_at_blue("#",  32, 1);
-//	kprint_at_blue("###",  31, 2);
-//	kprint_at_blue("###",  31, 3);
-//	kprint_at_blue("#######",  29, 4);
-//	kprint_at_blue("###########",  27, 5);
-//	kprint_at_blue("###############",  25, 6);
-//	kprint_at_blue("#################",  24, 7);
-//	kprint_at_blue("###################",  23, 8);
-//	kprint_at_blue("###################",  23, 9);
-//	kprint_at_blue("#################",  24, 10);
-//	kprint_at_blue("###############",  25, 11);
-//	kprint_at_blue("###########",  27, 12);
-//	kprint_at_blue("DripOS", 30, 14);
-//}
 
 void logoDraw() {
     int xOff = 24;
