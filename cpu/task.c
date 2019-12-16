@@ -11,6 +11,7 @@
 Task *runningTask;
 Task mainTask;
 Task otherTask;
+Task kickstart;
 static Task temp;
 Task *next_temp;
 uint32_t pid_max = 0;
@@ -27,17 +28,16 @@ uint32_t just_started = 1;
 static void otherMain() {
     loaded = 1;
     while (1) {
-        oof++;
-        sprint("\n");
-        sprint_uint(oof);
-        //kprint("\nHello! 2");
-        //yeild();
+        //oof++;
+        //sprint("\n");
+        //sprint_uint(oof);
+        asm volatile("hlt");
     }
 }
 
 static void otherMain2() {
     while (1) {
-        //kprint("\nHello! 1");
+        sprint("\nHello!");
         //yield();
     }
 }
@@ -47,13 +47,16 @@ void initTasking() {
     asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(temp.regs.cr3)::"%eax"); // No paging yet
     asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(temp.regs.eflags)::"%eax");
  
-    createTask(&otherTask, otherMain);
-    createTask(&mainTask, otherMain2);
-    mainTask.next = &otherTask; // Head of task list
-    otherTask.next = &mainTask; // Tail of task list
+    createTask(&mainTask, otherMain);
+    createTask(&otherTask, otherMain2);
+    createTask(&kickstart, otherMain);
+    //createTask(&mainTask, otherMain2);
+    mainTask.next = &otherTask;
+    otherTask.next = &mainTask;
+    kickstart.next = &mainTask;
     global_regs = kmalloc(sizeof(registers_t));
-    runningTask = &otherTask;
-    //execute_command("bgtask");
+    runningTask = &kickstart;
+    execute_command("bgtask");
     call_counter = sizeof(registers_t);
     otherMain();
 }
@@ -213,10 +216,6 @@ void schedule(registers_t *from) {
 }
 
 void swap_values(registers_t *r) {
-    //sprint("\n");
-    //sprint_uint(r->useresp);
-    //sprint("\n");
-    //sprint_uint(r->esp);
     regs = &runningTask->regs; // Get registers
     /* Set old registers */
     regs->eflags = r->eflags;
@@ -227,7 +226,7 @@ void swap_values(registers_t *r) {
     regs->edi = r->edi;
     regs->esi = r->esi;
     regs->eip = r->eip;
-    regs->esp = r->esp;
+    regs->esp = r->esp-40;
     regs->ebp = r->ebp;
     // Select new running task
     runningTask = runningTask->next;
@@ -237,8 +236,7 @@ void swap_values(registers_t *r) {
 
     // Set values for context switch
     regs = &runningTask->regs;
-    r->eflags = regs->eflags;
-    r->eflags = r->eflags | 0x200;
+    r->eflags = regs->eflags | 0x200;
     r->eax = regs->eax;
     r->ebx = regs->ebx;
     r->ecx = regs->ecx;
@@ -247,24 +245,7 @@ void swap_values(registers_t *r) {
     r->esi = regs->esi;
     r->eip = regs->eip;
     call_counter = regs->esp;
-    //r->task_esp = regs->esp;
-    //r->useresp = regs->esp;
-    //r->esp = regs->esp;
     r->ebp = regs->ebp;
-    //sprint("\nDone switching\n");
-    //sprint_uint(r->esp);
-    //sprint("\n");
-    //sprint_uint(r->eip);
-    //sprint("\n");
-    //sprint_uint(r->eip);
-    //sprint("\n");
-    //sprint_uint(r->esp);
-    //sprint("\n");
-    //sprint_uint(r->useresp);
-    //sprint("\n");
-    //sprint_uint(r->ebp);
-    //sprint("\n");
-    //sprint_uint(r->eax);
     breakA();
 }
 

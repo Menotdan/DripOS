@@ -8,6 +8,7 @@
 [extern temp_data1]
 [extern swap_values]
 [extern print_stuff]
+[extern breakA]
 ; Common ISR code
 isr_common_stub:
     ; 1. Save CPU state
@@ -47,6 +48,7 @@ irq_common_stub:
     mov ebx, [switch_task]
     cmp ebx, 1
     jne testLabel
+    call breakA
     mov ebx, 0
     mov [switch_task], ebx
     mov eax, esp ; Safety, irq_handler probably changed eax
