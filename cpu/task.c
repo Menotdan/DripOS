@@ -60,7 +60,7 @@ void initTasking() {
  
 uint32_t createTask(Task *task, void (*main)()) {//, uint32_t *pagedir) { // No paging yet
     asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(temp.regs.cr3)::"%eax"); // No paging yet
-    asm volatile("cli; pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl; sti;":"=m"(temp.regs.eflags)::"%eax");
+    asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(temp.regs.eflags)::"%eax");
     task->regs.eax = 0;
     task->regs.ebx = 0;
     task->regs.ecx = 0;
@@ -80,7 +80,7 @@ uint32_t createTask(Task *task, void (*main)()) {//, uint32_t *pagedir) { // No 
     tempregs.edx = 0;
     tempregs.esi = 0;
     tempregs.edi = 0;
-    tempregs.eflags = temp.regs.cr3;
+    tempregs.eflags = temp.regs.eflags;
     tempregs.eip = (uint32_t) main;
     tempregs.ebp = 0;
     tempregs.cs = 0x8;
@@ -89,8 +89,8 @@ uint32_t createTask(Task *task, void (*main)()) {//, uint32_t *pagedir) { // No 
     tempregs.dr6 = 0;
     tempregs.err_code = 0;
     tempregs.int_no = 1234;
-    uint8_t *stack_insert_buffer = get_pointer(task->regs.esp);
     task->regs.esp -= sizeof(registers_t);
+    uint8_t *stack_insert_buffer = get_pointer(task->regs.esp);
     memory_copy((uint8_t *)&tempregs, stack_insert_buffer, sizeof(registers_t));
     //breakA();
 
