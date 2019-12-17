@@ -228,14 +228,17 @@ void swap_values(registers_t *r) {
     regs->eip = r->eip;
     regs->esp = r->esp-40;
     regs->ebp = r->ebp;
+    sprint("\nESP 1: ");
+    sprint_uint(regs->esp);
     // Select new running task
     runningTask = runningTask->next;
     while (runningTask->state != RUNNING) {
         runningTask = runningTask->next;
     }
-
     // Set values for context switch
     regs = &runningTask->regs;
+    sprint("\nESP 2: ");
+    sprint_uint(regs->esp);
     r->eflags = regs->eflags | 0x200;
     r->eax = regs->eax;
     r->ebx = regs->ebx;
@@ -246,6 +249,9 @@ void swap_values(registers_t *r) {
     r->eip = regs->eip;
     call_counter = regs->esp;
     r->ebp = regs->ebp;
+    //r->esp = call_counter+40;
+    sprint("\nESP 3: ");
+    sprint_uint(call_counter);
     breakA();
 }
 
