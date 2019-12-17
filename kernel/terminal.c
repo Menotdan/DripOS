@@ -166,8 +166,14 @@ void execute_command(char input[]) {
 		p_tone(atoi(afterSpace(input)), 100);
 	} else if (strcmp(input, "bgtask") == 0) {
 		//if (task == 0) {
-			task = createTask(kmalloc(sizeof(Task)), bg_task);
-			task2 = createTask(kmalloc(sizeof(Task)), bg_task2);
+			Task *temp_task1 = kmalloc(sizeof(Task));
+			Task *temp_task2 = kmalloc(sizeof(Task));
+
+			task = createTask(temp_task1, bg_task, "Tick counter");
+			task2 = createTask(temp_task2, bg_task2, "Tick counter");
+			temp_task1->priority = LOW;
+			temp_task2->priority = LOW;
+
 			kprint("Background task started!");
 		//} else {
 		//	kprint("Nope");

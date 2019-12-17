@@ -6,7 +6,8 @@
 [extern store_global]
 [extern call_counter]
 [extern temp_data1]
-[extern swap_values]
+[extern store_values]
+[extern schedule_task]
 [extern print_stuff]
 [extern breakA]
 ; Common ISR code
@@ -52,8 +53,10 @@ irq_common_stub:
     mov ebx, 0
     mov [switch_task], ebx
     mov eax, esp ; Safety, irq_handler probably changed eax
-    call swap_values ; Change context stored on stack
-    mov esp, [call_counter]
+    call store_values ; Store current registers pointer to runningTask
+    mov esp, [call_counter] ; Change ESP
+    mov eax, esp ; Set param
+    call schedule_task ; Pick next task and set it in r
 testLabel:
     add esp, 8 ; DR6 and ss
 

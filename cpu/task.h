@@ -29,10 +29,11 @@ typedef struct Task {
     uint32_t pid; // Process id of the task
     uint8_t state; // The state the task is in
     uint32_t waiting; // If state is SLEEPING, this is the tick to restart the task, if the state is IRQ_WAIT, this is the IRQ that it is waiting for
+    char name[21];
 } Task;
 
 void initTasking();
-extern uint32_t createTask(Task *task, void (*main)());
+extern uint32_t createTask(Task *task, void (*main)(), char *task_name);
 extern int32_t kill_task(uint32_t pid); // 
 extern void yield(); // Yield, will be optional
 extern void switchTask(); // The function which actually switches

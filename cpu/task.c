@@ -35,33 +35,30 @@ static void otherMain() {
     }
 }
 
-static void otherMain2() {
-    while (1) {
-        sprint("\nHello!");
-        //yield();
-    }
-}
+// static void otherMain2() {
+//     while (1) {
+//         sprint("\nHello!");
+//         //yield();
+//     }
+// }
 
 void initTasking() {
     // Get EFLAGS and CR3
     asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(temp.regs.cr3)::"%eax"); // No paging yet
     asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(temp.regs.eflags)::"%eax");
  
-    createTask(&mainTask, otherMain);
-    createTask(&otherTask, otherMain2);
-    createTask(&kickstart, otherMain);
-    //createTask(&mainTask, otherMain2);
-    mainTask.next = &otherTask;
-    otherTask.next = &mainTask;
+    createTask(&mainTask, otherMain, "Idle task");
+    createTask(&kickstart, otherMain, "no");
+    pid_max--;
+    mainTask.next = &mainTask;
     kickstart.next = &mainTask;
     global_regs = kmalloc(sizeof(registers_t));
     runningTask = &kickstart;
-    execute_command("bgtask");
     call_counter = sizeof(registers_t);
     otherMain();
 }
  
-uint32_t createTask(Task *task, void (*main)()) {//, uint32_t *pagedir) { // No paging yet
+uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *pagedir) { // No paging yet
     asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(temp.regs.cr3)::"%eax"); // No paging yet
     asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(temp.regs.eflags)::"%eax");
     task->regs.eax = 0;
@@ -75,6 +72,8 @@ uint32_t createTask(Task *task, void (*main)()) {//, uint32_t *pagedir) { // No 
     task->regs.cr3 = (uint32_t)temp.regs.cr3; // No paging yet
     task->regs.esp = ((uint32_t)kmalloc(0x4000) & (~0xf)) + 0x4000; // Allocate 16KB for the process stack
     task->regs.ebp = 0;
+
+    strcpy((char *)&task->name, task_name);
 
     registers_t tempregs;
     tempregs.eax = 0;
@@ -164,6 +163,8 @@ void print_tasks() {
         kprint_uint(temp_list->pid);
         kprint("  ");
         kprint_uint(temp_list->ticks_cpu_time);
+        kprint("  ");
+        kprint(temp_list->name);
         temp_list = temp_list->next;
         oof = 0;
     }
@@ -215,7 +216,16 @@ void schedule(registers_t *from) {
     sprint_uint(runningTask->regs.esp);*/
 }
 
-void swap_values(registers_t *r) {
+/* Task selector */
+void pick_task() {
+    // Select new running task
+    runningTask = runningTask->next;
+    while (runningTask->state != RUNNING) {
+        runningTask = runningTask->next;
+    }
+}
+
+void store_values(registers_t *r) {
     regs = &runningTask->regs; // Get registers
     /* Set old registers */
     regs->eflags = r->eflags;
@@ -228,17 +238,14 @@ void swap_values(registers_t *r) {
     regs->eip = r->eip;
     regs->esp = r->esp-40;
     regs->ebp = r->ebp;
-    sprint("\nESP 1: ");
-    sprint_uint(regs->esp);
-    // Select new running task
-    runningTask = runningTask->next;
-    while (runningTask->state != RUNNING) {
-        runningTask = runningTask->next;
-    }
+    pick_task();
+    regs = &runningTask->regs; // Get registers again
+    call_counter = regs->esp;
+}
+
+void schedule_task(registers_t *r) {
     // Set values for context switch
     regs = &runningTask->regs;
-    sprint("\nESP 2: ");
-    sprint_uint(regs->esp);
     r->eflags = regs->eflags | 0x200;
     r->eax = regs->eax;
     r->ebx = regs->ebx;
@@ -247,12 +254,7 @@ void swap_values(registers_t *r) {
     r->edi = regs->edi;
     r->esi = regs->esi;
     r->eip = regs->eip;
-    call_counter = regs->esp;
     r->ebp = regs->ebp;
-    //r->esp = call_counter+40;
-    sprint("\nESP 3: ");
-    sprint_uint(call_counter);
-    breakA();
 }
 
 void irq_schedule() {
