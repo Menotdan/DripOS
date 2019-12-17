@@ -43,9 +43,12 @@ void initTasking() {
  
     createTask(&mainTask, otherMain, "Idle task");
     createTask(&kickstart, 0, "no");
+    //Log("Initializing terminal", 1);
+	//Log("Terminal loaded", 3);
     pid_max = 1;
     mainTask.next = &mainTask;
     kickstart.next = &mainTask;
+    init_terminal();
     global_regs = kmalloc(sizeof(registers_t));
     runningTask = &kickstart;
     //call_counter = sizeof(registers_t);

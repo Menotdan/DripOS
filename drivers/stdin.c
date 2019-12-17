@@ -259,11 +259,12 @@ char scancode_to_ascii(char scan, uint8_t upper) {
 char getch(uint8_t upper) {
     char ret;
     ret = get_scancode();
-    while ((ret == 0 && err == 1) || ret > SC_MAX) {
+    while ((ret == 0 && err == 1) || (uint8_t)ret > SC_MAX) {
         err = 0;
         runningTask->state = IRQ_WAIT;
         runningTask->waiting = 1;
         yield();
+        sprint_uint(2);
         ret = get_scancode();
     }
     ret = scancode_to_ascii(ret, upper);
@@ -288,16 +289,17 @@ char *getline(uint8_t upper) {
 char *getline_print(uint8_t upper) {
     char *buffer = kmalloc(2000);
     char *start_pointer = buffer;
-    char currentChar = '\0';
+    char currentChar[2];
     *buffer = 0;
-    currentChar = getch(upper);
-    while (currentChar != '\n') {
-        kprint(&currentChar);
-        *buffer = currentChar;
+    currentChar[1] = '\0';
+    currentChar[0] = getch(upper);
+    while (currentChar[0] != '\n') {
+        kprint((char *)&currentChar);
+        *buffer = currentChar[0];
         buffer++;
-        currentChar = getch(upper);
+        currentChar[0] = getch(upper);
     }
     *buffer = '\0';
-    kprint(&currentChar);
+    kprint((char *)&currentChar);
     return start_pointer;
 }

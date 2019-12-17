@@ -5,6 +5,7 @@
 
 void user_input(char input[]);
 int getstate();
+void Log(char *message, int type);
 uint32_t uinlen;
 uint32_t position;
 int prompttype;

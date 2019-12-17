@@ -422,12 +422,14 @@ void execute_command(char input[]) {
 void terminal_task() {
 	while (1)
 	{
-		execute_command(getline_print(0));
+		char *command = getline_print(0);
+		execute_command(command);
+		free(command, 2000);
 	}
 }
 
 void init_terminal() {
 	sprint_uint(123456);
-	uint8_t terminal_pid = createTask(kmalloc(sizeof(Task)), &terminal_task, "Terminal");
+	uint8_t terminal_pid = createTask(kmalloc(sizeof(Task)), terminal_task, "Terminal");
 	kprint_uint(terminal_pid);
 }

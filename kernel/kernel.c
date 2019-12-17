@@ -150,10 +150,6 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	}
 	Log("Test done", 1);
 
-	Log("Initializing terminal", 1);
-	init_terminal();
-	Log("Terminal loaded", 3);
-
 	free(testOnStart, 0x1000);
 	Log("Clearing screen...", 1);
 	wait(100);
