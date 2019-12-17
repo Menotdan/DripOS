@@ -14,6 +14,7 @@
 #include "../libc/mem.h"
 #include <serial.h>
 #include "../cpu/task.h"
+#include "../drivers/stdin.h"
 
 int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
@@ -39,6 +40,7 @@ void bg_task2() {
 		//yield();
 	}
 }
+
 
 void read_disk(uint32_t sector) {
 	char str2[32];
@@ -415,4 +417,17 @@ void execute_command(char input[]) {
 	}
 	kprint("\n");
 	kprint("drip@DripOS> ");
+}
+
+void terminal_task() {
+	while (1)
+	{
+		execute_command(getline_print(0));
+	}
+}
+
+void init_terminal() {
+	sprint_uint(123456);
+	uint8_t terminal_pid = createTask(kmalloc(sizeof(Task)), &terminal_task, "Terminal");
+	kprint_uint(terminal_pid);
 }

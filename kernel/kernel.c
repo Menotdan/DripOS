@@ -17,6 +17,7 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include "../fs/dripfs.h"
 #include "../cpu/task.h"
 #include "../drivers/vga.h"
+#include "../drivers/ps2.h"
 //codes
 int prevtick = 0;
 int login = 1;
@@ -32,9 +33,9 @@ uint32_t upperMemSize;
 uint32_t largestUseableMem = 0;
 uint32_t memAddr = 0;
 multiboot_memory_map_t* mmap;
-char key_buffer[2000];
-char key_buffer_up[2000];
-char key_buffer_down[2000];
+//char key_buffer[2000];
+//char key_buffer_up[2000];
+//char key_buffer_down[2000];
 
 void after_load() {
 	while (1 == 1) {
@@ -113,17 +114,19 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	Log("Loaded memory", 1);
 	isr_install();
 	Log("ISR Enabled", 1);
+	init_timer(1000);
+	Log("Timer enabled", 1);
+	Log("Loading PS/2", 1);
+	init_ps2();
+	Log("PS/2 enabled", 3);
 	irq_install();
 	Log("Interrupts Enabled", 1);
-	//interrupt_test();
-	init_timer(1000);
-	//Log("Timer enabled", 1);
-
 	Log("Scanning for drives", 1);
 	drive_scan();
 	Log("Drive scan done", 1);
 
 	Log("Starting the HDD driver", 1);
+	init_hdd();
 	init_hddw();
 	Log("Done", 1);
 
@@ -147,6 +150,10 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	}
 	Log("Test done", 1);
 
+	Log("Initializing terminal", 1);
+	init_terminal();
+	Log("Terminal loaded", 3);
+
 	free(testOnStart, 0x1000);
 	Log("Clearing screen...", 1);
 	wait(100);
@@ -156,7 +163,7 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	play_sound(300, 50);
 	play_sound(500, 50);
 	clear_screen();
-	stdin_init();
+	//stdin_init();
 	kprint("DripOS 0.0020\n"); //Version
 	sprintd("DripOS 0.0020 loaded"); //Version
 	//check_crash();

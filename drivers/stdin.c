@@ -7,6 +7,8 @@
 #include <debug.h>
 #include "../drivers/screen.h"
 #include "../libc/mem.h"
+#include "ps2.h"
+#include "../cpu/task.h"
 
 #define LSHIFT 0x2A
 #define RSHIFT 0x36
@@ -23,221 +25,279 @@ const char *sc_name[] = { "ERROR", "Esc", "1", "2", "3", "4", "5", "6",
         "/", "RShift", "Keypad *", "LAlt", "Spacebar"};
 const char sc_ascii[] = { ' ', ' ', '1', '2', '3', '4', '5', '6',     
     '7', '8', '9', '0', '-', '=', ' ', ' ', 'q', 'w', 'e', 'r', 't', 'y', 
-        'u', 'i', 'o', 'p', '[', ']', ' ', ' ', 'a', 's', 'd', 'f', 'g', 
+        'u', 'i', 'o', 'p', '[', ']', '\n', ' ', 'a', 's', 'd', 'f', 'g', 
         'h', 'j', 'k', 'l', ';', '\'', '`', ' ', '\\', 'z', 'x', 'c', 'v', 
         'b', 'n', 'm', ',', '.', '/', ' ', ' ', ' ', ' '};
 
 const char sc_ascii_uppercase[] = { ' ', ' ', '!', '@', '#', '$', '%', '^',     
     '&', '*', '(', ')', '_', '+', ' ', ' ', 'Q', 'W', 'E', 'R', 'T', 'Y', 
-        'U', 'I', 'O', 'P', '{', '}', ' ', ' ', 'A', 'S', 'D', 'F', 'G', 
+        'U', 'I', 'O', 'P', '{', '}', '\n', ' ', 'A', 'S', 'D', 'F', 'G', 
         'H', 'J', 'K', 'L', ':', '|', '~', ' ', '\\', 'Z', 'X', 'C', 'V', 
         'B', 'N', 'M', '<', '>', '?', ' ', ' ', ' ', ' '};
 
-int shift = 0;
-int first = 1;
+//int shift = 0;
+//int first = 1;
 
-void key_handler(uint8_t scancode, bool keyup) {
-    if (scancode == LARROW && keyup != true){
-        if (position > 0) {
-            position -= 1;
-            int cOffset = get_cursor_offset();
-            set_cursor_offset(get_offset(get_offset_col(cOffset)-1, get_offset_row(cOffset)));
-        }
-    } else if (scancode == RARROW && keyup != true){
-        if (position < uinlen) {
-            position += 1;
-            int cOffset = get_cursor_offset();
-            set_cursor_offset(get_offset(get_offset_col(cOffset)+1, get_offset_row(cOffset)));
-        }
-    } else if (scancode == UPARROW && keyup != true){
-        uint32_t loop = 0;
-        uint32_t loop2 = 0;
-        while (loop2 < (uint32_t)strlen(key_buffer))
-        {
-            key_buffer_down[loop] = key_buffer[loop];
-            loop2++;
-        }
+// void key_handler(uint8_t scancode, bool keyup) {
+//     if (scancode == LARROW && keyup != true){
+//         if (position > 0) {
+//             position -= 1;
+//             int cOffset = get_cursor_offset();
+//             set_cursor_offset(get_offset(get_offset_col(cOffset)-1, get_offset_row(cOffset)));
+//         }
+//     } else if (scancode == RARROW && keyup != true){
+//         if (position < uinlen) {
+//             position += 1;
+//             int cOffset = get_cursor_offset();
+//             set_cursor_offset(get_offset(get_offset_col(cOffset)+1, get_offset_row(cOffset)));
+//         }
+//     } else if (scancode == UPARROW && keyup != true){
+//         uint32_t loop = 0;
+//         uint32_t loop2 = 0;
+//         while (loop2 < (uint32_t)strlen(key_buffer))
+//         {
+//             key_buffer_down[loop] = key_buffer[loop];
+//             loop2++;
+//         }
         
-        while (loop < (uint32_t)strlen(key_buffer_up))
-        {
-            key_buffer[loop] = key_buffer_up[loop];
-            loop++;
-        }
-        key_buffer[strlen(key_buffer_up)] = remove_null("\0");
+//         while (loop < (uint32_t)strlen(key_buffer_up))
+//         {
+//             key_buffer[loop] = key_buffer_up[loop];
+//             loop++;
+//         }
+//         key_buffer[strlen(key_buffer_up)] = remove_null("\0");
 
-        int cOffset = get_cursor_offset();
-        set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
-        for (uint32_t g = 0; g < uinlen; g++)
-        {
-            kprint_backspace();
-        }
-        //kprint_backspace();
-        cOffset = get_cursor_offset();
-        set_cursor_offset(get_offset(get_offset_col(cOffset), get_offset_row(cOffset)));
-        if (key_buffer != 0) {
-            kprint(key_buffer);
-        }
-        //sprintd(key_buffer);
-        //set_cursor_offset(get_offset(get_offset_col(offsetTemp)-1, get_offset_row(offsetTemp)));
-        uinlen = strlen(key_buffer_up);
-        position = uinlen;
-    } 
-    // else if (scancode == DOWNARROW && keyup != true) {
-    //     uint32_t loop = 0;
-    //     uint32_t loop2 = 0;
+//         int cOffset = get_cursor_offset();
+//         set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
+//         for (uint32_t g = 0; g < uinlen; g++)
+//         {
+//             kprint_backspace();
+//         }
+//         //kprint_backspace();
+//         cOffset = get_cursor_offset();
+//         set_cursor_offset(get_offset(get_offset_col(cOffset), get_offset_row(cOffset)));
+//         if (key_buffer != 0) {
+//             kprint(key_buffer);
+//         }
+//         //sprintd(key_buffer);
+//         //set_cursor_offset(get_offset(get_offset_col(offsetTemp)-1, get_offset_row(offsetTemp)));
+//         uinlen = strlen(key_buffer_up);
+//         position = uinlen;
+//     } 
+//     // else if (scancode == DOWNARROW && keyup != true) {
+//     //     uint32_t loop = 0;
+//     //     uint32_t loop2 = 0;
 
-    //     // while (loop2 < strlen(key_buffer))
-    //     // {
-    //     //     key_buffer_up[loop] = key_buffer[loop];
-    //     //     loop2++;
-    //     // }
+//     //     // while (loop2 < strlen(key_buffer))
+//     //     // {
+//     //     //     key_buffer_up[loop] = key_buffer[loop];
+//     //     //     loop2++;
+//     //     // }
         
-    //     key_buffer[loop] = "\0";
+//     //     key_buffer[loop] = "\0";
 
-    //     uint32_t offsetTemp = get_cursor_offset();
-    //     int cOffset = get_cursor_offset();
-    //     set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
-    //     for (uint32_t g = 0; g < uinlen; g++)
-    //     {
-    //         kprint_backspace();
-    //     }
-    //     //kprint_backspace();
-    //     cOffset = get_cursor_offset();
-    //     set_cursor_offset(get_offset(get_offset_col(cOffset), get_offset_row(cOffset)));
-    //     kprint(key_buffer);
-    //     //sprintd(key_buffer);
-    //     //set_cursor_offset(get_offset(get_offset_col(offsetTemp)-1, get_offset_row(offsetTemp)));
-    //     uinlen = strlen(key_buffer_down);
-    //     position = uinlen;
-    // }
-    else if (strcmp(sc_name[scancode], "Backspace") == 0 && keyup != true) {
-        if (uinlen > 0) {
-            backspacep(key_buffer, position);
-            uint32_t offsetTemp = get_cursor_offset();
-            int cOffset = get_cursor_offset();
-            set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
-            for (uint32_t g = 0; g < uinlen; g++)
-            {
-                kprint_backspace();
-            }
-            //kprint_backspace();
-            cOffset = get_cursor_offset();
-            set_cursor_offset(get_offset(get_offset_col(cOffset), get_offset_row(cOffset)));
-            if (key_buffer != 0) {
-                kprint(key_buffer);
-            }
-            //sprintd(key_buffer);
-            set_cursor_offset(get_offset(get_offset_col(offsetTemp)-1, get_offset_row(offsetTemp)));
-            uinlen -= 1;
-            position -= 1;
-        }
-    } else if (strcmp(sc_name[scancode], "Spacebar") == 0 && keyup != true) {
-        appendp(key_buffer, sc_ascii[scancode], position);
-        uint32_t offsetTemp = get_cursor_offset();
-        int cOffset = get_cursor_offset();
-        set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
-        for (uint32_t g = 0; g < uinlen; g++)
-        {
-            kprint_backspace();
-        }
-        cOffset = get_cursor_offset();
-        if (key_buffer != 0) {
-            kprint(key_buffer);
-        }
-        set_cursor_offset(get_offset(get_offset_col(offsetTemp)+1, get_offset_row(offsetTemp)));
-        uinlen++;
-        position++;
-    } else if (strcmp(sc_name[scancode], "ERROR") == 0 && keyup != true) {
-    } else if (strcmp(sc_name[scancode], "Lctrl") == 0 && keyup != true) {
-    } else if (strcmp(sc_name[scancode], "LAlt") == 0 && keyup != true) {
-    } else if (strcmp(sc_name[scancode], "LShift") == 0 && keyup != true) {
-        shift = 1;
-    } else if (strcmp(sc_name[scancode], "RShift") == 0 && keyup != true) {
-        shift = 1;
-    }  else if (strcmp(sc_name[scancode], "LShift") == 0 && keyup == true) {
-        shift = 0;
-    } else if (strcmp(sc_name[scancode], "RShift") == 0 && keyup == true) {
-        shift = 0;
-    } else if (strcmp(sc_name[scancode], "Enter") == 0 && keyup != true) {
-        //fixer(key_buffer);
-        //user_input(key_buffer);
-        for (uint32_t q = 0; q < uinlen; q++) {
-            key_buffer_up[q] = key_buffer[q];
-            key_buffer_up[q+1] = '\0';
-        }
-        user_input(key_buffer);
-        for (uint32_t i = 0; i < 2000; i++) {
-			key_buffer[i] = 0;
-		}
-        uinlen = 0;
-		position = 0;
-        //uint32_t l = strlen(key_buffer);
-        //key_buffer[l] = 3;
-        //key_buffer[l+1] = remove_null("\0");
-    } else {
-        if (shift == 0) {
-            if (!keyup) {
-                if (scancode < SC_MAX){
-                    appendp(key_buffer, sc_ascii[scancode], position);
+//     //     uint32_t offsetTemp = get_cursor_offset();
+//     //     int cOffset = get_cursor_offset();
+//     //     set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
+//     //     for (uint32_t g = 0; g < uinlen; g++)
+//     //     {
+//     //         kprint_backspace();
+//     //     }
+//     //     //kprint_backspace();
+//     //     cOffset = get_cursor_offset();
+//     //     set_cursor_offset(get_offset(get_offset_col(cOffset), get_offset_row(cOffset)));
+//     //     kprint(key_buffer);
+//     //     //sprintd(key_buffer);
+//     //     //set_cursor_offset(get_offset(get_offset_col(offsetTemp)-1, get_offset_row(offsetTemp)));
+//     //     uinlen = strlen(key_buffer_down);
+//     //     position = uinlen;
+//     // }
+//     else if (strcmp(sc_name[scancode], "Backspace") == 0 && keyup != true) {
+//         if (uinlen > 0) {
+//             backspacep(key_buffer, position);
+//             uint32_t offsetTemp = get_cursor_offset();
+//             int cOffset = get_cursor_offset();
+//             set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
+//             for (uint32_t g = 0; g < uinlen; g++)
+//             {
+//                 kprint_backspace();
+//             }
+//             //kprint_backspace();
+//             cOffset = get_cursor_offset();
+//             set_cursor_offset(get_offset(get_offset_col(cOffset), get_offset_row(cOffset)));
+//             if (key_buffer != 0) {
+//                 kprint(key_buffer);
+//             }
+//             //sprintd(key_buffer);
+//             set_cursor_offset(get_offset(get_offset_col(offsetTemp)-1, get_offset_row(offsetTemp)));
+//             uinlen -= 1;
+//             position -= 1;
+//         }
+//     } else if (strcmp(sc_name[scancode], "Spacebar") == 0 && keyup != true) {
+//         appendp(key_buffer, sc_ascii[scancode], position);
+//         uint32_t offsetTemp = get_cursor_offset();
+//         int cOffset = get_cursor_offset();
+//         set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
+//         for (uint32_t g = 0; g < uinlen; g++)
+//         {
+//             kprint_backspace();
+//         }
+//         cOffset = get_cursor_offset();
+//         if (key_buffer != 0) {
+//             kprint(key_buffer);
+//         }
+//         set_cursor_offset(get_offset(get_offset_col(offsetTemp)+1, get_offset_row(offsetTemp)));
+//         uinlen++;
+//         position++;
+//     } else if (strcmp(sc_name[scancode], "ERROR") == 0 && keyup != true) {
+//     } else if (strcmp(sc_name[scancode], "Lctrl") == 0 && keyup != true) {
+//     } else if (strcmp(sc_name[scancode], "LAlt") == 0 && keyup != true) {
+//     } else if (strcmp(sc_name[scancode], "LShift") == 0 && keyup != true) {
+//         shift = 1;
+//     } else if (strcmp(sc_name[scancode], "RShift") == 0 && keyup != true) {
+//         shift = 1;
+//     }  else if (strcmp(sc_name[scancode], "LShift") == 0 && keyup == true) {
+//         shift = 0;
+//     } else if (strcmp(sc_name[scancode], "RShift") == 0 && keyup == true) {
+//         shift = 0;
+//     } else if (strcmp(sc_name[scancode], "Enter") == 0 && keyup != true) {
+//         //fixer(key_buffer);
+//         //user_input(key_buffer);
+//         for (uint32_t q = 0; q < uinlen; q++) {
+//             key_buffer_up[q] = key_buffer[q];
+//             key_buffer_up[q+1] = '\0';
+//         }
+//         user_input(key_buffer);
+//         for (uint32_t i = 0; i < 2000; i++) {
+// 			key_buffer[i] = 0;
+// 		}
+//         uinlen = 0;
+// 		position = 0;
+//         //uint32_t l = strlen(key_buffer);
+//         //key_buffer[l] = 3;
+//         //key_buffer[l+1] = remove_null("\0");
+//     } else {
+//         if (shift == 0) {
+//             if (!keyup) {
+//                 if (scancode < SC_MAX){
+//                     appendp(key_buffer, sc_ascii[scancode], position);
 
-                    uint32_t offsetTemp = get_cursor_offset();
-                    int cOffset = get_cursor_offset();
-                    //breakA();
-                    set_cursor_offset(get_offset(get_offset_col(cOffset)+(uinlen-position), get_offset_row(cOffset)));
-                    //breakA();
-                    cOffset = get_cursor_offset();
-                    for (uint32_t g = 0; g < uinlen; g++)
-                    {
-                        //set_cursor_offset(get_offset(get_offset_col(cOffset)+(uinlen-position) - g, get_offset_row(cOffset)));
-                        kprint_backspace();
-                        //kprint_at(0x08, -1, -1);
-                        //breakA();
-                    }
-                    //kprint_backspace();
-                    //kprint_backspace();
+//                     uint32_t offsetTemp = get_cursor_offset();
+//                     int cOffset = get_cursor_offset();
+//                     //breakA();
+//                     set_cursor_offset(get_offset(get_offset_col(cOffset)+(uinlen-position), get_offset_row(cOffset)));
+//                     //breakA();
+//                     cOffset = get_cursor_offset();
+//                     for (uint32_t g = 0; g < uinlen; g++)
+//                     {
+//                         //set_cursor_offset(get_offset(get_offset_col(cOffset)+(uinlen-position) - g, get_offset_row(cOffset)));
+//                         kprint_backspace();
+//                         //kprint_at(0x08, -1, -1);
+//                         //breakA();
+//                     }
+//                     //kprint_backspace();
+//                     //kprint_backspace();
                     
-                    //breakA();
-                    if (key_buffer != 0) {
-                        kprint(key_buffer);
-                    }
-                    set_cursor_offset(get_offset(get_offset_col(offsetTemp)+1, get_offset_row(offsetTemp)));
-                    //sprintd(key_buffer);
-                    uinlen++;
-                    position++;
-                }
-            }
-        } else if (shift == 1) {
-            if (!keyup) {
-                if (scancode < SC_MAX){
-                    appendp(key_buffer, sc_ascii_uppercase[scancode], position);
+//                     //breakA();
+//                     if (key_buffer != 0) {
+//                         kprint(key_buffer);
+//                     }
+//                     set_cursor_offset(get_offset(get_offset_col(offsetTemp)+1, get_offset_row(offsetTemp)));
+//                     //sprintd(key_buffer);
+//                     uinlen++;
+//                     position++;
+//                 }
+//             }
+//         } else if (shift == 1) {
+//             if (!keyup) {
+//                 if (scancode < SC_MAX){
+//                     appendp(key_buffer, sc_ascii_uppercase[scancode], position);
 
-                    uint32_t offsetTemp = get_cursor_offset();
-                    int cOffset = get_cursor_offset();
-                    set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
-                    for (uint32_t g = 0; g < uinlen; g++)
-                    {
-                        kprint_backspace();
-                    }
-                    //kprint_backspace();
-                    cOffset = get_cursor_offset();
-                    if (key_buffer != 0) {
-                        kprint(key_buffer);
-                    }
-                    //sprintd(key_buffer);
+//                     uint32_t offsetTemp = get_cursor_offset();
+//                     int cOffset = get_cursor_offset();
+//                     set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
+//                     for (uint32_t g = 0; g < uinlen; g++)
+//                     {
+//                         kprint_backspace();
+//                     }
+//                     //kprint_backspace();
+//                     cOffset = get_cursor_offset();
+//                     if (key_buffer != 0) {
+//                         kprint(key_buffer);
+//                     }
+//                     //sprintd(key_buffer);
 
-                    //kprint(str);
-                    set_cursor_offset(get_offset(get_offset_col(offsetTemp)+1, get_offset_row(offsetTemp)));
-                    uinlen++;
-                    position++;
-                }
-            }
+//                     //kprint(str);
+//                     set_cursor_offset(get_offset(get_offset_col(offsetTemp)+1, get_offset_row(offsetTemp)));
+//                     uinlen++;
+//                     position++;
+//                 }
+//             }
+//         }
+//     }
+// }
+// void stdin_init() {
+//     //backspace(key_buffer);
+//     uinlen = 0;
+//     key_buffer[0] = 0;
+//     key_buffer_down[0] = 0;
+//     key_buffer_up[0] = 0;
+// }
+
+char scancode_to_ascii(char scan, uint8_t upper) {
+    if (scan < SC_MAX) {
+        if (upper == 1) {
+            return (char)sc_ascii_uppercase[(uint8_t)scan];
+        } else {
+            return (char)sc_ascii[(uint8_t)scan];
         }
+    } else {
+        return ' ';
     }
 }
-void stdin_init() {
-    //backspace(key_buffer);
-    uinlen = 0;
-    key_buffer[0] = 0;
-    key_buffer_down[0] = 0;
-    key_buffer_up[0] = 0;
+
+char getch(uint8_t upper) {
+    char ret;
+    ret = get_scancode();
+    while ((ret == 0 && err == 1) || ret > SC_MAX) {
+        err = 0;
+        runningTask->state = IRQ_WAIT;
+        runningTask->waiting = 1;
+        yield();
+        ret = get_scancode();
+    }
+    ret = scancode_to_ascii(ret, upper);
+    return ret;
+}
+
+char *getline(uint8_t upper) {
+    char *buffer = kmalloc(2000);
+    char *start_pointer = buffer;
+    char currentChar = '\0';
+    *buffer = 0;
+    currentChar = getch(upper);
+    while (currentChar != '\n') {
+        *buffer = currentChar;
+        buffer++;
+        currentChar = getch(upper);
+    }
+    *buffer = '\0';
+    return start_pointer;
+}
+
+char *getline_print(uint8_t upper) {
+    char *buffer = kmalloc(2000);
+    char *start_pointer = buffer;
+    char currentChar = '\0';
+    *buffer = 0;
+    currentChar = getch(upper);
+    while (currentChar != '\n') {
+        kprint(&currentChar);
+        *buffer = currentChar;
+        buffer++;
+        currentChar = getch(upper);
+    }
+    *buffer = '\0';
+    kprint(&currentChar);
+    return start_pointer;
 }

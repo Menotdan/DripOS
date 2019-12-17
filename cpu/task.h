@@ -48,4 +48,5 @@ uint32_t eax;
 uint32_t eip;
 uint32_t esp;
 registers_t *temp_data1;
+Task mainTask;
 #endif

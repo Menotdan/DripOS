@@ -7,6 +7,7 @@
 #include "../cpu/isr.h"
 #include "../drivers/serial.h"
 #include <debug.h>
+#include "timer.h"
 
 Task *runningTask;
 Task mainTask;
@@ -35,26 +36,20 @@ static void otherMain() {
     }
 }
 
-// static void otherMain2() {
-//     while (1) {
-//         sprint("\nHello!");
-//         //yield();
-//     }
-// }
-
 void initTasking() {
     // Get EFLAGS and CR3
     asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(temp.regs.cr3)::"%eax"); // No paging yet
     asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(temp.regs.eflags)::"%eax");
  
     createTask(&mainTask, otherMain, "Idle task");
-    createTask(&kickstart, otherMain, "no");
-    pid_max--;
+    createTask(&kickstart, 0, "no");
+    pid_max = 1;
     mainTask.next = &mainTask;
     kickstart.next = &mainTask;
     global_regs = kmalloc(sizeof(registers_t));
     runningTask = &kickstart;
-    call_counter = sizeof(registers_t);
+    //call_counter = sizeof(registers_t);
+    execute_command("ps");
     otherMain();
 }
  
@@ -106,11 +101,10 @@ uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *
     pid_max++;
     return task->pid;
 }
- 
+
 void yield() {
-    //Task *last = runningTask;
-    runningTask = runningTask->next;
-    //kprint("\nswitchTask call didn't work, execution returned");
+    timesliceleft = 1;
+    asm volatile("int $32"); // Changes task
 }
 
 int32_t kill_task(uint32_t pid) {
@@ -155,8 +149,12 @@ int32_t kill_task(uint32_t pid) {
 void print_tasks() {
     Task *temp_list = &mainTask;
     uint32_t oof = 1;
+    uint32_t loop = 0;
     while (1) {
-        if (temp_list == &mainTask && oof != 1) {
+        if (loop > pid_max) {
+            break;
+        }
+        if (temp_list->pid == 0 && oof != 1) {
             break;
         }
         kprint("\n");
@@ -167,6 +165,7 @@ void print_tasks() {
         kprint(temp_list->name);
         temp_list = temp_list->next;
         oof = 0;
+        loop++;
     }
 }
 

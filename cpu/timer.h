@@ -11,6 +11,7 @@ int lSnd;
 int pSnd;
 int task;
 uint32_t switch_task;
-registers_t *temp;
+//registers_t *temp;
+uint32_t timesliceleft;
 
 #endif

@@ -127,18 +127,6 @@ char *exception_messages[] = {
 };
 
 void isr_handler(registers_t *r) {
-    // kprint("received interrupt: ");
-    // char s[3];
-    // int_to_ascii(r->int_no, s);
-    // kprint(s);
-    // kprint("\n");
-    // kprint("error code: ");
-    // char e[3];
-    // int_to_ascii(r->err_code, s);
-    // kprint(s);
-    // kprint("\n");
-    // kprint(exception_messages[r->int_no]);
-    // kprint("\n");
     sprint("\nCalls to switch: ");
     sprint_uint(call_counter);
     crash_screen(r, exception_messages[r->int_no], 1);
@@ -150,40 +138,26 @@ void register_interrupt_handler(uint8_t n, isr_t handler) {
 }
 
 void irq_handler(registers_t *r) {
-    //data = r;
     /* After every interrupt we need to send an EOI to the PICs
      * or they will not send another interrupt again */
+
     if (r->int_no >= 40) port_byte_out(0xA0, 0x20); /* slave */
     port_byte_out(0x20, 0x20); /* master */
-    // sprint("\nAddress: ");
-    // sprint_uint((uint32_t)r);
-    // sprint("\nOOF: ");
-    // sprint_uint((uint32_t)oof);
-    // sprint("\nEAX: ");
-    // sprint_uint((uint32_t)eax);
-    // sprint("\nESP: ");
-    // sprint_uint(r->esp);
-    // sprint("\nEIP: ");
-    // sprint_uint(r->eip);
+
     /* Handle the interrupt in a more modular way */
     if (interrupt_handlers[r->int_no] != 0) {
         handler = interrupt_handlers[r->int_no];
-        //test = kmalloc(0x1000);
-        //sprint("\nRunning handler");
-        //sprint("\nData esp: ");
-        //sprint_uint(r->esp);
         handler(r);
-        //sprint("\nReturned");
-        /*if (switch_task == 1) {
-            sprint("\nSwitching task");
-            switch_task = 0;
-            sprint("Set switch task");
-            timer_switch_task(temp, runningTask->next);
-            sprint("Wait, thats illegal");
-        }*/
-        //free(test, 0x1000);
-        //sprint("Done handling\n");
-        //breakA();
+        Task *iterator = (&mainTask)->next;
+        while (iterator->pid != 0) {
+            if (iterator->state == IRQ_WAIT) { // Set all the tasks waiting for this IRQ to Running
+                sprint_uint(1);
+                if (iterator->waiting == (r->int_no-32)) {
+                    iterator->state = RUNNING;
+                }
+            }
+            iterator = iterator->next;
+        }
     } 
     else {
         if (loaded == 1) {
@@ -195,9 +169,5 @@ void irq_handler(registers_t *r) {
 void irq_install() {
     /* Enable interruptions */
     asm volatile("sti");
-    /* IRQ0: timer */
-    //init_timer(50);
-    /* IRQ1: keyboard */
-    init_keyboard();
-    init_hdd();
+    //init_hdd();
 }
