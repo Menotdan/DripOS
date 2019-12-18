@@ -3,10 +3,15 @@
 /* Declare constants for the multiboot header. */
 .set ALIGN,    1<<0             /* align loaded modules on page boundaries */
 .set MEMINFO,  1<<1             /* provide memory map */
-.set FLAGS,    ALIGN | MEMINFO  /* this is the Multiboot 'flag' field */
+.set VIDEO_MODE, 0x00000004           /* set video mode */
+.set FLAGS, ALIGN | MEMINFO | VIDEO_MODE    /* this is the Multiboot 'flag' field */
 .set MAGIC,    0x1BADB002       /* 'magic number' lets bootloader find the header */
 .set CHECKSUM, -(MAGIC + FLAGS) /* checksum of above, to prove we are multiboot */
- 
+.set VIDMODE, 0
+.set WIDTH, 720
+.set HEIGHT, 480
+.set DEPTH, 32
+
 /*
 Declare a multiboot header that marks the program as a kernel. These are magic
 values that are documented in the multiboot standard. The bootloader will
@@ -19,7 +24,12 @@ forced to be within the first 8 KiB of the kernel file.
 .long MAGIC
 .long FLAGS
 .long CHECKSUM
- 
+.long 0, 0, 0, 0, 0
+.long VIDMODE
+.long WIDTH
+.long HEIGHT
+.long DEPTH
+
 .section .data
 /*
 GDT from the old DripOS bootloader, which was from the original

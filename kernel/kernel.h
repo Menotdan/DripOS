@@ -19,5 +19,14 @@ int loaded;
 char key_buffer[2000];
 char key_buffer_up[2000];
 char key_buffer_down[2000];
+uint8_t *vidmem;
+uint16_t width;
+uint16_t height;
+uint32_t bbp; // Bytes, not bits
+uint32_t extra_bits;
+uint32_t bpl; // Bytes per line
+uint8_t red_byte;
+uint8_t blue_byte;
+uint8_t green_byte;
 
 #endif

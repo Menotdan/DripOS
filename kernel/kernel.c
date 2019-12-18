@@ -16,8 +16,9 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include "debug.h"
 #include "../fs/dripfs.h"
 #include "../cpu/task.h"
-#include "../drivers/vga.h"
+//#include "../drivers/vga.h"
 #include "../drivers/ps2.h"
+#include "../drivers/vesa.h"
 //codes
 int prevtick = 0;
 int login = 1;
@@ -36,6 +37,17 @@ multiboot_memory_map_t* mmap;
 char key_buffer[2000];
 char key_buffer_up[2000];
 char key_buffer_down[2000];
+uint8_t *vidmem;
+uint16_t width;
+uint16_t height;
+uint32_t bbp; // Bytes, not bits
+uint32_t extra_bits;
+uint32_t bpl; // Bytes per line
+uint8_t red_byte;
+uint8_t blue_byte;
+uint8_t green_byte;
+uint32_t char_w;
+uint32_t char_h;
 
 void after_load() {
 	while (1 == 1) {
@@ -109,12 +121,59 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 		kprint_uint(memAddr);
 		set_addr(memAddr, largestUseableMem);
     }
+	/* VESA SET? */
+	if ((mbd->flags & 0x800) == 0x800) {
+		// VBE ready
+		sprint("\nWidth: ");
+		sprint_uint(mbd->framebuffer_width);
+		width = mbd->framebuffer_width;
+		sprint("\nHeight: ");
+		sprint_uint(mbd->framebuffer_height);
+		height = mbd->framebuffer_height;
+		sprint("\nFramebuffer address: ");
+		sprint_uint(mbd->framebuffer_addr_low);
+		sprint("\nColors: ");
+		sprint_uint(mbd->framebuffer_palette_num_colors);
+		vidmem = (uint8_t *)mbd->framebuffer_addr_low;
+		sprint("\nBPP: ");
+		sprint_uint(mbd->framebuffer_bpp);
+		sprint("\nBytes per pixel: ");
+		sprint_uint(mbd->framebuffer_bpp/8);
+		sprint("\nLeftover: ");
+		sprint_uint(mbd->framebuffer_bpp%8);
+		bbp = mbd->framebuffer_bpp/8;
+		extra_bits = mbd->framebuffer_bpp%8;
+		sprint("\nPitch: ");
+		sprint_uint(mbd->framebuffer_pitch);
+		bpl = mbd->framebuffer_pitch;
+		red_byte = mbd->framebuffer_red_field_position/8;
+		green_byte = mbd->framebuffer_green_field_position/8;
+		blue_byte = mbd->framebuffer_blue_field_position/8;
+		sprint("\nChar width: ");
+		sprint_uint(width/8);
+		sprint("\nChar height: ");
+		sprint_uint(height/8);
+		char_w = width/8;
+		char_h = height/8;
+	}
+
 	clear_screen();
 	// Initialize everything with a startup log
 	Log("Loaded memory", 1);
 	isr_install();
 	Log("ISR Enabled", 1);
 	init_timer(1000);
+	// for (uint32_t posx = 0; posx<width; posx++) {
+	// 	for (uint32_t posy = 0; posy<width; posy++) {
+	// 		draw_pixel(posx, posy, posy/2, 0,0);
+	// 	}
+	// }
+	// for (uint32_t posx = 0; posx<width; posx++) {
+	// 	for (uint32_t posy = 0; posy<width; posy++) {
+	// 		draw_pixel(posx, posy, 0, posy/2, posy/2);
+	// 	}
+	// }
+	render8x8bitmap(font8x8_basic['a']);
 	Log("Timer enabled", 1);
 	Log("Loading PS/2", 1);
 	init_ps2();

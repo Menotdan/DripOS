@@ -82,15 +82,12 @@ void init_timer(uint32_t freq) {
 
 void wait(uint32_t ms) {
 	prev = tick;
-    //char *eghagh;
-    //int_to_ascii(ticks, eghagh);
-    //kprint(eghagh);
 	while(tick < ms*10 + prev) {
-		//logoDraw();
-        //okok += 1;
-        //int_to_ascii(okok, eghagh);
-        //append(eghagh, "\n");
-        //kprint(eghagh);
         manage_sys();
 	}
+}
+
+void task_wait(uint32_t ms) {
+    runningTask->state = SLEEPING;
+    runningTask->waiting = ms + tick;
 }

@@ -311,15 +311,16 @@ void set_cursor_offset(int offset) {
 }
 
 void clear_screen() {
-    int screen_size = MAX_COLS * MAX_ROWS;
-    int i;
-    uint8_t *screen = (uint8_t*) VIDEO_ADDRESS;
+    // int screen_size = MAX_COLS * MAX_ROWS;
+    // int i;
+    // uint8_t *screen = (uint8_t*) VIDEO_ADDRESS;
 
-    for (i = 0; i < screen_size; i++) {
-        screen[i*2] = ' ';
-        screen[i*2+1] = WHITE_ON_BLACK;
-    }
-    set_cursor_offset(get_offset(0, 0));
+    // for (i = 0; i < screen_size; i++) {
+    //     screen[i*2] = ' ';
+    //     screen[i*2+1] = WHITE_ON_BLACK;
+    // }
+    // set_cursor_offset(get_offset(0, 0));
+    
 }
 
 
