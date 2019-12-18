@@ -151,7 +151,7 @@ void irq_handler(registers_t *r) {
         Task *iterator = (&mainTask)->next;
         while (iterator->pid != 0) {
             if (iterator->state == IRQ_WAIT) { // Set all the tasks waiting for this IRQ to Running
-                sprint_uint(1);
+                //sprint_uint(1);
                 if (iterator->waiting == (r->int_no-32)) {
                     iterator->state = RUNNING;
                 }

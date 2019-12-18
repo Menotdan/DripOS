@@ -57,20 +57,20 @@ static void timer_callback(registers_t *regs) {
 
 void config_timer(uint32_t time) {
     /* Get the PIT value: hardware clock at 1193180 Hz */
-    sprint_uint(1);
+    //sprint_uint(1);
     uint32_t divisor = 1193180 / time;
-    sprint_uint(2);
+    //sprint_uint(2);
     uint8_t low  = (uint8_t)(divisor & 0xFF);
-    sprint_uint(3);
+    //sprint_uint(3);
     uint8_t high = (uint8_t)( (divisor >> 8) & 0xFF);
-    sprint_uint(4);
+    //sprint_uint(4);
     /* Send the command */
     port_byte_out(0x43, 0x36); /* Command port */
-    sprint_uint(5);
+    //sprint_uint(5);
     port_byte_out(0x40, low);
-    sprint_uint(6);
+    ///sprint_uint(6);
     port_byte_out(0x40, high);
-    sprint_uint(7);
+    //sprint_uint(7);
     //kprint("Timer configured\n");
 }
 

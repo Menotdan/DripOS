@@ -20,6 +20,10 @@ int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
 uint32_t task2 = 0;
 Task bg_task_timer;
+char *current_buffer;
+char *previous_buffer;
+uint32_t current_buffer_pos = 0;
+uint32_t previous_buffer_pos = 0;
 void bg_task() {
 	while (1)
 	{
@@ -419,17 +423,178 @@ void execute_command(char input[]) {
 	kprint("drip@DripOS> ");
 }
 
+uint8_t key_handler(uint8_t scancode, bool keyup, uint8_t shift) {
+    if (scancode == LARROW && keyup != true){
+        if (position > 0) {
+            position -= 1;
+            int cOffset = get_cursor_offset();
+            set_cursor_offset(get_offset(get_offset_col(cOffset)-1, get_offset_row(cOffset)));
+        }
+    } else if (scancode == RARROW && keyup != true){
+        if (position < uinlen) {
+            position += 1;
+            int cOffset = get_cursor_offset();
+            set_cursor_offset(get_offset(get_offset_col(cOffset)+1, get_offset_row(cOffset)));
+        }
+    } else if (scancode == UPARROW && keyup != true){
+        uint32_t loop = 0;
+        uint32_t loop2 = 0;
+        while (loop2 < (uint32_t)strlen(key_buffer))
+        {
+            key_buffer_down[loop] = key_buffer[loop];
+            loop2++;
+        }
+        
+        while (loop < (uint32_t)strlen(key_buffer_up))
+        {
+            key_buffer[loop] = key_buffer_up[loop];
+            loop++;
+        }
+        key_buffer[strlen(key_buffer_up)] = remove_null("\0");
+
+        int cOffset = get_cursor_offset();
+        set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
+        for (uint32_t g = 0; g < uinlen; g++)
+        {
+            kprint_backspace();
+        }
+        //kprint_backspace();
+        cOffset = get_cursor_offset();
+        set_cursor_offset(get_offset(get_offset_col(cOffset), get_offset_row(cOffset)));
+        if (key_buffer != 0) {
+            kprint(key_buffer);
+        }
+        //sprintd(key_buffer);
+        //set_cursor_offset(get_offset(get_offset_col(offsetTemp)-1, get_offset_row(offsetTemp)));
+        uinlen = strlen(key_buffer_up);
+        position = uinlen;
+    }
+    else if (strcmp(sc_name[scancode], "Backspace") == 0 && keyup != true) {
+        if (uinlen > 0) {
+            backspacep(key_buffer, position);
+            uint32_t offsetTemp = get_cursor_offset();
+            int cOffset = get_cursor_offset();
+            set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
+            for (uint32_t g = 0; g < uinlen; g++)
+            {
+                kprint_backspace();
+            }
+            //kprint_backspace();
+            cOffset = get_cursor_offset();
+            set_cursor_offset(get_offset(get_offset_col(cOffset), get_offset_row(cOffset)));
+            if (key_buffer != 0) {
+                kprint(key_buffer);
+            }
+            //sprintd(key_buffer);
+            set_cursor_offset(get_offset(get_offset_col(offsetTemp)-1, get_offset_row(offsetTemp)));
+            uinlen -= 1;
+            position -= 1;
+        }
+    } else if (strcmp(sc_name[scancode], "Spacebar") == 0 && keyup != true) {
+        appendp(key_buffer, sc_ascii[scancode], position);
+        uint32_t offsetTemp = get_cursor_offset();
+        int cOffset = get_cursor_offset();
+        set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
+        for (uint32_t g = 0; g < uinlen; g++)
+        {
+            kprint_backspace();
+        }
+        cOffset = get_cursor_offset();
+        if (key_buffer != 0) {
+            kprint(key_buffer);
+        }
+        set_cursor_offset(get_offset(get_offset_col(offsetTemp)+1, get_offset_row(offsetTemp)));
+        uinlen++;
+        position++;
+    } else if (strcmp(sc_name[scancode], "ERROR") == 0 && keyup != true) {
+    } else if (strcmp(sc_name[scancode], "Lctrl") == 0 && keyup != true) {
+    } else if (strcmp(sc_name[scancode], "LAlt") == 0 && keyup != true) {
+    } else if (strcmp(sc_name[scancode], "LShift") == 0 && keyup != true) {
+        shift = 1;
+    } else if (strcmp(sc_name[scancode], "RShift") == 0 && keyup != true) {
+        shift = 1;
+    }  else if (strcmp(sc_name[scancode], "LShift") == 0 && keyup == true) {
+        shift = 0;
+    } else if (strcmp(sc_name[scancode], "RShift") == 0 && keyup == true) {
+        shift = 0;
+    } else if (strcmp(sc_name[scancode], "Enter") == 0 && keyup != true) {
+        for (uint32_t q = 0; q < uinlen; q++) {
+            key_buffer_up[q] = key_buffer[q];
+            key_buffer_up[q+1] = '\0';
+        }
+        user_input(key_buffer);
+        for (uint32_t i = 0; i < 2000; i++) {
+			key_buffer[i] = 0;
+		}
+        uinlen = 0;
+		position = 0;
+    } else {
+        if (shift == 0) {
+            if (!keyup) {
+                if (scancode < SC_MAX){
+                    appendp(key_buffer, sc_ascii[scancode], position);
+
+                    uint32_t offsetTemp = get_cursor_offset();
+                    int cOffset = get_cursor_offset();
+                    set_cursor_offset(get_offset(get_offset_col(cOffset)+(uinlen-position), get_offset_row(cOffset)));
+                    cOffset = get_cursor_offset();
+                    for (uint32_t g = 0; g < uinlen; g++)
+                    {
+                        kprint_backspace();
+					}
+                    if (key_buffer != 0) {
+                        kprint(key_buffer);
+                    }
+                    set_cursor_offset(get_offset(get_offset_col(offsetTemp)+1, get_offset_row(offsetTemp)));
+                    uinlen++;
+                    position++;
+                }
+            }
+        } else if (shift == 1) {
+            if (!keyup) {
+                if (scancode < SC_MAX){
+                    appendp(key_buffer, sc_ascii_uppercase[scancode], position);
+
+                    uint32_t offsetTemp = get_cursor_offset();
+                    int cOffset = get_cursor_offset();
+                    set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
+                    for (uint32_t g = 0; g < uinlen; g++)
+                    {
+                        kprint_backspace();
+                    }
+                    cOffset = get_cursor_offset();
+                    if (key_buffer != 0) {
+                        kprint(key_buffer);
+					}
+
+                    set_cursor_offset(get_offset(get_offset_col(offsetTemp)+1, get_offset_row(offsetTemp)));
+                    uinlen++;
+                    position++;
+                }
+            }
+        }
+    }
+	return shift;
+}
+
 void terminal_task() {
+	uint8_t shift = 0;
 	while (1)
 	{
-		char *command = getline_print(0);
-		execute_command(command);
-		free(command, 2000);
+		unsigned char scan = (unsigned char)getcode(); // Waiting for a scancode from the keyboard
+		if (scan > 0x80) {
+			scan = scan - 0x80;
+			shift = key_handler(scan, true, shift);
+		} else {
+			shift = key_handler(scan, false, shift);
+		}
 	}
 }
 
 void init_terminal() {
 	sprint_uint(123456);
+	current_buffer = kmalloc(2000);
+	previous_buffer = kmalloc(2000);
 	uint8_t terminal_pid = createTask(kmalloc(sizeof(Task)), terminal_task, "Terminal");
 	kprint_uint(terminal_pid);
 }

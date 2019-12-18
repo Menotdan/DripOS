@@ -33,9 +33,9 @@ uint32_t upperMemSize;
 uint32_t largestUseableMem = 0;
 uint32_t memAddr = 0;
 multiboot_memory_map_t* mmap;
-//char key_buffer[2000];
-//char key_buffer_up[2000];
-//char key_buffer_down[2000];
+char key_buffer[2000];
+char key_buffer_up[2000];
+char key_buffer_down[2000];
 
 void after_load() {
 	while (1 == 1) {
