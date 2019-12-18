@@ -596,5 +596,5 @@ void init_terminal() {
 	current_buffer = kmalloc(2000);
 	previous_buffer = kmalloc(2000);
 	uint8_t terminal_pid = createTask(kmalloc(sizeof(Task)), terminal_task, "Terminal");
-	kprint_uint(terminal_pid);
+	if (terminal_pid){};
 }

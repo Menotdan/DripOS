@@ -53,7 +53,6 @@ void initTasking() {
     global_regs = kmalloc(sizeof(registers_t));
     runningTask = &kickstart;
     //call_counter = sizeof(registers_t);
-    execute_command("ps");
     otherMain();
 }
  
