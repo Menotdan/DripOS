@@ -28,5 +28,7 @@ uint32_t bpl; // Bytes per line
 uint8_t red_byte;
 uint8_t blue_byte;
 uint8_t green_byte;
+uint32_t char_w;
+uint32_t char_h;
 
 #endif

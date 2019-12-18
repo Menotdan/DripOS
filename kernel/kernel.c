@@ -58,19 +58,19 @@ void after_load() {
 void Log(char *message, int type) {
 	if (type == 1) { // Info
 		kprint("\n[");
-		kprint_color("INFO", 0x01);
+		kprint_color("INFO", color_from_rgb(0,0,255), color_from_rgb(0,0,0));
 		kprint("]: ");
-		kprint_color(message, 0x09);
+		kprint_color(message, color_from_rgb(0,255,255), color_from_rgb(0,0,0));
 	} else if (type == 2) { // Warn
 		kprint("\n[");
-		kprint_color("WARN", 0x0e);
+		kprint_color("WARN", color_from_rgb(255,255,0), color_from_rgb(0,0,0));
 		kprint("]: ");
-		kprint_color(message, 0x06);
+		kprint_color(message, color_from_rgb(155, 155, 0), color_from_rgb(0,0,0));
 	} else if (type == 3) { // Good
 		kprint("\n[");
-		kprint_color("SUCCESS", 0x02);
+		kprint_color("SUCCESS", color_from_rgb(0,255,0), color_from_rgb(0,0,0));
 		kprint("]: ");
-		kprint_color(message, 0x0a);
+		kprint_color(message, color_from_rgb(0,155,0), color_from_rgb(0,0,0));
 	}
 }
 
@@ -91,23 +91,11 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
     {
         for (mmap = (struct multiboot_mmap_entry*)mbd->mmap_addr; (uint32_t)mmap < (mbd->mmap_addr + mbd->mmap_length); mmap = (struct multiboot_mmap_entry*)((uint32_t)mmap + mmap->size + sizeof(mmap->size)))
         {
-			uint32_t addrH = mmap->addr_high;
+			//uint32_t addrH = mmap->addr_high;
             uint32_t addrL = mmap->addr_low;
-            uint32_t lenH = mmap->len_high;
+            //uint32_t lenH = mmap->len_high;
             uint32_t lenL = mmap->len_low;
 			uint8_t mType = mmap->type;
-			kprint("\n\n");
-			kprint("ADDR_HIGH: ");
-			kprint_uint(addrH);
-			kprint(", ADDR_LOW: ");
-			kprint_uint(addrL);
-			kprint("\n");
-			kprint("LEN_HIGH: ");
-			kprint_uint(lenH);
-			kprint(", LEN_LOW: ");
-			kprint_uint(lenL);
-			kprint(", MEM_TYPE: ");
-			kprint_uint(mType);
 			if (mType == 1) {
 				if (lenL > largestUseableMem) {
 					largestUseableMem = abs(lenL - abs(endOfCode-addrL));
@@ -115,12 +103,9 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 				}
 			}
         }
-		kprint("\nEnd of code: ");
-		kprint_uint(endOfCode);
-		kprint("\nCalculated address: ");
-		kprint_uint(memAddr);
 		set_addr(memAddr, largestUseableMem);
     }
+	setup_screen();
 	/* VESA SET? */
 	if ((mbd->flags & 0x800) == 0x800) {
 		// VBE ready
@@ -173,13 +158,13 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	// 		draw_pixel(posx, posy, 0, posy/2, posy/2);
 	// 	}
 	// }
-	render8x8bitmap(font8x8_basic['a']);
 	Log("Timer enabled", 1);
 	Log("Loading PS/2", 1);
 	init_ps2();
 	Log("PS/2 enabled", 3);
 	irq_install();
 	Log("Interrupts Enabled", 1);
+
 	Log("Scanning for drives", 1);
 	drive_scan();
 	Log("Drive scan done", 1);

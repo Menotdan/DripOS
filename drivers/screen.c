@@ -7,11 +7,21 @@
 #include "../libc/string.h"
 #include "../cpu/isr.h"
 #include "../cpu/task.h"
+#include "../kernel/kernel.h"
+
+uint32_t screen_offset = 0;
+color_t white;
+color_t black;
+color_t red;
+color_t green;
+color_t blue;
+color_t cyan;
+char *screen_chars;
 
 /* Declaration of private functions */
 int get_cursor_offset();
 void set_cursor_offset(int offset);
-int print_char(char c, int col, int row, char attr);
+int print_char(char c, int col, int row, color_t fg, color_t bg);
 int get_offset(int col, int row);
 int get_offset_row(int offset);
 int get_offset_col(int offset);
@@ -44,6 +54,34 @@ int logo[16][16] = {
         {0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0}
 };
 
+void setup_screen() {
+    white.red = 255;
+    white.green = 255;
+    white.blue = 255;
+    
+    black.red = 0;
+    black.green = 0;
+    black.blue = 0;
+
+    red.red = 255;
+    red.green = 0;
+    red.blue = 0;
+
+    green.red = 0;
+    green.green = 255;
+    green.blue = 0;
+
+    blue.red = 0;
+    blue.green = 0;
+    blue.blue = 255;
+
+    cyan.red = 0;
+    cyan.green = 255;
+    cyan.blue = 255;
+
+    screen_chars = kmalloc((char_w*char_h));
+}
+
 void kprint_at(char *message, int col, int row) {
     /* Set cursor if col/row are negative */
     int offset;
@@ -58,7 +96,7 @@ void kprint_at(char *message, int col, int row) {
     /* Loop through message and print it */
     int i = 0;
     while (message[i] != 0) {
-        offset = print_char(message[i++], col, row, WHITE_ON_BLACK);
+        offset = print_char(message[i++], col, row, white, black);
         /* Compute row/col for next iteration */
         row = get_offset_row(offset);
         col = get_offset_col(offset);
@@ -81,7 +119,7 @@ void kprint_no_move(char *message, int col, int row) {
     /* Loop through message and print it */
     int i = 0;
     while (message[i] != 0) {
-        offset = print_char(message[i++], col, row, WHITE_ON_BLACK);
+        offset = print_char(message[i++], col, row, white, black);
         /* Compute row/col for next iteration */
         row = get_offset_row(offset);
         col = get_offset_col(offset);
@@ -103,14 +141,14 @@ void kprint_at_blue(char *message, int col, int row) {
     /* Loop through message and print it */
     int i = 0;
     while (message[i] != 0) {
-        offset = print_char(message[i++], col, row, BLUE_ON_BLACK);
+        offset = print_char(message[i++], col, row, white, black);
         /* Compute row/col for next iteration */
         row = get_offset_row(offset);
         col = get_offset_col(offset);
     }
 }
 
-void kprint_at_col(char *message, int col, int row, char color) {
+void kprint_at_col(char *message, int col, int row, color_t fg, color_t bg) {
     /* Set cursor if col/row are negative */
     int offset;
     if (col >= 0 && row >= 0)
@@ -124,7 +162,7 @@ void kprint_at_col(char *message, int col, int row, char color) {
     /* Loop through message and print it */
     int i = 0;
     while (message[i] != 0) {
-        offset = print_char(message[i++], col, row, color);
+        offset = print_char(message[i++], col, row, fg, bg);
         /* Compute row/col for next iteration */
         row = get_offset_row(offset);
         col = get_offset_col(offset);
@@ -135,15 +173,15 @@ void kprint(char *message) {
     kprint_at(message, -1, -1);
 }
 
-void kprint_color(char *message, char color) {
-    kprint_at_col(message, -1, -1, color);
+void kprint_color(char *message, color_t fg, color_t bg) {
+    kprint_at_col(message, -1, -1, fg, bg);
 }
 
 void crash_screen(registers_t *crash_state, char *msg, uint8_t printReg) {
     asm volatile("cli");
     clear_screen();
     set_cursor_offset(get_offset(35, 0));
-    kprint_color("ERROR", 0x0C);
+    kprint_color("ERROR", red, black);
     set_cursor_offset(get_offset(15, 1));
     kprint("The system has been halted to prevent damage");
     set_cursor_offset(get_offset(15, 3));
@@ -211,12 +249,12 @@ void logoDraw() {
     for (int y = 0; y < 16; y++) {
         for (int x = 0; x < 16; x++) {
             if(logo[y][x] == 1) {
-                kprint_at_col(" ", x + xOff, y, BLACK_ON_BLACK);
-            } else if(logo[y][x] == 2) {                kprint_at_col(" ", x + xOff, y, CYAN_ON_CYAN);
+                kprint_at_col(" ", x + xOff, y, black, black);
+            } else if(logo[y][x] == 2) {                kprint_at_col(" ", x + xOff, y, cyan, cyan);
             } else if(logo[y][x] == 3) {
-                kprint_at_col(" ", x + xOff, y, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_WHITE));
+                kprint_at_col(" ", x + xOff, y, white, white);
             } else {
-                kprint_at_col(" ", x + xOff, y, WHITE_ON_BLACK);
+                kprint_at_col(" ", x + xOff, y, white, black);
             }
         }
     }
@@ -226,7 +264,7 @@ void kprint_backspace() {
     int offset = get_cursor_offset()-2;
     int row = get_offset_row(offset);
     int col = get_offset_col(offset);
-    print_char(0x08, col, row, WHITE_ON_BLACK);
+    print_char(0x08, col, row, white, black);
 }
 
 
@@ -243,45 +281,46 @@ void kprint_backspace() {
  * Returns the offset of the next character
  * Sets the video cursor to the returned offset
  */
-int print_char(char c, int col, int row, char attr) {
-    uint8_t *vidmem = (uint8_t*) VIDEO_ADDRESS;
-    if (!attr) attr = WHITE_ON_BLACK;
+int print_char(char c, int col, int row, color_t fg, color_t bg) {
+    uint32_t MAX_COLS = char_w;
+    uint32_t MAX_ROWS = char_h;
 
     /* Error control: print a red 'E' if the coords aren't right */
-    if (col >= MAX_COLS || row >= MAX_ROWS) {
-        vidmem[2*(MAX_COLS)*(MAX_ROWS)-2] = 'E';
-        vidmem[2*(MAX_COLS)*(MAX_ROWS)-1] = RED_ON_WHITE;
+    if ((uint32_t)col >= MAX_COLS || (uint32_t)row >= MAX_ROWS) {
         return get_offset(col, row);
     }
 
-    int offset;
-    if (col >= 0 && row >= 0) offset = get_offset(col, row);
+    uint32_t offset;
+    if (col >= 0 && row >= 0) offset = (uint32_t)get_offset(col, row);
     else offset = get_cursor_offset();
 
     if (c == '\n') {
         row = get_offset_row(offset);
         offset = get_offset(0, row+1);
-    } else if (c == 0x08) { /* Backspace */
-        vidmem[offset] = ' ';
-        vidmem[offset+1] = attr;
+    } else if (c == 0x8) {
+        screen_chars[(get_offset(col,row))/2] = ' ';
+        render8x8bitmap(font8x8_basic[(uint32_t)c], col, row, bg, fg);
     } else {
-        vidmem[offset] = c;
-        vidmem[offset+1] = attr;
+        screen_chars[(get_offset(col,row))/2] = c;
+        render8x8bitmap(font8x8_basic[(uint32_t)c], col, row, bg, fg);
         offset += 2;
     }
 
     /* Check if the offset is over screen size and scroll */
     if (offset >= MAX_ROWS * MAX_COLS * 2) {
-        int i;
-        for (i = 1; i < MAX_ROWS; i++) 
-            memory_copy((uint8_t*)(get_offset(0, i) + VIDEO_ADDRESS),
-                        (uint8_t*)(get_offset(0, i-1) + VIDEO_ADDRESS),
-                        MAX_COLS * 2);
-
-        /* Blank last line */
-        char *last_line = (char*) (get_offset(0, MAX_ROWS-1) + (uint8_t*) VIDEO_ADDRESS);
-        for (i = 0; i < MAX_COLS * 2; i++) last_line[i] = 0;
-
+        uint32_t i;
+        for (i = 1; i < MAX_ROWS; i++) {
+            for (uint32_t r = 0; r < MAX_COLS; r++) {
+                screen_chars[(get_offset(i-1, r))/2] = screen_chars[(get_offset(i, r))/2];
+            }
+        }
+        for (i = 0; i < MAX_ROWS; i++) {
+            for (uint32_t r = 0; r < MAX_COLS; r++) {
+                if (screen_chars[get_offset(i, r)/2] != '\0') {
+                    render8x8bitmap(font8x8_basic[(uint8_t)screen_chars[get_offset(i, r)/2]], col, row, bg, fg);
+                }
+            }
+        }
         offset -= 2 * MAX_COLS;
     }
 
@@ -290,40 +329,28 @@ int print_char(char c, int col, int row, char attr) {
 }
 
 int get_cursor_offset() {
-    /* Use the VGA ports to get the current cursor position
-     * 1. Ask for high byte of the cursor offset (data 14)
-     * 2. Ask for low byte (data 15)
-     */
-    port_byte_out(REG_SCREEN_CTRL, 14);
-    int offset = port_byte_in(REG_SCREEN_DATA) << 8; /* High byte: << 8 */
-    port_byte_out(REG_SCREEN_CTRL, 15);
-    offset += port_byte_in(REG_SCREEN_DATA);
-    return offset * 2; /* Position * size of character cell */
+    return (int)screen_offset; /* Position * size of character cell */
 }
 
 void set_cursor_offset(int offset) {
     /* Similar to get_cursor_offset, but instead of reading we write data */
-    offset /= 2;
-    port_byte_out(REG_SCREEN_CTRL, 14);
-    port_byte_out(REG_SCREEN_DATA, (uint8_t)(offset >> 8));
-    port_byte_out(REG_SCREEN_CTRL, 15);
-    port_byte_out(REG_SCREEN_DATA, (uint8_t)(offset & 0xff));
+    screen_offset = (uint32_t)offset;
 }
 
 void clear_screen() {
-    // int screen_size = MAX_COLS * MAX_ROWS;
-    // int i;
-    // uint8_t *screen = (uint8_t*) VIDEO_ADDRESS;
-
-    // for (i = 0; i < screen_size; i++) {
-    //     screen[i*2] = ' ';
-    //     screen[i*2+1] = WHITE_ON_BLACK;
-    // }
-    // set_cursor_offset(get_offset(0, 0));
-    
+    fill_screen(0,0,0);
 }
 
 
-int get_offset(int col, int row) { return 2 * (row * MAX_COLS + col); }
-int get_offset_row(int offset) { return offset / (2 * MAX_COLS); }
-int get_offset_col(int offset) { return (offset - (get_offset_row(offset)*2*MAX_COLS))/2; }
+int get_offset(int col, int row) { 
+    uint32_t MAX_COLS = char_w;
+    return 2 * (row * MAX_COLS + col);
+}
+int get_offset_row(int offset) {
+    uint32_t MAX_COLS = char_w;
+    return offset / (2 * MAX_COLS);
+}
+int get_offset_col(int offset) {
+    uint32_t MAX_COLS = char_w;
+    return (offset - (get_offset_row(offset)*2*MAX_COLS))/2;
+}

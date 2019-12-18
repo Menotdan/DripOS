@@ -3,6 +3,7 @@
 
 #include "../cpu/types.h"
 #include "../cpu/isr.h"
+#include "vesa.h"
 typedef unsigned char *va_list;
 /* width of stack == width of int */
 #define	STACKITEM	int
@@ -21,8 +22,6 @@ typedef unsigned char *va_list;
 #define va_arg(AP, TYPE)	\
 	(AP += VA_SIZE(TYPE), *((TYPE *)(AP - VA_SIZE(TYPE))))
 #define VIDEO_ADDRESS 0xb8000
-#define MAX_ROWS 25
-#define MAX_COLS 80
 // #define WHITE_ON_BLACK 0x0f
 // #define RED_ON_WHITE 0xf4
 // #define BLUE_ON_BLACK 0x09
@@ -44,8 +43,9 @@ int get_offset_row(int offset);
 int get_offset(int col, int row);
 void set_cursor_offset(int offset);
 int get_cursor_offset();
-void kprint_color(char *message, char color);
+void kprint_color(char *message, color_t fg, color_t bg);
 void crash_screen(registers_t *crash_state, char *msg, uint8_t printReg);
+void setup_screen();
 
 
 #endif
