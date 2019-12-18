@@ -80,6 +80,7 @@ void setup_screen() {
     cyan.blue = 255;
 
     screen_chars = kmalloc((char_w*char_h));
+    memory_set((uint8_t*)screen_chars, 0, (char_w*char_h));
 }
 
 void kprint_at(char *message, int col, int row) {
@@ -338,7 +339,9 @@ void set_cursor_offset(int offset) {
 }
 
 void clear_screen() {
+    set_cursor_offset(0);
     fill_screen(0,0,0);
+    memory_set((uint8_t*)screen_chars, 0, (char_w*char_h));
 }
 
 
