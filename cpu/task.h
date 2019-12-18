@@ -13,7 +13,8 @@
 #define NORMAL 2
 #define LOW 1
 #define VERY_LOW 0
-
+/* Cursor max (cursor pos wont be updated for tasks with a cursor_pos greater than this) */
+#define CURSOR_MAX 4000000000
 extern void initTasking();
  
 typedef struct {
@@ -29,6 +30,7 @@ typedef struct Task {
     uint32_t pid; // Process id of the task
     uint8_t state; // The state the task is in
     uint32_t waiting; // If state is SLEEPING, this is the tick to restart the task, if the state is IRQ_WAIT, this is the IRQ that it is waiting for
+    uint32_t cursor_pos;
     char name[21];
 } Task;
 

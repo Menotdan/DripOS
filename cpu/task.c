@@ -48,6 +48,7 @@ void initTasking() {
     pid_max = 1;
     mainTask.next = &mainTask;
     kickstart.next = &mainTask;
+    mainTask.cursor_pos = CURSOR_MAX;
     init_terminal();
     global_regs = kmalloc(sizeof(registers_t));
     runningTask = &kickstart;
@@ -70,6 +71,7 @@ uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *
     task->regs.cr3 = (uint32_t)temp.regs.cr3; // No paging yet
     task->regs.esp = ((uint32_t)kmalloc(0x4000) & (~0xf)) + 0x4000; // Allocate 16KB for the process stack
     task->regs.ebp = 0;
+    task->cursor_pos = get_cursor_offset();
 
     strcpy((char *)&task->name, task_name);
 
@@ -240,6 +242,9 @@ void store_values(registers_t *r) {
     regs->eip = r->eip;
     regs->esp = r->esp-40;
     regs->ebp = r->ebp;
+    if (runningTask->cursor_pos < CURSOR_MAX)  {
+        runningTask->cursor_pos = get_cursor_offset();
+    }
     pick_task();
     regs = &runningTask->regs; // Get registers again
     call_counter = regs->esp;
@@ -257,6 +262,9 @@ void schedule_task(registers_t *r) {
     r->esi = regs->esi;
     r->eip = regs->eip;
     r->ebp = regs->ebp;
+    if (runningTask->cursor_pos < CURSOR_MAX) {
+        set_cursor_offset(runningTask->cursor_pos);
+    }
 }
 
 void irq_schedule() {
