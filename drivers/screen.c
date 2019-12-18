@@ -102,6 +102,7 @@ void kprint_at(char *message, int col, int row) {
         row = get_offset_row(offset);
         col = get_offset_col(offset);
     }
+    update_display();
 }
 
 void kprint_no_move(char *message, int col, int row) {
@@ -126,6 +127,7 @@ void kprint_no_move(char *message, int col, int row) {
         col = get_offset_col(offset);
     }
     set_cursor_offset(prevOffset);
+    update_display();
 }
 
 void kprint_at_blue(char *message, int col, int row) {

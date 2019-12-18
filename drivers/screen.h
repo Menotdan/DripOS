@@ -46,6 +46,7 @@ int get_cursor_offset();
 void kprint_color(char *message, color_t fg, color_t bg);
 void crash_screen(registers_t *crash_state, char *msg, uint8_t printReg);
 void setup_screen();
+char *screen_chars;
 
 
 #endif

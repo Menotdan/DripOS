@@ -140,6 +140,10 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 		sprint_uint(height/8);
 		char_w = width/8;
 		char_h = height/8;
+		current_screen.video_buffer_size = height*bpl;
+		current_screen.graphics_vid_buffer = kmalloc(current_screen.video_buffer_size);
+		current_screen.text_vid_buffer = kmalloc(current_screen.video_buffer_size);
+		current_screen.text_enabled = 1;
 	}
 
 	clear_screen();

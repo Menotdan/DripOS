@@ -580,6 +580,7 @@ uint8_t key_handler(uint8_t scancode, bool keyup, uint8_t shift) {
 
 void terminal_task() {
 	uint8_t shift = 0;
+	uint32_t prev_offset = 0;
 	while (1)
 	{
 		unsigned char scan = (unsigned char)getcode(); // Waiting for a scancode from the keyboard
@@ -588,6 +589,43 @@ void terminal_task() {
 			shift = key_handler(scan, true, shift);
 		} else {
 			shift = key_handler(scan, false, shift);
+			uint32_t cur_x = (uint32_t)get_offset_col(get_cursor_offset());
+			uint32_t cur_y = (uint32_t)get_offset_row(get_cursor_offset());
+			cur_x = (cur_x*8)+1;
+			cur_y = cur_y*8;
+			cur_y += 10;
+			draw_pixel(cur_x, cur_y, 255, 255, 255);
+			cur_x++;
+			draw_pixel(cur_x, cur_y, 255, 255, 255);
+			cur_x++;
+			draw_pixel(cur_x, cur_y, 255, 255, 255);
+			cur_x++;
+			draw_pixel(cur_x, cur_y, 255, 255, 255);
+			cur_x++;
+			draw_pixel(cur_x, cur_y, 255, 255, 255);
+			cur_x++;
+			draw_pixel(cur_x, cur_y, 255, 255, 255);
+
+			cur_x = (uint32_t)get_offset_col(prev_offset);
+			cur_y = (uint32_t)get_offset_row(prev_offset);
+			cur_x = (cur_x*8)+1;
+			cur_y = cur_y*8;
+			cur_y += 10;
+			draw_pixel(cur_x, cur_y, 0, 0, 0);
+			cur_x++;
+			draw_pixel(cur_x, cur_y, 0, 0, 0);
+			cur_x++;
+			draw_pixel(cur_x, cur_y, 0, 0, 0);
+			cur_x++;
+			draw_pixel(cur_x, cur_y, 0, 0, 0);
+			cur_x++;
+			draw_pixel(cur_x, cur_y, 0, 0, 0);
+			cur_x++;
+			draw_pixel(cur_x, cur_y, 0, 0, 0);
+
+			update_display();
+
+			prev_offset = (uint32_t)get_cursor_offset();
 		}
 	}
 }

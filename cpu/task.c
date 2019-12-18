@@ -40,7 +40,7 @@ void initTasking() {
     // Get EFLAGS and CR3
     asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(temp.regs.cr3)::"%eax"); // No paging yet
     asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(temp.regs.eflags)::"%eax");
- 
+
     createTask(&mainTask, otherMain, "Idle task");
     createTask(&kickstart, 0, "no");
     //Log("Initializing terminal", 1);
@@ -52,7 +52,6 @@ void initTasking() {
     init_terminal();
     global_regs = kmalloc(sizeof(registers_t));
     runningTask = &kickstart;
-    //call_counter = sizeof(registers_t);
     otherMain();
 }
  
@@ -71,6 +70,7 @@ uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *
     task->regs.esp = ((uint32_t)kmalloc(0x4000) & (~0xf)) + 0x4000; // Allocate 16KB for the process stack
     task->regs.ebp = 0;
     task->cursor_pos = get_cursor_offset();
+    task->screen = current_screen;
 
     strcpy((char *)&task->name, task_name);
 
@@ -207,16 +207,6 @@ void schedule(registers_t *from) {
     while (runningTask->state != RUNNING) {
         runningTask = runningTask->next;
     }
-    // Switch
-    //sprint_uint(3);
-    /*sprint("\nFrom eip: ");
-    sprint_uint(from->eip);
-    sprint("\nFrom esp: ");
-    sprint_uint(from->esp);
-    sprint("\nRunning eip: ");
-    sprint_uint(runningTask->regs.eip);
-    sprint("\nRunning esp: ");
-    sprint_uint(runningTask->regs.esp);*/
 }
 
 /* Task selector */
@@ -225,6 +215,11 @@ void pick_task() {
     runningTask = runningTask->next;
     while (runningTask->state != RUNNING) {
         runningTask = runningTask->next;
+    }
+    if (runningTask->pid == 0) {
+        while (runningTask->state != RUNNING) {
+            runningTask = runningTask->next;
+        }
     }
 }
 
