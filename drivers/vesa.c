@@ -11,168 +11,51 @@ color_t color_from_rgb(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 void draw_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b) {
-    // uint8_t *vidmemcur = vidmem;
-    // uint32_t offset = y*bpl + x*bbp;
-    // vidmemcur += offset;
-    // for (uint8_t byte = 0; byte<bbp; byte++) {
-    //     if (red_byte == byte) {
-    //         *vidmemcur = r;
-    //     } else if (green_byte == byte) {
-    //         *vidmemcur = g;
-    //     } else if (blue_byte == byte) {
-    //         *vidmemcur = b;
-    //     }
-    //     vidmemcur++;
-    // }
-
-    uint8_t *vidmemcur = current_screen.graphics_vid_buffer;
-    uint32_t offset = y*bpl + x*bbp;
+    uint32_t *vidmemcur = (uint32_t *)current_screen.graphics_vid_buffer;
+    uint32_t offset = (y*bpl + x*bbp)/4;
     vidmemcur += offset;
-    for (uint8_t byte = 0; byte<bbp; byte++) {
-        if (red_byte == byte) {
-            *vidmemcur = r;
-        } else if (green_byte == byte) {
-            *vidmemcur = g;
-        } else if (blue_byte == byte) {
-            *vidmemcur = b;
-        }
-        vidmemcur++;
-    }
+    *vidmemcur = (r << (red_byte)) | (g << (green_byte)) | (b << (blue_byte));
+    vidmemcur++;
 }
 
 void fill_screen(uint8_t r, uint8_t g, uint8_t b) {
-    // uint8_t *vidmemcur = vidmem;
-    // uint32_t byte_counter = 0;
-    // for (uint32_t y = 0; y<height; y++) {
-    //     for (uint32_t x = 0; x<width; x++) {
-    //         for (uint8_t byte = 0; byte<bbp; byte++) {
-    //             if (red_byte == byte) {
-    //                 *vidmemcur = r;
-    //             } else if (green_byte == byte) {
-    //                 *vidmemcur = g;
-    //             } else if (blue_byte == byte) {
-    //                 *vidmemcur = b;
-    //             }
-    //             vidmemcur++;
-    //             byte_counter++;
-    //         }
-
-    //         byte_counter = 0;
-    //     }
-    // }
-
-    uint8_t *vidmemcur = current_screen.graphics_vid_buffer;
-    for (uint32_t y = 0; y<height; y++) {
-        for (uint32_t x = 0; x<width; x++) {
-            for (uint8_t byte = 0; byte<bbp; byte++) {
-                if (red_byte == byte) {
-                    *vidmemcur = r;
-                } else if (green_byte == byte) {
-                    *vidmemcur = g;
-                } else if (blue_byte == byte) {
-                    *vidmemcur = b;
-                }
-                vidmemcur++;
-            }
-        }
-    }
-
-    vidmemcur = current_screen.text_vid_buffer;
-    for (uint32_t y = 0; y<height; y++) {
-        for (uint32_t x = 0; x<width; x++) {
-            for (uint8_t byte = 0; byte<bbp; byte++) {
-                if (red_byte == byte) {
-                    *vidmemcur = r;
-                } else if (green_byte == byte) {
-                    *vidmemcur = g;
-                } else if (blue_byte == byte) {
-                    *vidmemcur = b;
-                }
-                vidmemcur++;
-            }
-        }
+    uint32_t color = (r << (red_byte)) | (g << (green_byte)) | (b << (blue_byte));
+    uint32_t *vidmemcur = (uint32_t *)(current_screen.graphics_vid_buffer);
+    for (uint32_t i = 0; i<(height*bpl)/4; i++) {
+        *(uint32_t *)vidmemcur = color;
+        vidmemcur++;
     }
 }
 
 void render8x8bitmap(unsigned char bitmap[8], uint8_t xpos, uint8_t ypos, color_t bg, color_t fg) {
     char current_map;
+    uint32_t foreground_color = (fg.red << (red_byte)) | (fg.green << (green_byte)) | (fg.blue << (blue_byte));
+    uint32_t background_color = (bg.red << (red_byte)) | (bg.green << (green_byte)) | (bg.blue << (blue_byte));;
     for (uint8_t y = 0; y<8; y++) {
         current_map = bitmap[y];
         for (uint8_t x = 0; x<8; x++) {
             uint8_t active = (current_map >> x) & 1; // Get the bit
             if (active == 1) {
                 /* Draw foreground color */
-                // uint8_t *vidmemcur = vidmem;
-                // uint32_t offset = (y+(ypos*8))*bpl + (x+(xpos*8))*bbp;
-                // vidmemcur += offset;
-                // for (uint8_t byte = 0; byte<bbp; byte++) {
-                //     if (red_byte == byte) {
-                //         *vidmemcur = fg.red;
-                //     } else if (green_byte == byte) {
-                //         *vidmemcur = fg.green;
-                //     } else if (blue_byte == byte) {
-                //         *vidmemcur = fg.blue;
-                //     }
-                //     vidmemcur++;
-                // }
 
-                uint8_t *vidmemcur = current_screen.text_vid_buffer;
-                uint32_t offset = (y+(ypos*8))*bpl + (x+(xpos*8))*bbp;
+                uint32_t *vidmemcur = (uint32_t *)current_screen.graphics_vid_buffer;
+                uint32_t offset = ((y+(ypos*8))*bpl + (x+(xpos*8))*bbp)/4;
                 vidmemcur += offset;
-                for (uint8_t byte = 0; byte<bbp; byte++) {
-                    if (red_byte == byte) {
-                        *vidmemcur = fg.red;
-                    } else if (green_byte == byte) {
-                        *vidmemcur = fg.green;
-                    } else if (blue_byte == byte) {
-                        *vidmemcur = fg.blue;
-                    }
-                    vidmemcur++;
-                }
+                *vidmemcur = foreground_color;
+                vidmemcur++;
             } else {
                 /* Draw background color */
-                uint8_t *vidmemcur = current_screen.text_vid_buffer;
-                uint32_t offset = (y+(ypos*8))*bpl + (x+(xpos*8))*bbp;
+
+                uint32_t *vidmemcur = (uint32_t *)current_screen.graphics_vid_buffer;
+                uint32_t offset = ((y+(ypos*8))*bpl + (x+(xpos*8))*bbp)/4;
                 vidmemcur += offset;
-                for (uint8_t byte = 0; byte<bbp; byte++) {
-                    if (red_byte == byte) {
-                        *vidmemcur = bg.red;
-                    } else if (green_byte == byte) {
-                        *vidmemcur = bg.green;
-                    } else if (blue_byte == byte) {
-                        *vidmemcur = bg.blue;
-                    }
-                    vidmemcur++;
-                }
+                *vidmemcur = background_color;
+                vidmemcur++;
             }
         }
     }
 }
 
 void update_display() {
-    uint8_t *vidmemcur = vidmem;
-    uint8_t *text = current_screen.text_vid_buffer;
-    uint8_t pixel_buffer[bbp];
-    memory_copy(current_screen.graphics_vid_buffer, vidmem, current_screen.video_buffer_size);
-    if (vidmemcur) {
-
-    } 
-
-    if (current_screen.text_enabled) {
-        uint8_t *vidmemcur = vidmem;
-        for (uint32_t buffer_pos = 0; buffer_pos<current_screen.video_buffer_size/bbp; buffer_pos++) {
-            uint8_t all_zero = 1;
-            for (uint8_t byte = 0; byte<bbp; byte++) {
-                pixel_buffer[byte] = *text;
-                text++;
-                if (pixel_buffer[byte] != 0) {
-                    all_zero = 0;
-                }
-            }
-            if (all_zero == 0) {
-                memory_copy(pixel_buffer, vidmemcur, bbp);
-            }
-            vidmemcur += bbp;
-        }
-    }
+    memory_copy32((uint32_t *)current_screen.graphics_vid_buffer, (uint32_t*)vidmem, (current_screen.video_buffer_size/4));
 }

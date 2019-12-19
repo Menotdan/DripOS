@@ -10,6 +10,7 @@
 [extern schedule_task]
 [extern print_stuff]
 [extern breakA]
+[extern sse_data]
 ; Common ISR code
 isr_common_stub:
     ; 1. Save CPU state
@@ -49,7 +50,7 @@ irq_common_stub:
     mov ebx, [switch_task]
     cmp ebx, 1
     jne testLabel
-    call breakA
+    ;call breakA
     mov ebx, 0
     mov [switch_task], ebx
     mov eax, esp ; Safety, irq_handler probably changed eax

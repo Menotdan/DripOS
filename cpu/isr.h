@@ -73,6 +73,7 @@ extern void irq15();
 
 /* Struct which aggregates many registers */
 typedef struct {
+   //uint8_t sse[]
    uint32_t dr6;
    uint32_t ds; /* Data segment selector */
    uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax; /* Pushed by pusha. */

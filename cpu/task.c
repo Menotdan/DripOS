@@ -1,13 +1,4 @@
 #include "task.h"
-#include "../libc/mem.h"
-#include "../drivers/screen.h"
-#include "../libc/string.h"
-#include "../kernel/kernel.h"
-#include "../kernel/terminal.h"
-#include "../cpu/isr.h"
-#include "../drivers/serial.h"
-#include <debug.h>
-#include "timer.h"
 
 Task *runningTask;
 Task mainTask;

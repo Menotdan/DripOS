@@ -288,7 +288,6 @@ int print_char(char c, int col, int row, color_t fg, color_t bg) {
     uint32_t MAX_COLS = char_w;
     uint32_t MAX_ROWS = char_h;
 
-    /* Error control: print a red 'E' if the coords aren't right */
     if ((uint32_t)col >= MAX_COLS || (uint32_t)row >= MAX_ROWS) {
         return get_offset(col, row);
     }
@@ -311,17 +310,16 @@ int print_char(char c, int col, int row, color_t fg, color_t bg) {
 
     /* Check if the offset is over screen size and scroll */
     if (offset >= MAX_ROWS * MAX_COLS * 2) {
-        uint32_t i;
-        for (i = 1; i < MAX_ROWS; i++) {
-            for (uint32_t r = 0; r < MAX_COLS; r++) {
-                screen_chars[(get_offset(i-1, r))/2] = screen_chars[(get_offset(i, r))/2];
-            }
-        }
-        for (i = 0; i < MAX_ROWS; i++) {
-            for (uint32_t r = 0; r < MAX_COLS; r++) {
-                if (screen_chars[get_offset(i, r)/2] != '\0') {
-                    render8x8bitmap(font8x8_basic[(uint8_t)screen_chars[get_offset(i, r)/2]], col, row, bg, fg);
-                }
+        for (uint32_t y = 8; y<height; y++) {
+            for (uint32_t x = 0; x<width; x++) {
+                uint32_t buffer_offset = (y*bpl + x*bbp)/4;
+                uint32_t buffer_offset_new = (y-8*bpl + x*bbp)/4;
+                uint32_t *vidmemcur = (uint32_t *)current_screen.graphics_vid_buffer;
+                uint32_t *vidmemoffset = (uint32_t *)current_screen.graphics_vid_buffer;
+                vidmemcur += buffer_offset;
+                vidmemoffset += buffer_offset_new;
+
+                *vidmemoffset = *vidmemcur;
             }
         }
         offset -= 2 * MAX_COLS;
@@ -344,6 +342,7 @@ void clear_screen() {
     set_cursor_offset(0);
     fill_screen(0,0,0);
     memory_set((uint8_t*)screen_chars, 0, (char_w*char_h));
+    update_display();
 }
 
 

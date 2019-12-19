@@ -1,8 +1,18 @@
-#ifndef TASK_H
-#define TASK_H
 #include <stdint.h>
 #include "isr.h"
 #include "../drivers/vesa.h"
+#include "../libc/mem.h"
+#include "../drivers/screen.h"
+#include "../libc/string.h"
+#include "../kernel/kernel.h"
+#include "../kernel/terminal.h"
+#include "../cpu/isr.h"
+#include "../drivers/serial.h"
+#include <debug.h>
+#include "timer.h"
+
+#ifndef TASK_H
+#define TASK_H
 
 /* Task states */
 #define RUNNING 0

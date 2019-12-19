@@ -80,10 +80,15 @@ undefined behavior.
 .section .bss
 .align 16
 .global stack_top
+.global sse_data
 stack_bottom:
 .skip 65536 /* 64 KiB of kernel stack, stack for other processes will
 allocated when they are created */
 stack_top:
+
+.align 16
+sse_data:
+.skip 512 /* 512 bytes for the fxsave */
 
 /*
 The linker script specifies _start as the entry point to the kernel and the

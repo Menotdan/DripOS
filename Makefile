@@ -13,7 +13,7 @@ LINKER = ~/Desktop/Compiler/bin/i686-elf-ld
 incPath = ~/DripOS/include
 GDB = gdb
 MEM = 1G # Memory for qemu
-O_LEVEL = 2
+O_LEVEL = 3
 # -g: Use debugging symbols in gcc
 CFLAGS = -g -mregparm=3 #-m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra
 

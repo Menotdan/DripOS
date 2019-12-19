@@ -1,6 +1,7 @@
 //0xEFFFFF
 asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 
+#include "kernel.h"
 #include <stdio.h>
 #include <serial.h>
 #include <libc.h>
@@ -8,7 +9,6 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include "../cpu/isr.h"
 #include "../drivers/screen.h"
 #include "../drivers/sound.h"
-#include "kernel.h"
 #include "../libc/string.h"
 #include "../libc/mem.h"
 #include "../cpu/timer.h"
@@ -16,9 +16,9 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include "debug.h"
 #include "../fs/dripfs.h"
 #include "../cpu/task.h"
-//#include "../drivers/vga.h"
 #include "../drivers/ps2.h"
 #include "../drivers/vesa.h"
+
 //codes
 int prevtick = 0;
 int login = 1;
@@ -131,9 +131,9 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 		sprint("\nPitch: ");
 		sprint_uint(mbd->framebuffer_pitch);
 		bpl = mbd->framebuffer_pitch;
-		red_byte = mbd->framebuffer_red_field_position/8;
-		green_byte = mbd->framebuffer_green_field_position/8;
-		blue_byte = mbd->framebuffer_blue_field_position/8;
+		red_byte = mbd->framebuffer_red_field_position;
+		green_byte = mbd->framebuffer_green_field_position;
+		blue_byte = mbd->framebuffer_blue_field_position;
 		sprint("\nChar width: ");
 		sprint_uint(width/8);
 		sprint("\nChar height: ");
@@ -151,17 +151,9 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	Log("Loaded memory", 1);
 	isr_install();
 	Log("ISR Enabled", 1);
+	fill_screen(255,0,0);
 	init_timer(1000);
-	// for (uint32_t posx = 0; posx<width; posx++) {
-	// 	for (uint32_t posy = 0; posy<width; posy++) {
-	// 		draw_pixel(posx, posy, posy/2, 0,0);
-	// 	}
-	// }
-	// for (uint32_t posx = 0; posx<width; posx++) {
-	// 	for (uint32_t posy = 0; posy<width; posy++) {
-	// 		draw_pixel(posx, posy, 0, posy/2, posy/2);
-	// 	}
-	// }
+
 	Log("Timer enabled", 1);
 	Log("Loading PS/2", 1);
 	init_ps2();
@@ -207,10 +199,10 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	play_sound(300, 50);
 	play_sound(500, 50);
 	clear_screen();
-	//stdin_init();
+
 	kprint("DripOS 0.0020\n"); //Version
 	sprintd("DripOS 0.0020 loaded"); //Version
-	//check_crash();
+
 	kprint("Type help for commands\nType shutdown to shutdown\n\n");
 	kprint("Memory available: ");
 	char test[25];
@@ -219,9 +211,7 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	kprint(" bytes\n");
 	kprint("drip@DripOS> ");
 	sprintd("Entering multitask/system management loop");
-	//Log("Starting multitasking and leaving kernel main...", 1);
-	//loaded = 1;
-	//breakA();
+
 	initTasking();
 }
 
