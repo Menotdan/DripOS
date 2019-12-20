@@ -8,6 +8,7 @@
 #include "../kernel/terminal.h"
 #include "../cpu/isr.h"
 #include "../drivers/serial.h"
+#include "../drivers/sound.h"
 #include <debug.h>
 #include "timer.h"
 
@@ -35,6 +36,7 @@ typedef struct {
  
 typedef struct Task {
     Registers regs;
+    uint8_t *start_esp; // The original allocated memory for the stack of this process
     uint32_t ticks_cpu_time;
     struct Task *next;
     uint8_t priority;

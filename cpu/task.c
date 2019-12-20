@@ -20,9 +20,6 @@ uint32_t just_started = 1;
 static void otherMain() {
     loaded = 1;
     while (1) {
-        //oof++;
-        //sprint("\n");
-        //sprint_uint(oof);
         asm volatile("hlt");
     }
 }
@@ -33,9 +30,8 @@ void initTasking() {
     asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(temp.regs.eflags)::"%eax");
 
     createTask(&mainTask, otherMain, "Idle task");
+    createTask(kmalloc(sizeof(Task)), sound_handler, "Sound task");
     createTask(&kickstart, 0, "no");
-    //Log("Initializing terminal", 1);
-	//Log("Terminal loaded", 3);
     pid_max = 1;
     mainTask.next = &mainTask;
     kickstart.next = &mainTask;
@@ -59,6 +55,7 @@ uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *
     task->regs.eip = (uint32_t) main;
     task->regs.cr3 = (uint32_t)temp.regs.cr3; // No paging yet
     task->regs.esp = ((uint32_t)kmalloc(0x4000) & (~0xf)) + 0x4000; // Allocate 16KB for the process stack
+    task->start_esp = (uint8_t *)task->regs.esp - 0x4000;
     task->regs.ebp = 0;
     task->cursor_pos = get_cursor_offset();
     task->screen = current_screen;
@@ -110,18 +107,10 @@ int32_t kill_task(uint32_t pid) {
     Task *to_kill = 0;
     Task *prev_task;
     uint32_t loop = 0;
-    //kprint("\nPID to find: ");
-    //kprint_uint(pid);
-    //kprint("\nMax PID: ");
-    //kprint_uint(pid_max);
     while (1) {
-        //kprint("\nLoop: ");
-        //kprint_uint(loop);
         if (loop > pid_max) {
             break;
         }
-        //kprint("\nCurrent pid: ");
-        //kprint_uint(temp_kill->next->pid);
         if (temp_kill->next->pid == pid) {
             to_kill = temp_kill->next; // Process to kill
             prev_task = temp_kill; // Process before
@@ -137,6 +126,9 @@ int32_t kill_task(uint32_t pid) {
     if ((uint32_t)to_kill == 0) {
         return 1; // This should never be reached but eh, safety first
     }
+
+    free(to_kill->start_esp, 0x4000);
+
     prev_task->next = temp_kill; // Remove killed task from the chain
     return 0; // Worked... hopefully lol
 }

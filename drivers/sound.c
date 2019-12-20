@@ -1,6 +1,11 @@
 #include "sound.h"
 #include "../cpu/ports.h"
 #include "../cpu/timer.h"
+#include "../cpu/task.h"
+
+uint32_t start_sound; // The start of a sound
+uint32_t len_sound; // Length of the sound
+uint8_t sound_on; // Is the sound playing?
 
 void play(uint32_t nFrequence) {
     uint32_t Div;
@@ -36,9 +41,10 @@ void nosound() {
 }
 
 void play_sound(uint32_t nFrequence, uint32_t ticks) {
-    play(nFrequence);
-    sleep(ticks);
-    nosound();
+    play(nFrequence); // Set the PIT for the speaker to play the frequency requested
+    sound_on = 1; // Set sound_on to 1 so the handler knows to turn the sound off
+    start_sound = tick; // Current timer tick
+    len_sound = ticks; // Length
 }
 
 void pgw() {
@@ -47,4 +53,18 @@ void pgw() {
     wait(10);
     play_sound(500, 30);
     play_sound(600, 30);
+}
+
+void sound_handler() {
+    while (1) {
+        /* If the sound is done playing, stop it, otherwise switch tasks */
+        if ((tick - start_sound >= len_sound) && sound_on) {
+            sound_on = 0;
+            nosound();
+        } else
+        {
+            yield();
+        }
+        
+    }
 }
