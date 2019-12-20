@@ -1,6 +1,6 @@
 #include "task.h"
 
-Task *runningTask;
+Task *running_task;
 Task mainTask;
 Task otherTask;
 Task kickstart;
@@ -42,7 +42,7 @@ void initTasking() {
     mainTask.cursor_pos = CURSOR_MAX;
     init_terminal();
     global_regs = kmalloc(sizeof(registers_t));
-    runningTask = &kickstart;
+    running_task = &kickstart;
     otherMain();
 }
  
@@ -166,7 +166,7 @@ void print_tasks() {
 
 void timer_switch_task(registers_t *from, Task *to) {
     //free(test, 0x1000);
-    Registers *regs = &runningTask->regs;
+    Registers *regs = &running_task->regs;
     regs->eflags = from->eflags;
     regs->eax = from->eax;
     regs->ebx = from->ebx;
@@ -177,11 +177,11 @@ void timer_switch_task(registers_t *from, Task *to) {
     regs->eip = from->eip;
     regs->esp = from->esp;
     regs->ebp = from->ebp;
-    runningTask = to;
+    running_task = to;
 }
 
 void schedule(registers_t *from) {
-    Registers *regs = &runningTask->regs; // Get registers
+    Registers *regs = &running_task->regs; // Get registers
     /* Set old registers */
     regs->eflags = from->eflags;
     regs->eax = from->eax;
@@ -194,28 +194,28 @@ void schedule(registers_t *from) {
     regs->esp = from->esp;
     regs->ebp = from->ebp;
     // Select new running task
-    runningTask = runningTask->next;
-    while (runningTask->state != RUNNING) {
-        runningTask = runningTask->next;
+    running_task = running_task->next;
+    while (running_task->state != RUNNING) {
+        running_task = running_task->next;
     }
 }
 
 /* Task selector */
 void pick_task() {
     // Select new running task
-    runningTask = runningTask->next;
-    while (runningTask->state != RUNNING) {
-        runningTask = runningTask->next;
+    running_task = running_task->next;
+    while (running_task->state != RUNNING) {
+        running_task = running_task->next;
     }
-    if (runningTask->pid == 0) {
-        while (runningTask->state != RUNNING) {
-            runningTask = runningTask->next;
+    if (running_task->pid == 0) {
+        while (running_task->state != RUNNING) {
+            running_task = running_task->next;
         }
     }
 }
 
 void store_values(registers_t *r) {
-    regs = &runningTask->regs; // Get registers
+    regs = &running_task->regs; // Get registers
     /* Set old registers */
     regs->eflags = r->eflags;
     regs->eax = r->eax;
@@ -227,17 +227,17 @@ void store_values(registers_t *r) {
     regs->eip = r->eip;
     regs->esp = r->esp-40;
     regs->ebp = r->ebp;
-    if (runningTask->cursor_pos < CURSOR_MAX)  {
-        runningTask->cursor_pos = get_cursor_offset();
+    if (running_task->cursor_pos < CURSOR_MAX)  {
+        running_task->cursor_pos = get_cursor_offset();
     }
     pick_task();
-    regs = &runningTask->regs; // Get registers again
+    regs = &running_task->regs; // Get registers again
     call_counter = regs->esp;
 }
 
 void schedule_task(registers_t *r) {
     // Set values for context switch
-    regs = &runningTask->regs;
+    regs = &running_task->regs;
     r->eflags = regs->eflags | 0x200;
     r->eax = regs->eax;
     r->ebx = regs->ebx;
@@ -247,13 +247,13 @@ void schedule_task(registers_t *r) {
     r->esi = regs->esi;
     r->eip = regs->eip;
     r->ebp = regs->ebp;
-    if (runningTask->cursor_pos < CURSOR_MAX) {
-        set_cursor_offset(runningTask->cursor_pos);
+    if (running_task->cursor_pos < CURSOR_MAX) {
+        set_cursor_offset(running_task->cursor_pos);
     }
 }
 
 void irq_schedule() {
-    regs = &runningTask->regs; // Get registers
+    regs = &running_task->regs; // Get registers
     /* Set old registers */
     regs->eflags = global_regs->eflags;
     regs->eax = global_regs->eax;
@@ -266,22 +266,22 @@ void irq_schedule() {
     regs->esp = global_regs->esp;
     regs->ebp = global_regs->ebp;
     // Select new running task
-    runningTask = runningTask->next;
-    while (runningTask->state != RUNNING) {
-        runningTask = runningTask->next;
+    running_task = running_task->next;
+    while (running_task->state != RUNNING) {
+        running_task = running_task->next;
     }
     // Switch
     //sprint_uint(3);
-    regs = &(runningTask->regs);
+    regs = &(running_task->regs);
     sprint("\nFrom eip: ");
     sprint_uint(global_regs->eip);
     sprint("\nFrom esp: ");
     sprint_uint(global_regs->esp);
     sprint("\nRunning eip: ");
-    sprint_uint(runningTask->regs.eip);
+    sprint_uint(running_task->regs.eip);
     sprint("\nRunning esp: ");
-    sprint_uint(runningTask->regs.esp);
-    oof = (uint32_t)&(runningTask->regs);
+    sprint_uint(running_task->regs.esp);
+    oof = (uint32_t)&(running_task->regs);
     sprint("\nOOF: ");
     sprint_uint(oof);
     switchTask();

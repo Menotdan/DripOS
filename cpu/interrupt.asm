@@ -54,7 +54,7 @@ irq_common_stub:
     mov ebx, 0
     mov [switch_task], ebx
     mov eax, esp ; Safety, irq_handler probably changed eax
-    call store_values ; Store current registers pointer to runningTask
+    call store_values ; Store current registers pointer to running_task
     mov esp, [call_counter] ; Change ESP
     mov eax, esp ; Set param
     call schedule_task ; Pick next task and set it in r

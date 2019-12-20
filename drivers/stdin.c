@@ -57,8 +57,8 @@ char getch(uint8_t upper) {
     ret = get_scancode();
     while ((ret == 0 && err == 1) || (uint8_t)ret > SC_MAX) {
         err = 0;
-        runningTask->state = IRQ_WAIT;
-        runningTask->waiting = 1;
+        running_task->state = IRQ_WAIT;
+        running_task->waiting = 1;
         yield();
         ret = get_scancode();
     }
@@ -71,8 +71,8 @@ char getcode() {
     ret = get_scancode();
     while ((ret == 0 && err == 1)) {
         err = 0;
-        runningTask->state = IRQ_WAIT;
-        runningTask->waiting = 1;
+        running_task->state = IRQ_WAIT;
+        running_task->waiting = 1;
         yield();
         ret = get_scancode();
     }

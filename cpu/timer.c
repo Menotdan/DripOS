@@ -38,19 +38,19 @@ static void timer_callback(registers_t *regs) {
         tMil += 1;
     }
 
-    runningTask->ticks_cpu_time++;
+    running_task->ticks_cpu_time++;
     UNUSED(regs);
     if (timesliceleft == 0 && loaded == 1) {
-        if (runningTask->next->priority == NORMAL) {
+        if (running_task->next->priority == NORMAL) {
             timesliceleft = 16; // 16 ms
         }
-        if (runningTask->next->priority == HIGH) {
+        if (running_task->next->priority == HIGH) {
             timesliceleft = 24; // 24 ms
         }
-        if (runningTask->next->priority == LOW) {
+        if (running_task->next->priority == LOW) {
             timesliceleft = 8; // 8 ms
         }
-        //timer_switch_task(temp, runningTask->next); // Switch task
+        //timer_switch_task(temp, running_task->next); // Switch task
         switch_task = 1;
     }
 }
@@ -87,7 +87,7 @@ void wait(uint32_t ms) {
 	}
 }
 
-void task_wait(uint32_t ms) {
-    runningTask->state = SLEEPING;
-    runningTask->waiting = ms + tick;
+void sleep(uint32_t ms) {
+    running_task->state = SLEEPING;
+    running_task->waiting = ms + tick;
 }
