@@ -418,7 +418,7 @@ void execute_command(char input[]) {
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);
-		play_sound(100, 200);
+		play_sound(100, 500);
 	}
 	kprint("\n");
 	kprint("drip@DripOS> ");

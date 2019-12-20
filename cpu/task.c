@@ -30,12 +30,15 @@ void initTasking() {
     asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(temp.regs.eflags)::"%eax");
 
     createTask(&mainTask, otherMain, "Idle task");
-    createTask(kmalloc(sizeof(Task)), sound_handler, "Sound task");
     createTask(&kickstart, 0, "no");
     pid_max = 1;
     mainTask.next = &mainTask;
     kickstart.next = &mainTask;
     mainTask.cursor_pos = CURSOR_MAX;
+    Task *temp = kmalloc(sizeof(Task));
+    createTask(temp, sound_handler, "Sound task");
+    temp->cursor_pos = CURSOR_MAX;
+
     init_terminal();
     global_regs = kmalloc(sizeof(registers_t));
     running_task = &kickstart;
