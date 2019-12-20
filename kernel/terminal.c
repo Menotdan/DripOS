@@ -198,14 +198,11 @@ void execute_command(char input[]) {
 			kprint(" failed!");
 		}
 	} else if (strcmp(input, "testMem") == 0) {
-		//breakA();
-		//asserta(0, "t");
 		for (int c = 0; c < 10000; c++) {
 			testy = (char *)kmalloc(0x1000);
 			kprint_uint((uint32_t)testy);
 			kprint("\n");
 			*testy = 100;
-			//free(testy, 0x1000);
 		}
 	} else if (strcmp(input, "testMemLess") == 0) {
 		uint32_t *test1 = kmalloc(0x1000);
