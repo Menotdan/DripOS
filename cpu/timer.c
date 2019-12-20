@@ -18,64 +18,68 @@ uint32_t prev = 0; //Previous ticks for wait() function
 int lSnd = 0; //Length of sound
 int task = 0; //is task on?
 int pSnd = 0; //ticks before sound started
-int tMil = 0; // How many million ticks
-char tMilStr[12];
 uint32_t okok = 0;
-uint32_t timesliceleft = 1;
+uint32_t time_slice_left = 1;
 //registers_t *temp;
 uint32_t switch_task = 0;
 
 static void timer_callback(registers_t *regs) {
     tick++;
     if (loaded == 1) {
-        timesliceleft--;
+        time_slice_left--;
     }
-    //kprint("");
-    if (tick - (uint32_t)pSnd > (uint32_t)lSnd*10) {
+
+    /* Unsleep sleeping processes */
+    Task *iterator = (&mainTask)->next;
+    while (iterator->pid != 0) {
+        /* Set all tasks waiting for this tick to running */
+        if (iterator->state == SLEEPING) {
+            if (iterator->waiting == tick) {
+                iterator->state = RUNNING;
+            }
+        }
+        iterator = iterator->next;
+    }
+
+    if (tick - (uint32_t)pSnd > (uint32_t)lSnd*100) {
         nosound();
-    }
-    if((int)tick == 1000000) {
-        tMil += 1;
     }
 
     running_task->ticks_cpu_time++;
     UNUSED(regs);
-    if (timesliceleft == 0 && loaded == 1) {
+    if (time_slice_left == 0 && loaded == 1) {
         if (running_task->next->priority == NORMAL) {
-            timesliceleft = 16; // 16 ms
+            time_slice_left = 16; // 16 ms
         }
         if (running_task->next->priority == HIGH) {
-            timesliceleft = 24; // 24 ms
+            time_slice_left = 24; // 24 ms
         }
         if (running_task->next->priority == LOW) {
-            timesliceleft = 8; // 8 ms
+            time_slice_left = 8; // 8 ms
         }
-        //timer_switch_task(temp, running_task->next); // Switch task
+        /* Set the switch task variable, which indicates to the assembly handler
+        that the next task is ready to be loaded */
         switch_task = 1;
     }
 }
 
-void config_timer(uint32_t time) {
-    /* Get the PIT value: hardware clock at 1193180 Hz */
-    //sprint_uint(1);
-    uint32_t divisor = 1193180 / time;
-    //sprint_uint(2);
+void config_timer(uint32_t frequency) {
+    /* Get the PIT value: maximum hardware clock at 1193180 Hz */
+    uint32_t divisor = 1193180 / frequency;
+
+    /* Caluclate the bytes to send to the PIT,
+    where the bytes indicate the frequency */
     uint8_t low  = (uint8_t)(divisor & 0xFF);
-    //sprint_uint(3);
     uint8_t high = (uint8_t)( (divisor >> 8) & 0xFF);
-    //sprint_uint(4);
-    /* Send the command */
+
+    /* Send the command to set the frequency */
     port_byte_out(0x43, 0x36); /* Command port */
-    //sprint_uint(5);
-    port_byte_out(0x40, low);
-    ///sprint_uint(6);
-    port_byte_out(0x40, high);
-    //sprint_uint(7);
-    //kprint("Timer configured\n");
+    port_byte_out(0x40, low); /* Low byte of the frequency */
+    port_byte_out(0x40, high); /* High byte of the frequency */
 }
 
 void init_timer(uint32_t freq) {
-    /* Install the function we just wrote */
+    /* Load the timer callback into IRQ0s handler and configure the timer */
     register_interrupt_handler(IRQ0, timer_callback);
     config_timer(freq);
 }
@@ -83,7 +87,7 @@ void init_timer(uint32_t freq) {
 void wait(uint32_t ms) {
 	prev = tick;
 	while(tick < ms*10 + prev) {
-        manage_sys();
+        asm volatile("hlt");
 	}
 }
 

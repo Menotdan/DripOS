@@ -98,7 +98,7 @@ uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *
 }
 
 void yield() {
-    timesliceleft = 1;
+    time_slice_left = 1;
     asm volatile("int $32"); // Changes task
 }
 
