@@ -57,5 +57,5 @@ void render8x8bitmap(unsigned char bitmap[8], uint8_t xpos, uint8_t ypos, color_
 }
 
 void update_display() {
-    memory_copy32((uint32_t *)current_screen.graphics_vid_buffer, (uint32_t*)vidmem, (current_screen.video_buffer_size/4));
+    memcpy32((uint32_t *)current_screen.graphics_vid_buffer, (uint32_t*)vidmem, (current_screen.video_buffer_size/4));
 }

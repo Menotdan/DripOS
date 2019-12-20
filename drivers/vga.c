@@ -675,7 +675,7 @@ assume: chain-4 addressing already off */
 /* write font 0 */
 	for(i = 0; i < 256; i++)
 	{
-		memory_copy((uint8_t *)(16384u * 0 + i * 32), buf, font_height);
+		memcpy((uint8_t *)(16384u * 0 + i * 32), buf, font_height);
 		buf += font_height;
 	}
 #if 0

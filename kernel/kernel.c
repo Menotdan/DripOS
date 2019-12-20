@@ -142,8 +142,6 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 		char_h = height/8;
 		current_screen.video_buffer_size = height*bpl;
 		current_screen.graphics_vid_buffer = kmalloc(current_screen.video_buffer_size);
-		current_screen.text_vid_buffer = kmalloc(current_screen.video_buffer_size);
-		current_screen.text_enabled = 1;
 	}
 
 	clear_screen();
@@ -151,7 +149,6 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	Log("Loaded memory", 1);
 	isr_install();
 	Log("ISR Enabled", 1);
-	fill_screen(255,0,0);
 	init_timer(1000);
 
 	Log("Timer enabled", 1);
@@ -192,10 +189,12 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 
 	free(testOnStart, 0x1000);
 	Log("Clearing screen...", 1);
+	update_display();
 	wait(100);
 	clear_screen();
 	prevtick = tick;
 	logoDraw();
+	update_display();
 	play_sound(300, 50);
 	play_sound(500, 50);
 	clear_screen();

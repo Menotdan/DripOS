@@ -1,7 +1,7 @@
 # Cleaned and fixed by StackOverflow user Michael Petch
-C_SOURCES = $(wildcard kernel/*.c drivers/*.c cpu/*.c libc/*.c fs/*.c)
+C_SOURCES = $(wildcard kernel/*.c drivers/*.c cpu/*.c libc/*.c fs/*.c builtinapps/*.c)
 NASM_SOURCES = $(wildcard kernel/*.asm drivers/*.asm cpu/*.asm libc/*.asm fs/*.asm)
-HEADERS = $(wildcard kernel/*.h drivers/*.h cpu/*.h libc/*.h fs/*.h)
+HEADERS = $(wildcard kernel/*.h drivers/*.h cpu/*.h libc/*.h fs/*.h builtinapps/*.h)
 BIG_S_SOURCES = $(wildcard kernel/*.S drivers/*.S cpu/*.S libc/*.S fs/*.S *.S)
 S_SOURCES = $(wildcard kernel/*.s drivers/*.s cpu/*.s libc/*.s fs/*.s *.s)
 # Nice syntax for file extension replacement

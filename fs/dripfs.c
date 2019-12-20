@@ -31,7 +31,7 @@ uint32_t dfs_table_scan(uint32_t first_sector, uint8_t dev, uint8_t controller) 
             sprint("\nTable scanner got: ");
             sprint_uint(s);
             *(uint32_t*)readBuffer = 0;
-            memory_copy(readBuffer, writeBuffer, 512);
+            memcpy(readBuffer, writeBuffer, 512);
             writeFromBuffer(s, 0);
             return s;
         }
@@ -54,7 +54,7 @@ dripfs_128_128_t dfs_table_find_128x128(dripfs_sector_table_t *start_table, uint
             break;
         } 
         readToBuffer(start_table->sectors[current_index]);
-        memory_copy(readBuffer, (uint8_t *)scan_table, 512);
+        memcpy(readBuffer, (uint8_t *)scan_table, 512);
         good = 0;
         for (current_index_2 = 0; current_index_2 < 128; current_index_2++) { // Loop to find an empty slot, if it finds nothing, it leaves the current_index variable set to 128
             if (scan_table->sectors[current_index_2] == 0) {
@@ -69,7 +69,7 @@ dripfs_128_128_t dfs_table_find_128x128(dripfs_sector_table_t *start_table, uint
     if (empty == 1) {
         uint32_t new_1 = dfs_table_scan(1, 0, 0);
         scan_table->sectors[current_index] = new_1;
-        memory_copy((uint8_t *)scan_table, readBuffer, 512);
+        memcpy((uint8_t *)scan_table, readBuffer, 512);
         writeFromBuffer(table_sector, 0);
     }
     current_index_2 = 0;
@@ -97,9 +97,9 @@ uint32_t dfs_table_128x128_add_new(uint32_t sector_to_write, dripfs_sector_table
     dripfs_sector_table_t *table = kmalloc(512);
 
     readToBuffer(start_table->sectors[to_write.index1]);
-    memory_copy(readBuffer, (uint8_t *)table, 512);
+    memcpy(readBuffer, (uint8_t *)table, 512);
     table->sectors[to_write.index2] = sector_to_write;
-    memory_copy((uint8_t *)table, writeBuffer, 512);
+    memcpy((uint8_t *)table, writeBuffer, 512);
     writeFromBuffer(start_table->sectors[to_write.index1], 0);
     free(table, 512);
     return 0;
@@ -135,25 +135,25 @@ dripfs_128_128_128_t dfs_table_find_128x128x128(dripfs_sector_table_t *start_tab
         uint32_t new_sector = dfs_table_scan(1, 0, 0);
         uint32_t old_sector = 0;
         readToBuffer(table_sector);
-        memory_copy(readBuffer, (uint8_t *)temp_table, 512);
+        memcpy(readBuffer, (uint8_t *)temp_table, 512);
         temp_table->sectors[index] = new_sector;
-        memory_copy((uint8_t *)temp_table, writeBuffer, 512);
+        memcpy((uint8_t *)temp_table, writeBuffer, 512);
         writeFromBuffer(table_sector, 0);
         /* repeat 1 */
         old_sector = new_sector;
         readToBuffer(new_sector);
-        memory_copy(readBuffer, (uint8_t *)temp_table, 512);
+        memcpy(readBuffer, (uint8_t *)temp_table, 512);
         new_sector = dfs_table_scan(1, 0, 0);
         temp_table->sectors[0] = new_sector;
-        memory_copy((uint8_t *)temp_table, writeBuffer, 512);
+        memcpy((uint8_t *)temp_table, writeBuffer, 512);
         writeFromBuffer(old_sector, 0);
         /* repeat 2 */
         old_sector = new_sector;
         readToBuffer(new_sector);
-        memory_copy(readBuffer, (uint8_t *)temp_table, 512);
+        memcpy(readBuffer, (uint8_t *)temp_table, 512);
         new_sector = dfs_table_scan(1, 0, 0);
         temp_table->sectors[0] = 0;
-        memory_copy((uint8_t *)temp_table, writeBuffer, 512);
+        memcpy((uint8_t *)temp_table, writeBuffer, 512);
         writeFromBuffer(old_sector, 0);
         // Return data
         ret.index1 = index;
@@ -184,7 +184,7 @@ void dfs_new_folder(char *name, uint32_t entry_sector, uint32_t table_sector, ui
     for (uint32_t s = 0; s < 449; s++) {
         dir->reserved[s] = '\0';
     }
-    memory_copy((uint8_t *)dir, writeBuffer, 512);
+    memcpy((uint8_t *)dir, writeBuffer, 512);
     sprint("\nEntry sector: ");
     sprint_uint(entry_sector);
     writeFromBuffer(entry_sector, 0);
@@ -192,7 +192,7 @@ void dfs_new_folder(char *name, uint32_t entry_sector, uint32_t table_sector, ui
     for (uint32_t i = 0; i<128; i++) {
         table->sectors[i] = 0;
     }
-    memory_copy((uint8_t *)table, writeBuffer, 512); // Copy table to buffer
+    memcpy((uint8_t *)table, writeBuffer, 512); // Copy table to buffer
     sprint("\nTable sector: ");
     sprint_uint(table_sector);
     writeFromBuffer(table_sector, 0);
@@ -212,13 +212,13 @@ void dfs_new_file(char *name, uint32_t entry_sector, uint32_t table_sector, uint
     dripfs_file_entry_t *dir = kmalloc(512); // Allocate memory
     dripfs_dir_entry_t *parent_folder = kmalloc(512);
     readToBuffer(parent_dir_sector); // Read the parent directory's entry sector
-    memory_copy(readBuffer, (uint8_t *)parent_folder, 512); // Copy it to the allocated memory
+    memcpy(readBuffer, (uint8_t *)parent_folder, 512); // Copy it to the allocated memory
     uint32_t file_table = parent_folder->file_table_sector; // Store the table sector in memory
     free(parent_folder, 512); // Free the allocated memory, as we no longer need it
     /* Now we do some table nonsense */
     dripfs_sector_table_t *parent_dir_table = kmalloc(512); // Allocate memory for the table
     readToBuffer(file_table);
-    memory_copy(readBuffer, (uint8_t *)parent_dir_table, 512);
+    memcpy(readBuffer, (uint8_t *)parent_dir_table, 512);
     dfs_table_128x128_add_new(entry_sector, parent_dir_table, file_table);
 
     dir->parent_dir_entry_sector = parent_dir_sector; // Where the parent directory lives
@@ -228,7 +228,7 @@ void dfs_new_file(char *name, uint32_t entry_sector, uint32_t table_sector, uint
     for (uint32_t s = 0; s < 449; s++) {
         dir->reserved[s] = '\0'; // Fill reserved
     }
-    memory_copy((uint8_t *)dir, writeBuffer, 512); // Copy the dir entry to write buffer
+    memcpy((uint8_t *)dir, writeBuffer, 512); // Copy the dir entry to write buffer
     sprint("\nEntry sector: ");
     sprint_uint(entry_sector);
     writeFromBuffer(entry_sector, 0); // Write
@@ -236,7 +236,7 @@ void dfs_new_file(char *name, uint32_t entry_sector, uint32_t table_sector, uint
     for (uint32_t i = 0; i<128; i++) { // Clear table
         table->sectors[i] = 0;
     }
-    memory_copy((uint8_t *)table, writeBuffer, 512); // Copy table to buffer
+    memcpy((uint8_t *)table, writeBuffer, 512); // Copy table to buffer
     sprint("\nTable sector: ");
     sprint_uint(table_sector);
     writeFromBuffer(table_sector, 0); // Write table to table sector
@@ -273,7 +273,7 @@ void dfs_write_file(dripfs_file_entry_t *file, uint8_t *data, uint32_t bytes, ui
         if (temp_table->sectors[0] == 0) { // Check if the first sector is 0, if it is, we can fill it with a new cell
             uint32_t test = dfs_table_scan(1, 0, 0);
             temp_table->sectors[0] = test; // Scan for a free table and assign the sector of that table to the first entry in the file's table
-            memory_copy(readBuffer, writeBuffer, 512); // Copy the modified data to the write buffer
+            memcpy(readBuffer, writeBuffer, 512); // Copy the modified data to the write buffer
             sprint("\nTable table sector: ");
             sprint_uint(file->sector_of_sector_table);
             writeFromBuffer(file->sector_of_sector_table, 0); // Write
@@ -281,7 +281,7 @@ void dfs_write_file(dripfs_file_entry_t *file, uint8_t *data, uint32_t bytes, ui
 
             // Repeat the process because DripFS is bad and uses 128*128*128 tables, which are sure to make it slow
             temp_table->sectors[0] = dfs_table_scan(1, 0, 0); // Scan for a free table and assign the sector of that table to the first entry in the file's table
-            memory_copy(readBuffer, writeBuffer, 512); // Copy the modified data to the write buffer
+            memcpy(readBuffer, writeBuffer, 512); // Copy the modified data to the write buffer
             sprint("\nTable table sector: ");
             sprint_uint(test);
             writeFromBuffer(test, 0); // Write
@@ -293,12 +293,12 @@ void dfs_write_file(dripfs_file_entry_t *file, uint8_t *data, uint32_t bytes, ui
                 temp_table->sectors[sec] = dfs_table_scan(1, 0, 0); // Fill the table with as many sectors as we need
             }
             temp_table = kmalloc(512); // Allocate space for a table independent of readBuffer
-            memory_copy(readBuffer, (uint8_t *)temp_table, 512); // Copy the readBuffer into temp_table
-            memory_copy((uint8_t *)temp_table, writeBuffer, 512); // Copy table into buffer to be written
+            memcpy(readBuffer, (uint8_t *)temp_table, 512); // Copy the readBuffer into temp_table
+            memcpy((uint8_t *)temp_table, writeBuffer, 512); // Copy table into buffer to be written
             writeFromBuffer(test, 0); // Write table
             uint8_t *data_temp = data; // Setup temp data buffer
             for (uint32_t sec = 0; sec<sectors_needed; sec++) {
-                memory_copy(data_temp, writeBuffer, 512); // Copy data
+                memcpy(data_temp, writeBuffer, 512); // Copy data
                 sprint("\nDrive sector: ");
                 sprint_uint(temp_table->sectors[sec]);
                 writeFromBuffer(temp_table->sectors[sec], 0); // Write the data to whatever sector is the table
@@ -343,7 +343,7 @@ void dfs_format(char *volume_name, uint8_t dev, uint8_t controller) {
         *drive_buffer = TABLE_CONSTANT;
         writeFromBuffer(i, 0);
     }
-    memory_copy((uint8_t *)boot_sect, writeBuffer, 512);
+    memcpy((uint8_t *)boot_sect, writeBuffer, 512);
     writeFromBuffer(0, 1);
     // Now to create the root directory
     uint32_t entrySector = dfs_table_scan(1, 0, 0); // Find the first fitting sector
@@ -358,7 +358,7 @@ void dfs_format(char *volume_name, uint8_t dev, uint8_t controller) {
     dfs_new_file("test.txt", 3, 4, 1, 0, 0);
     readToBuffer(3);
     dripfs_file_entry_t *read_entry = kmalloc(512);
-    memory_copy(readBuffer, (uint8_t *)read_entry, 512);
+    memcpy(readBuffer, (uint8_t *)read_entry, 512);
     sprint("\nData: ");
     sprint(read_entry->filename);
     sprint(" ");

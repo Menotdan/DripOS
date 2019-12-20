@@ -83,7 +83,7 @@ uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *
     tempregs.int_no = 1234;
     task->regs.esp -= sizeof(registers_t);
     uint8_t *stack_insert_buffer = get_pointer(task->regs.esp);
-    memory_copy((uint8_t *)&tempregs, stack_insert_buffer, sizeof(registers_t));
+    memcpy((uint8_t *)&tempregs, stack_insert_buffer, sizeof(registers_t));
     //breakA();
 
     next_temp = mainTask.next;

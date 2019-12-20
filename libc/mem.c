@@ -27,14 +27,14 @@ unsigned peekw(uint32_t seg, uint32_t offset) {
 }
 
 
-void memory_copy(uint8_t *source, uint8_t *dest, int nbytes) {
+void memcpy(uint8_t *source, uint8_t *dest, int nbytes) {
     int i;
     for (i = 0; i < nbytes; i++) {
         *(dest + i) = *(source + i);
     }
 }
 
-void memory_copy32(uint32_t *source, uint32_t *dest, int ndwords) {
+void memcpy32(uint32_t *source, uint32_t *dest, int ndwords) {
     int i;
     for (i = 0; i < ndwords; i++) {
         *(dest + i) = *(source + i);
