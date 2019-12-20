@@ -2,6 +2,7 @@
 #include "../libc/mem.h"
 #include "../drivers/vesa.h"
 #include "../drivers/ps2.h"
+#include "../drivers/sound.h"
 
 typedef struct segment
 {

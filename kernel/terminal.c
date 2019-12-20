@@ -170,7 +170,7 @@ void execute_command(char input[]) {
 		int_to_ascii(atoi(afterSpace(input)), test);
 		kprint(test);
 		uint32_t tone_freq = atoi(afterSpace(input));
-		play_sound(tone_freq, 100);
+		play_sound(tone_freq, 1000);
 	} else if (strcmp(input, "bgtask") == 0) {
 		//if (task == 0) {
 			Task *temp_task1 = kmalloc(sizeof(Task));
@@ -418,7 +418,7 @@ void execute_command(char input[]) {
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);
-		p_tone(100, 5);
+		play_sound(100, 200);
 	}
 	kprint("\n");
 	kprint("drip@DripOS> ");

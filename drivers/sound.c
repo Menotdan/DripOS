@@ -1,5 +1,4 @@
 #include "sound.h"
-//#include "../cpu/types.h"
 #include "../cpu/ports.h"
 #include "../cpu/timer.h"
 
@@ -38,7 +37,7 @@ void nosound() {
 
 void play_sound(uint32_t nFrequence, uint32_t ticks) {
     play(nFrequence);
-    wait(ticks);
+    sleep(ticks);
     nosound();
 }
 
