@@ -35,7 +35,6 @@ void play(uint32_t nFrequence) {
 }
 
 void nosound() {
-    kprint_uint(3);
     uint8_t tmp = port_byte_in(0x61) & 0xFC;
 
     port_byte_out(0x61, tmp);
