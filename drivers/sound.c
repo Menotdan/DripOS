@@ -35,6 +35,7 @@ void play(uint32_t nFrequence) {
 }
 
 void nosound() {
+    kprint_uint(3);
     uint8_t tmp = port_byte_in(0x61) & 0xFC;
 
     port_byte_out(0x61, tmp);
@@ -42,9 +43,9 @@ void nosound() {
 
 void play_sound(uint32_t nFrequence, uint32_t ticks) {
     play(nFrequence); // Set the PIT for the speaker to play the frequency requested
-    sound_on = 1; // Set sound_on to 1 so the handler knows to turn the sound off
     start_sound = tick; // Current timer tick
     len_sound = ticks; // Length
+    sound_on = 1; // Set sound_on to 1 so the handler knows to turn the sound off
 }
 
 void pgw() {

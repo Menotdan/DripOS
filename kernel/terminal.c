@@ -170,7 +170,7 @@ void execute_command(char input[]) {
 		int_to_ascii(atoi(afterSpace(input)), test);
 		kprint(test);
 		uint32_t tone_freq = atoi(afterSpace(input));
-		play_sound(tone_freq, 1000);
+		play_sound(tone_freq, 500);
 	} else if (strcmp(input, "bgtask") == 0) {
 		//if (task == 0) {
 			Task *temp_task1 = kmalloc(sizeof(Task));

@@ -41,10 +41,6 @@ static void timer_callback(registers_t *regs) {
         iterator = iterator->next;
     }
 
-    if (tick - (uint32_t)pSnd > (uint32_t)lSnd*100) {
-        nosound();
-    }
-
     running_task->ticks_cpu_time++;
     UNUSED(regs);
     if (time_slice_left == 0 && loaded == 1) {
@@ -94,4 +90,5 @@ void wait(uint32_t ms) {
 void sleep(uint32_t ms) {
     running_task->state = SLEEPING;
     running_task->waiting = ms + tick;
+    yield();
 }
