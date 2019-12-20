@@ -41,12 +41,12 @@ void memcpy32(uint32_t *source, uint32_t *dest, int ndwords) {
     }
 }
 
-void memory_set(uint8_t *dest, uint8_t val, uint32_t len) {
+void memset(uint8_t *dest, uint8_t val, uint32_t len) {
     uint8_t *temp = (uint8_t *)dest;
     for ( ; len != 0; len--) *temp++ = val;
 }
 
-void memory_set32(uint32_t *dest, uint32_t val, uint32_t len) {
+void memset32(uint32_t *dest, uint32_t val, uint32_t len) {
     uint32_t *temp = (uint32_t *)dest;
     for ( ; len != 0; len--) *temp++ = val;
 }
@@ -74,7 +74,7 @@ void set_addr(uint32_t addr, uint32_t memSize) {
     sprint_uint(memSize);
     sprint("\n");
     void * t = get_pointer(free_mem_addr);
-    memory_set32(t, 0, 8);
+    memset32(t, 0, 8);
 }
 
 /* Unrecursive function to find the best fitting block of mem to use */
@@ -160,7 +160,7 @@ uint32_t kmalloc_int(uint32_t size, int align) {
     memoryRemaining -= size;
     usedMem += size;
     
-    //memory_set((uint8_t *)ret, 0, size);
+    //memset((uint8_t *)ret, 0, size);
     sprint("\nReturning address: ");
     sprint_uint(ret);
     return ret;
@@ -182,7 +182,7 @@ void free(void * addr, uint32_t size) {
 
     if ((uint32_t)address + size == free_mem_addr) {
         /* Add new block to the chain */
-        memory_set(address, 0, size);
+        memset(address, 0, size);
         uint32_t lastAddr = *free_ptr;
         uint32_t lastSize = *free_ptr_offset;
         free_mem_addr -= size;
@@ -191,7 +191,7 @@ void free(void * addr, uint32_t size) {
         *free_ptr = lastAddr;
         *free_ptr_offset = lastSize;
     } else {
-        memory_set(address, 0, size);
+        memset(address, 0, size);
         *addr_base = curAddr;
         *addr_size = curSize;
         *free_ptr = (uint32_t)address;

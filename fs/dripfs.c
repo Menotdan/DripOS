@@ -353,7 +353,7 @@ void dfs_format(char *volume_name, uint8_t dev, uint8_t controller) {
     kprint_uint((tick-ticks_start)/100);
     kprint(" seconds");
     uint8_t *data = kmalloc(512);
-    memory_set(data, 0, 512);
+    memset(data, 0, 512);
     *data = 123;
     dfs_new_file("test.txt", 3, 4, 1, 0, 0);
     readToBuffer(3);
