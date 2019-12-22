@@ -15,6 +15,7 @@
 #include <serial.h>
 #include "../cpu/task.h"
 #include "../drivers/stdin.h"
+#include "../drivers/vesa.h"
 
 int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
@@ -385,29 +386,12 @@ void execute_command(char input[]) {
 			kprint("Secondary IDE, Slave Drive (Drive 4): Offline\n");
 		}
 	} else if (strcmp("fatTest", input) == 0) {
-		// dir_entry_t *new_file_created = kmalloc(sizeof(dir_entry_t));
-		// uint32_t *data_to_write = kmalloc(512);
-		// uint32_t *data_to_read = kmalloc(512);
-		// *data_to_write = 123456789;
-		// new_file("test", "txt", (uint32_t)(&new_file_created), 512, 1);
-		// write_data_to_entry(new_file_created, data_to_write, 512);
-		// read_data_from_entry(new_file_created, data_to_read);
-		// sprint("\nData read from ");
-		// kprint("Data read from ");
-		// char filename[13];
-		// fat_str(new_file_created->name, new_file_created->ext, filename);
-		// sprint(filename);
-		// sprint(": ");
-		// sprint_uint(*data_to_read);
-		// sprint("\n");
-		// kprint(filename);
-		// kprint(": ");
-		// kprint_uint(*data_to_read);
-		// kprint("\n");
-		// free(data_to_read, 512);
-		// free(data_to_write, 512);
-		// free(new_file_created, sizeof(dir_entry_t));
-		kprint("Big ded\n");
+		vesa_tty_t test = new_framebuffer((width/2), 0, (width/2), height);
+		vesa_tty_t temp = swap_display(test);
+		draw_pixel(8, 8, 255,255,255);
+		//kprint("Big ded\n");
+		update_display();
+		test = swap_display(temp);
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);

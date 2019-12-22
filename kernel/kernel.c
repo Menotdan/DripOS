@@ -124,6 +124,8 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 		sprint_uint(mbd->framebuffer_bpp);
 		sprint("\nBytes per pixel: ");
 		sprint_uint(mbd->framebuffer_bpp/8);
+		sprint("\nBytes per line: ");
+		sprint_uint(mbd->framebuffer_pitch);
 		sprint("\nLeftover: ");
 		sprint_uint(mbd->framebuffer_bpp%8);
 		bbp = mbd->framebuffer_bpp/8;
@@ -138,13 +140,15 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 		sprint_uint(width/8);
 		sprint("\nChar height: ");
 		sprint_uint(height/8);
-		char_w = width/8;
-		char_h = height/8;
-		current_screen.video_buffer_size = height*bpl;
-		current_screen.graphics_vid_buffer = kmalloc(current_screen.video_buffer_size);
+		current_screen = new_framebuffer(0, 0, width/2, height);
 	}
 
 	clear_screen();
+	draw_pixel(2,1,255,255,0);
+	draw_pixel(3,1,255,255,255);
+	draw_pixel(4,1,0,255,255);
+	update_display();
+	//wait(133);
 	// Initialize everything with a startup log
 	Log("Loaded memory", 1);
 	isr_install();
