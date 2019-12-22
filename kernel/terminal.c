@@ -386,12 +386,15 @@ void execute_command(char input[]) {
 			kprint("Secondary IDE, Slave Drive (Drive 4): Offline\n");
 		}
 	} else if (strcmp("fatTest", input) == 0) {
-		vesa_tty_t test = new_framebuffer((width/2), 0, (width/2), height);
+		vesa_tty_t test = new_framebuffer((width/2)+1, 0, (width/2), height);
 		vesa_tty_t temp = swap_display(test);
-		draw_pixel(8, 8, 255,255,255);
-		//kprint("Big ded\n");
-		update_display();
+		uint32_t cursor_off = get_cursor_offset();
+		set_cursor_offset(0);
+		kprint("Second framebuffer test\n");
 		test = swap_display(temp);
+		set_cursor_offset(cursor_off);
+		cleanup_framebuffer(test);
+		sleep(1234);
 	} else {
 		kprint("Unknown command: ");
 		kprint(input);

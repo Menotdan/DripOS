@@ -1,10 +1,12 @@
 #include "snake.h"
 
 void snake_main() {
-    get_scancode();
-    if (err != 1) {
+    while (1) {
+        get_scancode();
+        if (err != 1) {
 
-    } else {
-        err = 0;
+        } else {
+            err = 0;
+        }
     }
 }

@@ -29,6 +29,7 @@ typedef struct vesa_tty
 void update_display();
 void draw_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b);
 void fill_screen(uint8_t r, uint8_t g, uint8_t b);
+void cleanup_framebuffer(vesa_tty_t framebuffer);
 extern void render8x8bitmap(unsigned char bitmap[8], uint8_t xpos, uint8_t ypos, color_t bg, color_t fg);
 color_t color_from_rgb(uint8_t r, uint8_t g, uint8_t b);
 vesa_tty_t swap_display(vesa_tty_t new);

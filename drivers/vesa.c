@@ -21,6 +21,10 @@ vesa_tty_t new_framebuffer(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
     return ret;
 }
 
+void cleanup_framebuffer(vesa_tty_t framebuffer) {
+    free(framebuffer.graphics_vid_buffer, framebuffer.video_buffer_size);
+}
+
 color_t color_from_rgb(uint8_t r, uint8_t g, uint8_t b) {
     color_t ret;
     ret.red = r;
@@ -77,11 +81,7 @@ vesa_tty_t swap_display(vesa_tty_t new) {
 }
 
 void update_display() {
-    //uint32_t *vidmemcur = (uint32_t *)vidmem;
-    //vidmemcur += ((current_screen.y*bpl)/4)+current_screen.x;
-    //memcpy32((uint32_t *)current_screen.graphics_vid_buffer, (uint32_t*)vidmemcur, (current_screen.video_buffer_size/4));
-    
-    uint32_t *vidmemcur = (uint32_t *)(vidmem + (current_screen.x +
+    uint32_t *vidmemcur = (uint32_t *)(((uint32_t*)vidmem) + (current_screen.x +
     (current_screen.y * width))); // Video memory offset to draw the buffer at
     uint32_t *buffer_mem = (uint32_t *)current_screen.graphics_vid_buffer; // The buffer's memory to read from
 
