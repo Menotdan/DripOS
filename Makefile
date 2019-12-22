@@ -24,6 +24,9 @@ myos.iso: kernel.elf
 	cp kernel.elf isodir/boot/os-image.bin
 	cp grub.cfg isodir/boot/grub/grub.cfg
 	grub-mkrescue -o DripOS.iso isodir
+	rm -rf *.bin *.dis *.o os-image.bin *.elf
+	rm -rf kernel/*.o drivers/*.o boot/*.o cpu/*.o libc/*.o fs/*.o
+	rm -rf kernel/*.d drivers/*.d boot/*.d cpu/*.d libc/*.d fs/*.d
  
 # '--oformat binary' deletes all symbols as a collateral, so we don't need
 # to 'strip' them manually on this case
