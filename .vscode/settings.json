@@ -9,7 +9,8 @@
         "stdio.h": "c",
         "kernel.h": "c",
         "serial.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "math.h": "c"
     },
     "VSCodeCounter.showInStatusBar": true
 }

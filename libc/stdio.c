@@ -1,18 +1,29 @@
-#include "../drivers/screen.h"
-#include "../libc/stdio.h"
-#include "../kernel/kernel.h"
+/*
+    stdio.c
+    Copyright Menotdan 2018-2019
+
+    Standard Input/Output definitions
+
+    MIT License
+*/
+
+#include <stdio.h>
+
 int in = 0;
 char *keyinput;
-void printf(char *text) {
+int stdinpass = 0;
+
+// TODO: rework this so its not just a wrapper
+void printf(char* text) {
     kprint(text);
 }
 
-void stdin_call(char *text) {
+void stdin_call(char* text) {
     in = 1;
     keyinput = text;
 }
 
-char * scanf(char *message) {
+char* scanf(char* message) {
     kprint(message);
     stdinpass = 1;
     in = 0;

@@ -1,8 +1,17 @@
-#ifndef STDIO_H
-#define STDIO_H
+/*
+    stdio.h
+    Copyright Menotdan 2018-2019
+
+    Standard Input/Output definitions
+
+    MIT License
+*/
+
+#pragma once
+
 #include "../drivers/screen.h"
-#include "../cpu/ports.h"
-#include "../fs/hdd.h"
-#include "../fs/hddw.h"
-#include "../drivers/stdin.h"
-#endif
+#include "../kernel/kernel.h"
+
+void printf(char *text);
+void stdin_call(char *text);
+char* scanf(char *message);
