@@ -1,6 +1,6 @@
 #include "vesa.h"
 
-vesa_tty_t current_screen;
+vesa_buffer_t current_buffer;
 
 void vesa_init() {
 
@@ -8,8 +8,8 @@ void vesa_init() {
 
 /* Create a new framebuffer with an x and y position on the screen,
 and with a set width and height */
-vesa_tty_t new_framebuffer(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
-    vesa_tty_t ret;
+vesa_buffer_t new_framebuffer(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
+    vesa_buffer_t ret;
     ret.video_buffer_size = (w*h)*bbp;
     ret.graphics_vid_buffer = kmalloc(ret.video_buffer_size);
     ret.x = x;
@@ -21,7 +21,7 @@ vesa_tty_t new_framebuffer(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
     return ret;
 }
 
-void cleanup_framebuffer(vesa_tty_t framebuffer) {
+void cleanup_framebuffer(vesa_buffer_t framebuffer) {
     free(framebuffer.graphics_vid_buffer, framebuffer.video_buffer_size);
 }
 
@@ -34,8 +34,8 @@ color_t color_from_rgb(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 void draw_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b) {
-    uint32_t *vidmemcur = (uint32_t *)current_screen.graphics_vid_buffer;
-    uint32_t offset = ((y * current_screen.buffer_width) + x);
+    uint32_t *vidmemcur = (uint32_t *)current_buffer.graphics_vid_buffer;
+    uint32_t offset = ((y * current_buffer.buffer_width) + x);
     vidmemcur += offset;
     *vidmemcur = (r << (red_byte)) | (g << (green_byte)) | (b << (blue_byte));
     vidmemcur++;
@@ -43,8 +43,8 @@ void draw_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b) {
 
 void fill_screen(uint8_t r, uint8_t g, uint8_t b) {
     uint32_t color = (r << (red_byte)) | (g << (green_byte)) | (b << (blue_byte));
-    uint32_t *vidmemcur = (uint32_t *)(current_screen.graphics_vid_buffer);
-    for (uint32_t i = 0; i<(current_screen.buffer_height*current_screen.buffer_width); i++) {
+    uint32_t *vidmemcur = (uint32_t *)(current_buffer.graphics_vid_buffer);
+    for (uint32_t i = 0; i<(current_buffer.buffer_height*current_buffer.buffer_width); i++) {
         *(uint32_t *)vidmemcur = color;
         vidmemcur++;
     }
@@ -54,8 +54,8 @@ void render8x8bitmap(unsigned char bitmap[8], uint8_t xpos, uint8_t ypos, color_
     char current_map;
     uint32_t foreground_color = (fg.red << (red_byte)) | (fg.green << (green_byte)) | (fg.blue << (blue_byte));
     uint32_t background_color = (bg.red << (red_byte)) | (bg.green << (green_byte)) | (bg.blue << (blue_byte));;
-    uint32_t offset = ((ypos*8)*current_screen.buffer_width) + (xpos*8);
-    uint32_t *vidmemcur = (uint32_t *)current_screen.graphics_vid_buffer;
+    uint32_t offset = ((ypos*8)*current_buffer.buffer_width) + (xpos*8);
+    uint32_t *vidmemcur = (uint32_t *)current_buffer.graphics_vid_buffer;
     vidmemcur += offset;
     for (uint8_t y = 0; y<8; y++) {
         current_map = bitmap[y];
@@ -70,24 +70,24 @@ void render8x8bitmap(unsigned char bitmap[8], uint8_t xpos, uint8_t ypos, color_
             }
             vidmemcur++;
         }
-        vidmemcur += current_screen.buffer_width-8;
+        vidmemcur += current_buffer.buffer_width-8;
     }
 }
 
-vesa_tty_t swap_display(vesa_tty_t new) {
-    vesa_tty_t ret = current_screen;
-    current_screen = new;
+vesa_buffer_t swap_display(vesa_buffer_t new) {
+    vesa_buffer_t ret = current_buffer;
+    current_buffer = new;
     return ret;
 }
 
 void update_display() {
-    uint32_t *vidmemcur = (uint32_t *)(((uint32_t*)vidmem) + (current_screen.x +
-    (current_screen.y * width))); // Video memory offset to draw the buffer at
-    uint32_t *buffer_mem = (uint32_t *)current_screen.graphics_vid_buffer; // The buffer's memory to read from
+    uint32_t *vidmemcur = (uint32_t *)(((uint32_t*)vidmem) + (current_buffer.x +
+    (current_buffer.y * width))); // Video memory offset to draw the buffer at
+    uint32_t *buffer_mem = (uint32_t *)current_buffer.graphics_vid_buffer; // The buffer's memory to read from
 
-    for (uint32_t i = 0; i<current_screen.buffer_height; i++) { // Iterate over the whole buffer
-        memcpy32(buffer_mem, vidmemcur, current_screen.buffer_width); // Copy the current line to video memory
-        buffer_mem += current_screen.buffer_width; // Increment the buffer memory
+    for (uint32_t i = 0; i<current_buffer.buffer_height; i++) { // Iterate over the whole buffer
+        memcpy32(buffer_mem, vidmemcur, current_buffer.buffer_width); // Copy the current line to video memory
+        buffer_mem += current_buffer.buffer_width; // Increment the buffer memory
         vidmemcur += (width); // Increment the video memory
         // by the width of the video memory - the buffer's width to reset the drawing
         // to where the start of the buffer's space is 

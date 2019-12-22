@@ -44,7 +44,7 @@ typedef struct Task {
     uint8_t state; // The state the task is in
     uint32_t waiting; // If state is SLEEPING, this is the tick to restart the task, if the state is IRQ_WAIT, this is the IRQ that it is waiting for
     uint32_t cursor_pos;
-    vesa_tty_t screen;
+    vesa_buffer_t buffer;
     char name[21];
 } Task;
 

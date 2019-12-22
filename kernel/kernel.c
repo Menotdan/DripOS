@@ -140,7 +140,7 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 		sprint_uint(width/8);
 		sprint("\nChar height: ");
 		sprint_uint(height/8);
-		current_screen = new_framebuffer(0, 0, width/2, height);
+		current_buffer = new_framebuffer(0, 0, width/2, height);
 	}
 
 	clear_screen();

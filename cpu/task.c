@@ -61,7 +61,7 @@ uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *
     task->start_esp = (uint8_t *)task->regs.esp - 0x4000;
     task->regs.ebp = 0;
     task->cursor_pos = get_cursor_offset();
-    task->screen = current_screen;
+    task->buffer = current_buffer;
 
     strcpy((char *)&task->name, task_name);
 
@@ -225,6 +225,7 @@ void store_values(registers_t *r) {
     if (running_task->cursor_pos < CURSOR_MAX)  {
         running_task->cursor_pos = get_cursor_offset();
     }
+    running_task->buffer = current_buffer;
     pick_task();
     regs = &running_task->regs; // Get registers again
     call_counter = regs->esp;
@@ -245,6 +246,7 @@ void schedule_task(registers_t *r) {
     if (running_task->cursor_pos < CURSOR_MAX) {
         set_cursor_offset(running_task->cursor_pos);
     }
+    current_buffer = running_task->buffer;
 }
 
 void irq_schedule() {

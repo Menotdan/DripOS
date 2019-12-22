@@ -285,8 +285,8 @@ void kprint_backspace() {
  * Sets the video cursor to the returned offset
  */
 int print_char(char c, int col, int row, color_t fg, color_t bg) {
-    uint32_t MAX_COLS = current_screen.text_col;
-    uint32_t MAX_ROWS = current_screen.text_row;
+    uint32_t MAX_COLS = current_buffer.text_col;
+    uint32_t MAX_ROWS = current_buffer.text_row;
 
     if ((uint32_t)col >= MAX_COLS || (uint32_t)row >= MAX_ROWS) {
         return get_offset(col, row);
@@ -310,10 +310,10 @@ int print_char(char c, int col, int row, color_t fg, color_t bg) {
 
     /* Check if the offset is over screen size and scroll */
     if (offset >= MAX_ROWS * MAX_COLS * 2) {
-        uint32_t *vidmemcur = (uint32_t *)current_screen.graphics_vid_buffer + (8*current_screen.buffer_width);
-        uint32_t *vidmem_offset = (uint32_t *)current_screen.graphics_vid_buffer;
-        for (uint32_t y = 8; y<current_screen.buffer_height; y++) {
-            for (uint32_t x = 0; x<current_screen.buffer_width; x++) {
+        uint32_t *vidmemcur = (uint32_t *)current_buffer.graphics_vid_buffer + (8*current_buffer.buffer_width);
+        uint32_t *vidmem_offset = (uint32_t *)current_buffer.graphics_vid_buffer;
+        for (uint32_t y = 8; y<current_buffer.buffer_height; y++) {
+            for (uint32_t x = 0; x<current_buffer.buffer_width; x++) {
                 *vidmem_offset = *vidmemcur;
                 vidmemcur++;
                 vidmem_offset++;
@@ -344,14 +344,14 @@ void clear_screen() {
 
 
 int get_offset(int col, int row) { 
-    uint32_t MAX_COLS = current_screen.text_col;
+    uint32_t MAX_COLS = current_buffer.text_col;
     return 2 * (row * MAX_COLS + col);
 }
 int get_offset_row(int offset) {
-    uint32_t MAX_COLS = current_screen.text_col;
+    uint32_t MAX_COLS = current_buffer.text_col;
     return offset / (2 * MAX_COLS);
 }
 int get_offset_col(int offset) {
-    uint32_t MAX_COLS = current_screen.text_col;
+    uint32_t MAX_COLS = current_buffer.text_col;
     return (offset - (get_offset_row(offset)*2*MAX_COLS))/2;
 }

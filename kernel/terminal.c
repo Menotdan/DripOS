@@ -22,10 +22,10 @@ int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
 uint32_t task2 = 0;
 Task bg_task_timer;
-char *current_buffer;
-char *previous_buffer;
-uint32_t current_buffer_pos = 0;
-uint32_t previous_buffer_pos = 0;
+//char *current_buffer;
+//char *previous_buffer;
+//uint32_t current_buffer_pos = 0;
+//uint32_t previous_buffer_pos = 0;
 void bg_task() {
 	while (1)
 	{
@@ -390,8 +390,8 @@ void execute_command(char input[]) {
 			kprint("Secondary IDE, Slave Drive (Drive 4): Offline\n");
 		}
 	} else if (strcmp("fatTest", input) == 0) {
-		vesa_tty_t test = new_framebuffer((width/2)+1, 0, (width/2), height);
-		vesa_tty_t temp = swap_display(test);
+		vesa_buffer_t test = new_framebuffer((width/2)+1, 0, (width/2), height);
+		vesa_buffer_t temp = swap_display(test);
 		uint32_t cursor_off = get_cursor_offset();
 		set_cursor_offset(0);
 		kprint("Second framebuffer test\n");
@@ -615,9 +615,9 @@ void terminal_task() {
 }
 
 void init_terminal() {
-	sprint_uint(123456);
-	current_buffer = kmalloc(2000);
-	previous_buffer = kmalloc(2000);
+	//sprint_uint(123456);
+	//current_buffer = kmalloc(2000);
+	//previous_buffer = kmalloc(2000);
 	uint8_t terminal_pid = createTask(kmalloc(sizeof(Task)), terminal_task, "Terminal");
 	if (terminal_pid){};
 }
