@@ -3,6 +3,7 @@
 #include "../drivers/vesa.h"
 #include "../drivers/ps2.h"
 #include "../drivers/sound.h"
+#include "../drivers/stdin.h"
 
 typedef struct segment
 {
@@ -24,3 +25,5 @@ struct apple
     uint32_t x;
     uint32_t y;
 };
+
+void snake_main();

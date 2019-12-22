@@ -16,6 +16,7 @@
 #include "../cpu/task.h"
 #include "../drivers/stdin.h"
 #include "../drivers/vesa.h"
+#include "../builtinapps/snake.h"
 
 int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
@@ -156,7 +157,10 @@ void execute_command(char input[]) {
 		} else {
 			kprint(" seconds");
 		}
-  } else if (strcmp(input, "help") == 0) {
+	} else if (strcmp(input, "snake") == 0) {
+		createTask(kmalloc(sizeof(Task)), snake_main, "Snake game");
+		kprint("Snake started!");
+	} else if (strcmp(input, "help") == 0) {
 		kprint("Commands: ps, kill, uptime, scan, testDrive, fmem, help, shutdown, panic, print, clear, bgtask, bgoff, read, drives, select, testMem, free\n");
 	} else if (strcmp(input, "clear") == 0){
 		clear_screen();
