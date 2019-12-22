@@ -104,9 +104,9 @@ void execute_command(char input[]) {
 		uint32_t uptimeMinutes = 0;
 		uint32_t uptimeHours = 0;
 		uint32_t uptimeDays = 0;
-		while (tempTick >= 100)
+		while (tempTick >= 1000)
 		{
-			tempTick -= 100;
+			tempTick -= 1000;
 			uptimeSeconds += 1;
 		}
 
