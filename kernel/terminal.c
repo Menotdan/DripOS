@@ -17,6 +17,7 @@
 #include "../drivers/stdin.h"
 #include "../drivers/vesa.h"
 #include "../builtinapps/snake.h"
+#include <cpuid.h>
 
 int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
@@ -162,6 +163,10 @@ void execute_command(char input[]) {
 		kprint("Snake started!");
 	} else if (strcmp(input, "help") == 0) {
 		kprint("Commands: ps, kill, uptime, scan, testDrive, fmem, help, shutdown, panic, print, clear, bgtask, bgoff, read, drives, select, testMem, free\n");
+	} else if (strcmp(input, "cpu") == 0) {
+		char cpuid_output[4][4]; // Four uint8_ts
+		__get_cpuid(0, (unsigned int *)cpuid_output[0], (unsigned int *)cpuid_output[1], (unsigned int *)cpuid_output[2], (unsigned int *)cpuid_output[3]);
+		kprint((char *)cpuid_output);
 	} else if (strcmp(input, "clear") == 0){
 		clear_screen();
 	} else if (match("print", input) == -2) {

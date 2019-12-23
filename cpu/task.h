@@ -46,6 +46,8 @@ typedef struct Task {
     uint32_t cursor_pos;
     vesa_buffer_t buffer;
     char name[21];
+    char *scancode_buffer;
+    uint32_t slept_ticks;
 } Task;
 
 void initTasking();

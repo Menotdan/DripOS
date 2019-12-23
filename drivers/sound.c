@@ -58,9 +58,13 @@ void pgw() {
 void sound_handler() {
     while (1) {
         /* If the sound is done playing, stop it, otherwise switch tasks */
+        if (sound_on) {
+            sleep(len_sound);
+        }
         if ((tick - start_sound >= len_sound) && sound_on) {
             sound_on = 0;
             nosound();
+            yield();
         } else
         {
             yield();

@@ -202,7 +202,8 @@ void pick_task() {
     while (running_task->state != RUNNING) {
         running_task = running_task->next;
     }
-    if (running_task->pid == 0) {
+    if (running_task->pid == 0) { // Avoid Idle task
+        running_task = running_task->next;
         while (running_task->state != RUNNING) {
             running_task = running_task->next;
         }
