@@ -1,11 +1,21 @@
+/*
+    sysState.c
+    Copyright Menotdan 2018-2019
+
+    System State Manager
+
+    MIT License
+*/
+
 #include "sysState.h"
-#include "isr.h"
-#include "../libc/function.h"
-#include "../drivers/screen.h"
+
+#include <function.h>
+#include <drivers/screen.h>
+#include "../fs/hddw.h"
 #include "../kernel/kernel.h"
+#include "isr.h"
 #include "ports.h"
 #include "timer.h"
-#include "../fs/hddw.h"
 
 void sys_state_manager() {
     int state = getstate();

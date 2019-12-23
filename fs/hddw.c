@@ -1,10 +1,14 @@
-#include <stdbool.h>
-#include <libc.h>
-#include <time.h>
-#include <serial.h>
-#include <stdio.h>
-#include "hdd.h"
-#include "hddw.h"
+/*
+    hdwd.c
+    Copyright Menotdan 2018-2019
+
+    HDD I/O
+
+    MIT License
+*/
+
+#include <fs/hddw.h>
+
 uint8_t *readBuffer;
 uint8_t *writeBuffer;
 uint16_t readOut[256];

@@ -1,16 +1,13 @@
-// Drip FS
-// "Where slowness is not a bad thing"
-// A garbage FS written by Menotdan
+/*
+    dripfs.c
+    Copyright Menotdan 2018-2019
 
-#include "hddw.h"
-#include "hdd.h"
-#include "dripfs.h"
-#include "../libc/mem.h"
-#include "../include/debug.h"
-#include "../libc/string.h"
-#include "../drivers/screen.h"
-#include "../drivers/serial.h"
-#include "../cpu/timer.h"
+    A garbage FS written by Menotdan
+
+    MIT License
+*/
+
+#include <fs/dripfs.h>
 
 dripfs_boot_sect_t *boot_sect;
 

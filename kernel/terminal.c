@@ -1,22 +1,4 @@
-#include "kernel.h"
-#include "debug.h"
-#include "../libc/string.h"
-#include "../cpu/soundManager.h"
-#include "../cpu/timer.h"
-#include "../drivers/sound.h"
-#include "../drivers/time.h"
-#include "../drivers/screen.h"
-#include "../fs/hdd.h"
-#include "../fs/hddw.h"
-//#include "../fs/fat32.h"
-#include "../libc/stdio.h"
-#include <stdint.h>
-#include "../libc/mem.h"
-#include <serial.h>
-#include "../cpu/task.h"
-#include "../drivers/stdin.h"
-#include "../drivers/vesa.h"
-#include "../builtinapps/snake.h"
+#include <kernel/terminal.h>
 
 int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?

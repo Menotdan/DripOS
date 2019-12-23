@@ -1,6 +1,19 @@
-#ifndef INCLUDE_SERIAL_H
-#define INCLUDE_SERIAL_H
+/*
+    serial.h
+    Copyright Menotdan 2018-2019
 
-#include "../drivers/serial.h"
+    Write to serial ports
 
-#endif
+    MIT License
+*/
+
+#pragma once
+
+#include <stdio.h>
+#include <string.h>
+#include "../../cpu/timer.h"
+
+void init_serial();
+void write_serial(char a);
+void sprint(char* message);
+void sprintd(char* message);

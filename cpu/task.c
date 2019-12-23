@@ -1,3 +1,12 @@
+/*
+    task.c
+    Copyright Menotdan 2018-2019
+
+    Task manager
+
+    MIT License
+*/
+
 #include "task.h"
 
 Task *running_task;

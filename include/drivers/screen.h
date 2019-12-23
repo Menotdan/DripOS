@@ -1,9 +1,25 @@
-#ifndef SCREEN_H
-#define SCREEN_H
+/*
+    screen.h
+    Copyright Menotdan 2018-2019
 
-#include "../cpu/types.h"
-#include "../cpu/isr.h"
-#include "vesa.h"
+    Screen driver
+
+    MIT License
+*/
+
+#pragma once
+
+#include <stddef.h>
+#include <drivers/vesa.h>
+#include <drivers/colors.h>
+#include <mem.h>
+#include <string.h>
+#include <kernel/kernel.h>
+#include "../../cpu/types.h"
+#include "../../cpu/isr.h"
+#include "../../cpu/ports.h"
+#include "../../cpu/task.h"
+
 typedef unsigned char *va_list;
 /* width of stack == width of int */
 #define	STACKITEM	int
@@ -30,23 +46,21 @@ typedef unsigned char *va_list;
 #define REG_SCREEN_CTRL 0x3d4
 #define REG_SCREEN_DATA 0x3d5
 
+extern char* screen_chars;
+
 /* Public kernel API */
 void clear_screen();
-void kprint_at(char *message, int col, int row);
+void kprint_at(char* message, int col, int row);
 void kprint(char *message);
 void kprint_backspace();
-void kprint_at_blue(char *message, int col, int row);
-void kprint_no_move(char *message, int col, int row);
+void kprint_at_blue(char* message, int col, int row);
+void kprint_no_move(char* message, int col, int row);
 void logoDraw();
 int get_offset_col(int offset);
 int get_offset_row(int offset);
 int get_offset(int col, int row);
 void set_cursor_offset(int offset);
 int get_cursor_offset();
-void kprint_color(char *message, color_t fg, color_t bg);
-void crash_screen(registers_t *crash_state, char *msg, uint8_t printReg);
+void kprint_color(char* message, color_t fg, color_t bg);
+void crash_screen(registers_t* crash_state, char* msg, uint8_t printReg);
 void setup_screen();
-char *screen_chars;
-
-
-#endif

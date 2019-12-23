@@ -1,21 +1,28 @@
-#ifndef VESA_H
-#define VESA_H
-#include "../kernel/kernel.h"
-#include "font.h"
-#include <stdint.h>
-#include "../libc/mem.h"
-#include "../drivers/serial.h"
-#include "../libc/string.h"
+/*
+    vesa.h
+    Copyright Menotdan 2018-2019
 
-typedef struct color
-{
+    VESA screen control
+
+    MIT License
+*/
+
+#pragma once
+
+#include <stdint.h>
+#include <string.h>
+#include <mem.h>
+#include <drivers/font.h>
+#include <drivers/serial.h>
+#include <kernel/kernel.h>
+
+typedef struct color {
     uint8_t red;
     uint8_t green;
     uint8_t blue;
 } color_t;
 
-typedef struct vesa_tty
-{
+typedef struct vesa_tty {
     uint8_t *graphics_vid_buffer;
     uint32_t video_buffer_size;
     uint32_t x;
@@ -35,6 +42,4 @@ color_t color_from_rgb(uint8_t r, uint8_t g, uint8_t b);
 vesa_tty_t swap_display(vesa_tty_t new);
 vesa_tty_t new_framebuffer(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
 
-vesa_tty_t current_screen;
-
-#endif
+extern vesa_tty_t current_screen;

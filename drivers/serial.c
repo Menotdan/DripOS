@@ -1,7 +1,13 @@
-#include "serial.h"
-#include "../libc/string.h"
-#include "../cpu/timer.h"
-#include <stdio.h>
+/*
+    serial.h
+    Copyright Menotdan 2018-2019
+
+    Write to serial ports
+
+    MIT License
+*/
+
+#include <drivers/serial.h>
 
 #define PORT 0x3f8   /* COM1 */
  
@@ -26,14 +32,14 @@ void write_serial(char a) {
    port_byte_out(PORT,a);
 }
 
-void sprint(char *message) {
+void sprint(char* message) {
     int i = 0;
     while (message[i] != 0) {
         write_serial(message[i++]);
     }
 }
 
-void sprintd(char *message) {
+void sprintd(char* message) {
     sprint("[");
     sprint_uint(tick);
     sprint(" ticks] [DripOS]: ");

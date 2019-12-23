@@ -1,7 +1,13 @@
-#include "sound.h"
-#include "../cpu/ports.h"
-#include "../cpu/timer.h"
-#include "../cpu/task.h"
+/*
+    sound.c
+    Copyright Menotdan 2018-2019
+
+    Sound driver
+
+    MIT License
+*/
+
+#include <drivers/sound.h>
 
 uint32_t start_sound; // The start of a sound
 uint32_t len_sound; // Length of the sound

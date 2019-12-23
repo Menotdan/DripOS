@@ -1,17 +1,4 @@
 #include "timer.h"
-#include "isr.h"
-#include "ports.h"
-#include "../libc/function.h"
-#include "../drivers/screen.h"
-#include "sysState.h"
-#include "../drivers/keyboard.h"
-#include "../drivers/stdin.h"
-#include "../drivers/sound.h"
-#include "soundManager.h"
-#include "../libc/string.h"
-#include "../kernel/systemManager.h"
-#include "../kernel/kernel.h"
-#include "task.h"
 
 uint32_t tick = 0; //Ticks
 uint32_t prev = 0; //Previous ticks for wait() function

@@ -10,7 +10,18 @@
         "kernel.h": "c",
         "serial.h": "c",
         "stdint.h": "c",
-        "math.h": "c"
+        "math.h": "c",
+        "vesa.h": "c",
+        "keyboard.h": "c",
+        "colors.h": "c",
+        "mem.h": "c",
+        "debug.h": "c",
+        "stdin.h": "c",
+        "ports.h": "c",
+        "sysstate.h": "c",
+        "snake.h": "c",
+        "systemmanager.h": "c",
+        "font.h": "c"
     },
     "VSCodeCounter.showInStatusBar": true
 }

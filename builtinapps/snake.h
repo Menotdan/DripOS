@@ -1,12 +1,13 @@
-#include <stdint.h>
-#include "../libc/mem.h"
-#include "../drivers/vesa.h"
-#include "../drivers/ps2.h"
-#include "../drivers/sound.h"
-#include "../drivers/stdin.h"
+#pragma once
 
-typedef struct segment
-{
+#include <stdint.h>
+#include <mem.h>
+#include <drivers/vesa.h>
+#include <drivers/ps2.h>
+#include <drivers/sound.h>
+#include <drivers/stdin.h>
+
+typedef struct segment {
     struct segment *next;
     uint8_t next_dir;
     uint32_t x;
@@ -14,14 +15,12 @@ typedef struct segment
 } segment_t;
 
 
-struct snake
-{
+struct snake {
     uint32_t score;
     segment_t *head;
 };
 
-struct apple
-{
+struct apple {
     uint32_t x;
     uint32_t y;
 };

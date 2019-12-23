@@ -1,49 +1,14 @@
-#include <stdint.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <libc.h>
-#include <time.h>
-#include "../cpu/isr.h"
+/*
+    hdd.c
+    Copyright Menotdan 2018-2019
 
-#define IDE_MASTER 0
-#define IDE_SLAVE  1
+    HDD Setup
 
-#define IDE_DEFAULT_PRIMARY 0x1F0
-#define IDE_DEFAULT_SECONDARY 0x170
+    MIT License
+*/
 
-#define ATA_PORT_DATA 0x000
-#define ATA_PORT_ERROR 0x001
-#define ATA_PORT_FEATURES 0x001
-#define ATA_PORT_SCT_COUNT 0x002
-#define ATA_PORT_SCT_NUMBER 0x003
-#define ATA_PORT_CYL_LOW 0x004
-#define ATA_PORT_CYL_HIGH 0x005
-#define ATA_PORT_DRV 0x006
-#define ATA_PORT_STATUS 0x007
-#define ATA_PORT_COMMAND 0x007
-#define ATA_PORT_ALT_STATUS 0x206
-#define ATA_PORT_PRIMARY_DETECT 0x1F3
-#define ATA_PORT_PRIMARY_DRIVE_DETECT 0x1F6
-#define ATA_PORT_PRIMARY_STATUS 0x1F7
-#define ATA_PORT_SECONDARY_DETECT 0x173
-#define ATA_PORT_SECONDARY_DRIVE_DETECT 0x176
-#define ATA_PORT_SECONDARY_STATUS 0x177
+#include <fs/hdd.h>
 
-#define MAGIC_DETECT 0x88 // Detect controllers
-#define MASTER_DRIVE_DETECT 0xA0 // Master drive detection
-#define SLAVE_DRIVE_DETECT 0xB0 // Slave drive detection
-
-#define ATA_SR_BSY     0x80    // Busy
-#define ATA_SR_DRQ     0x08    // Data request ready
-#define ATA_SR_ERR     0x01    // Error
-
-#define ATA_READ 1
-#define ATA_WRITE 2
-
-#define ATA_PIO28 0
-#define ATA_PIO48 1
-
-#define CMD_GET_SECTORS 0xF8
 int ata_pio = 0;
 uint16_t ata_drive = MASTER_DRIVE;
 uint32_t ata_controler = PRIMARY_IDE;

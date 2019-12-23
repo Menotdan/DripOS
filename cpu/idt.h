@@ -1,10 +1,19 @@
-#ifndef IDT_H
-#define IDT_H
+/*
+    idt.h
+    Copyright Menotdan 2018-2019
+
+    Interrupts
+
+    MIT License
+*/
+
+#pragma once
 
 #include "types.h"
 
 /* Segment selectors */
 #define KERNEL_CS 0x08
+#define IDT_ENTRIES 256
 
 /* How every interrupt gate (handler) is defined */
 typedef struct {
@@ -27,13 +36,9 @@ typedef struct {
     uint32_t base;
 } __attribute__((packed)) idt_register_t;
 
-#define IDT_ENTRIES 256
 idt_gate_t idt[IDT_ENTRIES];
 idt_register_t idt_reg;
-
 
 /* Functions implemented in idt.c */
 void set_idt_gate(int n, uint32_t handler);
 void set_idt();
-
-#endif

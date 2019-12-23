@@ -1,21 +1,23 @@
-#include "keyboard.h"
-#include "../cpu/ports.h"
-#include "../cpu/isr.h"
-#include "screen.h"
-#include "../libc/string.h"
-#include "../libc/function.h"
-#include "../kernel/kernel.h"
-#include "stdin.h"
-#include <stdbool.h>
+/*
+    keyboard.c
+    Copyright Menotdan and cfenollosa 2018-2019
+
+    Keyboard driver
+
+    MIT License
+*/
+
+#include <drivers/keyboard.h>
+
 #include <stdint.h>
-
-#define BACKSPACE 0x0E
-#define ENTER 0x1C
-#define LSHIFT 0x2A
-#define RSHIFT 0x36
-#define KEYUPOFFSET 0x80
-
-#define SC_MAX 57
+#include <stdbool.h>
+#include <string.h>
+#include <function.h>
+#include <drivers/screen.h>
+#include <drivers/stdin.h>
+#include "../../kernel/kernel.h"
+#include "../../cpu/ports.h"
+#include "../../cpu/isr.h"
 
 
 // static void keyboard_callback(registers_t *regs) {

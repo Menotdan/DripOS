@@ -1,17 +1,18 @@
-#ifndef TYPES_H
-#define TYPES_H
+/*
+    types.h
+    Copyright Menotdan 2018-2019
+
+    Useful types
+
+    MIT License
+*/
+
+
+#pragma once
 
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef unsigned char  u8;
-typedef          int   s32;
-typedef          short s16;
-typedef          char s8;
-#define low_16(address) (uint16_t)((address) & 0xFFFF)
-#define high_16(address) (uint16_t)(((address) >> 16) & 0xFFFF)
-extern char _ctype[];
- 
 #define CT_UP	0x01	/* upper case */
 #define CT_LOW	0x02	/* lower case */
 #define CT_DIG	0x04	/* digit */
@@ -36,4 +37,13 @@ extern char _ctype[];
 #define toascii(c)	((unsigned)(c) & 0x7F)
 #define tolower(c)	(isupper(c) ? c + 'a' - 'A' : c)
 #define toupper(c)	(islower(c) ? c + 'A' - 'a' : c)
-#endif
+
+#define low_16(address) (uint16_t)((address) & 0xFFFF)
+#define high_16(address) (uint16_t)(((address) >> 16) & 0xFFFF)
+
+typedef unsigned char u8;
+typedef int s32;
+typedef short s16;
+typedef char s8;
+
+extern char _ctype[];

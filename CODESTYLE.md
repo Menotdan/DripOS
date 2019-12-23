@@ -47,7 +47,8 @@ Import statements should be grouped by where they're from. If you have 5 imports
 - `stdlib.h`, `stdio.h`, etc
 3. drivers
 4. fs
-5. cpu
+5. kernel
+6. cpu
 
 ## Header Files
 After the comment, the file should start with `#pragma once`. Do not use `#define` and `#ifndef`
@@ -56,11 +57,13 @@ After the comment, the file should start with `#pragma once`. Do not use `#defin
 1. Copyright Comment
 2. `#pragma once`
 3. Imports
-4. Structs
-5. Enums
-6. Exposed Variables
+4. Definitions
+5. Typedefs
+6. Structs
+7. Enums
+8. Exposed Variables
     - Any `extern` variables exposed from the source file
-7. Function Declarations
+9. Function Declarations
 
 ## Source Files
 After the comment, source files should always start with an import of its corresponding header file and a line of whitespace under it.

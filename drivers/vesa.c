@@ -1,4 +1,13 @@
-#include "vesa.h"
+/*
+    vesa.c
+    Copyright Menotdan 2018-2019
+
+    VESA screen control
+
+    MIT License
+*/
+
+#include <drivers/vesa.h>
 
 vesa_tty_t current_screen;
 

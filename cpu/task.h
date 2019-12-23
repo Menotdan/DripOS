@@ -1,19 +1,26 @@
-#include <stdint.h>
-#include "isr.h"
-#include "../drivers/vesa.h"
-#include "../libc/mem.h"
-#include "../drivers/screen.h"
-#include "../libc/string.h"
-#include "../kernel/kernel.h"
-#include "../kernel/terminal.h"
-#include "../cpu/isr.h"
-#include "../drivers/serial.h"
-#include "../drivers/sound.h"
-#include <debug.h>
-#include "timer.h"
+/*
+    task.h
+    Copyright Menotdan 2018-2019
 
-#ifndef TASK_H
-#define TASK_H
+    Task manager
+
+    MIT License
+*/
+
+#pragma once
+
+#include <stdint.h>
+#include <mem.h>
+#include <string.h>
+#include <drivers/vesa.h>
+#include <drivers/screen.h>
+#include <drivers/serial.h>
+#include <drivers/sound.h>
+#include <kernel/kernel.h>
+#include <kernel/terminal.h>
+#include <kernel/debug.h>
+#include "isr.h"
+#include "timer.h"
 
 /* Task states */
 #define RUNNING 0
@@ -29,6 +36,8 @@
 #define CURSOR_MAX 4000000000
 extern void initTasking();
  
+//typedef struct vesa_tty vesa_tty_t;
+
 typedef struct {
 // eax off   0    4    8    12   16   20   24   28   32   36      40
     uint32_t eax, ebx, ecx, edx, esi, edi, esp, ebp, eip, eflags, cr3;
@@ -48,6 +57,14 @@ typedef struct Task {
     char name[21];
 } Task;
 
+uint32_t call_counter;
+uint32_t oof;
+uint32_t eax;
+uint32_t eip;
+uint32_t esp;
+registers_t *temp_data1;
+Task mainTask;
+
 void initTasking();
 extern uint32_t createTask(Task *task, void (*main)(), char *task_name);
 extern int32_t kill_task(uint32_t pid); // 
@@ -58,11 +75,3 @@ extern void timer_switch_task(registers_t *from, Task *to);
 Task *running_task;
 void store_global(uint32_t f, registers_t *ok);
 void irq_schedule();
-uint32_t call_counter;
-uint32_t oof;
-uint32_t eax;
-uint32_t eip;
-uint32_t esp;
-registers_t *temp_data1;
-Task mainTask;
-#endif

@@ -9,8 +9,8 @@
 
 #pragma once
 
-#include "../drivers/screen.h"
-#include "../kernel/kernel.h"
+#include <drivers/screen.h>
+#include <kernel/kernel.h>
 
 void printf(char *text);
 void stdin_call(char *text);

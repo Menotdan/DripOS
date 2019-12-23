@@ -1,7 +1,22 @@
-#ifndef KERNEL_H
-#define KERNEL_H
+#pragma once
 
 #include <stdint.h>
+#include <stdio.h>
+#include <math.h>
+#include <string.h>
+#include <mem.h>
+#include <drivers/serial.h>
+#include <drivers/screen.h>
+#include <drivers/sound.h>
+#include <drivers/ps2.h>
+#include <drivers/vesa.h>
+#include <kernel/terminal.h>
+#include <kernel/debug.h>
+#include "../../multiboot.h"
+#include <fs/dripfs.h>
+#include "../cpu/isr.h"
+#include "../../cpu/timer.h"
+#include "../../cpu/task.h"
 
 void user_input(char input[]);
 int getstate();
@@ -30,5 +45,3 @@ uint8_t blue_byte;
 uint8_t green_byte;
 uint32_t char_w;
 uint32_t char_h;
-
-#endif

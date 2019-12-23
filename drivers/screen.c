@@ -1,13 +1,13 @@
-#include "screen.h"
-#include "../cpu/ports.h"
-#include "../cpu/types.h"
-#include <stddef.h>
-#include "../libc/mem.h"
-#include "colors.h"
-#include "../libc/string.h"
-#include "../cpu/isr.h"
-#include "../cpu/task.h"
-#include "../kernel/kernel.h"
+/*
+    screen.c
+    Copyright Menotdan 2018-2019
+
+    Screen driver
+
+    MIT License
+*/
+
+#include <drivers/screen.h>
 
 uint32_t screen_offset = 0;
 color_t white;

@@ -1,16 +1,26 @@
-#include <serial.h>
-#include <libc.h>
+/*
+    isr.c
+    Copyright Menotdan 2018-2019
+
+    Interrupts
+
+    MIT License
+*/
+
 #include "isr.h"
-#include "idt.h"
-#include "../drivers/screen.h"
-#include "../drivers/keyboard.h"
-#include "../libc/string.h"
-#include "timer.h"
-#include "ports.h"
+
+#include <libc.h>
+#include <debug.h>
+#include <string.h>
+#include <drivers/serial.h>
+#include <drivers/screen.h>
+#include <drivers/keyboard.h>
 #include "../fs/hdd.h"
 #include "../kernel/kernel.h"
+#include "idt.h"
+#include "timer.h"
+#include "ports.h"
 #include "task.h"
-#include <debug.h>
 
 isr_t interrupt_handlers[256];
 isr_t handler;

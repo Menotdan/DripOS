@@ -1,23 +1,7 @@
 //0xEFFFFF
 asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 
-#include "kernel.h"
-#include <stdio.h>
-#include <serial.h>
-#include <libc.h>
-#include "../multiboot.h"
-#include "../cpu/isr.h"
-#include "../drivers/screen.h"
-#include "../drivers/sound.h"
-#include "../libc/string.h"
-#include "../libc/mem.h"
-#include "../cpu/timer.h"
-#include "terminal.h"
-#include "debug.h"
-#include "../fs/dripfs.h"
-#include "../cpu/task.h"
-#include "../drivers/ps2.h"
-#include "../drivers/vesa.h"
+#include <kernel/kernel.h>
 
 //codes
 int prevtick = 0;

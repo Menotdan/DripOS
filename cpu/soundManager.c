@@ -1,6 +1,17 @@
+/*
+    soundManager.c
+    Copyright Menotdan 2018-2019
+
+    Sound Manager
+
+    MIT License
+*/
+
 #include "soundManager.h"
-#include "../drivers/sound.h"
+
 #include <stdint.h>
+#include <drivers/sound.h>
+
 
 bool sound_en = false;
 bool sound_dis = true;

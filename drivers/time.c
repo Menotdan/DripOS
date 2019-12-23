@@ -1,33 +1,45 @@
-#include "time.h"
- #include "../cpu/ports.h"
- int century_register;
- unsigned char second;
-unsigned char minute;
-unsigned char hour;
-unsigned char day;
-unsigned char month;
-unsigned int  year;
+/*
+    time.c
+    Copyright Menotdan 2018-2019
+
+    CMOS Time driver
+
+    MIT License
+*/
+
+#include <drivers/time.h>
+
+int32_t century_register;
+uint8_t second;
+uint8_t minute;
+uint8_t hour;
+uint8_t day;
+uint8_t month;
+uint32_t year;
+
 int get_update_in_progress_flag() {
 	port_byte_out(cmos_address, 0x0A);
 	return (port_byte_in(cmos_data) & 0x80);
 }
 
-unsigned char get_RTC_register(int reg) {
+uint8_t get_RTC_register(int reg) {
 	port_byte_out(cmos_address, reg);
 	return port_byte_in(cmos_data);
 }
 
 void read_rtc() {
-	unsigned char century;
-	unsigned char last_second;
-	unsigned char last_minute;
-	unsigned char last_hour;
-	unsigned char last_day;
-	unsigned char last_month;
-	unsigned char last_year;
-	unsigned char last_century;
-	unsigned char registerB;
+	uint8_t century;
+	uint8_t last_second;
+	uint8_t last_minute;
+	uint8_t last_hour;
+	uint8_t last_day;
+	uint8_t last_month;
+	uint8_t last_year;
+	uint8_t last_century;
+	uint8_t registerB;
+
  	while(get_update_in_progress_flag());
+
  	second = get_RTC_register(0x00);
 	minute = get_RTC_register(0x02);
 	hour = get_RTC_register(0x04);
@@ -35,6 +47,7 @@ void read_rtc() {
 	month = get_RTC_register(0x08);
 	year = get_RTC_register(0x09);
 	century = 0;
+
  	if(century_register != 0) {
 		century = get_RTC_register(century_register);
 	}

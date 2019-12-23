@@ -1,3 +1,12 @@
+/*
+    idt.c
+    Copyright Menotdan 2018-2019
+
+    Interrupts
+
+    MIT License
+*/
+
 #include "idt.h"
 //for update
 void set_idt_gate(int n, uint32_t handler) {

@@ -1,11 +1,20 @@
-#include "ps2.h"
+/*
+    ps2.c
+    Copyright Menotdan 2018-2019
+
+    Keypress Handler
+
+    MIT License
+*/
+
+#include <drivers/ps2.h>
 
 char scancode_buffer[2000];
 char scancode = 0;
 uint16_t buffer_index = 0;
 uint8_t err = 0;
 
-void mouse_handler(registers_t *r) {
+void mouse_handler(registers_t* r) {
     // TODO: Make mouse handler
     char mouse_data1 = port_byte_in(0x60);
     char mouse_data2 = port_byte_in(0x60); // X
@@ -19,7 +28,7 @@ void mouse_handler(registers_t *r) {
     UNUSED(mouse_data1);
 }
 
-void keyboard_handler(registers_t *r) {
+void keyboard_handler(registers_t* r) {
     /* Store scancode */
     char is_mouse = (port_byte_in(0x64) & 0x20) >> 5;
     if (is_mouse == 0) {

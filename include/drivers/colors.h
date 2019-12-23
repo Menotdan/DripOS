@@ -1,5 +1,22 @@
+/*
+    stdio.h
+    Copyright Menotdan 2018-2019
+
+    Standard Input/Output definitions
+
+    MIT License
+*/
+
+#pragma once
+
 #include <stdint.h>
-#ifndef COLORS_H
+
+#define WHITE_ON_BLACK 0x0f
+#define RED_ON_WHITE 0xf4
+#define BLUE_ON_BLACK 0x09
+#define WHITE_ON_WHITE 0xff
+#define CYAN_ON_CYAN 0x33
+#define BLACK_ON_BLACK 0x00
 
 enum vga_color {
     VGA_COLOR_BLACK = 0,
@@ -22,18 +39,6 @@ enum vga_color {
 
 uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg);
 
-inline uint16_t vga_entry(unsigned char c, uint8_t color)
-{
+inline uint16_t vga_entry(unsigned char c, uint8_t color) {
     return (uint16_t) c | ((uint16_t) color << 8u);
 }
-
-#define COLORS_H
-
-#define WHITE_ON_BLACK 0x0f
-#define RED_ON_WHITE 0xf4
-#define BLUE_ON_BLACK 0x09
-#define WHITE_ON_WHITE 0xff
-#define CYAN_ON_CYAN 0x33
-#define BLACK_ON_BLACK 0x00
-
-#endif

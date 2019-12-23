@@ -1,5 +1,13 @@
-#ifndef ISR_H
-#define ISR_H
+/*
+    isr.h
+    Copyright Menotdan 2018-2019
+
+    Interrupts
+
+    MIT License
+*/
+
+#pragma once
 
 #include "types.h"
 
@@ -89,5 +97,3 @@ typedef void (*isr_t)(registers_t*);
 void register_interrupt_handler(uint8_t n, isr_t handler);
 
 uint32_t *test;
-
-#endif

@@ -1,4 +1,4 @@
-#include <debug.h>
+#include <kernel/debug.h>
 
 void breakA() {
     // Debugger break 
