@@ -83,6 +83,9 @@ void isr_install() {
     set_idt_gate(45, (uint32_t)irq13);
     set_idt_gate(46, (uint32_t)irq14);
     set_idt_gate(47, (uint32_t)irq15);
+    
+    // Syscall handler
+    set_idt_gate(0x80, (uint32_t)sys);
 
     set_idt(); // Load with ASM
 }
@@ -148,7 +151,7 @@ void irq_handler(registers_t *r) {
     if (interrupt_handlers[r->int_no] != 0) {
         handler = interrupt_handlers[r->int_no];
         handler(r);
-        Task *iterator = (&mainTask)->next;
+        Task *iterator = (&main_task)->next;
         while (iterator->pid != 0) {
             /* Set all the tasks waiting for this IRQ to Running */
             if (iterator->state == IRQ_WAIT) {

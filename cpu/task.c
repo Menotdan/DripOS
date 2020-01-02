@@ -1,27 +1,39 @@
 #include "task.h"
 
 Task *running_task;
-Task mainTask;
-Task otherTask;
+Task main_task;
 Task kickstart;
 static Task temp;
 Task *next_temp;
+uint32_t old_stack_ptr;
 uint32_t pid_max = 0;
-registers_t *global_regs;
 uint32_t call_counter = 0;
 Registers *regs;
-registers_t *temp_data1;
-uint32_t oof = 0;
-uint32_t eax = 0;
-uint32_t eip = 0;
-uint32_t esp = 0;
-uint32_t just_started = 1;
+Task *focus_tasks;
+extern uint32_t suicide_stack;
 
 static void otherMain() {
     loaded = 1;
+    play_sound(300, 50);
+	play_sound(500, 50);
     while (1) {
         asm volatile("hlt");
     }
+}
+
+void set_focused_task(Task *new_focus) {
+    focus_tasks = new_focus;
+}
+
+Task *get_focused_task() {
+    return focus_tasks;
+}
+
+void new_stack(uint32_t address) {
+    asm __volatile__("xchg %%esp, %0\n\t"
+        : "=r"(old_stack_ptr)
+        : "0"(address)
+        );
 }
 
 void initTasking() {
@@ -29,18 +41,17 @@ void initTasking() {
     asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(temp.regs.cr3)::"%eax"); // No paging yet
     asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(temp.regs.eflags)::"%eax");
 
-    createTask(&mainTask, otherMain, "Idle task");
+    createTask(&main_task, otherMain, "Idle task");
     createTask(&kickstart, 0, "no");
     pid_max = 1;
-    mainTask.next = &mainTask;
-    kickstart.next = &mainTask;
-    mainTask.cursor_pos = CURSOR_MAX;
+    main_task.next = &main_task;
+    kickstart.next = &main_task;
+    main_task.cursor_pos = CURSOR_MAX;
     Task *temp = kmalloc(sizeof(Task));
-    createTask(temp, sound_handler, "Sound task");
+    //createTask(temp, task_cleaner, "Task handler");
     temp->cursor_pos = CURSOR_MAX;
 
     init_terminal();
-    global_regs = kmalloc(sizeof(registers_t));
     running_task = &kickstart;
     otherMain();
 }
@@ -59,6 +70,7 @@ uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *
     task->regs.cr3 = (uint32_t)temp.regs.cr3; // No paging yet
     task->regs.esp = ((uint32_t)kmalloc(0x4000) & (~0xf)) + 0x4000; // Allocate 16KB for the process stack
     task->start_esp = (uint8_t *)task->regs.esp - 0x4000;
+    task->scancode_buffer = kmalloc(512); // 512 chars for each task's keyboard buffer
     task->regs.ebp = 0;
     task->cursor_pos = get_cursor_offset();
     task->buffer = current_buffer;
@@ -86,9 +98,9 @@ uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *
     memcpy((uint8_t *)&tempregs, stack_insert_buffer, sizeof(registers_t));
     //breakA();
 
-    next_temp = mainTask.next;
+    next_temp = main_task.next;
     task->next = next_temp;
-    mainTask.next = task;
+    main_task.next = task;
     task->pid = pid_max;
     task->ticks_cpu_time = 0;
     task->state = RUNNING;
@@ -102,11 +114,33 @@ void yield() {
     asm volatile("int $32"); // Changes task
 }
 
+void schedule_task(registers_t *r) {
+    // Set values for context switch
+    regs = &running_task->regs;
+    r->eflags = regs->eflags | 0x200;
+    r->eax = regs->eax;
+    r->ebx = regs->ebx;
+    r->ecx = regs->ecx;
+    r->edx = regs->edx;
+    r->edi = regs->edi;
+    r->esi = regs->esi;
+    r->eip = regs->eip;
+    r->ebp = regs->ebp;
+    if (running_task->cursor_pos < CURSOR_MAX) {
+        set_cursor_offset(running_task->cursor_pos);
+    }
+    current_buffer = running_task->buffer;
+}
+
 int32_t kill_task(uint32_t pid) {
+    sprint("\nKilling task ");
+    sprint_uint(pid);
+    sprint("\nCurrent task: ");
+    sprint_uint(running_task->pid);
     if (pid == 0 || pid == 1) {
         return 2; // Permission denied
     }
-    Task *temp_kill = &mainTask;
+    Task *temp_kill = &main_task;
     Task *to_kill = 0;
     Task *prev_task;
     uint32_t loop = 0;
@@ -131,13 +165,13 @@ int32_t kill_task(uint32_t pid) {
     }
 
     free(to_kill->start_esp, 0x4000);
-
+    free(to_kill->scancode_buffer, 512);
     prev_task->next = temp_kill; // Remove killed task from the chain
     return 0; // Worked... hopefully lol
 }
 
 void print_tasks() {
-    Task *temp_list = &mainTask;
+    Task *temp_list = &main_task;
     uint32_t oof = 1;
     uint32_t loop = 0;
     while (1) {
@@ -159,41 +193,6 @@ void print_tasks() {
     }
 }
 
-void timer_switch_task(registers_t *from, Task *to) {
-    //free(test, 0x1000);
-    Registers *regs = &running_task->regs;
-    regs->eflags = from->eflags;
-    regs->eax = from->eax;
-    regs->ebx = from->ebx;
-    regs->ecx = from->ecx;
-    regs->edx = from->edx;
-    regs->edi = from->edi;
-    regs->esi = from->esi;
-    regs->eip = from->eip;
-    regs->esp = from->esp;
-    regs->ebp = from->ebp;
-    running_task = to;
-}
-
-void schedule(registers_t *from) {
-    Registers *regs = &running_task->regs; // Get registers
-    /* Set old registers */
-    regs->eflags = from->eflags;
-    regs->eax = from->eax;
-    regs->ebx = from->ebx;
-    regs->ecx = from->ecx;
-    regs->edx = from->edx;
-    regs->edi = from->edi;
-    regs->esi = from->esi;
-    regs->eip = from->eip;
-    regs->esp = from->esp;
-    regs->ebp = from->ebp;
-    // Select new running task
-    running_task = running_task->next;
-    while (running_task->state != RUNNING) {
-        running_task = running_task->next;
-    }
-}
 
 /* Task selector */
 void pick_task() {
@@ -230,97 +229,4 @@ void store_values(registers_t *r) {
     pick_task();
     regs = &running_task->regs; // Get registers again
     call_counter = regs->esp;
-}
-
-void schedule_task(registers_t *r) {
-    // Set values for context switch
-    regs = &running_task->regs;
-    r->eflags = regs->eflags | 0x200;
-    r->eax = regs->eax;
-    r->ebx = regs->ebx;
-    r->ecx = regs->ecx;
-    r->edx = regs->edx;
-    r->edi = regs->edi;
-    r->esi = regs->esi;
-    r->eip = regs->eip;
-    r->ebp = regs->ebp;
-    if (running_task->cursor_pos < CURSOR_MAX) {
-        set_cursor_offset(running_task->cursor_pos);
-    }
-    current_buffer = running_task->buffer;
-}
-
-void irq_schedule() {
-    regs = &running_task->regs; // Get registers
-    /* Set old registers */
-    regs->eflags = global_regs->eflags;
-    regs->eax = global_regs->eax;
-    regs->ebx = global_regs->ebx;
-    regs->ecx = global_regs->ecx;
-    regs->edx = global_regs->edx;
-    regs->edi = global_regs->edi;
-    regs->esi = global_regs->esi;
-    regs->eip = global_regs->eip;
-    regs->esp = global_regs->esp;
-    regs->ebp = global_regs->ebp;
-    // Select new running task
-    running_task = running_task->next;
-    while (running_task->state != RUNNING) {
-        running_task = running_task->next;
-    }
-    // Switch
-    //sprint_uint(3);
-    regs = &(running_task->regs);
-    sprint("\nFrom eip: ");
-    sprint_uint(global_regs->eip);
-    sprint("\nFrom esp: ");
-    sprint_uint(global_regs->esp);
-    sprint("\nRunning eip: ");
-    sprint_uint(running_task->regs.eip);
-    sprint("\nRunning esp: ");
-    sprint_uint(running_task->regs.esp);
-    oof = (uint32_t)&(running_task->regs);
-    sprint("\nOOF: ");
-    sprint_uint(oof);
-    switchTask();
-}
-void store_global(uint32_t f, registers_t *ok) {
-    sprint("\nEIP: ");
-    sprint_uint(ok->eip);
-    sprint("\nEAX: ");
-    sprint_uint(ok->eax);
-    sprint("\nEBX: ");
-    sprint_uint(ok->ebx);
-    sprint("\nEDX: ");
-    sprint_uint(ok->edx);
-    sprint("\nESP: ");
-    sprint_uint(ok->esp);
-    sprint("\nADDR: ");
-    sprint_uint((uint32_t)ok);
-    sprint("\nF: ");
-    sprint_uint((uint32_t)f);
-    
-    /* Set all 17 */
-    //global_regs->dr6 = f;
-    global_regs->cs = ok->cs;
-    global_regs->ds = ok->ds;
-    global_regs->ecx = ok->ecx;
-    global_regs->eax = ok->eax;
-    global_regs->ebx = ok->ebx;
-    global_regs->edx = ok->edx;
-    global_regs->esp = ok->esp;
-    global_regs->ebp = ok->ebp;
-    global_regs->eip = ok->eip;
-    global_regs->esi = ok->esi;
-    global_regs->eflags = ok->eflags;
-    global_regs->edi = ok->edi;
-    //global_regs->useresp = ok->useresp;
-    global_regs->err_code = ok->err_code;
-    //global_regs->ss = ok->ss;
-    global_regs->int_no = ok->int_no;
-    global_regs->dr6 = ok->dr6;
-}
-
-void print_stuff() {
-    sprint("\nMade it to the end... this is it I guess...");
 }

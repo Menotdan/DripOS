@@ -3,13 +3,11 @@
 #include "ports.h"
 #include "../libc/function.h"
 #include "../drivers/screen.h"
-#include "sysState.h"
 #include "../drivers/keyboard.h"
 #include "../drivers/stdin.h"
 #include "../drivers/sound.h"
 #include "soundManager.h"
 #include "../libc/string.h"
-#include "../kernel/systemManager.h"
 #include "../kernel/kernel.h"
 #include "task.h"
 
@@ -30,7 +28,7 @@ static void timer_callback(registers_t *regs) {
     }
 
     /* Unsleep sleeping processes */
-    Task *iterator = (&mainTask)->next;
+    Task *iterator = (&main_task)->next;
     while (iterator->pid != 0) {
         /* Set all tasks waiting for this tick to running */
         if (iterator->state == SLEEPING) {

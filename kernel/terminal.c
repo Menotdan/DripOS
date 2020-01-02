@@ -623,6 +623,8 @@ void init_terminal() {
 	//sprint_uint(123456);
 	//current_buffer = kmalloc(2000);
 	//previous_buffer = kmalloc(2000);
-	uint8_t terminal_pid = createTask(kmalloc(sizeof(Task)), terminal_task, "Terminal");
+	Task *term = kmalloc(sizeof(Task));
+	uint8_t terminal_pid = createTask(term, terminal_task, "Terminal");
+	set_focused_task(term);
 	if (terminal_pid){};
 }

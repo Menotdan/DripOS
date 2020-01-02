@@ -199,8 +199,6 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	prevtick = tick;
 	logoDraw();
 	update_display();
-	play_sound(300, 50);
-	play_sound(500, 50);
 	clear_screen();
 
 	kprint("DripOS 0.0020\n"); //Version

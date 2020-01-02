@@ -1,6 +1,7 @@
 ; Defined in isr.c
 [extern isr_handler]
 [extern irq_handler]
+[extern syscall_handle]
 [extern switch_task]
 [extern irq_schedule]
 [extern store_global]
@@ -66,6 +67,22 @@ testLabel:
     sti ; Set interrupt flag
     iret ; Ret
 
+syscall_handler:
+    ; 1. Save CPU state
+	pushad ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
+	mov ax, ds ; Lower 16-bits of eax = ds.
+	push eax ; save the data segment descriptor
+    mov eax, dr6
+    push eax
+	mov eax, esp
+
+    ; 2. Call C handler
+	call syscall_handle
+    add esp, 8
+	popad
+	add esp, 8 ; Cleans up the pushed error code and pushed ISR number
+	sti
+	iret ; pops 3 things at once: CS, EIP, EFLAGS
 
 return_stub:
 
@@ -126,6 +143,8 @@ global irq12
 global irq13
 global irq14
 global irq15
+; Syscall
+global sys
 
 ; 0: Divide By Zero Exception
 isr0:
@@ -442,3 +461,8 @@ irq15:
 	push byte 47
 	jmp irq_common_stub
 
+sys:
+	cli
+	push byte 0
+	push byte 0
+	jmp syscall_handler

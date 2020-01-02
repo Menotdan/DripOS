@@ -1,12 +1,12 @@
 #include "ps2.h"
+#include "../cpu/task.h"
 
-char scancode_buffer[2000];
-char scancode = 0;
 uint16_t buffer_index = 0;
 uint8_t err = 0;
 
 void mouse_handler(registers_t *r) {
     // TODO: Make mouse handler
+    sprint("\nPS/2: Got mouse");
     char mouse_data1 = port_byte_in(0x60);
     char mouse_data2 = port_byte_in(0x60); // X
     char mouse_data3 = port_byte_in(0x60); // Y
@@ -24,11 +24,11 @@ void keyboard_handler(registers_t *r) {
     char is_mouse = (port_byte_in(0x64) & 0x20) >> 5;
     if (is_mouse == 0) {
         char scan = port_byte_in(0x60);
-        if (scancode == 0) {
-            scancode = scan;
-        } else {
-            scancode_buffer[buffer_index] = scan;
-            buffer_index++;
+        sprint("\nPS/2: Got scancode: ");
+        sprint_uint(scan);
+        if (loaded) {
+            *(get_focused_task()->scancode_buffer + get_focused_task()->scancode_buffer_pos) = scan;
+            get_focused_task()->scancode_buffer_pos++;
         }
     } else {
         mouse_handler(r);
@@ -38,13 +38,10 @@ void keyboard_handler(registers_t *r) {
 
 char get_scancode() {
     char ret;
-    if (buffer_index > 0) {
-        ret = scancode_buffer[buffer_index-1];
-        scancode_buffer[buffer_index-1] = 0;
-        buffer_index--;
-    } else if (scancode != 0) {
-        ret = scancode;
-        scancode = 0;
+    if (running_task->scancode_buffer_pos > 0) {
+        ret = *(running_task->scancode_buffer + running_task->scancode_buffer_pos - 1);
+        *(running_task->scancode_buffer + running_task->scancode_buffer_pos - 1) = 0;
+        running_task->scancode_buffer_pos--;
     } else {
         err = 1;
         ret = 0;

@@ -47,6 +47,7 @@ typedef struct Task {
     vesa_buffer_t buffer;
     char name[21];
     char *scancode_buffer;
+    uint16_t scancode_buffer_pos;
     uint32_t slept_ticks;
 } Task;
 
@@ -55,8 +56,12 @@ extern uint32_t createTask(Task *task, void (*main)(), char *task_name);
 extern int32_t kill_task(uint32_t pid); // 
 extern void yield(); // Yield, will be optional
 extern void switchTask(); // The function which actually switches
-extern void print_tasks();
-extern void timer_switch_task(registers_t *from, Task *to);
+extern void print_tasks(); // Print all the tasks
+void pick_task(); // Pick a task to be scheduled
+void schedule_task(registers_t *r); // Load the task into a registers_t
+void set_focused_task(Task *new_focus);
+Task *get_focused_task();
+
 Task *running_task;
 void store_global(uint32_t f, registers_t *ok);
 void irq_schedule();
@@ -66,5 +71,5 @@ uint32_t eax;
 uint32_t eip;
 uint32_t esp;
 registers_t *temp_data1;
-Task mainTask;
+Task main_task;
 #endif

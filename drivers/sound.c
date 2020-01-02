@@ -45,6 +45,7 @@ void play_sound(uint32_t nFrequence, uint32_t ticks) {
     start_sound = tick; // Current timer tick
     len_sound = ticks; // Length
     sound_on = 1; // Set sound_on to 1 so the handler knows to turn the sound off
+    createTask(kmalloc(sizeof(Task)), sound_handler, "Sound stopper");
 }
 
 void pgw() {
@@ -64,10 +65,11 @@ void sound_handler() {
         if ((tick - start_sound >= len_sound) && sound_on) {
             sound_on = 0;
             nosound();
-            yield();
+            kill_task(running_task->pid);
+            
         } else
         {
-            yield();
+            sleep(10);
         }
         
     }
