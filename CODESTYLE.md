@@ -4,6 +4,10 @@ snake_case for implementation functions
 snake_case for interface functions, except where following libc
 
 # Code format
+1. East const
+2. Right pointers
+3. Include guards (using NAME_H format)
+
 ## C source files
 1. Includes
 2. Global variables (try to minimize)
@@ -16,3 +20,4 @@ snake_case for interface functions, except where following libc
 3. Exposed variables
 4. Exposed functions with return type of void
 5. Other exposed functions (Group by return type)
+6. Include argument names in function declaration
