@@ -132,6 +132,29 @@ void schedule_task(registers_t *r) {
     current_buffer = running_task->buffer;
 }
 
+void sprint_tasks() {
+    Task *temp_list = &main_task;
+    uint32_t oof = 1;
+    uint32_t loop = 0;
+    while (1) {
+        if (loop > pid_max) {
+            break;
+        }
+        if (temp_list->pid == 0 && oof != 1) {
+            break;
+        }
+        sprint("\n");
+        sprint_uint(temp_list->pid);
+        sprint("  ");
+        sprint_uint(temp_list->ticks_cpu_time);
+        sprint("  ");
+        sprint(temp_list->name);
+        temp_list = temp_list->next;
+        oof = 0;
+        loop++;
+    }
+}
+
 int32_t kill_task(uint32_t pid) {
     sprint("\nKilling task ");
     sprint_uint(pid);
@@ -169,8 +192,9 @@ int32_t kill_task(uint32_t pid) {
     }
     sprint("\nESP ok");
     free(to_kill->scancode_buffer, 512);
-    sprint("This ok");
+    sprint("\nThis ok");
     prev_task->next = temp_kill; // Remove killed task from the chain
+    sprint_tasks();
     return 0; // Worked... hopefully lol
 }
 
