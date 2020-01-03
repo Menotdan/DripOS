@@ -65,7 +65,10 @@ void sound_handler() {
         if ((tick - start_sound >= len_sound) && sound_on) {
             sound_on = 0;
             nosound();
-            kill_task(running_task->pid);
+            asm volatile("\
+                mov $0, %eax\n\
+                int $0x80");
+            sprint("\nThe interrupt returned to the wrong place...");
             
         } else
         {

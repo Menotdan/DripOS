@@ -58,7 +58,7 @@ irq_common_stub:
     call store_values ; Store current registers pointer to running_task
     mov esp, [call_counter] ; Change ESP
     mov eax, esp ; Set param
-    call schedule_task ; Pick next task and set it in r
+    call schedule_task ; Pick next task and set it in return
 testLabel:
     add esp, 8 ; DR6 and ss
 
@@ -78,6 +78,13 @@ syscall_handler:
 
     ; 2. Call C handler
 	call syscall_handle
+    mov ebx, [switch_task]
+    cmp ebx, 1
+    jne no_switch
+    mov esp, [call_counter] ; Change ESP
+    mov eax, esp ; Set param
+    call schedule_task ; Pick next task and set it in return
+no_switch:
     add esp, 8
 	popad
 	add esp, 8 ; Cleans up the pushed error code and pushed ISR number

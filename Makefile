@@ -58,7 +58,7 @@ debug: myos.iso
 cpu/switch.o: cpu/switch.s
 	${CC} -Werror -Wall -Wextra -Wpedantic -O${O_LEVEL} -g -MD -c $< -o $@
 %.o: %.c ${HEADERS}
-	${CC} -mregparm=3 -Iinclude -O${O_LEVEL} -g -Werror -Wall -Wextra -Wpedantic -fno-omit-frame-pointer -MD -c $< -o $@ -std=gnu11 -ffreestanding
+	${CC} -mregparm=3 -Iinclude -I. -O${O_LEVEL} -g -Werror -Wall -Wextra -Wpedantic -fno-omit-frame-pointer -MD -c $< -o $@ -std=gnu11 -ffreestanding
  
 %.o: %.s
 	${CC} -Werror -Wall -Wextra -Wpedantic -O${O_LEVEL} -g -MD -c $< -o $@
