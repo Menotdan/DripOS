@@ -92,11 +92,11 @@ void execute_command(char input[]) {
 	  	kprint("No!");
   } else if (strcmp(input, "free") == 0) {
         char temp[25];
-		int_to_ascii(memoryRemaining, temp);
+		int_to_ascii(memory_remaining, temp);
 		kprint("Memory available: ");
 		kprint(temp);
 		kprint(" bytes\n");
-		int_to_ascii(usedMem, temp);
+		int_to_ascii(used_mem, temp);
 		kprint("Memory used: ");
 		kprint(temp);
 		kprint(" bytes");
@@ -225,7 +225,7 @@ void execute_command(char input[]) {
 		sprintd("Test 2:");
 		sprint_uint(*test2);
 		char temp[25];
-		int_to_ascii(memoryRemaining, temp);
+		int_to_ascii(memory_remaining, temp);
 		sprint("\nMemory Remaining: ");
 		sprint(temp);
 		sprint(" bytes\n");
@@ -586,53 +586,56 @@ void terminal_task() {
 			shift = key_handler(scan, false, shift);
 			uint32_t cur_x = (uint32_t)get_offset_col(get_cursor_offset());
 			uint32_t cur_y = (uint32_t)get_offset_row(get_cursor_offset());
-			cur_x = (cur_x*8)+1;
-			cur_y = cur_y*8;
-			cur_y += 10;
-			under_cursor_new[0] = get_pixel(cur_x,cur_y);
-			draw_pixel(cur_x, cur_y, 255, 255, 255);
-			cur_x++;
-			under_cursor_new[1] = get_pixel(cur_x,cur_y);
-			draw_pixel(cur_x, cur_y, 255, 255, 255);
-			cur_x++;
-			under_cursor_new[2] = get_pixel(cur_x,cur_y);
-			draw_pixel(cur_x, cur_y, 255, 255, 255);
-			cur_x++;
-			under_cursor_new[3] = get_pixel(cur_x,cur_y);
-			draw_pixel(cur_x, cur_y, 255, 255, 255);
-			cur_x++;
-			under_cursor_new[4] = get_pixel(cur_x,cur_y);
-			draw_pixel(cur_x, cur_y, 255, 255, 255);
-			cur_x++;
-			under_cursor_new[5] = get_pixel(cur_x,cur_y);
-			draw_pixel(cur_x, cur_y, 255, 255, 255);
+			if ((uint32_t)get_cursor_offset() != prev_offset) {
+				sprint("\nMoving cursor");
+				cur_x = (cur_x*8)+1;
+				cur_y = cur_y*8;
+				cur_y += 10;
+				under_cursor_new[0] = get_pixel(cur_x,cur_y);
+				draw_pixel(cur_x, cur_y, 255, 255, 255);
+				cur_x++;
+				under_cursor_new[1] = get_pixel(cur_x,cur_y);
+				draw_pixel(cur_x, cur_y, 255, 255, 255);
+				cur_x++;
+				under_cursor_new[2] = get_pixel(cur_x,cur_y);
+				draw_pixel(cur_x, cur_y, 255, 255, 255);
+				cur_x++;
+				under_cursor_new[3] = get_pixel(cur_x,cur_y);
+				draw_pixel(cur_x, cur_y, 255, 255, 255);
+				cur_x++;
+				under_cursor_new[4] = get_pixel(cur_x,cur_y);
+				draw_pixel(cur_x, cur_y, 255, 255, 255);
+				cur_x++;
+				under_cursor_new[5] = get_pixel(cur_x,cur_y);
+				draw_pixel(cur_x, cur_y, 255, 255, 255);
 
-			cur_x = (uint32_t)get_offset_col(prev_offset);
-			cur_y = (uint32_t)get_offset_row(prev_offset);
-			cur_x = (cur_x*8)+1;
-			cur_y = cur_y*8;
-			cur_y += 10;
-			draw_pixel(cur_x, cur_y, under_cursor[0].red, under_cursor[0].green, under_cursor[0].blue);
-			cur_x++;
-			draw_pixel(cur_x, cur_y, under_cursor[1].red, under_cursor[1].green, under_cursor[1].blue);
-			cur_x++;
-			draw_pixel(cur_x, cur_y, under_cursor[2].red, under_cursor[2].green, under_cursor[2].blue);
-			cur_x++;
-			draw_pixel(cur_x, cur_y, under_cursor[3].red, under_cursor[3].green, under_cursor[3].blue);
-			cur_x++;
-			draw_pixel(cur_x, cur_y, under_cursor[4].red, under_cursor[4].green, under_cursor[4].blue);
-			cur_x++;
-			draw_pixel(cur_x, cur_y, under_cursor[5].red, under_cursor[5].green, under_cursor[5].blue);
+				cur_x = (uint32_t)get_offset_col(prev_offset);
+				cur_y = (uint32_t)get_offset_row(prev_offset);
+				cur_x = (cur_x*8)+1;
+				cur_y = cur_y*8;
+				cur_y += 10;
+				draw_pixel(cur_x, cur_y, under_cursor[0].red, under_cursor[0].green, under_cursor[0].blue);
+				cur_x++;
+				draw_pixel(cur_x, cur_y, under_cursor[1].red, under_cursor[1].green, under_cursor[1].blue);
+				cur_x++;
+				draw_pixel(cur_x, cur_y, under_cursor[2].red, under_cursor[2].green, under_cursor[2].blue);
+				cur_x++;
+				draw_pixel(cur_x, cur_y, under_cursor[3].red, under_cursor[3].green, under_cursor[3].blue);
+				cur_x++;
+				draw_pixel(cur_x, cur_y, under_cursor[4].red, under_cursor[4].green, under_cursor[4].blue);
+				cur_x++;
+				draw_pixel(cur_x, cur_y, under_cursor[5].red, under_cursor[5].green, under_cursor[5].blue);
 
-			update_display();
+				update_display();
 
-			under_cursor[0] = under_cursor_new[0];
-			under_cursor[1] = under_cursor_new[1];
-			under_cursor[2] = under_cursor_new[2];
-			under_cursor[3] = under_cursor_new[3];
-			under_cursor[4] = under_cursor_new[4];
-			under_cursor[5] = under_cursor_new[5];
-			prev_offset = (uint32_t)get_cursor_offset();
+				under_cursor[0] = under_cursor_new[0];
+				under_cursor[1] = under_cursor_new[1];
+				under_cursor[2] = under_cursor_new[2];
+				under_cursor[3] = under_cursor_new[3];
+				under_cursor[4] = under_cursor_new[4];
+				under_cursor[5] = under_cursor_new[5];
+				prev_offset = (uint32_t)get_cursor_offset();
+			}
 		}
 	}
 }

@@ -3,15 +3,14 @@
 [extern irq_handler]
 [extern syscall_handle]
 [extern switch_task]
-[extern irq_schedule]
-[extern store_global]
-[extern call_counter]
-[extern temp_data1]
+[extern global_esp]
+[extern global_esp_old]
 [extern store_values]
 [extern schedule_task]
-[extern print_stuff]
 [extern breakA]
-[extern sse_data]
+[extern free]
+[extern global_old_task]
+[extern task_size]
 ; Common ISR code
 isr_common_stub:
     ; 1. Save CPU state
@@ -58,7 +57,7 @@ irq_common_stub:
     mov eax, esp ; Safety, irq_handler probably changed eax
     cld
     call store_values ; Store current registers pointer to running_task
-    mov esp, [call_counter] ; Change ESP
+    mov esp, [global_esp] ; Change ESP
     mov eax, esp ; Set param
     cld
     call schedule_task ; Pick next task and set it in return
@@ -85,8 +84,15 @@ syscall_handler:
     mov ebx, [switch_task]
     cmp ebx, 1
     jne no_switch
-    mov esp, [call_counter] ; Change ESP
-    mov eax, esp ; Set param
+    mov esp, [global_esp] ; Change ESP
+    ; TODO: call free on the old ESP
+    mov eax, [global_esp_old] ; Get the ESP of the old task
+    mov edx, 0x4000 ; Size of the stack
+    call free ; Free the memory
+    mov eax, global_old_task
+    mov edx, [task_size]
+    call free
+    mov eax, esp ; Set param to the current stack frame
     call schedule_task ; Pick next task and set it in return
 no_switch:
     add esp, 8

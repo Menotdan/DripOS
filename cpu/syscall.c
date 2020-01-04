@@ -11,9 +11,11 @@ void syscall_handle(registers_t *r) {
         /* Exit syscall */
         kill_task(running_task->pid); // TODO: Prevent anyone else from getting the
         // stack memory, so that it can be safely discarded when we are done
+        global_esp_old = (uint32_t)running_task->start_esp;
+        global_old_task = running_task;
         pick_task();
         // We can now discard the stack memory
-        call_counter = running_task->regs.esp;
+        global_esp = running_task->regs.esp;
         switch_task = 1;
         
         return; // bye bye

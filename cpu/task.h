@@ -1,3 +1,5 @@
+#ifndef TASK_H
+#define TASK_H
 #include <stdint.h>
 #include "isr.h"
 #include "../drivers/vesa.h"
@@ -11,9 +13,6 @@
 #include "../drivers/sound.h"
 #include <debug.h>
 #include "timer.h"
-
-#ifndef TASK_H
-#define TASK_H
 
 /* Task states */
 #define RUNNING 0
@@ -49,6 +48,7 @@ typedef struct Task {
     char *scancode_buffer;
     uint16_t scancode_buffer_pos;
     uint32_t slept_ticks;
+    uint32_t since_last_task;
 } Task;
 
 void initTasking();
@@ -64,9 +64,12 @@ Task *get_focused_task();
 Task *get_task_from_pid(uint32_t pid);
 
 Task *running_task;
+Task *global_old_task;
 void store_global(uint32_t f, registers_t *ok);
 void irq_schedule();
-uint32_t call_counter;
+uint32_t global_esp;
+uint32_t global_esp_old;
+extern uint32_t task_size;
 uint32_t oof;
 uint32_t eax;
 uint32_t eip;

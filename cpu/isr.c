@@ -131,7 +131,7 @@ char *exception_messages[] = {
 
 void isr_handler(registers_t *r) {
     sprint("\nCalls to switch: ");
-    sprint_uint(call_counter);
+    sprint_uint(global_esp);
     crash_screen(r, exception_messages[r->int_no], 1);
     while (1);
 }

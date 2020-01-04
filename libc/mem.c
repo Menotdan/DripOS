@@ -4,6 +4,19 @@
 #include <serial.h>
 #include "mem.h"
 
+uint8_t get_bit(uint8_t input, uint8_t bit) {
+    return ((input >> bit) & 1);
+}
+
+void set_bit(uint8_t *input, uint8_t bit, uint8_t state) {
+    if (state == 0) {
+        *input &= ~(1 << bit);
+    } else if (state == 1)  {
+        *input = (*input | (1 << bit));
+    }
+    
+}
+
 void *get_pointer(uint32_t addr) {
   volatile uintptr_t iptr = addr;
   unsigned int *ptr = (unsigned int*)iptr;
@@ -57,15 +70,17 @@ void memset32(uint32_t *dest, uint32_t val, uint32_t len) {
 uint32_t new_addr = 0;
 uint32_t prev_addr = 0;
 uint32_t mem_size = 0;
+uint32_t bitmap_size = 0;
+uint8_t *bitmap = 0;
 uint32_t free_mem_addr = 0;
 //volatile uintptr_t iptr;
-uint32_t memoryRemaining = 0;
-uint32_t usedMem = 0;
+uint32_t memory_remaining = 0;
+uint32_t used_mem = 0;
 uint32_t MAX = 0;
 uint32_t MIN = 0;
 void set_addr(uint32_t addr, uint32_t memSize) {
     free_mem_addr = addr;
-    memoryRemaining = memSize;
+    memory_remaining = memSize;
     MAX = mem_size + addr;
     MIN = free_mem_addr;
     sprint("\n Setting memory variables... \n  ");
@@ -73,6 +88,16 @@ void set_addr(uint32_t addr, uint32_t memSize) {
     sprint("\n   ");
     sprint_uint(memSize);
     sprint("\n");
+    sprint("\nSetting up memory bitmap...");
+    bitmap = (uint8_t *)free_mem_addr;
+    bitmap_size = (memSize / 0x1000) / 8;
+    sprint("\nNumber of bytes needed for bitmap: ");
+    sprint_uint(bitmap_size);
+    sprint("\nBitmap address: ");
+    sprint_uint((uint32_t)bitmap);
+    memset(bitmap, 0, bitmap_size);
+    free_mem_addr += bitmap_size;
+    memory_remaining -= bitmap_size;
     void * t = get_pointer(free_mem_addr);
     memset32(t, 0, 8);
 }
@@ -157,8 +182,8 @@ uint32_t kmalloc_int(uint32_t size, int align) {
         *f3 = (uint32_t)f1;
         *f4 = 1;
     }
-    memoryRemaining -= size;
-    usedMem += size;
+    memory_remaining -= size;
+    used_mem += size;
     
     //memset((uint8_t *)ret, 0, size);
     sprint("\nReturning address: ");
@@ -172,6 +197,8 @@ void * kmalloc(uint32_t size) {
 }
 
 void free(void * addr, uint32_t size) {
+    sprint("\nFreeing address: ");
+    sprint_uint((uint32_t)addr);
     void *address = get_pointer((uint32_t)addr);
     uint32_t *free_ptr = get_pointer(free_mem_addr);
     uint32_t *free_ptr_offset = get_pointer(free_mem_addr + 4);
@@ -198,7 +225,7 @@ void free(void * addr, uint32_t size) {
         *free_ptr_offset = size;
     }
 
-    memoryRemaining += size;
-    usedMem -= size;
+    memory_remaining += size;
+    used_mem -= size;
 
 }

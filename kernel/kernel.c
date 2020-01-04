@@ -105,6 +105,7 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 			}
         }
 		set_addr(memAddr, largestUseableMem);
+		
     }
 	setup_screen();
 	/* VESA SET? */
@@ -203,7 +204,7 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	kprint("Type help for commands\nType shutdown to shutdown\n\n");
 	kprint("Memory available: ");
 	char test[25];
-	int_to_ascii(memoryRemaining, test);
+	int_to_ascii(memory_remaining, test);
 	kprint(test);
 	kprint(" bytes\n");
 	kprint("drip@DripOS> ");

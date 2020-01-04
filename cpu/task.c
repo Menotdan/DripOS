@@ -7,7 +7,10 @@ static Task temp;
 Task *next_temp;
 uint32_t old_stack_ptr;
 uint32_t pid_max = 0;
-uint32_t call_counter = 0;
+uint32_t global_esp = 0;
+uint32_t global_esp_old = 0;
+uint32_t task_size = sizeof(Task);
+Task *global_old_task;
 Registers *regs;
 Task *focus_tasks;
 extern uint32_t suicide_stack;
@@ -88,6 +91,7 @@ uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *
     task->regs.ebp = 0;
     task->cursor_pos = get_cursor_offset();
     task->buffer = current_buffer;
+    
 
     strcpy((char *)&task->name, task_name);
 
@@ -120,6 +124,13 @@ uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *
     task->state = RUNNING;
     task->priority = NORMAL;
     pid_max++;
+    Task *iterator = (&main_task)->next;
+    while (iterator->pid != 0) {
+        iterator->since_last_task = 0;
+        iterator = iterator->next;
+    }
+    iterator->since_last_task = 0;
+
     return task->pid;
 }
 
@@ -231,16 +242,19 @@ void print_tasks() {
 /* Task selector */
 void pick_task() {
     // Select new running task
-    running_task = running_task->next;
-    while (running_task->state != RUNNING) {
-        running_task = running_task->next;
-    }
-    if (running_task->pid == 0) { // Avoid Idle task
-        running_task = running_task->next;
-        while (running_task->state != RUNNING) {
-            running_task = running_task->next;
+    uint32_t lowest_time = 0xffffffff;
+    Task *lowest_time_task = (&main_task);
+    Task *temp_iterator = (&main_task)->next;
+
+    while (temp_iterator->pid != 0) {
+        if ((temp_iterator->since_last_task < lowest_time) && temp_iterator->state == RUNNING) {
+            lowest_time = temp_iterator->since_last_task;
+            lowest_time_task = temp_iterator;
         }
+        temp_iterator = temp_iterator->next;
     }
+    running_task = lowest_time_task;
+    running_task->since_last_task += 1; // Times selected since last task started
 }
 
 void store_values(registers_t *r) {
@@ -262,5 +276,5 @@ void store_values(registers_t *r) {
     running_task->buffer = current_buffer;
     pick_task();
     regs = &running_task->regs; // Get registers again
-    call_counter = regs->esp;
+    global_esp = regs->esp;
 }

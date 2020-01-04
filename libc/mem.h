@@ -18,8 +18,8 @@ void * kmalloc(uint32_t size);
 
 /* Setup memory address */
 void set_addr(uint32_t addr, uint32_t memSize);
-uint32_t memoryRemaining;
-uint32_t usedMem;
+uint32_t memory_remaining;
+uint32_t used_mem;
 
 /* Free some memory */
 void free(void * address, uint32_t size);
