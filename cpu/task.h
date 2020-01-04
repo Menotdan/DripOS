@@ -61,6 +61,7 @@ void pick_task(); // Pick a task to be scheduled
 void schedule_task(registers_t *r); // Load the task into a registers_t
 void set_focused_task(Task *new_focus);
 Task *get_focused_task();
+Task *get_task_from_pid(uint32_t pid);
 
 Task *running_task;
 void store_global(uint32_t f, registers_t *ok);

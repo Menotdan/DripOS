@@ -9,12 +9,9 @@ void syscall_handle(registers_t *r) {
     sprint_uint(al);
     if (al == 0) {
         /* Exit syscall */
-        sprint("\nexit syscall");
         kill_task(running_task->pid); // TODO: Prevent anyone else from getting the
         // stack memory, so that it can be safely discarded when we are done
-        sprint("\nTask ded");
         pick_task();
-        sprint("\nPicked task");
         // We can now discard the stack memory
         call_counter = running_task->regs.esp;
         switch_task = 1;

@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "sound.h"
 #include "../cpu/ports.h"
 #include "../cpu/timer.h"
@@ -60,12 +61,7 @@ void sound_handler() {
         sleep(len_sound);
         if ((tick - start_sound >= len_sound)) {
             nosound();
-            sprint("\nInterrupt started...");
-            asm volatile("\
-                mov $0, %eax\n\
-                int $0x80");
-            sprint("\nThe interrupt returned to the wrong place...");
-            
+            exit();
         } else
         {
             sleep(10);

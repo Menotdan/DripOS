@@ -1,8 +1,11 @@
 #include "snake.h"
+#include <stdlib.h>
+#include "../cpu/task.h"
 
 void snake_main() {
     vesa_buffer_t snake_screen = new_framebuffer((width/2), 0, width/2, height);
     swap_display(snake_screen); // Setup display for the game
+    set_focused_task(running_task);
 
     /* snake_t game_snake;
     game_snake.head = kmalloc(sizeof(segment_t));
@@ -13,7 +16,11 @@ void snake_main() {
     while (1) { // While loop for the game
         fill_screen(0,0,0);
         /* TODO: Control which tasks get keyboard input */
-        //char scan = get_scancode();
+        char scan = get_scancode();
+        if (scancode_to_ascii(scan, 0) == 'q') {
+            set_focused_task(get_task_from_pid(1));
+            exit();
+        }
         if (err != 1) {
             //if (scan == LARROW) {
             //    draw_pixel(0,0,255,255,255);

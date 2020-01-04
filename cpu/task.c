@@ -12,6 +12,20 @@ Registers *regs;
 Task *focus_tasks;
 extern uint32_t suicide_stack;
 
+Task *get_task_from_pid(uint32_t pid) {
+    Task *temp_task = (&main_task)->next;
+    while (temp_task->pid != 0) {
+        if (temp_task->pid == pid) {
+            break;
+        }
+        temp_task = temp_task->next;
+    }
+    if (pid != 0 && temp_task->pid == 0) {
+        return (Task *)0;
+    }
+    return temp_task;
+}
+
 static void otherMain() {
     loaded = 1;
     play_sound(300, 50);
@@ -156,10 +170,6 @@ void sprint_tasks() {
 }
 
 int32_t kill_task(uint32_t pid) {
-    sprint("\nKilling task ");
-    sprint_uint(pid);
-    sprint("\nCurrent task: ");
-    sprint_uint(running_task->pid);
     if (pid == 0 || pid == 1) {
         return 2; // Permission denied
     }
@@ -186,15 +196,11 @@ int32_t kill_task(uint32_t pid) {
     if ((uint32_t)to_kill == 0) {
         return 1; // This should never be reached but eh, safety first
     }
-    sprint("\nAlmost done");
     if (pid != running_task->pid) {
         free(to_kill->start_esp, 0x4000);
     }
-    sprint("\nESP ok");
     free(to_kill->scancode_buffer, 512);
-    sprint("\nThis ok");
     prev_task->next = temp_kill; // Remove killed task from the chain
-    sprint_tasks();
     return 0; // Worked... hopefully lol
 }
 

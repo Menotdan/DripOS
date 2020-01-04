@@ -43,10 +43,10 @@ static void timer_callback(registers_t *regs) {
     UNUSED(regs);
     if (time_slice_left == 0 && loaded == 1) {
         if (running_task->next->priority == NORMAL) {
-            time_slice_left = 16; // 16 ms
+            time_slice_left = 8; // 16 ms
         }
         if (running_task->next->priority == HIGH) {
-            time_slice_left = 24; // 24 ms
+            time_slice_left = 30; // 24 ms
         }
         if (running_task->next->priority == LOW) {
             time_slice_left = 8; // 8 ms

@@ -158,11 +158,11 @@ void execute_command(char input[]) {
 		} else {
 			kprint(" seconds");
 		}
-	} else if (strcmp(input, "snake") == 0) {
+	} else if (strcmp(input, "static") == 0) {
+		kprint("\nPress Q to quit");
 		createTask(kmalloc(sizeof(Task)), snake_main, "Snake game");
-		kprint("Snake started!");
 	} else if (strcmp(input, "help") == 0) {
-		kprint("Commands: ps, kill, uptime, scan, testDrive, fmem, help, shutdown, panic, print, clear, bgtask, bgoff, read, drives, select, testMem, free\n");
+		kprint("Commands: static, ps, kill, uptime, scan, testDrive, fmem, help, shutdown, panic, print, clear, bgtask, bgoff, read, drives, select, testMem, free\n");
 	} else if (strcmp(input, "cpu") == 0) {
 		char cpuid_output[4][4]; // Four uint8_ts
 		__get_cpuid(0, (unsigned int *)cpuid_output[0], (unsigned int *)cpuid_output[1], (unsigned int *)cpuid_output[2], (unsigned int *)cpuid_output[3]);
