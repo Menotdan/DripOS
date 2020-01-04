@@ -258,37 +258,35 @@ void execute_command(char input[]) {
 			free(testy3, 0x1000);
 		}
 	} else if (strcmp(input, "time") == 0) {
-		// read_rtc();
-		// kprint_int(year);
-		// kprint("/");
-		// kprint_int(month);
-		// kprint("/");
-		// kprint_int(day);
-		// if (hour - 5 < 0) {
-		// 	kprint(" ");
-		// 	kprint_int(24 + (hour - 5));
-		// } else if(hour - 5 <= 10) {
-		// 	kprint(" 0");
-		// 	kprint_int(hour - 5);
-		// } else {
-		// 	kprint(" ");
-		// 	kprint_int(hour - 5);
-		// }
-		// if (minute > 9) {
-		// 	kprint(":");
-		// 	kprint_int(minute);
-		// } else {
-		// 	kprint(":0");
-		// 	kprint_int(minute);
-		// }
-		// if (second > 9) {
-		// 	kprint(":");
-		// 	kprint_int(second);
-		// } else {
-		// 	kprint(":0");
-		// 	kprint_int(second);
-		// }
-		kprint("Currently broken. Also you are a hacker for finding this command.");
+		read_rtc();
+		kprint_int(year);
+		kprint("/");
+		kprint_int(month);
+		kprint("/");
+		kprint_int(day);
+		if(hour - 5 <= 10) {
+			kprint(" 0");
+			kprint_int(hour);
+		} else {
+			kprint(" ");
+			kprint_int(hour);
+		}
+		if (minute > 9) {
+			kprint(":");
+			kprint_int(minute);
+		} else {
+			kprint(":0");
+			kprint_int(minute);
+		}
+		if (second > 9) {
+			kprint(":");
+			kprint_int(second);
+		} else {
+			kprint(":0");
+			kprint_int(second);
+		}
+	} else if (strcmp(input, "testInputSystem") == 0) {
+		kprint(getline_print(0));
 	} else if (strcmp(input, "scan") == 0) {
 		drive_scan();
 	} else if (match("testDrive", input) == -2) {
@@ -570,6 +568,14 @@ uint8_t key_handler(uint8_t scancode, bool keyup, uint8_t shift) {
 void terminal_task() {
 	uint8_t shift = 0;
 	uint32_t prev_offset = 0;
+	color_t under_cursor[6];
+	color_t under_cursor_new[6];
+	under_cursor[0] = color_from_rgb(0,0,0);
+	under_cursor[1] = color_from_rgb(0,0,0);
+	under_cursor[2] = color_from_rgb(0,0,0);
+	under_cursor[3] = color_from_rgb(0,0,0);
+	under_cursor[4] = color_from_rgb(0,0,0);
+	under_cursor[5] = color_from_rgb(0,0,0);
 	while (1)
 	{
 		unsigned char scan = (unsigned char)getcode(); // Waiting for a scancode from the keyboard
@@ -583,16 +589,22 @@ void terminal_task() {
 			cur_x = (cur_x*8)+1;
 			cur_y = cur_y*8;
 			cur_y += 10;
+			under_cursor_new[0] = get_pixel(cur_x,cur_y);
 			draw_pixel(cur_x, cur_y, 255, 255, 255);
 			cur_x++;
+			under_cursor_new[1] = get_pixel(cur_x,cur_y);
 			draw_pixel(cur_x, cur_y, 255, 255, 255);
 			cur_x++;
+			under_cursor_new[2] = get_pixel(cur_x,cur_y);
 			draw_pixel(cur_x, cur_y, 255, 255, 255);
 			cur_x++;
+			under_cursor_new[3] = get_pixel(cur_x,cur_y);
 			draw_pixel(cur_x, cur_y, 255, 255, 255);
 			cur_x++;
+			under_cursor_new[4] = get_pixel(cur_x,cur_y);
 			draw_pixel(cur_x, cur_y, 255, 255, 255);
 			cur_x++;
+			under_cursor_new[5] = get_pixel(cur_x,cur_y);
 			draw_pixel(cur_x, cur_y, 255, 255, 255);
 
 			cur_x = (uint32_t)get_offset_col(prev_offset);
@@ -600,20 +612,26 @@ void terminal_task() {
 			cur_x = (cur_x*8)+1;
 			cur_y = cur_y*8;
 			cur_y += 10;
-			draw_pixel(cur_x, cur_y, 0, 0, 0);
+			draw_pixel(cur_x, cur_y, under_cursor[0].red, under_cursor[0].green, under_cursor[0].blue);
 			cur_x++;
-			draw_pixel(cur_x, cur_y, 0, 0, 0);
+			draw_pixel(cur_x, cur_y, under_cursor[1].red, under_cursor[1].green, under_cursor[1].blue);
 			cur_x++;
-			draw_pixel(cur_x, cur_y, 0, 0, 0);
+			draw_pixel(cur_x, cur_y, under_cursor[2].red, under_cursor[2].green, under_cursor[2].blue);
 			cur_x++;
-			draw_pixel(cur_x, cur_y, 0, 0, 0);
+			draw_pixel(cur_x, cur_y, under_cursor[3].red, under_cursor[3].green, under_cursor[3].blue);
 			cur_x++;
-			draw_pixel(cur_x, cur_y, 0, 0, 0);
+			draw_pixel(cur_x, cur_y, under_cursor[4].red, under_cursor[4].green, under_cursor[4].blue);
 			cur_x++;
-			draw_pixel(cur_x, cur_y, 0, 0, 0);
+			draw_pixel(cur_x, cur_y, under_cursor[5].red, under_cursor[5].green, under_cursor[5].blue);
 
 			update_display();
 
+			under_cursor[0] = under_cursor_new[0];
+			under_cursor[1] = under_cursor_new[1];
+			under_cursor[2] = under_cursor_new[2];
+			under_cursor[3] = under_cursor_new[3];
+			under_cursor[4] = under_cursor_new[4];
+			under_cursor[5] = under_cursor_new[5];
 			prev_offset = (uint32_t)get_cursor_offset();
 		}
 	}

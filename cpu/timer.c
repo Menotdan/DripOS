@@ -59,7 +59,7 @@ static void timer_callback(registers_t *regs) {
 
 void config_timer(uint32_t frequency) {
     /* Get the PIT value: maximum hardware clock at 1193180 Hz */
-    uint32_t divisor = 1193180 / frequency;
+    uint32_t divisor = frequency;
 
     /* Caluclate the bytes to send to the PIT,
     where the bytes indicate the frequency */

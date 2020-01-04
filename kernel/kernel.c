@@ -12,6 +12,7 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include "../libc/string.h"
 #include "../libc/mem.h"
 #include "../cpu/timer.h"
+#include "../drivers/time.h"
 #include "terminal.h"
 #include "debug.h"
 #include "../fs/dripfs.h"
@@ -144,16 +145,11 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	}
 
 	clear_screen();
-	draw_pixel(2,1,255,255,0);
-	draw_pixel(3,1,255,255,255);
-	draw_pixel(4,1,0,255,255);
-	update_display();
-	//wait(133);
 	// Initialize everything with a startup log
 	Log("Loaded memory", 1);
 	isr_install();
 	Log("ISR Enabled", 1);
-	init_timer(1000);
+	init_timer(1193);
 
 	Log("Timer enabled", 1);
 	Log("Loading PS/2", 1);
@@ -211,6 +207,9 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	kprint(test);
 	kprint(" bytes\n");
 	kprint("drip@DripOS> ");
+	set_RTC_register(0x4, 13);
+	sprint("\nHour: ");
+	sprint_uint(get_RTC_register(0x4));
 	sprintd("Entering multitask/system management loop");
 
 	initTasking();

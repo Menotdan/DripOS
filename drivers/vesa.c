@@ -12,6 +12,7 @@ vesa_buffer_t new_framebuffer(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
     vesa_buffer_t ret;
     ret.video_buffer_size = (w*h)*bbp;
     ret.graphics_vid_buffer = kmalloc(ret.video_buffer_size);
+    memset32((uint32_t *)ret.graphics_vid_buffer, 0, ((ret.video_buffer_size)/4));
     ret.x = x;
     ret.y = y;
     ret.buffer_height = h;
@@ -38,7 +39,18 @@ void draw_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b) {
     uint32_t offset = ((y * current_buffer.buffer_width) + x);
     vidmemcur += offset;
     *vidmemcur = (r << (red_byte)) | (g << (green_byte)) | (b << (blue_byte));
-    vidmemcur++;
+}
+
+color_t get_pixel(uint16_t x, uint16_t y) {
+    color_t ret;
+
+    uint32_t *vidmemcur = (uint32_t *)current_buffer.graphics_vid_buffer;
+    uint32_t offset = ((y * current_buffer.buffer_width) + x);
+    vidmemcur += offset;
+    ret.red = (uint8_t)(*vidmemcur >> (red_byte));
+    ret.green = (uint8_t)(*vidmemcur >> (green_byte));
+    ret.blue = (uint8_t)(*vidmemcur >> (blue_byte));
+    return ret;
 }
 
 void fill_screen(uint8_t r, uint8_t g, uint8_t b) {

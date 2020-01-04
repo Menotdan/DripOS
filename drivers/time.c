@@ -1,7 +1,8 @@
 #include "time.h"
- #include "../cpu/ports.h"
- int century_register;
- unsigned char second;
+#include "../cpu/ports.h"
+
+int century_register;
+unsigned char second;
 unsigned char minute;
 unsigned char hour;
 unsigned char day;
@@ -15,6 +16,20 @@ int get_update_in_progress_flag() {
 unsigned char get_RTC_register(int reg) {
 	port_byte_out(cmos_address, reg);
 	return port_byte_in(cmos_data);
+}
+
+void set_RTC_register(int reg, unsigned char data) {
+	port_byte_out(cmos_address, reg);
+	port_byte_out(cmos_data, data);
+}
+
+void set_rtc() {
+	set_RTC_register(0x0, second);
+	set_RTC_register(0x2, minute);
+	set_RTC_register(0x4, hour);
+	set_RTC_register(0x7, day);
+	set_RTC_register(0x8, month);
+	set_RTC_register(0x9, year);
 }
 
 void read_rtc() {

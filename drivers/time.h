@@ -1,6 +1,6 @@
 #ifndef TIME_H
 #define TIME_H
-#define CURRENT_YEAR 2018
+#define CURRENT_YEAR 2020
 
 extern int century_register;
 extern unsigned char second;
@@ -15,6 +15,7 @@ enum cmos {
 };
 int get_update_in_progress_flag();
 unsigned char get_RTC_register(int reg);
+void set_RTC_register(int reg, unsigned char data);
 void format_time(char *string_buf, int len);
 void read_rtc();
 #endif

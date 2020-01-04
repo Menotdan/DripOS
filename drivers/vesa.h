@@ -32,6 +32,7 @@ void fill_screen(uint8_t r, uint8_t g, uint8_t b);
 void cleanup_framebuffer(vesa_buffer_t framebuffer);
 extern void render8x8bitmap(unsigned char bitmap[8], uint8_t xpos, uint8_t ypos, color_t bg, color_t fg);
 color_t color_from_rgb(uint8_t r, uint8_t g, uint8_t b);
+color_t get_pixel(uint16_t x, uint16_t y);
 vesa_buffer_t swap_display(vesa_buffer_t new);
 vesa_buffer_t new_framebuffer(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
 

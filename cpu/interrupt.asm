@@ -47,6 +47,7 @@ irq_common_stub:
                              ; of the interrupt handler state resides)
                              ; Push ESP as 1st parameter as it's a 
                              ; pointer to a registers_t
+    cld
     call irq_handler
     mov ebx, [switch_task]
     cmp ebx, 1
@@ -55,9 +56,11 @@ irq_common_stub:
     mov ebx, 0
     mov [switch_task], ebx
     mov eax, esp ; Safety, irq_handler probably changed eax
+    cld
     call store_values ; Store current registers pointer to running_task
     mov esp, [call_counter] ; Change ESP
     mov eax, esp ; Set param
+    cld
     call schedule_task ; Pick next task and set it in return
 testLabel:
     add esp, 8 ; DR6 and ss
@@ -77,6 +80,7 @@ syscall_handler:
 	mov eax, esp
 
     ; 2. Call C handler
+    cld
 	call syscall_handle
     mov ebx, [switch_task]
     cmp ebx, 1

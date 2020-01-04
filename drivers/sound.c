@@ -5,7 +5,6 @@
 
 uint32_t start_sound; // The start of a sound
 uint32_t len_sound; // Length of the sound
-uint8_t sound_on; // Is the sound playing?
 
 void play(uint32_t nFrequence) {
     uint32_t Div;
@@ -44,7 +43,6 @@ void play_sound(uint32_t nFrequence, uint32_t ticks) {
     play(nFrequence); // Set the PIT for the speaker to play the frequency requested
     start_sound = tick; // Current timer tick
     len_sound = ticks; // Length
-    sound_on = 1; // Set sound_on to 1 so the handler knows to turn the sound off
     createTask(kmalloc(sizeof(Task)), sound_handler, "Sound stopper");
 }
 
@@ -59,12 +57,10 @@ void pgw() {
 void sound_handler() {
     while (1) {
         /* If the sound is done playing, stop it, otherwise switch tasks */
-        if (sound_on) {
-            sleep(len_sound);
-        }
-        if ((tick - start_sound >= len_sound) && sound_on) {
-            sound_on = 0;
+        sleep(len_sound);
+        if ((tick - start_sound >= len_sound)) {
             nosound();
+            sprint("\nInterrupt started...");
             asm volatile("\
                 mov $0, %eax\n\
                 int $0x80");
