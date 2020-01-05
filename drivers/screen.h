@@ -37,7 +37,7 @@ void kprint(char *message);
 void kprint_backspace();
 void kprint_at_blue(char *message, int col, int row);
 void kprint_no_move(char *message, int col, int row);
-void logoDraw();
+void logo_draw();
 int get_offset_col(int offset);
 int get_offset_row(int offset);
 int get_offset(int col, int row);

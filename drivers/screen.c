@@ -246,21 +246,25 @@ void crash_screen(registers_t *crash_state, char *msg, uint8_t printReg) {
     asm("hlt");
 }
 
-void logoDraw() {
-    int xOff = 24;
+void logo_draw() {
+    const uint32_t size_x = 6;
+    const uint32_t size_y = 12;
+    uint32_t offset_x = (((current_buffer.buffer_width - 1) / 2) - (size_x * 16));
 
     for (int y = 0; y < 16; y++) {
         for (int x = 0; x < 16; x++) {
             if(logo[y][x] == 1) {
-                kprint_at_col(" ", x + xOff, y, black, black);
-            } else if(logo[y][x] == 2) {                kprint_at_col(" ", x + xOff, y, cyan, cyan);
+                rect_fill((offset_x + (x * size_x)), (y*size_y), size_x, size_y, color_from_rgb(0, 0, 0));
+            } else if(logo[y][x] == 2) {
+                rect_fill((offset_x + (x * size_x)), (y*size_y), size_x, size_y, color_from_rgb(0, 255, 255));
             } else if(logo[y][x] == 3) {
-                kprint_at_col(" ", x + xOff, y, white, white);
+                rect_fill((offset_x + (x * size_x)), (y*size_y), size_x, size_y, color_from_rgb(255, 255, 255));
             } else {
-                kprint_at_col(" ", x + xOff, y, white, black);
+                rect_fill((offset_x + (x * size_x)), (y*size_y), size_x, size_y, color_from_rgb(0, 0, 0));
             }
         }
     }
+    update_display();
 }
 
 void kprint_backspace() {

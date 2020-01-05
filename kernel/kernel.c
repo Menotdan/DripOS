@@ -191,10 +191,10 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	free(testOnStart, 0x1000);
 	Log("Clearing screen...", 1);
 	update_display();
-	wait(100);
 	clear_screen();
 	prevtick = tick;
-	logoDraw();
+	logo_draw();
+	wait(150);
 	update_display();
 	clear_screen();
 

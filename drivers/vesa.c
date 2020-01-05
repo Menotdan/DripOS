@@ -6,6 +6,14 @@ void vesa_init() {
 
 }
 
+void rect_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, color_t color) {
+    for (uint32_t y_draw = 0; y_draw < h; y_draw++) {
+        for (uint32_t x_draw = 0; x_draw < w; x_draw++) {
+            draw_pixel((x + x_draw), (y + y_draw), color.red, color.blue, color.green);
+        }
+    }
+}
+
 /* Create a new framebuffer with an x and y position on the screen,
 and with a set width and height */
 vesa_buffer_t new_framebuffer(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
@@ -33,13 +41,6 @@ color_t color_from_rgb(uint8_t r, uint8_t g, uint8_t b) {
     ret.green = g;
     ret.blue = b;
     return ret;
-}
-
-void draw_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b) {
-    uint32_t *vidmemcur = (uint32_t *)current_buffer.graphics_vid_buffer;
-    uint32_t offset = ((y * current_buffer.buffer_width) + x);
-    vidmemcur += offset;
-    *vidmemcur = (r << (red_byte)) | (g << (green_byte)) | (b << (blue_byte));
 }
 
 color_t get_pixel(uint16_t x, uint16_t y) {
