@@ -1,5 +1,5 @@
 #include "serial.h"
-#include "../libc/string.h"
+#include <string.h>
 #include "../cpu/timer.h"
 #include <stdio.h>
 
@@ -31,6 +31,18 @@ void sprint(char *message) {
     while (message[i] != 0) {
         write_serial(message[i++]);
     }
+}
+
+void sprint_int(int num) {
+    char toprint[33];
+    int_to_ascii(num, toprint);
+    sprint(toprint);
+}
+
+void sprint_uint(unsigned int num) {
+    char toprint[33];
+    uint_to_ascii(num, toprint);
+    sprint(toprint);
 }
 
 void sprintd(char *message) {

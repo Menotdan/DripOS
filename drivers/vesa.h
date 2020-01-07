@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "../libc/mem.h"
 #include "../drivers/serial.h"
-#include "../libc/string.h"
+#include <string.h>
 
 typedef struct color
 {

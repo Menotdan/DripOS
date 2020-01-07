@@ -1,6 +1,6 @@
 #include "../kernel/kernel.h"
 #include "keyboard.h"
-#include "../libc/string.h"
+#include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <serial.h>

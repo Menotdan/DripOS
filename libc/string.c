@@ -1,4 +1,4 @@
-#include "string.h"
+#include <string.h>
 #include "../cpu/types.h"
 #include "../drivers/screen.h"
 #include <stdint.h>
@@ -82,30 +82,6 @@ void reverse(char s[]) {
         s[i] = s[j];
         s[j] = c;
     }
-}
-
-void kprint_int(int num) {
-    char toprint[33];
-    int_to_ascii(num, toprint);
-    kprint(toprint);
-}
-
-void sprint_int(int num) {
-    char toprint[33];
-    int_to_ascii(num, toprint);
-    sprint(toprint);
-}
-
-void kprint_uint(unsigned int num) {
-    char toprint[33];
-    uint_to_ascii(num, toprint);
-    kprint(toprint);
-}
-
-void sprint_uint(unsigned int num) {
-    char toprint[33];
-    uint_to_ascii(num, toprint);
-    sprint(toprint);
 }
 
 /* K&R */

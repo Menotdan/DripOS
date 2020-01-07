@@ -4,7 +4,7 @@
 #include "idt.h"
 #include "../drivers/screen.h"
 #include "../drivers/keyboard.h"
-#include "../libc/string.h"
+#include <string.h>
 #include "timer.h"
 #include "ports.h"
 #include "../fs/hdd.h"
@@ -115,7 +115,7 @@ char *exception_messages[] = {
     "Machine Check",
     "Reserved",
     "Assert Error",
-    "Reserved",
+    "Out of memory",
     "Reserved",
     "Reserved",
 

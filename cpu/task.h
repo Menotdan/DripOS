@@ -5,7 +5,7 @@
 #include "../drivers/vesa.h"
 #include "../libc/mem.h"
 #include "../drivers/screen.h"
-#include "../libc/string.h"
+#include <string.h>
 #include "../kernel/kernel.h"
 #include "../kernel/terminal.h"
 #include "../cpu/isr.h"

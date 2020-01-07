@@ -31,8 +31,6 @@ Task *get_task_from_pid(uint32_t pid) {
 
 static void otherMain() {
     loaded = 1;
-    play_sound(300, 50);
-	play_sound(500, 50);
     while (1) {
         asm volatile("hlt");
     }

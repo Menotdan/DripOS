@@ -89,7 +89,7 @@ syscall_handler:
     mov eax, [global_esp_old] ; Get the ESP of the old task
     mov edx, 0x4000 ; Size of the stack
     call free ; Free the memory
-    mov eax, global_old_task
+    mov eax, [global_old_task]
     mov edx, [task_size]
     call free
     mov eax, esp ; Set param to the current stack frame

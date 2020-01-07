@@ -7,7 +7,7 @@
 #include "../drivers/stdin.h"
 #include "../drivers/sound.h"
 #include "soundManager.h"
-#include "../libc/string.h"
+#include <string.h>
 #include "../kernel/kernel.h"
 #include "task.h"
 

@@ -1,6 +1,6 @@
 #include "kernel.h"
 #include "debug.h"
-#include "../libc/string.h"
+#include <string.h>
 #include "../cpu/soundManager.h"
 #include "../cpu/timer.h"
 #include "../drivers/sound.h"
@@ -12,6 +12,7 @@
 #include "../libc/stdio.h"
 #include <stdint.h>
 #include "../libc/mem.h"
+#include "../mem/pmm.h"
 #include <serial.h>
 #include "../cpu/task.h"
 #include "../drivers/stdin.h"
@@ -208,11 +209,14 @@ void execute_command(char input[]) {
 			kprint(" failed!");
 		}
 	} else if (strcmp(input, "testMem") == 0) {
-		for (int c = 0; c < 10000; c++) {
+		for (int c = 0; c < 100000; c++) {
 			testy = (char *)kmalloc(0x1000);
 			kprint_uint((uint32_t)testy);
 			kprint("\n");
 			*testy = 100;
+			if (*testy != 100) {
+				asm volatile("int $22");
+			}
 		}
 	} else if (strcmp(input, "testMemLess") == 0) {
 		uint32_t *test1 = kmalloc(0x1000);

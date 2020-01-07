@@ -7,7 +7,7 @@
 #include "dripfs.h"
 #include "../libc/mem.h"
 #include "../include/debug.h"
-#include "../libc/string.h"
+#include <string.h>
 #include "../drivers/screen.h"
 #include "../drivers/serial.h"
 #include "../cpu/timer.h"

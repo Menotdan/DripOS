@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include "../libc/mem.h"
 #include "colors.h"
-#include "../libc/string.h"
+#include <string.h>
 #include "../cpu/isr.h"
 #include "../cpu/task.h"
 #include "../kernel/kernel.h"
@@ -105,6 +105,27 @@ void kprint_at(char *message, int col, int row) {
     update_display();
 }
 
+void kprint_at_no_update(char *message, int col, int row) {
+    /* Set cursor if col/row are negative */
+    int offset;
+    if (col >= 0 && row >= 0)
+        offset = get_offset(col, row);
+    else {
+        offset = get_cursor_offset();
+        row = get_offset_row(offset);
+        col = get_offset_col(offset);
+    }
+
+    /* Loop through message and print it */
+    int i = 0;
+    while (message[i] != 0) {
+        offset = print_char(message[i++], col, row, white, black);
+        /* Compute row/col for next iteration */
+        row = get_offset_row(offset);
+        col = get_offset_col(offset);
+    }
+}
+
 void kprint_no_move(char *message, int col, int row) {
     /* Set cursor if col/row are negative */
     int offset;
@@ -174,6 +195,10 @@ void kprint_at_col(char *message, int col, int row, color_t fg, color_t bg) {
 
 void kprint(char *message) {
     kprint_at(message, -1, -1);
+}
+
+void kprint_no_update(char *message) {
+    kprint_at_no_update(message, -1, -1);
 }
 
 void kprint_color(char *message, color_t fg, color_t bg) {
@@ -274,6 +299,29 @@ void kprint_backspace() {
     print_char(0x08, col, row, white, black);
 }
 
+void kprint_int(int num) {
+    char toprint[33];
+    int_to_ascii(num, toprint);
+    kprint(toprint);
+}
+
+void kprint_uint(unsigned int num) {
+    char toprint[33];
+    uint_to_ascii(num, toprint);
+    kprint(toprint);
+}
+
+void kprint_int_no_update(int num) {
+    char toprint[33];
+    int_to_ascii(num, toprint);
+    kprint_no_update(toprint);
+}
+
+void kprint_uint_no_update(unsigned int num) {
+    char toprint[33];
+    uint_to_ascii(num, toprint);
+    kprint_no_update(toprint);
+}
 
 /**********************************************************
  * Private kernel functions                               *

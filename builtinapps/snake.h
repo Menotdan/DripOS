@@ -9,6 +9,7 @@
 typedef struct segment
 {
     struct segment *next;
+    struct segment *previous;
     uint8_t next_dir;
     uint8_t moving_dir;
     uint32_t x;

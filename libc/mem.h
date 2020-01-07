@@ -16,10 +16,7 @@ void memset32(uint32_t *dest, uint32_t val, uint32_t len);
 /* kmalloc */
 void * kmalloc(uint32_t size);
 
-/* Setup memory address */
-void set_addr(uint32_t addr, uint32_t memSize);
-uint32_t memory_remaining;
-uint32_t used_mem;
+uint32_t kmalloc_bitmap(uint32_t size);
 
 /* Free some memory */
 void free(void * address, uint32_t size);

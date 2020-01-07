@@ -9,8 +9,9 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include "../cpu/isr.h"
 #include "../drivers/screen.h"
 #include "../drivers/sound.h"
-#include "../libc/string.h"
+#include <string.h>
 #include "../libc/mem.h"
+#include "../mem/pmm.h"
 #include "../cpu/timer.h"
 #include "../drivers/time.h"
 #include "terminal.h"
@@ -194,12 +195,18 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 	clear_screen();
 	prevtick = tick;
 	logo_draw();
-	wait(150);
+	play(300);
+	wait(15);
+	play(500);
+	wait(15);
+	play(580);
+	wait(30);
+	nosound();
 	update_display();
 	clear_screen();
 
-	kprint("DripOS 0.0020\n"); //Version
-	sprintd("DripOS 0.0020 loaded"); //Version
+	kprint("DripOS 0.0030\n"); //Version
+	sprintd("DripOS 0.0030 loaded"); //Version
 
 	kprint("Type help for commands\nType shutdown to shutdown\n\n");
 	kprint("Memory available: ");
