@@ -6,33 +6,33 @@ ENTRY(_start)
    kernel image. */
 SECTIONS
 {
-	/* Since we are loading a higher half kernel, we need to tell the linker
-	   where the kernel will be mapped in memory, so that function calls actually work */
-	. = 0xC0100000; /* 3GB + 1MB */
-	__kernel_start = .; /* Kernel start marker */
+	/* Begin putting sections at 1 MiB, a conventional place for kernels to be
+	   loaded at by the bootloader. */
+	. = 1M;
+ 
 	/* First put the multiboot header, as it is required to be put very early
 	   early in the image or the bootloader won't recognize the file format.
 	   Next we'll put the .text section. */
-	.text ALIGN (4K) : AT (ADDR (.text) - 0xC0000000)
+	.text BLOCK(4K) : ALIGN(4K)
 	{
 		*(.multiboot)
 		*(.text)
 	}
  
 	/* Read-only data. */
-	.rodata ALIGN (4K) : AT (ADDR (.rodata) - 0xC0000000)
+	.rodata BLOCK(4K) : ALIGN(4K)
 	{
 		*(.rodata)
 	}
  
 	/* Read-write data (initialized) */
-	.data ALIGN (4K) : AT (ADDR (.data) - 0xC0000000)
+	.data BLOCK(4K) : ALIGN(4K)
 	{
 		*(.data)
 	}
  
 	/* Read-write data (uninitialized) and stack */
-	.bss ALIGN (4K) : AT (ADDR (.bss) - 0xC0000000)
+	.bss BLOCK(4K) : ALIGN(4K)
 	{
 		*(COMMON)
 		*(.bss)
@@ -40,5 +40,5 @@ SECTIONS
     
 	/* The compiler may produce other sections, by default it will put them in
 	   a segment with the same name. Simply add stuff here as needed. */
-	__kernel_end = .; /* Marker so that the memory allocater doesn't eat the OS alive */
+	__kernel_end = ALIGN(1K); /* Marker so that the memory allocater doesn't eat the OS alive */
 }
