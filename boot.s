@@ -90,6 +90,19 @@ stack_top:
 sse_data:
 .skip 512 /* 512 bytes for the fxsave */
 
+
+# The first page tables (loaded into at boot)
+# Need to make space for them to ensure the bootloader does not write
+# important data to them later
+.section .bss, "aw", @nobits
+	.align 4096
+boot_page_directory:
+	.skip 4096
+boot_page_table1:
+	.skip 4096
+# We may need more tables later if the kernel grows larger than 3 MB, so that there
+# Is enough page table space to map all off the kernel to the higher half
+
 /*
 The linker script specifies _start as the entry point to the kernel and the
 bootloader will jump to this position once the kernel has been loaded. It
@@ -111,14 +124,17 @@ _start:
         itself. It has absolute and complete power over the
         machine.
         */
- 
+
+
         /*
         To set up a stack, we set the esp register to point to the top of the
         stack (as it grows downwards on x86 systems). This is necessarily done
         in assembly as languages such as C cannot function without a stack.
         */
         mov stack_top, esp
- 
+
+        /* Start setting up paging */
+        
         /*
         This is a good place to initialize crucial processor state before the
         high-level kernel is entered. It's best to minimize the early

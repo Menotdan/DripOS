@@ -1,9 +1,9 @@
 # Cleaned and fixed by StackOverflow user Michael Petch
-C_SOURCES = $(wildcard kernel/*.c drivers/*.c cpu/*.c libc/*.c fs/*.c builtinapps/*.c)
-NASM_SOURCES = $(wildcard kernel/*.asm drivers/*.asm cpu/*.asm libc/*.asm fs/*.asm)
-HEADERS = $(wildcard kernel/*.h drivers/*.h cpu/*.h libc/*.h fs/*.h builtinapps/*.h)
-BIG_S_SOURCES = $(wildcard kernel/*.S drivers/*.S cpu/*.S libc/*.S fs/*.S *.S)
-S_SOURCES = $(wildcard kernel/*.s drivers/*.s cpu/*.s libc/*.s fs/*.s *.s)
+C_SOURCES = $(wildcard kernel/*.c drivers/*.c cpu/*.c libc/*.c fs/*.c builtinapps/*.c mem/*.c)
+NASM_SOURCES = $(wildcard kernel/*.asm drivers/*.asm cpu/*.asm libc/*.asm fs/*.asm mem/*.asm)
+HEADERS = $(wildcard kernel/*.h drivers/*.h cpu/*.h libc/*.h fs/*.h mem/*.h builtinapps/*.h)
+BIG_S_SOURCES = $(wildcard kernel/*.S drivers/*.S cpu/*.S libc/*.S fs/*.S mem/*.S *.S)
+S_SOURCES = $(wildcard kernel/*.s drivers/*.s cpu/*.s libc/*.s fs/*.s mem/*.S *.s)
 # Nice syntax for file extension replacement
 OBJ = ${C_SOURCES:.c=.o}  ${NASM_SOURCES:.asm=.o} ${S_SOURCES:.s=.o} ${BIG_S_SOURCES:.S=.o} cpu/switch.o
  
@@ -24,7 +24,7 @@ myos.iso: kernel.elf
 	cp kernel.elf isodir/boot/os-image.bin
 	cp grub.cfg isodir/boot/grub/grub.cfg
 	grub-mkrescue -o DripOS.iso isodir
-	rm -rf kernel/*.o boot/*.bin drivers/*.o boot/*.o cpu/*.o libc/*.o fs/*.o
+	rm -rf kernel/*.o boot/*.bin drivers/*.o boot/*.o cpu/*.o libc/*.o fs/*.o mem/*.o
 	rm -rf *.bin *.o *.elf
 
  
@@ -41,7 +41,7 @@ lol: ${OBJ}
 	~/Desktop/Compiler/bin/i686-elf-ld -melf_i386 -o helllo -T linker.ld hello $^
 
 run: myos.iso
-	qemu-system-x86_64 -d guest_errors -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+	qemu-system-x86_64 -d guest_errors int -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
 
 run-kvm: myos.iso
 	sudo qemu-system-x86_64 -enable-kvm -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
@@ -70,4 +70,4 @@ cpu/switch.o: cpu/switch.s
  
 clean:
 	rm -rf *.bin *.dis *.o os-image.bin *.elf *.iso
-	rm -rf kernel/*.o boot/*.bin drivers/*.o boot/*.o cpu/*.o libc/*.o fs/*.o
+	rm -rf kernel/*.o boot/*.bin drivers/*.o boot/*.o cpu/*.o libc/*.o fs/*.o mem/*.o
