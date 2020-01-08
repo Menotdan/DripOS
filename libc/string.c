@@ -34,6 +34,18 @@ void uint_to_ascii(unsigned int n, char str[]) {
     reverse(str);
 }
 
+void uint64_to_ascii(uint64_t n, char str[]) {
+    uint64_t i;
+    i = 0;
+    do {
+        str[i++] = n % 10 + '0';
+    } while ((n /= 10) > 0);
+
+    str[i] = '\0';
+
+    reverse(str);
+}
+
 void itoa_s(int i,char* buf) {
    if (i < 0) {
       *buf++ = '-';

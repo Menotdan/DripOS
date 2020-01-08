@@ -44,17 +44,10 @@ Task *get_focused_task() {
     return focus_tasks;
 }
 
-void new_stack(uint32_t address) {
-    asm __volatile__("xchg %%esp, %0\n\t"
-        : "=r"(old_stack_ptr)
-        : "0"(address)
-        );
-}
-
 void initTasking() {
     // Get EFLAGS and CR3
-    asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(temp.regs.cr3)::"%eax"); // No paging yet
-    asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(temp.regs.eflags)::"%eax");
+    asm volatile("movq %%cr3, %%rax; movq %%rax, %0;":"=m"(temp.regs.cr3)::"%rax"); // No paging yet
+    asm volatile("pushfq; movq (%%rsp), %%rax; movq %%rax, %0; popfq;":"=m"(temp.regs.rflags)::"%rax");
 
     createTask(&main_task, otherMain, "Idle task");
     createTask(&kickstart, 0, "no");
@@ -72,21 +65,28 @@ void initTasking() {
 }
  
 uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *pagedir) { // No paging yet
-    asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(temp.regs.cr3)::"%eax"); // No paging yet
-    asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(temp.regs.eflags)::"%eax");
-    task->regs.eax = 0;
-    task->regs.ebx = 0;
-    task->regs.ecx = 0;
-    task->regs.edx = 0;
-    task->regs.esi = 0;
-    task->regs.edi = 0;
-    task->regs.eflags = temp.regs.eflags;
-    task->regs.eip = (uint32_t) main;
-    task->regs.cr3 = (uint32_t)temp.regs.cr3; // No paging yet
-    task->regs.esp = ((uint32_t)kmalloc(0x4000) & (~0xf)) + 0x4000; // Allocate 16KB for the process stack
-    task->start_esp = (uint8_t *)task->regs.esp - 0x4000;
+    asm volatile("movq %%cr3, %%rax; movq %%rax, %0;":"=m"(temp.regs.cr3)::"%rax");
+    task->regs.rax = 0;
+    task->regs.rbx = 0;
+    task->regs.rcx = 0;
+    task->regs.rdx = 0;
+    task->regs.rsi = 0;
+    task->regs.rdi = 0;
+    task->regs.r8 = 0;
+    task->regs.r9 = 0;
+    task->regs.r10 = 0;
+    task->regs.r11 = 0;
+    task->regs.r12 = 0;
+    task->regs.r13 = 0;
+    task->regs.r14 = 0;
+    task->regs.r15 = 0;
+    task->regs.rflags = temp.regs.rflags;
+    task->regs.rip = (uint64_t) main;
+    task->regs.cr3 = (uint64_t)temp.regs.cr3;
+    task->regs.rsp = ((uint64_t)kmalloc(0x4000) & (~0xf)) + 0x4000; // Allocate 16KB for the process stack
+    task->start_esp = (uint8_t *)task->regs.rsp - 0x4000;
     task->scancode_buffer = kmalloc(512); // 512 chars for each task's keyboard buffer
-    task->regs.ebp = 0;
+    task->regs.rbp = 0;
     task->cursor_pos = get_cursor_offset();
     task->buffer = current_buffer;
     
@@ -94,23 +94,31 @@ uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *
     strcpy((char *)&task->name, task_name);
 
     registers_t tempregs;
-    tempregs.eax = 0;
-    tempregs.ebx = 0;
-    tempregs.ecx = 0;
-    tempregs.edx = 0;
-    tempregs.esi = 0;
-    tempregs.edi = 0;
-    tempregs.eflags = temp.regs.eflags;
-    tempregs.eip = (uint32_t) main;
-    tempregs.ebp = 0;
+    tempregs.rax = 0;
+    tempregs.rbx = 0;
+    tempregs.rcx = 0;
+    tempregs.rdx = 0;
+    tempregs.rsi = 0;
+    tempregs.rdi = 0;
+    tempregs.r8 = 0;
+    tempregs.r9 = 0;
+    tempregs.r10 = 0;
+    tempregs.r11 = 0;
+    tempregs.r12 = 0;
+    tempregs.r13 = 0;
+    tempregs.r14 = 0;
+    tempregs.r15 = 0;
+    tempregs.rflags = temp.regs.rflags;
+    tempregs.rip = (uint64_t) main;
+    tempregs.rbp = 0;
     tempregs.cs = 0x8;
     tempregs.ds = 0x10;
-    tempregs.esp = task->regs.esp;
+    tempregs.rsp = task->regs.rsp;
     tempregs.dr6 = 0;
     tempregs.err_code = 0;
     tempregs.int_no = 1234;
-    task->regs.esp -= sizeof(registers_t);
-    uint8_t *stack_insert_buffer = get_pointer(task->regs.esp);
+    task->regs.rsp -= sizeof(registers_t);
+    uint8_t *stack_insert_buffer = get_pointer(task->regs.rsp);
     memcpy((uint8_t *)&tempregs, stack_insert_buffer, sizeof(registers_t));
     //breakA();
 
@@ -140,15 +148,23 @@ void yield() {
 void schedule_task(registers_t *r) {
     // Set values for context switch
     regs = &running_task->regs;
-    r->eflags = regs->eflags | 0x200;
-    r->eax = regs->eax;
-    r->ebx = regs->ebx;
-    r->ecx = regs->ecx;
-    r->edx = regs->edx;
-    r->edi = regs->edi;
-    r->esi = regs->esi;
-    r->eip = regs->eip;
-    r->ebp = regs->ebp;
+    r->rflags = regs->rflags | 0x200;
+    r->rax = regs->rax;
+    r->rbx = regs->rbx;
+    r->rcx = regs->rcx;
+    r->rdx = regs->rdx;
+    r->rdi = regs->rdi;
+    r->rsi = regs->rsi;
+    r->rip = regs->rip;
+    r->rbp = regs->rbp;
+    r->r8 = regs->r8;
+    r->r9 = regs->r9;
+    r->r10 = regs->r10;
+    r->r11 = regs->r11;
+    r->r12 = regs->r12;
+    r->r13 = regs->r13;
+    r->r14 = regs->r14;
+    r->r15 = regs->r15;
     if (running_task->cursor_pos < CURSOR_MAX) {
         set_cursor_offset(running_task->cursor_pos);
     }
@@ -202,7 +218,7 @@ int32_t kill_task(uint32_t pid) {
         loop++;
         temp_kill = temp_kill->next;
     }
-    if ((uint32_t)to_kill == 0) {
+    if ((uint64_t)to_kill == 0) {
         return 1; // This should never be reached but eh, safety first
     }
     if (pid != running_task->pid) {
@@ -258,21 +274,29 @@ void pick_task() {
 void store_values(registers_t *r) {
     regs = &running_task->regs; // Get registers
     /* Set old registers */
-    regs->eflags = r->eflags;
-    regs->eax = r->eax;
-    regs->ebx = r->ebx;
-    regs->ecx = r->ecx;
-    regs->edx = r->edx;
-    regs->edi = r->edi;
-    regs->esi = r->esi;
-    regs->eip = r->eip;
-    regs->esp = r->esp-40;
-    regs->ebp = r->ebp;
+    regs->rflags = r->rflags;
+    regs->rax = r->rax;
+    regs->rbx = r->rbx;
+    regs->rcx = r->rcx;
+    regs->rdx = r->rdx;
+    regs->rdi = r->rdi;
+    regs->rsi = r->rsi;
+    regs->rip = r->rip;
+    regs->rsp = r->rsp-40;
+    regs->rbp = r->rbp;
+    regs->r8 = r->r8;
+    regs->r9 = r->r9;
+    regs->r10 = r->r10;
+    regs->r11 = r->r11;
+    regs->r12 = r->r12;
+    regs->r13 = r->r13;
+    regs->r14 = r->r14;
+    regs->r15 = r->r15;
     if (running_task->cursor_pos < CURSOR_MAX)  {
         running_task->cursor_pos = get_cursor_offset();
     }
     running_task->buffer = current_buffer;
     pick_task();
     regs = &running_task->regs; // Get registers again
-    global_esp = regs->esp;
+    global_esp = regs->rsp;
 }

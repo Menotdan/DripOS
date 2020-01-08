@@ -7,15 +7,15 @@
 /* 
  * This is calculated by memory map parsing.
  */
-uint32_t new_addr = 0;
-uint32_t prev_addr = 0;
-uint32_t bitmap_size = 0;
+uint64_t new_addr = 0;
+uint64_t prev_addr = 0;
+uint64_t bitmap_size = 0;
 uint8_t *bitmap = 0;
-uint32_t free_mem_addr = 0;
-uint32_t memory_remaining = 0;
-uint32_t used_mem = 0;
-uint32_t MAX = 0;
-uint32_t MIN = 0;
+uint64_t free_mem_addr = 0;
+uint64_t memory_remaining = 0;
+uint64_t used_mem = 0;
+uint64_t MAX = 0;
+uint64_t MIN = 0;
 
 uint8_t get_bit(uint8_t input, uint8_t bit) {
     return ((input >> bit) & 1);
@@ -46,7 +46,7 @@ void set_addr(uint32_t addr, uint32_t mem_size) {
     sprint("\nNumber of bytes needed for bitmap: ");
     sprint_uint(bitmap_size);
     sprint("\nBitmap address: ");
-    sprint_uint((uint32_t)bitmap);
+    sprint_uint64((uint64_t)bitmap);
     memset(bitmap, 0, bitmap_size);
     free_mem_addr += bitmap_size;
     memory_remaining -= bitmap_size;
@@ -55,19 +55,19 @@ void set_addr(uint32_t addr, uint32_t mem_size) {
     MIN = free_mem_addr;
     memory_remaining = MAX-MIN;
     sprint("\nFree addr: ");
-    sprint_uint(free_mem_addr);
+    sprint_uint64(free_mem_addr);
     sprint("\nMIN: ");
-    sprint_uint(MIN);
+    sprint_uint64(MIN);
     sprint("\nRemaining: ");
-    sprint_uint(memory_remaining);
+    sprint_uint64(memory_remaining);
 }
 
-uint32_t pmm_find_free(uint32_t size) {
-    uint32_t pages_needed = size/0x1000;
-    uint32_t number_of_free = 0;
-    uint32_t pointer = 0;
-    uint32_t bitmap_byte = 0;
-    uint32_t bitmap_bit = 0;
+uint64_t pmm_find_free(uint64_t size) {
+    uint64_t pages_needed = size/0x1000;
+    uint64_t number_of_free = 0;
+    uint64_t pointer = 0;
+    uint64_t bitmap_byte = 0;
+    uint64_t bitmap_bit = 0;
     if (size % 0x1000) {
         pages_needed += 1;
     }
@@ -96,17 +96,17 @@ uint32_t pmm_find_free(uint32_t size) {
     return pointer;
 }
 
-uint32_t pmm_allocate(uint32_t size) {
-    uint32_t ret = pmm_find_free(size);
+uint64_t pmm_allocate(uint64_t size) {
+    uint64_t ret = pmm_find_free(size);
     if (ret == 0 || ret < MIN || ret > MAX) {
         return 0;
     }
  
-    uint32_t pages_needed = size/0x1000;
-    uint32_t bitmap_byte = 0; // The first byte in the sequence
-    uint32_t bitmap_bit = 0; // The first bit in the sequence
+    uint64_t pages_needed = size/0x1000;
+    uint64_t bitmap_byte = 0; // The first byte in the sequence
+    uint64_t bitmap_bit = 0; // The first bit in the sequence
     uint8_t *cur_bitmap_pos = bitmap;
-    uint32_t offset = ret - MIN; // Offset from the beginning of free memory
+    uint64_t offset = ret - MIN; // Offset from the beginning of free memory
     if (size % 0x1000) {
         pages_needed += 1;
     }
@@ -139,17 +139,17 @@ uint32_t pmm_allocate(uint32_t size) {
     return ret;
 }
 
-void pmm_unallocate(void * address, uint32_t size) {
-    uint32_t ret = (uint32_t)address;
+void pmm_unallocate(void * address, uint64_t size) {
+    uint64_t ret = (uint64_t)address;
     if (ret == 0 || ret < MIN || ret > MAX) {
         return;
     }
  
-    uint32_t pages_needed = size/0x1000;
-    uint32_t bitmap_byte = 0; // The first byte in the sequence
-    uint32_t bitmap_bit = 0; // The first bit in the sequence
+    uint64_t pages_needed = size/0x1000;
+    uint64_t bitmap_byte = 0; // The first byte in the sequence
+    uint64_t bitmap_bit = 0; // The first bit in the sequence
     uint8_t *cur_bitmap_pos = bitmap;
-    uint32_t offset = ret - MIN; // Offset from the beginning of free memory
+    uint64_t offset = ret - MIN; // Offset from the beginning of free memory
     if (size % 0x1000) {
         pages_needed += 1;
     }
@@ -157,7 +157,7 @@ void pmm_unallocate(void * address, uint32_t size) {
     bitmap_byte = (offset/0x1000)/8; // Get the byte to start writing to the bitmap
     bitmap_bit = (offset/0x1000)%8; // Get the bit to start writing to the bitmap
     cur_bitmap_pos += bitmap_byte;
-    for (uint32_t i = 0; i < pages_needed; i++) {
+    for (uint64_t i = 0; i < pages_needed; i++) {
         set_bit(cur_bitmap_pos, bitmap_bit, 0);
         bitmap_bit++;
         if (bitmap_bit == 8) {
@@ -168,14 +168,14 @@ void pmm_unallocate(void * address, uint32_t size) {
     }
 
     sprint("\nFreed ");
-    sprint_uint(size);
+    sprint_uint64(size);
     sprint(" bytes and ");
-    sprint_uint(pages_needed);
+    sprint_uint64(pages_needed);
     sprint(" pages and ");
-    sprint_uint(pages_needed*0x1000);
+    sprint_uint64(pages_needed*0x1000);
     sprint(" bytes were logged\nAddress: ");
-    sprint_uint((uint32_t)address);
-    uint32_t allocated_space = pages_needed*0x1000;
+    sprint_uint64((uint64_t)address);
+    uint64_t allocated_space = pages_needed*0x1000;
     free_mem_addr -= allocated_space;
     used_mem -= allocated_space;
     memory_remaining += allocated_space;

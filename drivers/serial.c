@@ -45,6 +45,12 @@ void sprint_uint(unsigned int num) {
     sprint(toprint);
 }
 
+void sprint_uint64(uint64_t num) {
+    char toprint[64];
+    uint64_to_ascii(num, toprint);
+    sprint(toprint);
+}
+
 void sprintd(char *message) {
     sprint("[");
     sprint_uint(tick);

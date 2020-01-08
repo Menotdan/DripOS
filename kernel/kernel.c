@@ -31,10 +31,9 @@ uint32_t position = 0;
 int prompttype = 0;
 int stdinpass = 0;
 int loaded = 0;
-uint32_t lowerMemSize;
-uint32_t upperMemSize;
-uint32_t largestUseableMem = 0;
-uint32_t memAddr = 0;
+uint32_t mem_size;
+uint64_t largest_usable_mem = 0;
+uint64_t mem_addr = 0;
 multiboot_memory_map_t* mmap;
 char key_buffer[2000];
 char key_buffer_up[2000];
@@ -80,32 +79,41 @@ void interrupt_test() {
 	asm("int $32");
 }
 
-void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
+void kmain(multiboot_info_t* mbd, uint64_t end_of_code) {
 	//set_text_mode(1);
 	// Read memory map
 	init_serial();
+	sprint_uint64(0xffffffffffffffff);
+	char oof[50] = "\n*hacker voice* im in\n";
+	char newline[50] = "\n";
+	sprint(oof);
+	sprint("h");
+	sprint_uint64((uint64_t)mbd);
+	sprint(newline);
+	sprint_uint64(mbd->framebuffer_addr);
+	while (1)
+	{
+		asm volatile("hlt");
+	}
+	
 	if (mbd->flags & MULTIBOOT_INFO_MEMORY)
     {
-		lowerMemSize = (uint32_t)mbd->mem_lower;
-		upperMemSize = (uint32_t)mbd->mem_upper;
-    }
+		mem_size = (uint32_t)mbd->mem;
+	}
     if (mbd->flags & MULTIBOOT_INFO_MEM_MAP)
     {
-        for (mmap = (struct multiboot_mmap_entry*)mbd->mmap_addr; (uint32_t)mmap < (mbd->mmap_addr + mbd->mmap_length); mmap = (struct multiboot_mmap_entry*)((uint32_t)mmap + mmap->size + sizeof(mmap->size)))
-        {
-			//uint32_t addrH = mmap->addr_high;
-            uint32_t addrL = mmap->addr_low;
-            //uint32_t lenH = mmap->len_high;
-            uint32_t lenL = mmap->len_low;
+        for (mmap = (struct multiboot_mmap_entry *)((uint64_t)mbd->mmap_addr); (uint64_t)mmap < (uint64_t)(mbd->mmap_addr + mbd->mmap_length); mmap = (struct multiboot_mmap_entry*)((uint64_t)mmap + mmap->size + sizeof(mmap->size))) {
+            uint64_t addr = mmap->addr;
+            uint64_t len = mmap->len;
 			uint8_t mType = mmap->type;
 			if (mType == 1) {
-				if (lenL > largestUseableMem) {
-					largestUseableMem = abs(lenL - abs(endOfCode-addrL));
-					memAddr = abs(addrL + abs(endOfCode-addrL));
+				if (len > largest_usable_mem) {
+					largest_usable_mem = abs(len - abs(end_of_code-addr));
+					mem_addr = abs(addr + abs(end_of_code-addr));
 				}
 			}
         }
-		set_addr(memAddr, largestUseableMem);
+		set_addr(mem_addr, largest_usable_mem);
 		
     }
 	setup_screen();
@@ -119,10 +127,10 @@ void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
 		sprint_uint(mbd->framebuffer_height);
 		height = mbd->framebuffer_height;
 		sprint("\nFramebuffer address: ");
-		sprint_uint(mbd->framebuffer_addr_low);
+		sprint_uint(mbd->framebuffer_addr);
 		sprint("\nColors: ");
 		sprint_uint(mbd->framebuffer_palette_num_colors);
-		vidmem = (uint8_t *)mbd->framebuffer_addr_low;
+		vidmem = (uint8_t *)mbd->framebuffer_addr;
 		sprint("\nBPP: ");
 		sprint_uint(mbd->framebuffer_bpp);
 		sprint("\nBytes per pixel: ");

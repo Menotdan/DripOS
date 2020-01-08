@@ -211,7 +211,7 @@ void execute_command(char input[]) {
 	} else if (strcmp(input, "testMem") == 0) {
 		for (int c = 0; c < 100000; c++) {
 			testy = (char *)kmalloc(0x1000);
-			kprint_uint((uint32_t)testy);
+			kprint_uint((uint64_t)testy);
 			kprint("\n");
 			*testy = 100;
 			if (*testy != 100) {

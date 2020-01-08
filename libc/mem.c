@@ -6,26 +6,10 @@
 #include "../cpu/timer.h"
 #include "../mem/pmm.h"
 
-void *get_pointer(uint32_t addr) {
+void *get_pointer(uint64_t addr) {
   volatile uintptr_t iptr = addr;
   unsigned int *ptr = (unsigned int*)iptr;
   return (void *)ptr;
-}
-
-void pokeb(uint32_t seg, uint32_t offset, char data) {
-    *(char*) ((seg * 0x10) + offset) = data;
-}
-
-char peekb(uint32_t seg, uint32_t offset) {
-    return *(char*) ((seg * 0x10) + offset);
-}
-
-void pokew(uint32_t seg, uint32_t offset, unsigned data) {
-    *(unsigned*) ((seg * 0x10) + offset) = data;
-}
-
-unsigned peekw(uint32_t seg, uint32_t offset) {
-    return *(unsigned*) ((seg * 0x10) + offset);
 }
 
 

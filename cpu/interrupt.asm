@@ -11,23 +11,60 @@
 [extern free]
 [extern global_old_task]
 [extern task_size]
+
+%macro pushaq 0
+    push rax      ; save current rax
+    push rbx      ; save current rbx
+    push rcx      ; save current rcx
+    push rdx      ; save current rdx
+    push rbp      ; save current rbp
+    push rdi      ; save current rdi
+    push rsi      ; save current rsi
+    push r8       ; save current r8
+    push r9       ; save current r9
+    push r10      ; save current r10
+    push r11      ; save current r11
+    push r12      ; save current r12
+    push r13      ; save current r13
+    push r14      ; save current r14
+    push r15      ; save current r15
+%endmacro
+
+%macro popaq 0
+    pop rax       ; restore current rax
+    pop rbx       ; restore current rbx
+    pop rcx       ; restore current rcx
+    pop rdx       ; restore current rdx
+    pop rbp       ; restore current rbp
+    pop rdi       ; restore current rdi
+    pop rsi       ; restore current rsi
+    pop r8        ; restore current r8
+    pop r9        ; restore current r9
+    pop r10       ; restore current r10
+    pop r11       ; restore current r11
+    pop r12       ; restore current r12
+    pop r13       ; restore current r13
+    pop r14       ; restore current r14
+    pop r15       ; restore current r15
+%endmacro
+
 ; Common ISR code
 isr_common_stub:
     ; 1. Save CPU state
-	pushad ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
+	pushaq
 	mov ax, ds ; Lower 16-bits of eax = ds.
-	push eax ; save the data segment descriptor
-    mov eax, dr6
-    push eax
-	mov eax, esp
+	push rax ; save the data segment descriptor
+    mov rax, dr6
+    push rax
+	mov rax, rsp
 
     ; 2. Call C handler
     cld
 	call isr_handler
-    add esp, 8
-	popad
+    add rsp, 8
+	popaq
     ;pop esp
-	add esp, 8 ; Cleans up the pushed error code and pushed ISR number
+	add rsp, 8 ; Cleans up the pushed error code and pushed ISR number
 	sti
 	iret ; pops 5 things at once: CS, EIP, EFLAGS, SS, and ESP
     
@@ -35,69 +72,68 @@ isr_common_stub:
 ; Common IRQ code. Identical to ISR code except for the 'call' 
 ; and the 'pop ebx'
 irq_common_stub:
-    ;push esp
-    pushad
+    pushaq
     mov ax, ds
-    push eax
+    push rax
 
-    mov eax, dr6
-    push eax
-    mov eax, esp                 ; At this point ESP is a pointer to where DS (and the rest
+    mov rax, dr6
+    push rax
+    mov rax, rsp                 ; At this point ESP is a pointer to where DS (and the rest
                              ; of the interrupt handler state resides)
                              ; Push ESP as 1st parameter as it's a 
                              ; pointer to a registers_t
     cld
     call irq_handler
-    mov ebx, [switch_task]
-    cmp ebx, 1
+    mov rbx, [switch_task]
+    cmp rbx, 1
     jne testLabel
     ;call breakA
-    mov ebx, 0
-    mov [switch_task], ebx
-    mov eax, esp ; Safety, irq_handler probably changed eax
+    mov rbx, 0
+    mov [switch_task], rbx
+    mov rax, rsp ; Safety, irq_handler probably changed eax
     cld
     call store_values ; Store current registers pointer to running_task
-    mov esp, [global_esp] ; Change ESP
-    mov eax, esp ; Set param
+    mov rsp, [global_esp] ; Change ESP
+    mov rax, rsp ; Set param
     cld
     call schedule_task ; Pick next task and set it in return
 testLabel:
-    add esp, 8 ; DR6 and ss
+    add rsp, 8 ; DR6 and ss
 
-    popad
-    add esp, 8 ; IRQ code and error code
+    popaq
+    add rsp, 8 ; IRQ code and error code
     sti ; Set interrupt flag
     iret ; Ret
 
 syscall_handler:
     ; 1. Save CPU state
-	pushad ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
+	pushaq ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
 	mov ax, ds ; Lower 16-bits of eax = ds.
-	push eax ; save the data segment descriptor
-    mov eax, dr6
-    push eax
-	mov eax, esp
+	push rax ; save the data segment descriptor
+    mov rax, dr6
+    push rax
+	mov rax, rsp
 
     ; 2. Call C handler
     cld
 	call syscall_handle
-    mov ebx, [switch_task]
-    cmp ebx, 1
+    mov rbx, [switch_task]
+    cmp rbx, 1
     jne no_switch
-    mov esp, [global_esp] ; Change ESP
+    mov rsp, [global_esp] ; Change ESP
     ; TODO: call free on the old ESP
-    mov eax, [global_esp_old] ; Get the ESP of the old task
-    mov edx, 0x4000 ; Size of the stack
+    mov rax, [global_esp_old] ; Get the ESP of the old task
+    mov rdx, 0x4000 ; Size of the stack
     call free ; Free the memory
-    mov eax, [global_old_task]
-    mov edx, [task_size]
+    mov rax, [global_old_task]
+    mov rdx, [task_size]
     call free
-    mov eax, esp ; Set param to the current stack frame
+    mov rax, rsp ; Set param to the current stack frame
     call schedule_task ; Pick next task and set it in return
 no_switch:
-    add esp, 8
-	popad
-	add esp, 8 ; Cleans up the pushed error code and pushed ISR number
+    add rsp, 8
+	popaq
+	add rsp, 8 ; Cleans up the pushed error code and pushed ISR number
 	sti
 	iret ; pops 3 things at once: CS, EIP, EFLAGS
 

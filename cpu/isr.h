@@ -78,9 +78,9 @@ typedef struct {
    //uint8_t sse[]
    uint32_t dr6;
    uint32_t ds; /* Data segment selector */
-   uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax; /* Pushed by pusha. */
+   uint32_t r15, r14, r13, r12, r11, r10, r9, r8, rsi, rdi, rbp, rdx, rcx, rbx, rax;
    uint32_t int_no, err_code; /* Interrupt number and error code (if applicable) */
-   uint32_t eip, cs, eflags; /* Pushed by the processor automatically */
+   uint32_t rip, cs, rflags, ss, rsp; /* Pushed by the processor automatically */
 } __attribute__((__packed__)) registers_t;
 
 void isr_install();

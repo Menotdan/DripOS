@@ -29,8 +29,7 @@
 extern void initTasking();
  
 typedef struct {
-// eax off   0    4    8    12   16   20   24   28   32   36      40
-    uint32_t eax, ebx, ecx, edx, esi, edi, esp, ebp, eip, eflags, cr3;
+    uint64_t rax, rbx, rcx, rdx, rsi, rdi, rsp, rbp, r8, r9, r10, r11, r12, r13, r14, r15, rip, rflags, cr3;
 } __attribute__((__packed__)) Registers;
  
 typedef struct Task {
