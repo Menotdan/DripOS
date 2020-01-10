@@ -63,6 +63,12 @@ align 4096
 paging_directories:
 resb 4096 ; Page directory
 
+pml4t:
+resb 4096 ; PML4T
+
+pdpt:
+resb 4096 ; PDPT
+
 global multiboot_header_pointer
 multiboot_header_pointer:
 resb 4
@@ -78,15 +84,14 @@ _start:
     ; Paging
     mov edi, 0x1000 ; The Page map level 4 table
     mov cr3, edi ; Point cr3 to the PML4T
-    xor eax, eax       ; Nullify the A-register.
-    mov ecx, 3072      ; Set the C-register to 3072.
-    rep stosd          ; Clear the memory.
     mov edi, 0x1000    ; Set the destination index to control register 3.
     ; Set the tables to point to the correct places, with the first two bits set
     ; to indicate that the page is present and that it is readable and writeable
     mov DWORD [edi], 0x2003 ; Point to the Page directory pointer table
     add edi, 0x1000 ; EDI is now pointing to where the Page directory pointer table is
-    mov DWORD [edi], paging_directories ; Point to the Page directory
+    mov eax, paging_directories ; Store it temporarly
+    or eax, 0x3 ; Set bottom bits
+    mov DWORD [edi], eax; Point to the Page directory
     
     mov ecx, 20 ; Loop counter
     mov edi, paging_directories ; Pointer to the page directory
