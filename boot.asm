@@ -88,7 +88,7 @@ _start:
     ; to indicate that the page is present and that it is readable and writeable
     mov eax, pdpt ; Store it temporarly
     or eax, 0x3 ; Set bottom bits
-    mov DWORD [edi], pdpt ; Point to the Page directory pointer table
+    mov DWORD [edi], eax ; Point to the Page directory pointer table
     mov edi, pdpt ; Pointing to the table
     mov eax, paging_directories ; Store it temporarly
     or eax, 0x3 ; Set bottom bits

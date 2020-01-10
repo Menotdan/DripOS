@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define MEMORY_MAPPED 0x200000
+#define MEMORY_MAPPED 0x2800000
 
 void user_input(char input[]);
 int getstate();
