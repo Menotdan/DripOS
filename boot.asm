@@ -59,42 +59,51 @@ stack_bottom:
 resb 65536
 stack_top:
 
+align 4096
+paging_directories:
+resb 4096 ; Page directory
+
 global multiboot_header_pointer
 multiboot_header_pointer:
 resb 4
 
 section .text
 extern long_mode_on
+extern __kernel_end
 global _start
 _start:
     mov esp, stack_top ; Set the stack up
+    xchg bx, bx
     push ebx
     ; Paging
     mov edi, 0x1000 ; The Page map level 4 table
     mov cr3, edi ; Point cr3 to the PML4T
     xor eax, eax       ; Nullify the A-register.
-    mov ecx, 4096      ; Set the C-register to 4096.
+    mov ecx, 3072      ; Set the C-register to 3072.
     rep stosd          ; Clear the memory.
-    mov edi, cr3       ; Set the destination index to control register 3.
+    mov edi, 0x1000    ; Set the destination index to control register 3.
     ; Set the tables to point to the correct places, with the first two bits set
     ; to indicate that the page is present and that it is readable and writeable
     mov DWORD [edi], 0x2003 ; Point to the Page directory pointer table
     add edi, 0x1000 ; EDI is now pointing to where the Page directory pointer table is
-    mov DWORD [edi], 0x3003 ; Point to the Page directory
-    add edi, 0x1000 ; EDI is now pointing to where the Page directory is
-    mov DWORD [edi], 0x4003 ; Point to the page table
-    add edi, 0x1000 ; EDI is now pointing at the Page table
+    mov DWORD [edi], paging_directories ; Point to the Page directory
+    
+    mov ecx, 20 ; Loop counter
+    mov edi, paging_directories ; Pointer to the page directory
+    xor ebx, ebx ; Null B register
+    mov ebx, 0x3 ; Present and writeable page entry
+    or ebx, 1 << 7 ; Set bit 7 so that the page is a 2 MiB page
+fill_pdt:
+    mov DWORD [edi], ebx ; Point the PDT entry to the 2 MiB page
+    add edi, 8 ; Increment the pointer by one entry
+    add ebx, 0x200000 ; Increment the adress by 2 MiB
+    loop fill_pdt
 
-    mov ebx, 0x3 ; Set the first two bits for every page in the table
-    mov ecx, 512 ; Loop counter
-.fill_table_loop:
-    mov DWORD [edi], ebx ; Point the table to the address set in ebx
-    add ebx, 0x1000 ; Add 0x1000 to ebx, for the next page
-    add edi, 8 ; Add 8 to the destination pointer, because these paging tables are for long mode
-    loop .fill_table_loop ; Loop over this label, using ecx as a counter
     mov eax, cr4                 ; Set the A-register to control register 4.
     or eax, 1 << 5               ; Set the PAE-bit, which is the 6th bit (bit 5).
+    ;or eax, 1 << 4               ; Set the PSE-bit, which is the 5th bit (bit 4).
     mov cr4, eax                 ; Set control register 4 to the A-register.
+done_table:   
     ; Switch to long mode
     mov ecx, 0xC0000080          ; Set the C-register to 0xC0000080, which is the EFER MSR.
     rdmsr                        ; Read from the model-specific register.

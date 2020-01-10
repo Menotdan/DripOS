@@ -79,18 +79,20 @@ void interrupt_test() {
 	asm("int $32");
 }
 
-void kmain(multiboot_info_t* mbd, uint64_t end_of_code) {
-	//set_text_mode(1);
+void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 	// Read memory map
 	init_serial();
 	sprint_uint64(0xffffffffffffffff);
-	char oof[50] = "\n*hacker voice* im in\n";
-	char newline[50] = "\n";
-	sprint(oof);
-	sprint("h");
+	sprint("\n");
 	sprint_uint64((uint64_t)mbd);
-	sprint(newline);
+	sprint("\n*hacker voice* Im in");
+	sprint("\n");
 	sprint_uint64(mbd->framebuffer_addr);
+	sprint("\n");
+	sprint_uint64(end_of_code);
+	sprint("\n");
+	sprint_uint64(MEMORY_MAPPED-end_of_code);
+	
 	while (1)
 	{
 		asm volatile("hlt");

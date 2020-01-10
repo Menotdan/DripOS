@@ -29,46 +29,43 @@ CFLAGS = -g -fno-pic               \
     -fno-omit-frame-pointer
 
 # First rule is run by default
-myos.iso: kernel32-withboot.elf
-	grub-file --is-x86-multiboot kernel32-withboot.elf
+myos.iso: kernel32.elf
+	grub-file --is-x86-multiboot kernel32.elf
 	mkdir -p isodir/boot/grub
-	cp kernel32-withboot.elf isodir/boot/os-image.bin
+	cp kernel32.elf isodir/boot/os-image.bin
 	cp grub.cfg isodir/boot/grub/grub.cfg
 	grub-mkrescue -o DripOS.iso isodir
-	rm -rf kernel/*.o boot/*.bin drivers/*.o boot/*.o cpu/*.o libc/*.o fs/*.o mem/*.o
-	rm -rf *.bin *.o *.elf
 
  
 # '--oformat binary' deletes all symbols as a collateral, so we don't need
 # to 'strip' them manually on this case
-kernel.bin: kernel32-withboot.elf
+kernel.bin: kernel32.elf
 	objcopy -O binary $^ $@
 
-kernel32-withboot.elf: kernel32.elf boot.o
-	${32BITLINKER} -o $@ -T linker.ld $^
 
 kernel32.elf: kernel.elf
 	objcopy -O elf32-i386 kernel.elf kernel32.elf
  
 # Used for debugging purposes
-kernel.elf: ${OBJ}
+kernel.elf: ${OBJ} boot.o
 	${LINKER} -o $@ -T linker.ld $^
 
 lol: ${OBJ}
 	~/Desktop/Compiler/bin/i686-elf-ld -melf_i386 -o helllo -T linker.ld hello $^
 
 run: myos.iso
-	qemu-system-x86_64 -d guest_errors int -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
-
+	- qemu-system-x86_64 -d guest_errors -d cpu_reset -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+	make clean
 run-kvm: myos.iso
-	sudo qemu-system-x86_64 -enable-kvm -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
-
+	- sudo qemu-system-x86_64 -enable-kvm -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+	make clean
 iso: myos.iso
 	cp myos.iso doneiso/
 # Open the connection to qemu and load our kernel-object file with symbols
 debug: myos.iso
 	qemu-system-x86_64 -vga std -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom DripOS.iso -hda dripdisk.img &
-	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf" -x "~/gdbcommands"
+	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel32.elf" -x "~/gdbcommands"
+	make clean
  
 # Generic rules for wildcards
 # To make an object, always compile from its .c $< $@
@@ -84,7 +81,7 @@ cpu/switch.o: cpu/switch.s
 	${CC} -Werror -Wall -Wextra -Wpedantic -O${O_LEVEL} -g -MD -c $< -o $@
 
 boot.o: boot.asm
-	nasm -g -f elf32 -o $@ $<
+	nasm -g -f elf64 -o $@ $<
 
 long_load.o: long_load.asm
 	nasm -g -f elf64 -o $@ $<

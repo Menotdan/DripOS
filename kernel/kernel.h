@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define MEMORY_MAPPED 0x200000
+
 void user_input(char input[]);
 int getstate();
 void Log(char *message, int type);
