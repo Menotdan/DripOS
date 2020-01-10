@@ -79,23 +79,23 @@ extern __kernel_end
 global _start
 _start:
     mov esp, stack_top ; Set the stack up
-    xchg bx, bx
     push ebx
     ; Paging
-    mov edi, 0x1000 ; The Page map level 4 table
+    mov edi, pml4t ; The Page map level 4 table
     mov cr3, edi ; Point cr3 to the PML4T
-    mov edi, 0x1000    ; Set the destination index to control register 3.
+    mov edi, pml4t    ; Set the destination index to control register 3.
     ; Set the tables to point to the correct places, with the first two bits set
     ; to indicate that the page is present and that it is readable and writeable
-    mov DWORD [edi], 0x2003 ; Point to the Page directory pointer table
-    add edi, 0x1000 ; EDI is now pointing to where the Page directory pointer table is
+    mov eax, pdpt ; Store it temporarly
+    or eax, 0x3 ; Set bottom bits
+    mov DWORD [edi], pdpt ; Point to the Page directory pointer table
+    mov edi, pdpt ; Pointing to the table
     mov eax, paging_directories ; Store it temporarly
     or eax, 0x3 ; Set bottom bits
     mov DWORD [edi], eax; Point to the Page directory
     
     mov ecx, 20 ; Loop counter
     mov edi, paging_directories ; Pointer to the page directory
-    xor ebx, ebx ; Null B register
     mov ebx, 0x3 ; Present and writeable page entry
     or ebx, 1 << 7 ; Set bit 7 so that the page is a 2 MiB page
 fill_pdt:
