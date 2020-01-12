@@ -12,3 +12,4 @@ write*
 **/*.old*
 *.mp3
 **/*.mp3
+.vscode
