@@ -40,6 +40,7 @@ multiboot_memory_map_t* mmap;
 char key_buffer[2000];
 char key_buffer_up[2000];
 char key_buffer_down[2000];
+char cpu_name[33];
 uint8_t *vidmem;
 uint16_t width;
 uint16_t height;
@@ -81,6 +82,38 @@ void interrupt_test() {
 	asm("int $32");
 }
 
+void get_cpu_name(char *str) {
+    asm volatile (
+		"  mov      $0x80000002, %%eax\n"
+		"  cpuid\n"
+		"  stosl\n"
+		"  mov      %%ebx, %%eax\n"
+		"  stosl\n"
+		"  mov      %%ecx, %%eax\n"
+		"  stosl\n"
+		"  mov      %%edx, %%eax\n"
+		"  stosl\n"
+		"  mov      $0x80000003, %%eax\n"
+		"  cpuid\n"
+		"  stosl\n"
+		"  mov      %%ebx, %%eax\n"
+		"  stosl\n"
+		"  mov      %%ecx, %%eax\n"
+		"  stosl\n"
+		"  mov      %%edx, %%eax\n"
+		"  stosl\n"
+		"  mov      $0x80000004, %%eax\n"
+		"  cpuid\n"
+		"  stosl\n"
+		"  mov      %%ebx, %%eax\n"
+		"  stosl\n"
+
+        :
+        : "D" (str)
+        : "rax", "rbx", "rcx", "rdx"
+    );
+}
+
 void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 	// Read memory map
 	init_serial();
@@ -107,6 +140,10 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 		sprint("\n Size: ");
 		sprint_uint(mbd->mmap_length);
 	}
+	sprint("\nCPU name: ");
+	get_cpu_name(cpu_name);
+	sprint(cpu_name);
+	sprint("\n");
 	while (1) {
 		asm volatile("hlt");
 	}

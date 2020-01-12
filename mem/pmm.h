@@ -12,19 +12,22 @@ extern uint64_t MAX;
 extern uint64_t MIN;
 extern uint8_t *bitmap;
 
-typedef struct pmm
+typedef struct mmap_entry_list
 {
-    /* data */
-};
+    multiboot_memory_map_t *next;
+    multiboot_memory_map_t *cur;
+} mmap_entry_list_t;
 
 
 typedef struct sorted_meminfo
 {
-    
+    mmap_entry_list_t *available;
+    mmap_entry_list_t *reserved;
+    mmap_entry_list_t *other;
 } sorted_meminfo_t;
 
 
-void set_addr(uint32_t addr, uint32_t mem_size);
+void configure_mem(multiboot_info_t *mbd);
 uint64_t pmm_find_free(uint64_t size);
 uint64_t pmm_allocate(uint64_t size);
 void pmm_unallocate(void * address, uint64_t size);
