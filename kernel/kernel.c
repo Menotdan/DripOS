@@ -12,6 +12,7 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include <string.h>
 #include "../libc/mem.h"
 #include "../mem/pmm.h"
+#include "../mem/vmm.h"
 #include "../cpu/timer.h"
 #include "../drivers/time.h"
 #include "terminal.h"
@@ -31,7 +32,8 @@ uint32_t position = 0;
 int prompttype = 0;
 int stdinpass = 0;
 int loaded = 0;
-uint32_t mem_size;
+uint64_t mem_size;
+uint64_t total_mem = 0;
 uint64_t largest_usable_mem = 0;
 uint64_t mem_addr = 0;
 multiboot_memory_map_t* mmap;
@@ -83,8 +85,12 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 	// Read memory map
 	init_serial();
 	sprint_uint64(0xffffffffffffffff);
-	sprint("\n");
+	sprint("\nMultiboot header: ");
 	sprint_uint64((uint64_t)mbd);
+	sprint("\nMemory lower: ");
+	sprint_uint64(mbd->mem_lower);
+	sprint("\nMemory upper: ");
+	sprint_uint64(mbd->mem_upper);
 	sprint("\n*hacker voice* Im in");
 	sprint("\n");
 	sprint_uint64(mbd->framebuffer_addr);
@@ -92,35 +98,21 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 	sprint_uint64(end_of_code);
 	sprint("\n");
 	sprint_uint64(MEMORY_MAPPED-end_of_code);
-	
-	while (1)
-	{
+	sprint("\nFramebuffer height: ");
+	sprint_uint64(mbd->framebuffer_height);
+	sprint("\nInitializing stage 1 paging and reading memory map");
+	if (mbd->flags & MULTIBOOT_INFO_MEM_MAP) {
+		sprint("\nMemory map exists. Address: ");
+		sprint_uint(mbd->mmap_addr);
+		sprint("\n Size: ");
+		sprint_uint(mbd->mmap_length);
+	}
+	while (1) {
 		asm volatile("hlt");
 	}
-	
-	if (mbd->flags & MULTIBOOT_INFO_MEMORY)
-    {
-		mem_size = (uint32_t)mbd->mem;
-	}
-    if (mbd->flags & MULTIBOOT_INFO_MEM_MAP)
-    {
-        for (mmap = (struct multiboot_mmap_entry *)((uint64_t)mbd->mmap_addr); (uint64_t)mmap < (uint64_t)(mbd->mmap_addr + mbd->mmap_length); mmap = (struct multiboot_mmap_entry*)((uint64_t)mmap + mmap->size + sizeof(mmap->size))) {
-            uint64_t addr = mmap->addr;
-            uint64_t len = mmap->len;
-			uint8_t mType = mmap->type;
-			if (mType == 1) {
-				if (len > largest_usable_mem) {
-					largest_usable_mem = abs(len - abs(end_of_code-addr));
-					mem_addr = abs(addr + abs(end_of_code-addr));
-				}
-			}
-        }
-		set_addr(mem_addr, largest_usable_mem);
-		
-    }
 	setup_screen();
 	/* VESA SET? */
-	if ((mbd->flags & 0x800) == 0x800) {
+	if ((mbd->flags & MULTIBOOT_INFO_VBE_INFO)) {
 		// VBE ready
 		sprint("\nWidth: ");
 		sprint_uint(mbd->framebuffer_width);

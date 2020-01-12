@@ -1,5 +1,12 @@
 #include <stdint.h>
+#include <stddef.h>
+#include "pmm.h"
+#include "../libc/mem.h"
 #define DEFAULT_PML4T 0x1000
+#define VMM_ADDR_MASK ~(0xfff)
+#define VMM_FLAG_PRESENT	(1<<0)
+#define VMM_FLAG_WRITE		(1<<1)
+#define VIRT_PHYS_BASE 0x1000000000000000
 
 typedef struct table_address
 {
@@ -16,8 +23,15 @@ typedef struct table_address
 
 typedef struct page_table
 {
-    uint64_t data[512];
-} page_table_t;
+    uint64_t ents[512];
+} pt_t;
+
+typedef struct {
+	size_t pml4_off;
+	size_t pdp_off;
+	size_t pd_off;
+	size_t pt_off;
+} pt_off_t;
 
 typedef struct used_free12K
 {
@@ -25,3 +39,22 @@ typedef struct used_free12K
     uint8_t used_pdt;
     uint8_t used_pt;
 } used_free12K_t;
+
+static inline pt_t *vmm_get_or_alloc_ent(pt_t *tab, size_t off, int flags) {
+    uint64_t ent_addr = tab->ents[off] & VMM_ADDR_MASK;
+    if (!ent_addr) {
+        ent_addr = tab->ents[off] = pmm_allocate(4096);
+        if (!ent_addr) {
+            return NULL;
+        }
+        tab->ents[off] |= flags | VMM_FLAG_PRESENT;
+        memset((void *)(ent_addr + VIRT_PHYS_BASE), 0, 4096);
+    }
+
+    return (pt_t *)(ent_addr + VIRT_PHYS_BASE);
+}
+void set_pml4t(uint64_t new);
+void *vmm_offs_to_virt(pt_off_t offs);
+int vmm_map_pages(pt_t *pml4, void *virt, void *phys, size_t count, int perms);
+uint64_t get_pml4t();
+pt_off_t vmm_virt_to_offs(void *virt);

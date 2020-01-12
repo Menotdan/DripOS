@@ -65,6 +65,29 @@ int atoi(char *str)
     return result; 
 } 
 
+void htoa(uint64_t in, char out[]) {
+    uint32_t pos = 0;
+    uint8_t tmp;
+
+    out[pos++] = '0';
+    out[pos++] = 'x';
+
+    for (uint16_t i = 60; i > 0; i -= 4) {
+        tmp = (uint8_t)((in >> i) & 0xf);
+        if (tmp >= 0xa) {
+            out[pos++] = (tmp - 0xa) + 'A';
+        } else {
+            out[pos++] = tmp + '0';
+        }
+    }
+
+    tmp = (uint8_t)(in & 0xf);
+    if (tmp >= 0xa) {
+        out[pos++] = (tmp - 0xa) + 'A';
+    } else {
+        out[pos++] = tmp + '0';
+    }
+}
 
 void hex_to_ascii(int n, char str[]) {
     append(str, '0');

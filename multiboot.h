@@ -147,7 +147,8 @@ struct multiboot_info
   multiboot_uint32_t flags;
 
   /* Available memory from BIOS */
-  multiboot_uint32_t mem;
+  multiboot_uint32_t mem_lower;
+  multiboot_uint32_t mem_upper;
 
   /* "root" partition */
   multiboot_uint32_t boot_device;

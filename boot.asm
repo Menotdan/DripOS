@@ -6,8 +6,8 @@ FLAGS equ ALIGN_MULTIBOOT | MEMINFO | VIDEO_MODE
 MAGIC equ 0x1BADB002
 CHECKSUM equ -(MAGIC + FLAGS)
 VIDMODE equ 0
-WIDTH equ 720
-HEIGHT equ 480
+WIDTH equ 1280
+HEIGHT equ 720
 DEPTH equ 32
 
 section .multiboot
@@ -79,7 +79,7 @@ extern __kernel_end
 global _start
 _start:
     mov esp, stack_top ; Set the stack up
-    push ebx
+    mov DWORD [multiboot_header_pointer], ebx
     ; Paging
     mov edi, pml4t ; The Page map level 4 table
     mov cr3, edi ; Point cr3 to the PML4T
@@ -117,7 +117,6 @@ done_table:
     mov eax, cr0                 ; Set the A-register to control register 0.
     or eax, 1 << 31              ; Set the PG-bit, which is the 32nd bit (bit 31).
     mov cr0, eax                 ; Set control register 0 to the A-register.
-    pop ebx
 
     ; Set up GDT
 

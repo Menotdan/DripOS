@@ -62,6 +62,46 @@ void set_addr(uint32_t addr, uint32_t mem_size) {
     sprint_uint64(memory_remaining);
 }
 
+/* Configure memory mapping and such */
+void configure_mem(multiboot_info_t *mbd) {
+        // Current mmap address
+		uint64_t current = ((uint64_t)mbd->mmap_addr) & 0xffffffff;
+		// Remaing mmap data
+		uint64_t remaining = mbd->mmap_length;
+
+		for (; remaining > 0; remaining -= sizeof(multiboot_memory_map_t)) {
+			multiboot_memory_map_t *mmap = (multiboot_memory_map_t *)(current);
+
+			char buf1[100];
+			char buf2[100];
+			uint64_t start = mmap->addr;
+			uint64_t end = start + mmap->len;
+			htoa(start, buf1);
+			htoa(end, buf2);
+			
+			sprint("\nEntry:\n  ");
+			sprint(buf1);
+			sprint(" - ");
+			sprint(buf2);
+			sprint("\n  Type: ");
+			if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
+				sprint("Usable");
+			} else if (mmap->type == MULTIBOOT_MEMORY_RESERVED) {
+				sprint("Reserved");
+			} else if (mmap->type == MULTIBOOT_MEMORY_ACPI_RECLAIMABLE) {
+				sprint("ACPI Reclaimable");
+			} else if (mmap->type == MULTIBOOT_MEMORY_NVS) {
+				sprint("NVS");
+			} else if (mmap->type == MULTIBOOT_MEMORY_BADRAM) {
+				sprint("Bad memory");
+			}
+
+			current += sizeof(multiboot_memory_map_t);
+			memset((uint8_t *)buf1, 0, 100);
+			memset((uint8_t *)buf2, 0, 100);
+		}
+}
+
 uint64_t pmm_find_free(uint64_t size) {
     uint64_t pages_needed = size/0x1000;
     uint64_t number_of_free = 0;
