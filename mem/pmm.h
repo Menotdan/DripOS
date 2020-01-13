@@ -12,20 +12,11 @@ extern uint64_t MAX;
 extern uint64_t MIN;
 extern uint8_t *bitmap;
 
-typedef struct mmap_entry_list
-{
-    multiboot_memory_map_t *next;
-    multiboot_memory_map_t *cur;
-} mmap_entry_list_t;
-
-
-typedef struct sorted_meminfo
-{
-    mmap_entry_list_t *available;
-    mmap_entry_list_t *reserved;
-    mmap_entry_list_t *other;
-} sorted_meminfo_t;
-
+typedef struct pmm_usable_list {
+    uint64_t size;
+    uint64_t address;
+    struct pmm_usable_list *next;
+} pmm_usable_list_t;
 
 void configure_mem(multiboot_info_t *mbd);
 uint64_t pmm_find_free(uint64_t size);

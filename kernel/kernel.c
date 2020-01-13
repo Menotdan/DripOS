@@ -139,6 +139,7 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 		sprint_uint(mbd->mmap_addr);
 		sprint("\n Size: ");
 		sprint_uint(mbd->mmap_length);
+		configure_mem(mbd);
 	}
 	sprint("\nCPU name: ");
 	get_cpu_name(cpu_name);

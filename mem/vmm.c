@@ -36,6 +36,20 @@ void *vmm_offs_to_virt(pt_off_t offs) {
 	return (void *)addr;
 }
 
+static inline pt_t *vmm_get_or_alloc_ent(pt_t *tab, size_t off, int flags) {
+    uint64_t ent_addr = tab->ents[off] & VMM_ADDR_MASK;
+    if (!ent_addr) {
+        ent_addr = tab->ents[off] = pmm_allocate(4096);
+        if (!ent_addr) {
+            return NULL;
+        }
+        tab->ents[off] |= flags | VMM_FLAG_PRESENT;
+        memset((void *)(ent_addr + VIRT_PHYS_BASE), 0, 4096);
+    }
+
+    return (pt_t *)(ent_addr + VIRT_PHYS_BASE);
+}
+
 int vmm_map_pages(pt_t *pml4, void *virt, void *phys, size_t count, int perms) {
     int higher_perms = perms & (VMM_FLAG_WRITE);
 

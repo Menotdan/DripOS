@@ -60,7 +60,7 @@ resb 65536
 stack_top:
 
 align 4096
-paging_directories:
+paging_directory1:
 resb 4096 ; Page directory
 
 pml4t:
@@ -90,12 +90,12 @@ _start:
     or eax, 0x3 ; Set bottom bits
     mov DWORD [edi], eax ; Point to the Page directory pointer table
     mov edi, pdpt ; Pointing to the table
-    mov eax, paging_directories ; Store it temporarly
+    mov eax, paging_directory1 ; Store it temporarly
     or eax, 0x3 ; Set bottom bits
     mov DWORD [edi], eax; Point to the Page directory
     
-    mov ecx, 20 ; Loop counter
-    mov edi, paging_directories ; Pointer to the page directory
+    mov ecx, 512 ; Loop counter
+    mov edi, paging_directory1 ; Pointer to the page directory
     mov ebx, 0x3 ; Present and writeable page entry
     or ebx, 1 << 7 ; Set bit 7 so that the page is a 2 MiB page
 fill_pdt:

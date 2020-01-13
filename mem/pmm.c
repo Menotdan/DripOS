@@ -7,15 +7,18 @@
 /* 
  * This is calculated by memory map parsing.
  */
+pmm_usable_list_t usable_mem;
+uint64_t total_memory = 0;
+uint64_t total_usable = 0;
 uint64_t new_addr = 0;
 uint64_t prev_addr = 0;
 uint64_t bitmap_size = 0;
-uint8_t *bitmap = 0;
 uint64_t free_mem_addr = 0;
 uint64_t memory_remaining = 0;
 uint64_t used_mem = 0;
 uint64_t MAX = 0;
 uint64_t MIN = 0;
+uint8_t *bitmap = 0;
 
 uint8_t get_bit(uint8_t input, uint8_t bit) {
     return ((input >> bit) & 1);
@@ -29,77 +32,58 @@ void set_bit(uint8_t *input, uint8_t bit, uint8_t state) {
     }
 }
 
-void set_addr(uint32_t addr, uint32_t mem_size) {
-    free_mem_addr = addr;
-    memory_remaining = mem_size;
-    MAX = mem_size + addr;
-    MIN = free_mem_addr;
-    sprint("\n Setting memory variables... \n  ");
-    sprint_uint(addr);
-    sprint("\n   ");
-    sprint_uint(mem_size);
-    sprint("\n");
-    sprint("\nSetting up memory bitmap...");
-    bitmap = (uint8_t *)free_mem_addr;
-    bitmap_size = (mem_size / 0x1000) / 8;
-    MIN += bitmap_size;
-    sprint("\nNumber of bytes needed for bitmap: ");
-    sprint_uint(bitmap_size);
-    sprint("\nBitmap address: ");
-    sprint_uint64((uint64_t)bitmap);
-    memset(bitmap, 0, bitmap_size);
-    free_mem_addr += bitmap_size;
-    memory_remaining -= bitmap_size;
-
-    free_mem_addr = (free_mem_addr + 0xFFF) & ~0xFFF;
-    MIN = free_mem_addr;
-    memory_remaining = MAX-MIN;
-    sprint("\nFree addr: ");
-    sprint_uint64(free_mem_addr);
-    sprint("\nMIN: ");
-    sprint_uint64(MIN);
-    sprint("\nRemaining: ");
-    sprint_uint64(memory_remaining);
-}
-
 /* Configure memory mapping and such */
 void configure_mem(multiboot_info_t *mbd) {
-        // Current mmap address
-		uint64_t current = ((uint64_t)mbd->mmap_addr) & 0xffffffff;
-		// Remaing mmap data
-		uint64_t remaining = mbd->mmap_length;
+    // Current mmap address
+    uint64_t current = ((uint64_t)mbd->mmap_addr) & 0xffffffff;
+    // Remaining mmap data
+    uint64_t remaining = mbd->mmap_length;
 
-		for (; remaining > 0; remaining -= sizeof(multiboot_memory_map_t)) {
-			multiboot_memory_map_t *mmap = (multiboot_memory_map_t *)(current);
+    total_memory += (mbd->mem_lower) * 1024;
+    total_memory += (mbd->mem_upper) * 1024;
 
-			char buf1[100];
-			char buf2[100];
-			uint64_t start = mmap->addr;
-			uint64_t end = start + mmap->len;
-			htoa(start, buf1);
-			htoa(end, buf2);
-			
-			sprint("\nEntry:\n  ");
-			sprint(buf1);
-			sprint(" - ");
-			sprint(buf2);
-			sprint("\n  Type: ");
-			if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
-				sprint("Usable");
-			} else if (mmap->type == MULTIBOOT_MEMORY_RESERVED) {
-				sprint("Reserved");
-			} else if (mmap->type == MULTIBOOT_MEMORY_ACPI_RECLAIMABLE) {
-				sprint("ACPI Reclaimable");
-			} else if (mmap->type == MULTIBOOT_MEMORY_NVS) {
-				sprint("NVS");
-			} else if (mmap->type == MULTIBOOT_MEMORY_BADRAM) {
-				sprint("Bad memory");
-			}
+    for (; remaining > 0; remaining -= sizeof(multiboot_memory_map_t)) {
+        multiboot_memory_map_t *mmap = (multiboot_memory_map_t *)(current);
 
-			current += sizeof(multiboot_memory_map_t);
-			memset((uint8_t *)buf1, 0, 100);
-			memset((uint8_t *)buf2, 0, 100);
-		}
+        char buf1[100];
+        char buf2[100];
+        uint64_t start = mmap->addr;
+        uint64_t end = start + mmap->len;
+        htoa(start, buf1);
+        htoa(end, buf2);
+        
+        sprint("\nEntry:\n  ");
+        sprint(buf1);
+        sprint(" - ");
+        sprint(buf2);
+        sprint("\n  Type: ");
+        
+        if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
+            sprint("Usable");
+
+            total_usable += mmap->len;
+            if (remaining == mbd->mmap_length) {
+                usable_mem.address = mmap->addr;
+                usable_mem.size = mmap->len & ~(0xFFF);
+                usable_mem.next = 0;
+            }
+        } else if (mmap->type == MULTIBOOT_MEMORY_RESERVED) {
+            sprint("Reserved");
+        } else if (mmap->type == MULTIBOOT_MEMORY_ACPI_RECLAIMABLE) {
+            sprint("ACPI Reclaimable");
+        } else if (mmap->type == MULTIBOOT_MEMORY_NVS) {
+            sprint("NVS");
+        } else if (mmap->type == MULTIBOOT_MEMORY_BADRAM) {
+            sprint("Bad memory");
+        }
+
+        current += sizeof(multiboot_memory_map_t);
+        memset((uint8_t *)buf1, 0, 100);
+        memset((uint8_t *)buf2, 0, 100);
+    }
+    /* Setup the bitmap for the pmm allocator */
+    total_usable &= ~((uint64_t)0xFFF); // Round the amount of memory down
+
 }
 
 uint64_t pmm_find_free(uint64_t size) {
@@ -131,7 +115,7 @@ uint64_t pmm_find_free(uint64_t size) {
         }
     }
     if (pointer == 0) {
-        asm volatile("int $22");
+        asm volatile("int $22"); // Out of memory :/
     }
     return pointer;
 }
