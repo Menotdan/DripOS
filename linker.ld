@@ -23,10 +23,10 @@ SECTIONS
 	/* Only load sections from boot.o */
    	.bootstrap ALIGN(4K):
    	{
-    	boot.o bootstrap.o (.text)
-    	boot.o bootstrap.o (.bss)
-    	boot.o bootstrap.o (.rodata)
-    	boot.o bootstrap.o (.data)
+    	boot.o (.text)
+    	boot.o (.bss)
+    	boot.o (.rodata)
+    	boot.o (.data)
    	}
 	__bootstrap_end = ALIGN(2M);
 	/* Now put sections for the kernel at higher addresses */
@@ -36,19 +36,19 @@ SECTIONS
 	/* All the object files except boot.o */
 	.text ALIGN(4K): AT(ADDR(.text) - KRNL_VMA_START)
 	{
-		*(EXCLUDE_FILE(*boot.o *bootstrap.o) .text)
-      	*(EXCLUDE_FILE(*boot.o *bootstrap.o) .rodata)
+		*(EXCLUDE_FILE(boot.o) .text)
+      	*(EXCLUDE_FILE(boot.o) .rodata)
 	}
 
 	.data ALIGN(4K): AT(ADDR(.data) - KRNL_VMA_START)
 	{
-		*(EXCLUDE_FILE(*boot.o *bootstrap.o) .data)
+		*(EXCLUDE_FILE(boot.o) .data)
 	}
 
 	.bss ALIGN(4K): AT(ADDR(.bss) - KRNL_VMA_START)
 	{
-		*(EXCLUDE_FILE(*boot.o *bootstrap.o) COMMON)
-      	*(EXCLUDE_FILE(*boot.o *bootstrap.o) .bss)
+		*(EXCLUDE_FILE(boot.o) COMMON)
+      	*(EXCLUDE_FILE(boot.o) .bss)
 	}
 
 	__kernel_end = ALIGN(2M);

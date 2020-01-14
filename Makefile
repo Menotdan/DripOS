@@ -9,7 +9,6 @@ OBJ = ${C_SOURCES:.c=.o}  ${NASM_SOURCES:.asm=.o} ${S_SOURCES:.s=.o} ${BIG_S_SOU
  
 # Change this if your cross-compiler is somewhere else
 CC = gcc
-i686CC = i686-elf-gcc
 LINKER = ld
 32BITLINKER = i686-elf-ld
 incPath = ~/DripOS/include
@@ -47,7 +46,7 @@ kernel.bin: kernel32.elf
 kernel32.elf: kernel.elf
 	objcopy -O elf32-i386 kernel.elf kernel32.elf
 
-kernel.elf: ${OBJ} bootstrap.o boot.o
+kernel.elf: ${OBJ} boot.o
 	${LINKER} -o $@ -T linker.ld $^
 
 lol: ${OBJ}
@@ -79,10 +78,6 @@ cpu/switch.o: cpu/switch.s
 	${CC} -Werror -Wall -Wextra -Wpedantic -O${O_LEVEL} -g -MD -c $< -o $@
 %.o: %.S
 	${CC} -Werror -Wall -Wextra -Wpedantic -O${O_LEVEL} -g -MD -c $< -o $@
-
-bootstrap.o: bootstrap.c
-	${i686CC} -Iinclude -I. -O${O_LEVEL} -Werror -Wall -Wextra -Wpedantic -fno-omit-frame-pointer -MD -c $< -o bootstrap32.o -std=gnu11 -ffreestanding
-	objcopy -O elf64-x86-64 bootstrap32.o $@
 
 boot.o: boot.asm
 	nasm -g -f elf64 -o $@ $<

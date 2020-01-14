@@ -1,4 +1,5 @@
 [bits 32]
+extern __kernel_start
 ALIGN_MULTIBOOT equ 1<<0
 MEMINFO equ 1<<1
 VIDEO_MODE equ 0x00000004
@@ -9,6 +10,9 @@ VIDMODE equ 0
 WIDTH equ 1280
 HEIGHT equ 720
 DEPTH equ 32
+
+KERNEL_START equ __kernel_start - 0xFFFFFFFF80000000
+KERNEL_START_OFF equ KERNEL_START + 0x40000000
 
 section .multiboot
 align 4
@@ -25,8 +29,19 @@ dd WIDTH
 dd HEIGHT
 dd DEPTH
 
+%macro gen_pd_2mb 3
+	%assign i %1
+	%rep %2
+		dq (i | 0x83)
+		%assign i i+0x200000
+	%endrep
+	%rep %3
+		dq 0
+	%endrep
+%endmacro
+
 section .data
- 
+
 GDT64:                           ; Global Descriptor Table (64-bit).
     .Null: equ $ - GDT64         ; The null descriptor.
     dw 0xFFFF                    ; Limit (low).
@@ -59,30 +74,37 @@ stack_bottom:
 resb 65536
 stack_top:
 
+section .data
 align 4096
 paging_directory1:
-resb 4096 ; Page directory
+    gen_pd_2mb 0, 2, 510
 
 paging_directory2:
-resb 4096 ; Page directory 2 (For higher half VMA)
+    gen_pd_2mb 0, 512, 0
 
 paging_directory3:
-resb 4096 ; Page directory 3 (For higher half kernel)
+    gen_pd_2mb KERNEL_START, 512, 0
 
 paging_directory4:
-resb 4096 ; Page directory 4 (For higher half kernel pt2)
+    gen_pd_2mb KERNEL_START_OFF, 512, 0
 
 pml4t:
-resb 4096 ; PML4T
+    dq (pdpt | 0x3)
+    times 255 dq 0
+    dq (pdpt2 | 0x3)
+    times 254 dq 0
+    dq (pdpt3 | 0x3)
 
 pdpt:
-resb 4096 ; PDPT
+    dq (paging_directory1 | 0x3)
 
 pdpt2:
-resb 4096 ; PDPT 2
+    dq (paging_directory2 | 0x3)
 
 pdpt3:
-resb 4096 ; PDPT 3
+    times 510 dq 0
+    dq (paging_directory3 | 0x3)
+    dq (paging_directory4 | 0x3)
 
 global multiboot_header_pointer
 multiboot_header_pointer:
