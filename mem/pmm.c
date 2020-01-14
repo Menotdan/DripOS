@@ -13,7 +13,6 @@ uint64_t total_usable = 0;
 uint64_t new_addr = 0;
 uint64_t prev_addr = 0;
 uint64_t bitmap_size = 0;
-uint64_t free_mem_addr = 0;
 uint64_t memory_remaining = 0;
 uint64_t used_mem = 0;
 uint64_t MAX = 0;
@@ -45,8 +44,8 @@ void configure_mem(multiboot_info_t *mbd) {
     for (; remaining > 0; remaining -= sizeof(multiboot_memory_map_t)) {
         multiboot_memory_map_t *mmap = (multiboot_memory_map_t *)(current);
 
-        char buf1[100];
-        char buf2[100];
+        char buf1[19];
+        char buf2[19];
         uint64_t start = mmap->addr;
         uint64_t end = start + mmap->len;
         htoa(start, buf1);
@@ -62,7 +61,9 @@ void configure_mem(multiboot_info_t *mbd) {
             sprint("Usable");
 
             total_usable += mmap->len;
+
             if (remaining == mbd->mmap_length) {
+                // Found the lower 640K of memory
                 usable_mem.address = mmap->addr;
                 usable_mem.size = mmap->len & ~(0xFFF);
                 usable_mem.next = 0;
@@ -78,8 +79,8 @@ void configure_mem(multiboot_info_t *mbd) {
         }
 
         current += sizeof(multiboot_memory_map_t);
-        memset((uint8_t *)buf1, 0, 100);
-        memset((uint8_t *)buf2, 0, 100);
+        memset((uint8_t *)buf1, 0, 19);
+        memset((uint8_t *)buf2, 0, 19);
     }
     /* Setup the bitmap for the pmm allocator */
     total_usable &= ~((uint64_t)0xFFF); // Round the amount of memory down
@@ -120,6 +121,14 @@ uint64_t pmm_find_free(uint64_t size) {
     return pointer;
 }
 
+// void *pmm_find(uint64_t pages) {
+
+// }
+
+// void *pmm_alloc(uint64_t size) {
+
+// }
+
 uint64_t pmm_allocate(uint64_t size) {
     uint64_t ret = pmm_find_free(size);
     if (ret == 0 || ret < MIN || ret > MAX) {
@@ -156,7 +165,6 @@ uint64_t pmm_allocate(uint64_t size) {
     sprint(" bytes were logged\nAddress: ");
     sprint_uint(ret);
     uint32_t allocated_space = pages_needed*0x1000;
-    free_mem_addr += allocated_space;
     used_mem += allocated_space;
     memory_remaining -= allocated_space;
 
@@ -200,7 +208,6 @@ void pmm_unallocate(void * address, uint64_t size) {
     sprint(" bytes were logged\nAddress: ");
     sprint_uint64((uint64_t)address);
     uint64_t allocated_space = pages_needed*0x1000;
-    free_mem_addr -= allocated_space;
     used_mem -= allocated_space;
     memory_remaining += allocated_space;
 }

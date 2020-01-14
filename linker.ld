@@ -1,44 +1,55 @@
 /* The bootloader will look at this image and start execution at the symbol
    designated as the entry point. */
 ENTRY(_start)
- 
+
+OUTPUT_FORMAT(elf64-x86-64)
+
+BSTRP_VMA_START = 0x100000;
+KRNL_VMA_START = 0xFFFFFFFF80000000;
+
 /* Tell where the various sections of the object files will be put in the final
    kernel image. */
 SECTIONS
 {
-	/* Begin putting sections at 1 MiB, a conventional place for kernels to be
-	   loaded at by the bootloader. */
-	. = 1M;
- 
-	/* First put the multiboot header, as it is required to be put very early
-	   early in the image or the bootloader won't recognize the file format.
-	   Next we'll put the .text section. */
-	.text BLOCK(4K) : ALIGN(4K)
-	{
+	. = BSTRP_VMA_START;
+
+	__bootstrap_start = .;
+	/* The multiboot header needs to be early in the binary, so that GRUB 
+	   can find it */
+	.multiboot ALIGN(4K):
+   	{
 		*(.multiboot)
-		*(.text)
-	}
- 
-	/* Read-only data. */
-	.rodata BLOCK(4K) : ALIGN(4K)
+   	}
+	/* Only load sections from boot.o */
+   	.bootstrap ALIGN(4K):
+   	{
+    	boot.o bootstrap.o (.text)
+    	boot.o bootstrap.o (.bss)
+    	boot.o bootstrap.o (.rodata)
+    	boot.o bootstrap.o (.data)
+   	}
+	__bootstrap_end = ALIGN(2M);
+	/* Now put sections for the kernel at higher addresses */
+	. += KRNL_VMA_START; /* Jump to the higher virtual address space */
+	__kernel_start = .;
+
+	/* All the object files except boot.o */
+	.text ALIGN(4K): AT(ADDR(.text) - KRNL_VMA_START)
 	{
-		*(.rodata)
+		*(EXCLUDE_FILE(*boot.o *bootstrap.o) .text)
+      	*(EXCLUDE_FILE(*boot.o *bootstrap.o) .rodata)
 	}
- 
-	/* Read-write data (initialized) */
-	.data BLOCK(4K) : ALIGN(4K)
+
+	.data ALIGN(4K): AT(ADDR(.data) - KRNL_VMA_START)
 	{
-		*(.data)
+		*(EXCLUDE_FILE(*boot.o *bootstrap.o) .data)
 	}
- 
-	/* Read-write data (uninitialized) and stack */
-	.bss BLOCK(4K) : ALIGN(4K)
+
+	.bss ALIGN(4K): AT(ADDR(.bss) - KRNL_VMA_START)
 	{
-		*(COMMON)
-		*(.bss)
+		*(EXCLUDE_FILE(*boot.o *bootstrap.o) COMMON)
+      	*(EXCLUDE_FILE(*boot.o *bootstrap.o) .bss)
 	}
-    
-	/* The compiler may produce other sections, by default it will put them in
-	   a segment with the same name. Simply add stuff here as needed. */
-	__kernel_end = ALIGN(4K); /* Marker so that the memory allocater doesn't eat the OS alive */
+
+	__kernel_end = ALIGN(2M);
 }

@@ -1,4 +1,5 @@
 ; Defined in isr.c
+[bits 64]
 [extern isr_handler]
 [extern irq_handler]
 [extern syscall_handle]
@@ -56,17 +57,16 @@ isr_common_stub:
 	push rax ; save the data segment descriptor
     mov rax, dr6
     push rax
-	mov rax, rsp
+	mov rdi, rsp
 
     ; 2. Call C handler
-    cld
+    ;cld
 	call isr_handler
-    add rsp, 8
+    add rsp, 16
 	popaq
     ;pop esp
-	add rsp, 8 ; Cleans up the pushed error code and pushed ISR number
-	sti
-	iret ; pops 5 things at once: CS, EIP, EFLAGS, SS, and ESP
+	add rsp, 16 ; Cleans up the pushed error code and pushed ISR number
+	iretq ; pops 5 things at once: CS, EIP, EFLAGS, SS, and ESP
     
 
 ; Common IRQ code. Identical to ISR code except for the 'call' 
@@ -90,20 +90,19 @@ irq_common_stub:
     ;call breakA
     mov rbx, 0
     mov [switch_task], rbx
-    mov rax, rsp ; Safety, irq_handler probably changed eax
+    mov rdi, rsp ; Safety, irq_handler probably changed eax
     cld
     call store_values ; Store current registers pointer to running_task
     mov rsp, [global_esp] ; Change ESP
-    mov rax, rsp ; Set param
+    mov rdi, rsp ; Set param
     cld
     call schedule_task ; Pick next task and set it in return
 testLabel:
-    add rsp, 8 ; DR6 and ss
+    add rsp, 16 ; DR6 and ss
 
     popaq
-    add rsp, 8 ; IRQ code and error code
-    sti ; Set interrupt flag
-    iret ; Ret
+    add rsp, 16 ; IRQ code and error code
+    iretq ; Ret
 
 syscall_handler:
     ; 1. Save CPU state
@@ -122,20 +121,19 @@ syscall_handler:
     jne no_switch
     mov rsp, [global_esp] ; Change ESP
     ; TODO: call free on the old ESP
-    mov rax, [global_esp_old] ; Get the ESP of the old task
-    mov rdx, 0x4000 ; Size of the stack
+    mov rdi, rsp ; Get the ESP of the old task
+    mov rsi, 0x4000 ; Size of the stack
     call free ; Free the memory
-    mov rax, [global_old_task]
-    mov rdx, [task_size]
+    mov rdi, [global_old_task]
+    mov rsi, [task_size]
     call free
     mov rax, rsp ; Set param to the current stack frame
     call schedule_task ; Pick next task and set it in return
 no_switch:
-    add rsp, 8
+    add rsp, 16
 	popaq
-	add rsp, 8 ; Cleans up the pushed error code and pushed ISR number
-	sti
-	iret ; pops 3 things at once: CS, EIP, EFLAGS
+	add rsp, 16 ; Cleans up the pushed error code and pushed ISR number
+	iretq ; pops 3 things at once: CS, EIP, EFLAGS
 
 return_stub:
 

@@ -63,11 +63,26 @@ align 4096
 paging_directory1:
 resb 4096 ; Page directory
 
+paging_directory2:
+resb 4096 ; Page directory 2 (For higher half VMA)
+
+paging_directory3:
+resb 4096 ; Page directory 3 (For higher half kernel)
+
+paging_directory4:
+resb 4096 ; Page directory 4 (For higher half kernel pt2)
+
 pml4t:
 resb 4096 ; PML4T
 
 pdpt:
 resb 4096 ; PDPT
+
+pdpt2:
+resb 4096 ; PDPT 2
+
+pdpt3:
+resb 4096 ; PDPT 3
 
 global multiboot_header_pointer
 multiboot_header_pointer:
@@ -76,39 +91,23 @@ resb 4
 section .text
 extern long_mode_on
 extern __kernel_end
+extern paging_setup
 global _start
 _start:
     mov esp, stack_top ; Set the stack up
     mov DWORD [multiboot_header_pointer], ebx
+    mov eax, pml4t
+    mov cr3, eax
     ; Paging
-    mov edi, pml4t ; The Page map level 4 table
-    mov cr3, edi ; Point cr3 to the PML4T
-    mov edi, pml4t    ; Set the destination index to control register 3.
-    ; Set the tables to point to the correct places, with the first two bits set
-    ; to indicate that the page is present and that it is readable and writeable
-    mov eax, pdpt ; Store it temporarly
-    or eax, 0x3 ; Set bottom bits
-    mov DWORD [edi], eax ; Point to the Page directory pointer table
-    mov edi, pdpt ; Pointing to the table
-    mov eax, paging_directory1 ; Store it temporarly
-    or eax, 0x3 ; Set bottom bits
-    mov DWORD [edi], eax; Point to the Page directory
-    
-    mov ecx, 512 ; Loop counter
-    mov edi, paging_directory1 ; Pointer to the page directory
-    mov ebx, 0x3 ; Present and writeable page entry
-    or ebx, 1 << 7 ; Set bit 7 so that the page is a 2 MiB page
-fill_pdt:
-    mov DWORD [edi], ebx ; Point the PDT entry to the 2 MiB page
-    add edi, 8 ; Increment the pointer by one entry
-    add ebx, 0x200000 ; Increment the adress by 2 MiB
-    loop fill_pdt
+
+    cld
+    call paging_setup
 
     mov eax, cr4                 ; Set the A-register to control register 4.
     or eax, 1 << 5               ; Set the PAE-bit, which is the 6th bit (bit 5).
     ;or eax, 1 << 4               ; Set the PSE-bit, which is the 5th bit (bit 4).
     mov cr4, eax                 ; Set control register 4 to the A-register.
-done_table:   
+
     ; Switch to long mode
     mov ecx, 0xC0000080          ; Set the C-register to 0xC0000080, which is the EFER MSR.
     rdmsr                        ; Read from the model-specific register.
@@ -128,4 +127,10 @@ done_table:
     mov fs, ax                    ; Set the F-segment to the A-register.
     mov gs, ax                    ; Set the G-segment to the A-register.
     mov ss, ax                    ; Set the stack segment to the A-register.
-    jmp GDT64.Code:long_mode_on   ; Set the code segment and enter 64-bit long mode.
+    jmp GDT64.Code:loaded         ; Set the code segment and enter 64-bit long mode.
+
+[bits 64]
+loaded:
+    ; Perform an absolute jump
+    mov rax, long_mode_on
+    jmp rax
