@@ -11,9 +11,6 @@ WIDTH equ 1280
 HEIGHT equ 720
 DEPTH equ 32
 
-KERNEL_START equ __kernel_start - 0xFFFFFFFF80000000
-KERNEL_START_OFF equ KERNEL_START + 0x40000000
-
 section .multiboot
 align 4
 dd MAGIC
@@ -83,28 +80,28 @@ paging_directory2:
     gen_pd_2mb 0, 512, 0
 
 paging_directory3:
-    gen_pd_2mb KERNEL_START, 512, 0
+    gen_pd_2mb 0x100000, 512, 0
 
 paging_directory4:
-    gen_pd_2mb KERNEL_START_OFF, 512, 0
+    gen_pd_2mb 0x40100000, 512, 0
 
 pml4t:
-    dq (pdpt | 0x3)
+    dq (pdpt + 0x3)
     times 255 dq 0
-    dq (pdpt2 | 0x3)
+    dq (pdpt2 + 0x3)
     times 254 dq 0
-    dq (pdpt3 | 0x3)
+    dq (pdpt3 + 0x3)
 
 pdpt:
-    dq (paging_directory1 | 0x3)
+    dq (paging_directory1 + 0x3)
 
 pdpt2:
-    dq (paging_directory2 | 0x3)
+    dq (paging_directory2 + 0x3)
 
 pdpt3:
     times 510 dq 0
-    dq (paging_directory3 | 0x3)
-    dq (paging_directory4 | 0x3)
+    dq (paging_directory3 + 0x3)
+    dq (paging_directory4 + 0x3)
 
 global multiboot_header_pointer
 multiboot_header_pointer:
