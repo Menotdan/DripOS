@@ -103,6 +103,7 @@ pdpt3:
     dq (paging_directory3 + 0x3)
     dq (paging_directory4 + 0x3)
 
+section .bss
 global multiboot_header_pointer
 multiboot_header_pointer:
 resb 4
@@ -113,9 +114,9 @@ extern __kernel_end
 extern paging_setup
 global _start
 _start:
-    mov esp, stack_top ; Set the stack up
-    mov DWORD [multiboot_header_pointer], ebx
-    mov eax, pml4t
+    mov esp, stack_top - 0xffffffff80000000 ; Set the stack up
+    mov DWORD [multiboot_header_pointer - 0xffffffff80000000], ebx
+    mov eax, pml4t - 0xffffffff80000000
     mov cr3, eax
     ; Paging
 
@@ -135,7 +136,7 @@ _start:
 
     ; Set up GDT
 
-    lgdt [GDT64.Pointer]         ; Load the 64-bit global descriptor table.
+    lgdt [GDT64.Pointer - 0xffffffff80000000]         ; Load the 64-bit global descriptor table.
 
     mov ax, GDT64.Data            ; Set the A-register to the data descriptor.
     mov ds, ax                    ; Set the data segment to the A-register.
