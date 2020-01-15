@@ -49,6 +49,8 @@
     pop r15       ; restore current r15
 %endmacro
 
+section .text
+
 ; Common ISR code
 isr_common_stub:
     ; 1. Save CPU state
