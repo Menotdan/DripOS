@@ -115,7 +115,8 @@ extern paging_setup
 global _start
 _start:
     mov esp, stack_top - 0xffffffff80000000 ; Set the stack up
-    mov DWORD [multiboot_header_pointer - 0xffffffff80000000], ebx
+    mov edi, multiboot_header_pointer - 0xffffffff80000000
+    mov DWORD [edi], ebx
     mov eax, pml4t - 0xffffffff80000000
     mov cr3, eax
     ; Paging

@@ -80,13 +80,13 @@ cpu/switch.o: cpu/switch.s
 	${CC} -Werror -Wall -Wextra -Wpedantic -O${O_LEVEL} -g -MD -c $< -o $@
 
 boot.o: boot.asm
-	nasm -g -f elf64 -o $@ $<
+	nasm -f elf64 -o $@ $<
 
 long_load.o: long_load.asm
-	nasm -g -f elf64 -o $@ $<
+	nasm -f elf64 -o $@ $<
 
 cpu/interrupt.o: cpu/interrupt.asm
-	nasm -g -f elf64 -o $@ $<
+	nasm -f elf64 -o $@ $<
 
 clean:
 	rm -rf *.bin *.dis *.o os-image.bin *.elf *.iso
