@@ -16,12 +16,12 @@ SECTIONS
 	__bootstrap_start = .;
 	/* The multiboot header needs to be early in the binary, so that GRUB 
 	   can find it */
-	.multiboot ALIGN(4K):
+	.multiboot ALIGN(4K): AT(ADDR(.multiboot))
    	{
 		*(.multiboot)
    	}
 	/* Only load sections from boot.o */
-   	.bootstrap ALIGN(4K):
+   	.bootstrap ALIGN(4K): AT(ADDR(.multiboot))
    	{
     	boot.o (.text)
     	boot.o (.bss)
