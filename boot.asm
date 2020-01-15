@@ -119,9 +119,6 @@ _start:
     mov cr3, eax
     ; Paging
 
-    cld
-    call paging_setup
-
     mov eax, cr4                 ; Set the A-register to control register 4.
     or eax, 1 << 5               ; Set the PAE-bit, which is the 6th bit (bit 5).
     ;or eax, 1 << 4               ; Set the PSE-bit, which is the 5th bit (bit 4).
@@ -146,7 +143,7 @@ _start:
     mov fs, ax                    ; Set the F-segment to the A-register.
     mov gs, ax                    ; Set the G-segment to the A-register.
     mov ss, ax                    ; Set the stack segment to the A-register.
-    jmp GDT64.Code:loaded         ; Set the code segment and enter 64-bit long mode.
+    jmp GDT64.Code:loaded - 0xffffffff80000000
 
 [bits 64]
 loaded:
