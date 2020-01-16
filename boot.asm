@@ -74,34 +74,43 @@ stack_top:
 section .data
 align 4096
 paging_directory1:
-    gen_pd_2mb 0, 2, 510
+    gen_pd_2mb 0, 12, 500
 
+align 4096
 paging_directory2:
     gen_pd_2mb 0, 512, 0
 
+align 4096
 paging_directory3:
     gen_pd_2mb 0x100000, 512, 0
 
+align 4096
 paging_directory4:
     gen_pd_2mb 0x40100000, 512, 0
 
+align 4096
 pml4t:
-    dq (pdpt + 0x3)
+    dq (pdpt + 0x3 - 0xffffffff80000000)
     times 255 dq 0
-    dq (pdpt2 + 0x3)
+    dq (pdpt2 + 0x3 - 0xffffffff80000000)
     times 254 dq 0
-    dq (pdpt3 + 0x3)
+    dq (pdpt3 + 0x3 - 0xffffffff80000000)
 
+align 4096
 pdpt:
-    dq (paging_directory1 + 0x3)
+    dq (paging_directory1 + 0x3 - 0xffffffff80000000)
+    times 511 dq 0
 
+align 4096
 pdpt2:
-    dq (paging_directory2 + 0x3)
+    dq (paging_directory2 + 0x3 - 0xffffffff80000000)
+    times 511 dq 0
 
+align 4096
 pdpt3:
     times 510 dq 0
-    dq (paging_directory3 + 0x3)
-    dq (paging_directory4 + 0x3)
+    dq (paging_directory3 + 0x3 - 0xffffffff80000000)
+    dq (paging_directory4 + 0x3 - 0xffffffff80000000)
 
 section .bss
 global multiboot_header_pointer
