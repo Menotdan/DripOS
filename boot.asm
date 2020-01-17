@@ -45,7 +45,7 @@ GDT64:                           ; Global Descriptor Table (64-bit).
     dw 0                         ; Base (low).
     db 0                         ; Base (middle)
     db 0                         ; Access.
-    db 1                         ; Granularity.
+    db 0                         ; Granularity.
     db 0                         ; Base (high).
     .Code: equ $ - GDT64         ; The code descriptor.
     dw 0                         ; Limit (low).
@@ -90,27 +90,27 @@ paging_directory4:
 
 align 4096
 pml4t:
-    dq (pdpt + 0x3 - 0xffffffff80000000)
+    dq (pdpt - 0xffffffff80000000 + 0x3)
     times 255 dq 0
-    dq (pdpt2 + 0x3 - 0xffffffff80000000)
+    dq (pdpt2 - 0xffffffff80000000 + 0x3)
     times 254 dq 0
-    dq (pdpt3 + 0x3 - 0xffffffff80000000)
+    dq (pdpt3 - 0xffffffff80000000 + 0x3)
 
 align 4096
 pdpt:
-    dq (paging_directory1 + 0x3 - 0xffffffff80000000)
+    dq (paging_directory1 - 0xffffffff80000000 + 0x3)
     times 511 dq 0
 
 align 4096
 pdpt2:
-    dq (paging_directory2 + 0x3 - 0xffffffff80000000)
+    dq (paging_directory2 - 0xffffffff80000000 + 0x3)
     times 511 dq 0
 
 align 4096
 pdpt3:
     times 510 dq 0
-    dq (paging_directory3 + 0x3 - 0xffffffff80000000)
-    dq (paging_directory4 + 0x3 - 0xffffffff80000000)
+    dq (paging_directory3 - 0xffffffff80000000 + 0x3)
+    dq (paging_directory4 - 0xffffffff80000000 + 0x3)
 
 section .bss
 global multiboot_header_pointer
@@ -144,20 +144,34 @@ _start:
     or eax, 1 << 31              ; Set the PG-bit, which is the 32nd bit (bit 31).
     mov cr0, eax                 ; Set control register 0 to the A-register.
 
+    mov eax, 1234
+
+    ;cli
+    ;hlt
+
     ; Set up GDT
-
-    lgdt [GDT64.Pointer - 0xffffffff80000000]         ; Load the 64-bit global descriptor table.
-
-    mov ax, GDT64.Data            ; Set the A-register to the data descriptor.
-    mov ds, ax                    ; Set the data segment to the A-register.
-    mov es, ax                    ; Set the extra segment to the A-register.
-    mov fs, ax                    ; Set the F-segment to the A-register.
-    mov gs, ax                    ; Set the G-segment to the A-register.
-    mov ss, ax                    ; Set the stack segment to the A-register.
+    lgdt [GDT64.Pointer - 0xffffffff80000000]
     jmp GDT64.Code:loaded - 0xffffffff80000000
 
 [bits 64]
 loaded:
+    lgdt [GDT64.Pointer]         ; Load the 64-bit global descriptor table.
+    cli
+    hlt
+    mov rax, GDT64.Data          ; Set the A-register to the data descriptor.
+    mov ds, ax                    ; Set the data segment to the A-register.
+    cli
+    hlt
+    mov es, ax                    ; Set the extra segment to the A-register.
+    cli
+    hlt
+    mov fs, ax                    ; Set the F-segment to the A-register.
+    cli
+    hlt
+    mov gs, ax                    ; Set the G-segment to the A-register.
+    cli
+    hlt
+    mov ss, ax                    ; Set the stack segment to the A-register.
     ; Perform an absolute jump
     mov rax, long_mode_on
     jmp rax
