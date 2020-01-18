@@ -158,13 +158,13 @@ _start:
 
 [bits 64]
 loaded:
-    lgdt [GDT64.Pointer]         ; Load the 64-bit global descriptor table.
-    mov eax, GDT64.Data          ; Set the A-register to the data descriptor.
-    mov ds, eax                  ; Set the data segment to the A-register.
-    mov es, eax                  ; Set the extra segment to the A-register.
-    mov fs, eax                  ; Set the F-segment to the A-register.
-    mov gs, eax                  ; Set the G-segment to the A-register.
-    mov ss, eax                  ; Set the stack segment to the A-register.
+    lgdt [GDT64.Pointer]        ; Load the 64-bit global descriptor table.
+    mov ax, GDT64.Data          ; Set the A-register to the data descriptor.
+    mov ds, ax                  ; Set the data segment to the A-register.
+    mov es, ax                  ; Set the extra segment to the A-register.
+    mov fs, ax                  ; Set the F-segment to the A-register.
+    mov gs, ax                  ; Set the G-segment to the A-register.
+    mov ss, ax                  ; Set the stack segment to the A-register.
     ; Perform an absolute jump
     mov rax, long_mode_on
     jmp rax
