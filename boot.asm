@@ -85,11 +85,11 @@ paging_directory2:
 
 align 4096
 paging_directory3:
-    gen_pd_2mb 0x100000, 512, 0
+    gen_pd_2mb 0x0, 512, 0
 
 align 4096
 paging_directory4:
-    gen_pd_2mb 0x40100000, 512, 0
+    gen_pd_2mb 0x40000000, 512, 0
 
 align 4096
 pml4t:
