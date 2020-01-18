@@ -159,21 +159,11 @@ _start:
 [bits 64]
 loaded:
     lgdt [GDT64.Pointer]         ; Load the 64-bit global descriptor table.
-    cli
-    hlt
-    mov rax, GDT64.Data          ; Set the A-register to the data descriptor.
+    mov ax, GDT64.Data           ; Set the A-register to the data descriptor.
     mov ds, ax                    ; Set the data segment to the A-register.
-    cli
-    hlt
     mov es, ax                    ; Set the extra segment to the A-register.
-    cli
-    hlt
     mov fs, ax                    ; Set the F-segment to the A-register.
-    cli
-    hlt
     mov gs, ax                    ; Set the G-segment to the A-register.
-    cli
-    hlt
     mov ss, ax                    ; Set the stack segment to the A-register.
     ; Perform an absolute jump
     mov rax, long_mode_on
