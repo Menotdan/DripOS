@@ -64,6 +64,9 @@ GDT64:                           ; Global Descriptor Table (64-bit).
     .Pointer:                    ; The GDT-pointer.
     dw $ - GDT64 - 1             ; Limit.
     dq GDT64                     ; Base.
+    .Pointer32:                    ; The GDT-pointer for 32 bit mode.
+    dw $ - GDT64 - 1             ; Limit.
+    dd GDT64 - 0xffffffff80000000; Base.
 
 section .bss
 align 16
@@ -150,7 +153,7 @@ _start:
     ;hlt
 
     ; Set up GDT
-    lgdt [GDT64.Pointer - 0xffffffff80000000]
+    lgdt [GDT64.Pointer32 - 0xffffffff80000000]
     jmp GDT64.Code:loaded - 0xffffffff80000000
 
 [bits 64]
