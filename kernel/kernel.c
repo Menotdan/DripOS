@@ -146,9 +146,10 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 	sprint(cpu_name);
 	sprint("\n");
 	
-	sprint("\nSetting up interrupts, so I can have exception handlers");
+	sprint("\nSetting up interrupts, so I can have exception handlers when my paging dies");
 	isr_install();
 	irq_install();
+	
 	while (1) {
 		asm volatile("hlt");
 	}

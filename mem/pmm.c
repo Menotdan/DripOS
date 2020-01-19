@@ -31,6 +31,10 @@ void set_bit(uint8_t *input, uint8_t bit, uint8_t state) {
     }
 }
 
+void set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem) {
+
+}
+
 /* Configure memory mapping and such */
 void configure_mem(multiboot_info_t *mbd) {
     // Current mmap address
@@ -84,7 +88,10 @@ void configure_mem(multiboot_info_t *mbd) {
     }
     /* Setup the bitmap for the pmm allocator */
     total_usable &= ~((uint64_t)0xFFF); // Round the amount of memory down
-
+    bitmap = (uint8_t *)(0); // Usable memory stars at 0, and
+    // we have it mapped by default, so we can use it for the bitmap start
+    
+    *(uint64_t *)(bitmap) = total_usable / (0x1000 * 8);
 }
 
 uint64_t pmm_find_free(uint64_t size) {

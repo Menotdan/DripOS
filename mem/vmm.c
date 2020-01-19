@@ -9,7 +9,7 @@ uint64_t get_pml4t() {
 }
 
 void set_pml4t(uint64_t new) {
-    asm volatile("movq %0, %%cr3;"::"r"(new));
+    asm volatile("movq %0, %%cr3;"::"r"(new) : "memory");
 }
 // qookie's fancy paging code
 pt_off_t vmm_virt_to_offs(void *virt) {
