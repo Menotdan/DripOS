@@ -11,8 +11,8 @@
 #include "../kernel/kernel.h"
 #include "task.h"
 
-uint32_t tick = 0; //Ticks
-uint32_t prev = 0; //Previous ticks for wait() function
+uint64_t tick = 0; //Ticks
+uint64_t prev = 0; //Previous ticks for wait() function
 int lSnd = 0; //Length of sound
 int task = 0; //is task on?
 int pSnd = 0; //ticks before sound started
@@ -23,38 +23,39 @@ uint32_t switch_task = 0;
 
 static void timer_callback(registers_t *regs) {
     tick++;
-    if (loaded == 1) {
-        time_slice_left--;
-    }
+    // if (loaded == 1) {
+    //     time_slice_left--;
+    // }
 
-    /* Unsleep sleeping processes */
-    Task *iterator = (&main_task)->next;
-    while (iterator->pid != 0) {
-        /* Set all tasks waiting for this tick to running */
-        if (iterator->state == SLEEPING) {
-            if (iterator->waiting == tick) {
-                iterator->state = RUNNING;
-            }
-        }
-        iterator = iterator->next;
-    }
+    // /* Unsleep sleeping processes */
+    // Task *iterator = (&main_task)->next;
+    // while (iterator->pid != 0) {
+    //     /* Set all tasks waiting for this tick to running */
+    //     if (iterator->state == SLEEPING) {
+    //         if (iterator->waiting == tick) {
+    //             iterator->state = RUNNING;
+    //         }
+    //     }
+    //     iterator = iterator->next;
+    // }
 
-    running_task->ticks_cpu_time++;
+    // running_task->ticks_cpu_time++;
+    // if (time_slice_left == 0 && loaded == 1) {
+    //     if (running_task->next->priority == NORMAL) {
+    //         time_slice_left = 8; // 16 ms
+    //     }
+    //     if (running_task->next->priority == HIGH) {
+    //         time_slice_left = 30; // 24 ms
+    //     }
+    //     if (running_task->next->priority == LOW) {
+    //         time_slice_left = 8; // 8 ms
+    //     }
+    //     /* Set the switch task variable, which indicates to the assembly handler
+    //     that the next task is ready to be loaded */
+    //     switch_task = 1;
+    // }
+
     UNUSED(regs);
-    if (time_slice_left == 0 && loaded == 1) {
-        if (running_task->next->priority == NORMAL) {
-            time_slice_left = 8; // 16 ms
-        }
-        if (running_task->next->priority == HIGH) {
-            time_slice_left = 30; // 24 ms
-        }
-        if (running_task->next->priority == LOW) {
-            time_slice_left = 8; // 8 ms
-        }
-        /* Set the switch task variable, which indicates to the assembly handler
-        that the next task is ready to be loaded */
-        switch_task = 1;
-    }
 }
 
 void config_timer(uint32_t frequency) {

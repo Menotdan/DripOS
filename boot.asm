@@ -126,7 +126,6 @@ extern __kernel_end
 extern paging_setup
 global _start
 _start:
-    mov esp, stack_top - 0xffffffff80000000 ; Set the stack up
     mov edi, multiboot_header_pointer - 0xffffffff80000000
     mov DWORD [edi], ebx
     mov eax, pml4t - 0xffffffff80000000
@@ -165,6 +164,7 @@ loaded:
     mov fs, ax                  ; Set the F-segment to the A-register.
     mov gs, ax                  ; Set the G-segment to the A-register.
     mov ss, ax                  ; Set the stack segment to the A-register.
+    mov rsp, stack_top ; Set the stack up
     ; Perform an absolute jump
     mov rax, long_mode_on
     jmp rax

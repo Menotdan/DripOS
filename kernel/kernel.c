@@ -145,6 +145,10 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 	get_cpu_name(cpu_name);
 	sprint(cpu_name);
 	sprint("\n");
+	
+	sprint("\nSetting up interrupts, so I can have exception handlers");
+	isr_install();
+	irq_install();
 	while (1) {
 		asm volatile("hlt");
 	}

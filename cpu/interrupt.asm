@@ -80,7 +80,7 @@ irq_common_stub:
 
     mov rax, dr6
     push rax
-    mov rax, rsp                 ; At this point ESP is a pointer to where DS (and the rest
+    mov rdi, rsp                 ; At this point ESP is a pointer to where DS (and the rest
                              ; of the interrupt handler state resides)
                              ; Push ESP as 1st parameter as it's a 
                              ; pointer to a registers_t
@@ -113,7 +113,7 @@ syscall_handler:
 	push rax ; save the data segment descriptor
     mov rax, dr6
     push rax
-	mov rax, rsp
+	mov rdi, rsp
 
     ; 2. Call C handler
     cld

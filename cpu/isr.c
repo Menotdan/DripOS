@@ -128,9 +128,13 @@ char *exception_messages[] = {
 };
 
 void isr_handler(registers_t *r) {
-    sprint("\nCalls to switch: ");
-    sprint_uint(global_esp);
-    crash_screen(r, exception_messages[r->int_no], 1);
+    //sprint("\nCalls to switch: ");
+    //sprint_uint(global_esp);
+    //crash_screen(r, exception_messages[r->int_no], 1);
+    sprint("\nException! Number: ");
+    sprint_uint(r->int_no);
+    sprint(" Message: ");
+    sprint(exception_messages[r->int_no]);
     while (1);
 }
 
@@ -149,16 +153,16 @@ void irq_handler(registers_t *r) {
     if (interrupt_handlers[r->int_no] != 0) {
         handler = interrupt_handlers[r->int_no];
         handler(r);
-        Task *iterator = (&main_task)->next;
-        while (iterator->pid != 0) {
-            /* Set all the tasks waiting for this IRQ to Running */
-            if (iterator->state == IRQ_WAIT) {
-                if (iterator->waiting == (r->int_no-32)) {
-                    iterator->state = RUNNING;
-                }
-            }
-            iterator = iterator->next;
-        }
+        // Task *iterator = (&main_task)->next;
+        // while (iterator->pid != 0) {
+        //     /* Set all the tasks waiting for this IRQ to Running */
+        //     if (iterator->state == IRQ_WAIT) {
+        //         if (iterator->waiting == (r->int_no-32)) {
+        //             iterator->state = RUNNING;
+        //         }
+        //     }
+        //     iterator = iterator->next;
+        // }
     } 
     else {
         if (loaded == 1) {

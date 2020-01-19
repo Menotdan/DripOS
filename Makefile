@@ -8,8 +8,8 @@ S_SOURCES = $(wildcard kernel/*.s drivers/*.s cpu/*.s libc/*.s fs/*.s mem/*.s *.
 OBJ = ${C_SOURCES:.c=.o}  ${NASM_SOURCES:.asm=.o} ${S_SOURCES:.s=.o} ${BIG_S_SOURCES:.S=.o}
  
 # Change this if your cross-compiler is somewhere else
-CC = gcc
-LINKER = ld
+CC = x86_64-elf-gcc
+LINKER = x86_64-elf-ld
 32BITLINKER = i686-elf-ld
 incPath = ~/DripOS/include
 GDB = gdb
@@ -30,9 +30,9 @@ CFLAGS = -g -fno-pic               \
 
 # First rule is run by default
 myos.iso: kernel32.elf
-	grub-file --is-x86-multiboot kernel32.elf
+	grub-file --is-x86-multiboot kernel.elf
 	mkdir -p isodir/boot/grub
-	cp kernel32.elf isodir/boot/os-image.bin
+	cp kernel.elf isodir/boot/os-image.bin
 	cp grub.cfg isodir/boot/grub/grub.cfg
 	grub-mkrescue -o DripOS.iso isodir
 
@@ -47,7 +47,7 @@ kernel32.elf: kernel.elf
 	objcopy -O elf32-i386 kernel.elf kernel32.elf
 
 kernel.elf: ${OBJ} boot.o
-	${LINKER} -o $@ -T linker.ld $^
+	${CC} -Wl,-z,max-page-size=0x1000 -nostdlib -o $@ -T linker.ld $^
 
 lol: ${OBJ}
 	~/Desktop/Compiler/bin/i686-elf-ld -melf_i386 -o helllo -T linker.ld hello $^
@@ -63,7 +63,7 @@ iso: myos.iso
 # Open the connection to qemu and load our kernel-object file with symbols
 debug: myos.iso
 	qemu-system-x86_64 -vga std -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom DripOS.iso -hda dripdisk.img &
-	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel32.elf" -x "~/gdbcommands"
+	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf"
 	make clean
  
 # Generic rules for wildcards
