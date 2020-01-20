@@ -1,5 +1,6 @@
 [bits 32]
 extern __kernel_start
+%define KERNEL_VMA 0xFFFFFFFF80000000
 ALIGN_MULTIBOOT equ 1<<0
 MEMINFO equ 1<<1
 VIDEO_MODE equ 0x00000004
@@ -66,7 +67,7 @@ GDT64:                           ; Global Descriptor Table (64-bit).
     dq GDT64                     ; Base.
     .Pointer32:                    ; The GDT-pointer for 32 bit mode.
     dw $ - GDT64 - 1             ; Limit.
-    dd GDT64 - 0xffffffff80000000; Base.
+    dd GDT64 - KERNEL_VMA        ; Base.
 
 section .bss
 align 16
@@ -93,27 +94,27 @@ paging_directory4:
 
 align 4096
 pml4t:
-    dq (pdpt - 0xffffffff80000000 + 0x3)
+    dq (pdpt - KERNEL_VMA + 0x3)
     times 255 dq 0
-    dq (pdpt2 - 0xffffffff80000000 + 0x3)
+    dq (pdpt2 - KERNEL_VMA + 0x3)
     times 254 dq 0
-    dq (pdpt3 - 0xffffffff80000000 + 0x3)
+    dq (pdpt3 - KERNEL_VMA + 0x3)
 
 align 4096
 pdpt:
-    dq (paging_directory1 - 0xffffffff80000000 + 0x3)
+    dq (paging_directory1 - KERNEL_VMA + 0x3)
     times 511 dq 0
 
 align 4096
 pdpt2:
-    dq (paging_directory2 - 0xffffffff80000000 + 0x3)
+    dq (paging_directory2 - KERNEL_VMA + 0x3)
     times 511 dq 0
 
 align 4096
 pdpt3:
     times 510 dq 0
-    dq (paging_directory3 - 0xffffffff80000000 + 0x3)
-    dq (paging_directory4 - 0xffffffff80000000 + 0x3)
+    dq (paging_directory3 - KERNEL_VMA + 0x3)
+    dq (paging_directory4 - KERNEL_VMA + 0x3)
 
 section .bss
 global multiboot_header_pointer
@@ -126,9 +127,9 @@ extern __kernel_end
 extern paging_setup
 global _start
 _start:
-    mov edi, multiboot_header_pointer - 0xffffffff80000000
+    mov edi, multiboot_header_pointer - KERNEL_VMA
     mov DWORD [edi], ebx
-    mov eax, pml4t - 0xffffffff80000000
+    mov eax, pml4t - KERNEL_VMA
     mov cr3, eax
     ; Paging
 
@@ -152,8 +153,8 @@ _start:
     ;hlt
 
     ; Set up GDT
-    lgdt [GDT64.Pointer32 - 0xffffffff80000000]
-    jmp GDT64.Code:loaded - 0xffffffff80000000
+    lgdt [GDT64.Pointer32 - KERNEL_VMA]
+    jmp GDT64.Code:loaded - KERNEL_VMA
 
 [bits 64]
 loaded:
