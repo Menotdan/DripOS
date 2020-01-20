@@ -6,7 +6,6 @@
 
 extern uint64_t memory_remaining;
 extern uint64_t used_mem;
-extern uint64_t bitmap_size;
 extern uint64_t MAX;
 extern uint64_t MIN;
 extern uint8_t *bitmap;

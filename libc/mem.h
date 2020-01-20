@@ -5,8 +5,8 @@
 
 void memcpy32(uint32_t *source, uint32_t *dest, int ndwords);
 void memcpy(uint8_t *source, uint8_t *dest, int nbytes);
-void memset(uint8_t *dest, uint8_t val, uint32_t len);
-void memset32(uint32_t *dest, uint32_t val, uint32_t len);
+void memset(uint8_t *dest, uint8_t val, uint64_t len);
+void memset32(uint32_t *dest, uint32_t val, uint64_t len);
 
 /* kmalloc */
 void * kmalloc(uint32_t size);

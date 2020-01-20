@@ -12,18 +12,17 @@ uint64_t total_memory = 0;
 uint64_t total_usable = 0;
 uint64_t new_addr = 0;
 uint64_t prev_addr = 0;
-uint64_t bitmap_size = 0;
 uint64_t memory_remaining = 0;
 uint64_t used_mem = 0;
 uint64_t MAX = 0;
 uint64_t MIN = 0;
 uint8_t *bitmap = 0;
 
-uint8_t get_bit(uint8_t input, uint8_t bit) {
+uint8_t get_bit_rel(uint8_t input, uint8_t bit) {
     return ((input >> bit) & 1);
 }
 
-void set_bit(uint8_t *input, uint8_t bit, uint8_t state) {
+void set_bit_rel(uint8_t *input, uint8_t bit, uint8_t state) {
     if (state == 0) {
         *input &= ~(1 << bit);
     } else if (state == 1)  {
@@ -31,8 +30,52 @@ void set_bit(uint8_t *input, uint8_t bit, uint8_t state) {
     }
 }
 
-void set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem) {
+uint8_t get_bit_rel(uint8_t *bitmap_change, uint8_t bit, uint64_t byte) {
+    return ((*(bitmap_change + byte) >> bit) & 1);
+}
 
+void set_bit(uint8_t *bitmap_change, uint8_t bit, uint64_t byte, uint8_t state) {
+    if (state == 0) {
+        *(bitmap_change + byte + 8) &= ~(1 << bit);
+    } else if (state == 1)  {
+        *(bitmap_change + byte + 8) = (*(bitmap_change + byte + 8) | (1 << bit));
+    }
+}
+
+uint8_t *get_next_bitmap(uint8_t *bitmap_start) {
+    uint8_t *bitmap_cur = bitmap_start;
+    bitmap_cur += *(uint64_t *)bitmap_start; // Jump to the end of the map
+    return (uint8_t *) *(uint64_t *)bitmap_cur;
+}
+
+void set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem) {
+    // Calculate the bitmap size in bytes, we add 8 to account for the size data
+    uint64_t bitmap_size = (((size_of_mem) + (0x1000 * 8) - 1) / (0x1000 * 8)) + 8;
+    // Number of pages needed for the bitmap
+    uint64_t bitmap_pages = ((bitmap_size + 8) + 0x1000 - 1) / 0x1000;
+    
+    if (old_bitmap) { // If old_bitmap is not 0
+        // Set the bitmap pointer for the old bitmap to the new one
+        *(uint64_t *) ((uint64_t) old_bitmap + *(uint64_t *) old_bitmap) = (uint64_t) bitmap_start;
+    }
+
+    // Clear the bitmap, including the pointer
+    memset(bitmap_start, 0, (bitmap_size) + 8);
+    // Set the size, not including the pointer
+    *(uint64_t *) bitmap_start = (bitmap_size);
+    
+    // Now to set the bitmap as allocated
+    uint64_t bitmap_bit = 0;
+    uint64_t bitmap_byte = 0;
+    for (; bitmap_pages > 0; bitmap_pages--) {
+        set_bit(bitmap_start, bitmap_bit, bitmap_byte, 1);
+        
+        bitmap_bit++;
+        if (bitmap_bit == 8) {
+            bitmap_bit = 0;
+            bitmap_byte++;
+        }
+    }
 }
 
 /* Configure memory mapping and such */
@@ -71,6 +114,9 @@ void configure_mem(multiboot_info_t *mbd) {
                 usable_mem.address = mmap->addr;
                 usable_mem.size = mmap->len & ~(0xFFF);
                 usable_mem.next = 0;
+                bitmap = (uint8_t *)(0); // Usable memory stars at 0, and
+                // we have it mapped by default, so we can use it for the bitmap start
+                set_bitmap(bitmap, 0, mmap->len & ~(0xFFF));
             }
         } else if (mmap->type == MULTIBOOT_MEMORY_RESERVED) {
             sprint("Reserved");
@@ -88,10 +134,6 @@ void configure_mem(multiboot_info_t *mbd) {
     }
     /* Setup the bitmap for the pmm allocator */
     total_usable &= ~((uint64_t)0xFFF); // Round the amount of memory down
-    bitmap = (uint8_t *)(0); // Usable memory stars at 0, and
-    // we have it mapped by default, so we can use it for the bitmap start
-    
-    *(uint64_t *)(bitmap) = total_usable / (0x1000 * 8);
 }
 
 uint64_t pmm_find_free(uint64_t size) {

@@ -27,12 +27,12 @@ void memcpy32(uint32_t *source, uint32_t *dest, int ndwords) {
     }
 }
 
-void memset(uint8_t *dest, uint8_t val, uint32_t len) {
+void memset(uint8_t *dest, uint8_t val, uint64_t len) {
     uint8_t *temp = (uint8_t *)dest;
     for ( ; len != 0; len--) *temp++ = val;
 }
 
-void memset32(uint32_t *dest, uint32_t val, uint32_t len) {
+void memset32(uint32_t *dest, uint32_t val, uint64_t len) {
     uint32_t *temp = (uint32_t *)dest;
     for ( ; len != 0; len--) *temp++ = val;
 }
