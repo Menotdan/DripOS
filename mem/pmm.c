@@ -176,7 +176,7 @@ uint64_t pmm_find_free(uint64_t size) {
     uint8_t *cur_map = bitmap;
     uint64_t bitmap_size = get_bitmap_size(cur_map);
     while (cur_map != 0) {
-        cur_map = get_next_bitmap();
+        cur_map = get_next_bitmap(cur_map);
     }
 }
 
