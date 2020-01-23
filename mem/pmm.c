@@ -4,10 +4,7 @@
 #include "../drivers/serial.h"
 #include "../cpu/timer.h"
 
-/* 
- * This is calculated by memory map parsing.
- */
-pmm_usable_list_t usable_mem;
+/* Some globals for the PMM to use as needed */
 uint64_t total_memory = 0;
 uint64_t total_usable = 0;
 uint64_t new_addr = 0;
@@ -18,10 +15,18 @@ uint64_t MAX = 0;
 uint64_t MIN = 0;
 uint8_t *bitmap = 0;
 
+/* Bitmap for use with the PMM. Actually a linked list of bitmaps where at the
+   start of the bitmap, there is the size of the bitmap in bytes (8 byte field),
+   and then there is the actual bitmap, which holds the info for what pages are
+   and aren't allocated. Then finally there is the pointer to the next bitmap in
+   the chain which is set to 0 if there is no bitmap after this one. */
+
+/* Get bit relative, gets a bit in a single uint8_t */
 uint8_t get_bit_rel(uint8_t input, uint8_t bit) {
     return ((input >> bit) & 1);
 }
 
+/* Set bit relative, sets a bit in a single uint8_t */
 void set_bit_rel(uint8_t *input, uint8_t bit, uint8_t state) {
     if (state == 0) {
         *input &= ~(1 << bit);
@@ -30,10 +35,12 @@ void set_bit_rel(uint8_t *input, uint8_t bit, uint8_t state) {
     }
 }
 
-uint8_t get_bit_rel(uint8_t *bitmap_change, uint8_t bit, uint64_t byte) {
-    return ((*(bitmap_change + byte) >> bit) & 1);
+/* Get a bit in the bitmap */
+uint8_t get_bit(uint8_t *bitmap_change, uint8_t bit, uint64_t byte) {
+    return ((*(bitmap_change + byte + 8) >> bit) & 1);
 }
 
+/* Set a bit in the bitmap */
 void set_bit(uint8_t *bitmap_change, uint8_t bit, uint64_t byte, uint8_t state) {
     if (state == 0) {
         *(bitmap_change + byte + 8) &= ~(1 << bit);
@@ -42,18 +49,43 @@ void set_bit(uint8_t *bitmap_change, uint8_t bit, uint64_t byte, uint8_t state) 
     }
 }
 
+/* Get the size of the bitmap */
+uint64_t get_bitmap_size(uint8_t *bitmap_start) {
+    return *(uint64_t *) bitmap_start; // Get the size data
+}
+
+/* Get next bitmap in a chain of bitmaps */
 uint8_t *get_next_bitmap(uint8_t *bitmap_start) {
+    if (!bitmap_start) {
+        return (uint8_t *) 0; // Return null
+    }
+
     uint8_t *bitmap_cur = bitmap_start;
     bitmap_cur += *(uint64_t *)bitmap_start; // Jump to the end of the map
     return (uint8_t *) *(uint64_t *)bitmap_cur;
 }
 
-void set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem) {
+/* Get the last bitmap in a chain of bitmaps */
+uint8_t *get_last_bitmap(uint8_t *bitmap_start) {
+    uint8_t *ret = 0;
+    uint8_t *cur_map = bitmap_start;
+    
+    while (cur_map != 0) {
+        ret = cur_map;
+        cur_map = get_next_bitmap(cur_map);
+    }
+
+    return ret;
+}
+
+/* Setup a bitmap which may be pointed to by another bitmap */
+void set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem, uint64_t offset) {
     // Calculate the bitmap size in bytes, we add 8 to account for the size data
     uint64_t bitmap_size = (((size_of_mem) + (0x1000 * 8) - 1) / (0x1000 * 8)) + 8;
     // Number of pages needed for the bitmap
     uint64_t bitmap_pages = ((bitmap_size + 8) + 0x1000 - 1) / 0x1000;
-    
+    bitmap_pages += (offset + 0x1000) & ~(0xfff);
+
     if (old_bitmap) { // If old_bitmap is not 0
         // Set the bitmap pointer for the old bitmap to the new one
         *(uint64_t *) ((uint64_t) old_bitmap + *(uint64_t *) old_bitmap) = (uint64_t) bitmap_start;
@@ -103,20 +135,24 @@ void configure_mem(multiboot_info_t *mbd) {
         sprint(" - ");
         sprint(buf2);
         sprint("\n  Type: ");
-        
+        /* Bitmap setup for use with the initial page table setup */
         if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
             sprint("Usable");
 
             total_usable += mmap->len;
 
             if (remaining == mbd->mmap_length) {
-                // Found the lower 640K of memory
-                usable_mem.address = mmap->addr;
-                usable_mem.size = mmap->len & ~(0xFFF);
-                usable_mem.next = 0;
-                bitmap = (uint8_t *)(0); // Usable memory stars at 0, and
-                // we have it mapped by default, so we can use it for the bitmap start
-                set_bitmap(bitmap, 0, mmap->len & ~(0xFFF));
+                // Found lower 640K of memory, ignore it, as to not overwrite stuff
+            } else {
+                // Check if the kernel is in this block
+                if ((uint64_t) __kernel_start >= mmap->addr && 
+                (uint64_t) __kernel_end < (mmap->len + mmap->addr) 
+                - ((mmap->len + mmap->addr) / 0x1000 / 8)) {
+                    // The kernel is here and so we setup the bitmap
+                    bitmap = ((uint64_t) __kernel_end + 0x1000) & ~(0xfff);
+                    set_bitmap(bitmap, 0, mmap->len);
+                    break;
+                }
             }
         } else if (mmap->type == MULTIBOOT_MEMORY_RESERVED) {
             sprint("Reserved");
@@ -137,126 +173,17 @@ void configure_mem(multiboot_info_t *mbd) {
 }
 
 uint64_t pmm_find_free(uint64_t size) {
-    uint64_t pages_needed = size/0x1000;
-    uint64_t number_of_free = 0;
-    uint64_t pointer = 0;
-    uint64_t bitmap_byte = 0;
-    uint64_t bitmap_bit = 0;
-    if (size % 0x1000) {
-        pages_needed += 1;
+    uint8_t *cur_map = bitmap;
+    uint64_t bitmap_size = get_bitmap_size(cur_map);
+    while (cur_map != 0) {
+        cur_map = get_next_bitmap();
     }
-    for (uint32_t i = 0; i < bitmap_size*8; i++) {
-        if (get_bit(*(bitmap+bitmap_byte), bitmap_bit) == 0) {
-            if (number_of_free == 0) {
-                pointer = (((bitmap_byte * 8) + bitmap_bit) * 0x1000)+MIN;
-            }
-            number_of_free++;
-            if (number_of_free == pages_needed) {
-                break;
-            }
-        } else {
-            number_of_free = 0;
-        }
-        // Increment the counter
-        bitmap_bit++;
-        if (bitmap_bit == 8) {
-            bitmap_byte++;
-            bitmap_bit = 0;
-        }
-    }
-    if (pointer == 0) {
-        asm volatile("int $22"); // Out of memory :/
-    }
-    return pointer;
 }
 
-// void *pmm_find(uint64_t pages) {
-
-// }
-
-// void *pmm_alloc(uint64_t size) {
-
-// }
-
 uint64_t pmm_allocate(uint64_t size) {
-    uint64_t ret = pmm_find_free(size);
-    if (ret == 0 || ret < MIN || ret > MAX) {
-        return 0;
-    }
- 
-    uint64_t pages_needed = size/0x1000;
-    uint64_t bitmap_byte = 0; // The first byte in the sequence
-    uint64_t bitmap_bit = 0; // The first bit in the sequence
-    uint8_t *cur_bitmap_pos = bitmap;
-    uint64_t offset = ret - MIN; // Offset from the beginning of free memory
-    if (size % 0x1000) {
-        pages_needed += 1;
-    }
-
-    bitmap_byte = (offset/0x1000)/8; // Get the byte to start writing to the bitmap
-    bitmap_bit = (offset/0x1000)%8; // Get the bit to start writing to the bitmap
-    cur_bitmap_pos += bitmap_byte;
-    for (uint32_t i = 0; i < pages_needed; i++) {
-        set_bit(cur_bitmap_pos, bitmap_bit, 1);
-        bitmap_bit++;
-        if (bitmap_bit == 8) {
-            bitmap_bit = 0;
-            bitmap_byte++;
-            cur_bitmap_pos++;
-        }
-    }
-    sprint("\nAllocated ");
-    sprint_uint(size);
-    sprint(" bytes and ");
-    sprint_uint(pages_needed);
-    sprint(" pages and ");
-    sprint_uint(pages_needed*0x1000);
-    sprint(" bytes were logged\nAddress: ");
-    sprint_uint(ret);
-    uint32_t allocated_space = pages_needed*0x1000;
-    used_mem += allocated_space;
-    memory_remaining -= allocated_space;
-
-    return ret;
+    
 }
 
 void pmm_unallocate(void * address, uint64_t size) {
-    uint64_t ret = (uint64_t)address;
-    if (ret == 0 || ret < MIN || ret > MAX) {
-        return;
-    }
- 
-    uint64_t pages_needed = size/0x1000;
-    uint64_t bitmap_byte = 0; // The first byte in the sequence
-    uint64_t bitmap_bit = 0; // The first bit in the sequence
-    uint8_t *cur_bitmap_pos = bitmap;
-    uint64_t offset = ret - MIN; // Offset from the beginning of free memory
-    if (size % 0x1000) {
-        pages_needed += 1;
-    }
-
-    bitmap_byte = (offset/0x1000)/8; // Get the byte to start writing to the bitmap
-    bitmap_bit = (offset/0x1000)%8; // Get the bit to start writing to the bitmap
-    cur_bitmap_pos += bitmap_byte;
-    for (uint64_t i = 0; i < pages_needed; i++) {
-        set_bit(cur_bitmap_pos, bitmap_bit, 0);
-        bitmap_bit++;
-        if (bitmap_bit == 8) {
-            bitmap_bit = 0;
-            bitmap_byte++;
-            cur_bitmap_pos++;
-        }
-    }
-
-    sprint("\nFreed ");
-    sprint_uint64(size);
-    sprint(" bytes and ");
-    sprint_uint64(pages_needed);
-    sprint(" pages and ");
-    sprint_uint64(pages_needed*0x1000);
-    sprint(" bytes were logged\nAddress: ");
-    sprint_uint64((uint64_t)address);
-    uint64_t allocated_space = pages_needed*0x1000;
-    used_mem -= allocated_space;
-    memory_remaining += allocated_space;
+    
 }

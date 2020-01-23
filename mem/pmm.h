@@ -3,12 +3,19 @@
 
 #include <stdint.h>
 #include "../multiboot.h"
+#include "../libc/symbols.h"
+
+#define MAPPED_DEF 0x40000000 // We have a 1 GiB of deafault mapped memory
+#define KERNEL_VMA_OFFSET 0xFFFFFFFF80000000 // Kernel VMA offset
+#define NORMAL_VMA_OFFSET 0xFFFF800000000000 // Normal VMA offset
 
 extern uint64_t memory_remaining;
 extern uint64_t used_mem;
 extern uint64_t MAX;
 extern uint64_t MIN;
 extern uint8_t *bitmap;
+extern symbol __kernel_end;
+extern symbol __kernel_start;
 
 typedef struct pmm_usable_list {
     uint64_t size;
