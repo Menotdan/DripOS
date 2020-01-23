@@ -150,7 +150,7 @@ void configure_mem(multiboot_info_t *mbd) {
                 - ((mmap->len + mmap->addr) / 0x1000 / 8)) {
                     // The kernel is here and so we setup the bitmap
                     bitmap = ((uint64_t) __kernel_end + 0x1000) & ~(0xfff);
-                    set_bitmap(bitmap, 0, mmap->len);
+                    set_bitmap(bitmap, 0, mmap->len, (((uint64_t) __kernel_end + 0x1000) & ~(0xfff)) - mmap->addr);
                     break;
                 }
             }
