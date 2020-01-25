@@ -90,6 +90,22 @@ uint8_t *get_last_bitmap(uint8_t *bitmap_start) {
     return ret;
 }
 
+/* Get a bitmap from a physical address */
+uint8_t *phys_to_bitmap(uint64_t phys_addr) {
+    uint8_t *map_iterator = bitmap;
+
+    while (map_iterator) {
+        if (get_represented_addr(map_iterator) - NORMAL_VMA_OFFSET <= phys_addr && 
+        phys_addr <= get_represented_addr(map_iterator) + (get_bitmap_size(map_iterator) * 0x1000 * 8) - NORMAL_VMA_OFFSET) {
+            // The physical address is in the bitmap
+            break;
+        }
+
+        map_iterator = get_next_bitmap(map_iterator);
+    }
+    return map_iterator;
+}
+
 /* Setup a bitmap which may be pointed to by another bitmap */
 void set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem, uint64_t offset) {
     // Calculate the bitmap size in bytes, we add 8 to account for the size data
@@ -109,20 +125,8 @@ void set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem
     *(uint64_t *) bitmap_start = (bitmap_size);
     // Set the represented address of the bitmap
     *(uint64_t *) (bitmap_start + bitmap_size + 8) = (uint64_t)bitmap_start - offset;
-    /* Debug data
-    sprint("\nPages: ");
-    sprint_hex(bitmap_pages);
-    sprint("\nBitmap size: ");
-    sprint_hex(bitmap_size);
-    sprint("\nMem size: ");
-    sprint_hex(size_of_mem);
-    sprint("\nOffset: ");
-    sprint_hex(offset);
-    sprint("\nPages without offset: ");
-    sprint_hex(((bitmap_size + 16) + 0x1000 - 1) / 0x1000);
-    */
-    
     // Now to set the bitmap as allocated
+
     uint64_t bitmap_bit = 0;
     uint64_t bitmap_byte = 0;
     for (; bitmap_pages > 0; bitmap_pages--) {
@@ -181,7 +185,7 @@ void configure_mem(multiboot_info_t *mbd) {
                 ((uint64_t) __kernel_end - KERNEL_VMA_OFFSET) < (mmap->len + mmap->addr) 
                 - ((mmap->len + mmap->addr) / 0x1000 / 8)) {
                     // The kernel is here and so we setup the bitmap
-                    bitmap = (uint8_t *) (((uint64_t) __kernel_end + 0x1000) & ~(0xfff));
+                    bitmap = (uint8_t *) (((((uint64_t) __kernel_end - KERNEL_VMA_OFFSET) + NORMAL_VMA_OFFSET) + 0x1000) & ~(0xfff));
                     set_bitmap(bitmap, 0, mmap->len, (((uint64_t) __kernel_end + 0x1000 - KERNEL_VMA_OFFSET) & ~(0xfff)) - (mmap->addr));
                     sprint("\nFirst bitmap set!");
                     break;
@@ -203,8 +207,22 @@ void configure_mem(multiboot_info_t *mbd) {
     }
     /* Setup the bitmap for the pmm allocator */
     total_usable &= ~((uint64_t)0xFFF); // Round the amount of memory down
-    sprint("Finding memory...");
-    sprint_hex(pmm_find_free(1) - KERNEL_VMA_OFFSET);
+    sprint("\nMemory 1: ");
+    sprint_hex(pmm_allocate(1));
+    sprint("\nMemory 2: ");
+    sprint_hex(pmm_allocate(1));
+    sprint("\nMemory 3: ");
+    uint64_t testing_free = pmm_allocate(1);
+    sprint_hex(testing_free);
+    pmm_unallocate((void *)testing_free, 1);
+    sprint("\nMemory 4: ");
+    sprint_hex(pmm_allocate(1));
+    sprint("\nMemory 5: ");
+    testing_free = pmm_allocate(0x3000);
+    sprint_hex(testing_free);
+    pmm_unallocate((void *)testing_free, 0x3000);
+    sprint("\nMemory 6: ");
+    sprint_hex(pmm_allocate(0x3000));
 }
 
 uint64_t pmm_find_free(uint64_t size) {
@@ -253,6 +271,8 @@ uint64_t pmm_allocate(uint64_t size) {
     uint64_t free_addr = pmm_find_free(needed); // Find the pages in bitmap land
 
     if (!free_addr) {
+        sprint("\n[PMM] Warning: couldn't find free space of size ");
+        sprint_hex((uint64_t) size);
         return 0; // Nothing found, say oof
     }
 
@@ -262,10 +282,65 @@ uint64_t pmm_allocate(uint64_t size) {
     uint64_t difference = free_addr - get_represented_addr(cur_map);
     difference /= 0x1000;
 
-    return free_addr - KERNEL_VMA_OFFSET; // yey we found something :D
+    uint64_t cur_byte = difference / 8;
+    uint8_t cur_bit = difference % 8;
+    for (; needed > 0; needed--) {
+        set_bit(cur_map, cur_bit, cur_byte, 1); // mark as allocated
+
+        cur_bit++;
+        if (cur_bit == 8) {
+            cur_byte++;
+            cur_bit = 0;
+        }
+    }
+
+    return free_addr - NORMAL_VMA_OFFSET; // yey we found something :D
 }
 
 void pmm_unallocate(void * address, uint64_t size) {
-    if (address) {}
-    if (size) {}
+    // Get the bitmap
+    uint8_t *bitmap_to_free = phys_to_bitmap((uint64_t) address);
+
+    sprint("\nBitmap: ");
+    sprint_hex((uint64_t) bitmap_to_free);
+
+    if (!bitmap_to_free) {
+        sprint("\n[PMM] Warning: couldn't find bitmap for address ");
+        sprint_hex((uint64_t) address);
+        return;
+    }
+
+    uint64_t distance = (uint64_t) address - (get_represented_addr(bitmap_to_free) - NORMAL_VMA_OFFSET);
+    uint64_t distance_pages = (distance + 0x1000 - 1) / 0x1000;
+
+    // Calculate bitmap positions
+    uint8_t distance_bits = distance_pages % 8;
+    uint64_t distance_bytes = distance_pages / 8;
+
+    size = (size + 0x1000 - 1) / 0x1000;
+    uint8_t size_bits = (size % 8);
+    uint64_t size_bytes = size / 8;
+
+    sprint("\nSize: ");
+    sprint_hex(size);
+    sprint("\nDistance: ");
+    sprint_hex(distance_pages);
+
+    for (uint64_t bytes = 0; bytes < size_bytes; bytes++) {
+        *(bitmap_to_free + 8 + distance_bytes + bytes) = 0;
+    }
+
+    for (uint64_t bits = 0; bits < size_bits; bits++) {
+        uint8_t bits_to_use = bits + distance_bits;
+        uint8_t extra_bytes = bits_to_use / 8;
+        sprint("\nBits: ");
+        sprint_hex(bits_to_use);
+        sprint("\nBytes: ");
+        sprint_hex(extra_bytes);
+        sprint("\nBit to write: ");
+        sprint_hex(bits_to_use % 8);
+        sprint("\nByte to write: ");
+        sprint_hex((distance_bytes + size_bytes + extra_bytes));
+        set_bit(bitmap_to_free, (bits_to_use % 8), (distance_bytes + size_bytes + extra_bytes), 0);
+    }
 }
