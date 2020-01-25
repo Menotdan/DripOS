@@ -51,6 +51,12 @@ void sprint_uint64(uint64_t num) {
     sprint(toprint);
 }
 
+void sprint_hex(uint64_t num) {
+    char toprint[20];
+    htoa(num, toprint);
+    sprint(toprint);
+}
+
 void sprintd(char *message) {
     sprint("[");
     sprint_uint(tick);

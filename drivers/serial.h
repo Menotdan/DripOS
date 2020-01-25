@@ -9,5 +9,6 @@ void sprintd(char *message);
 void sprint_uint(unsigned int num);
 void sprint_uint64(uint64_t num);
 void sprint_int(int num);
+void sprint_hex(uint64_t num);
 
 #endif

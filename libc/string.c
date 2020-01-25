@@ -87,6 +87,7 @@ void htoa(uint64_t in, char out[]) {
     } else {
         out[pos++] = tmp + '0';
     }
+    out[pos] = '\0'; // nullify 
 }
 
 void hex_to_ascii(int n, char str[]) {

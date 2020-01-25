@@ -143,6 +143,7 @@ void register_interrupt_handler(uint8_t n, isr_t handler) {
 }
 
 void irq_handler(registers_t *r) {
+    sprint("\nwut");
     /* After every interrupt we need to send an EOI to the PICs
      * or they will not send another interrupt again */
 
