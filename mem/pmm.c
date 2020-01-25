@@ -267,7 +267,7 @@ uint64_t pmm_find_free(uint64_t size) {
 }
 
 uint64_t pmm_allocate(uint64_t size) {
-    uint64_t needed = ((size + 0x1000) & ~(0xfff)) / 0x1000; // Calculate needed pages
+    uint64_t needed = ((size + 0x1000 - 1)) / 0x1000; // Calculate needed pages
     uint64_t free_addr = pmm_find_free(needed); // Find the pages in bitmap land
 
     if (!free_addr) {
@@ -301,9 +301,6 @@ void pmm_unallocate(void * address, uint64_t size) {
     // Get the bitmap
     uint8_t *bitmap_to_free = phys_to_bitmap((uint64_t) address);
 
-    sprint("\nBitmap: ");
-    sprint_hex((uint64_t) bitmap_to_free);
-
     if (!bitmap_to_free) {
         sprint("\n[PMM] Warning: couldn't find bitmap for address ");
         sprint_hex((uint64_t) address);
@@ -321,11 +318,6 @@ void pmm_unallocate(void * address, uint64_t size) {
     uint8_t size_bits = (size % 8);
     uint64_t size_bytes = size / 8;
 
-    sprint("\nSize: ");
-    sprint_hex(size);
-    sprint("\nDistance: ");
-    sprint_hex(distance_pages);
-
     for (uint64_t bytes = 0; bytes < size_bytes; bytes++) {
         *(bitmap_to_free + 8 + distance_bytes + bytes) = 0;
     }
@@ -333,14 +325,6 @@ void pmm_unallocate(void * address, uint64_t size) {
     for (uint64_t bits = 0; bits < size_bits; bits++) {
         uint8_t bits_to_use = bits + distance_bits;
         uint8_t extra_bytes = bits_to_use / 8;
-        sprint("\nBits: ");
-        sprint_hex(bits_to_use);
-        sprint("\nBytes: ");
-        sprint_hex(extra_bytes);
-        sprint("\nBit to write: ");
-        sprint_hex(bits_to_use % 8);
-        sprint("\nByte to write: ");
-        sprint_hex((distance_bytes + size_bytes + extra_bytes));
         set_bit(bitmap_to_free, (bits_to_use % 8), (distance_bytes + size_bytes + extra_bytes), 0);
     }
 }
