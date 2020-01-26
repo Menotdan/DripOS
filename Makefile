@@ -8,8 +8,8 @@ S_SOURCES = $(wildcard kernel/*.s drivers/*.s cpu/*.s libc/*.s fs/*.s mem/*.S *.
 OBJ = ${C_SOURCES:.c=.o}  ${NASM_SOURCES:.asm=.o} ${S_SOURCES:.s=.o} ${BIG_S_SOURCES:.S=.o} cpu/switch.o
  
 # Change this if your cross-compiler is somewhere else
-CC = ~/Desktop/Compiler/bin/i686-elf-gcc
-LINKER = ~/Desktop/Compiler/bin/i686-elf-ld
+CC = i686-elf-gcc
+LINKER = i686-elf-ld
 incPath = ~/DripOS/include
 GDB = gdb
 MEM = 1G # Memory for qemu
@@ -38,10 +38,10 @@ kernel.elf: ${OBJ}
 	${LINKER} -melf_i386 -o $@ -T linker.ld $^
 
 lol: ${OBJ}
-	~/Desktop/Compiler/bin/i686-elf-ld -melf_i386 -o helllo -T linker.ld hello $^
+	i686-elf-ld -melf_i386 -o helllo -T linker.ld hello $^
 
 run: myos.iso
-	qemu-system-x86_64 -d guest_errors int -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+	qemu-system-x86_64 -d guest_errors,int -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
 
 run-kvm: myos.iso
 	sudo qemu-system-x86_64 -enable-kvm -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
