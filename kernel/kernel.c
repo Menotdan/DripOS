@@ -128,6 +128,11 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 		sprintf("\nMemory map exists. Address: %x", mbd->mmap_addr);
 		sprintf("\n Size: %u", mbd->mmap_length);
 		configure_mem(mbd);
+		uint64_t phys_framebuffer = mbd->framebuffer_addr & ~(0xfff);
+		uint64_t framebuffer_size = mbd->framebuffer_height * mbd->framebuffer_pitch;
+		uint64_t framebuffer_pages = (framebuffer_size + 0x1000 - 1) / 0x1000;
+		vmm_map((void *) phys_framebuffer, (void *) phys_framebuffer, framebuffer_pages, 0);
+		*((uint32_t *) mbd->framebuffer_addr) = 0xFFFFFFFF;
 	}
 	sprint("\nCPU name: ");
 	get_cpu_name(cpu_name);
