@@ -22,6 +22,20 @@ void int_to_ascii(int n, char str[]) {
     reverse(str);
 }
 
+void int64_to_ascii(int64_t n, char str[]) {
+    int i, sign;
+    if ((sign = n) < 0) n = -n; // if number is less than 0, invert it
+    i = 0;
+    do {
+        str[i++] = n % 10 + '0';
+    } while ((n /= 10) > 0);
+
+    if (sign < 0) str[i++] = '-';
+    str[i] = '\0';
+
+    reverse(str);
+}
+
 void uint_to_ascii(unsigned int n, char str[]) {
     int i;
     i = 0;

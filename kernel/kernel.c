@@ -118,27 +118,15 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 	// Read memory map
 	init_serial();
 	sprint_uint64(0xffffffffffffffff);
-	sprint("\nMultiboot header: ");
-	sprint_uint64((uint64_t)mbd);
-	sprint("\nMemory lower: ");
-	sprint_uint64(mbd->mem_lower);
-	sprint("\nMemory upper: ");
-	sprint_uint64(mbd->mem_upper);
-	sprint("\n*hacker voice* Im in");
-	sprint("\n");
-	sprint_uint64(mbd->framebuffer_addr);
-	sprint("\n");
-	sprint_uint64(end_of_code);
-	sprint("\n");
-	sprint_uint64(MEMORY_MAPPED-end_of_code);
-	sprint("\nFramebuffer height: ");
-	sprint_uint64(mbd->framebuffer_height);
+	sprintf("\nMultiboot header: %lu", (uint64_t) mbd);
+	sprintf("\nMemory lower: %lu", mbd->mem_lower);
+	sprintf("\nMemory upper: %lu", mbd->mem_upper);
+	sprintf("\nFramebuffer height: %u", mbd->framebuffer_height);
+	sprintf("\nKernel end: %lx", end_of_code);
 	sprint("\nInitializing stage 1 paging and reading memory map");
 	if (mbd->flags & MULTIBOOT_INFO_MEM_MAP) {
-		sprint("\nMemory map exists. Address: ");
-		sprint_uint(mbd->mmap_addr);
-		sprint("\n Size: ");
-		sprint_uint(mbd->mmap_length);
+		sprintf("\nMemory map exists. Address: %x", mbd->mmap_addr);
+		sprintf("\n Size: %u", mbd->mmap_length);
 		configure_mem(mbd);
 	}
 	sprint("\nCPU name: ");

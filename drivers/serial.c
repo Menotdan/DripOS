@@ -1,4 +1,5 @@
 #include "serial.h"
+#include <stdarg.h>
 #include <string.h>
 #include "../cpu/timer.h"
 #include <stdio.h>
@@ -22,7 +23,6 @@ int is_transmit_empty() {
  
 void write_serial(char a) {
    while (is_transmit_empty() == 0);
- 
    port_byte_out(PORT,a);
 }
 
@@ -33,9 +33,15 @@ void sprint(char *message) {
     }
 }
 
-void sprint_int(int num) {
+void sprint_int(int32_t num) {
     char toprint[33];
     int_to_ascii(num, toprint);
+    sprint(toprint);
+}
+
+void sprint_int64(int64_t num) {
+    char toprint[33];
+    int64_to_ascii(num, toprint);
     sprint(toprint);
 }
 
@@ -55,6 +61,57 @@ void sprint_hex(uint64_t num) {
     char toprint[20];
     htoa(num, toprint);
     sprint(toprint);
+}
+
+void sprintf(char *message, ...) {
+    va_list format_list;
+    uint64_t index = 0;
+    uint8_t big = 0;
+
+    va_start(format_list, message);
+
+    while (message[index]) {
+        if (message[index] == '%') {
+            index++;
+            if (message[index] == 'l') {
+                index++;
+                big = 1;
+            }
+            switch (message[index]) {
+                case 'x':
+                    if (big) {
+                        sprint_hex(va_arg(format_list, uint64_t));
+                    } else {
+                        sprint_hex(va_arg(format_list, uint32_t));
+                    }
+                    break;
+                case 'd':
+                    if (big) {
+                        sprint_int64(va_arg(format_list, int64_t));
+                    } else {
+                        sprint_int(va_arg(format_list, int32_t));
+                    }
+                    break;
+                case 'u':
+                    if (big) {
+                        sprint_uint64(va_arg(format_list, uint64_t));
+                    } else {
+                        sprint_uint(va_arg(format_list, uint32_t));
+                    }
+                    break;
+                case 's':
+                    sprint(va_arg(format_list, char *));
+                    break;
+                default :
+                    break;
+            }
+        } else {
+            write_serial(message[index]);
+        }
+        index++;
+    }
+
+    va_end(format_list);
 }
 
 void sprintd(char *message) {
