@@ -175,8 +175,7 @@ void configure_mem(multiboot_info_t *mbd) {
                 // Found lower 640K of memory, ignore it, as to not overwrite stuff
             } else {
                 // Check if the kernel is in this block
-                sprint("\nAddress: ");
-                sprint_hex(mmap->addr);
+                sprintf("\nAddress: %lx", mmap->addr);
                 sprint("\nKernel start: ");
                 sprint_hex((uint64_t) __kernel_start - KERNEL_VMA_OFFSET);
                 sprint("\nKernel end: ");
@@ -207,22 +206,6 @@ void configure_mem(multiboot_info_t *mbd) {
     }
     /* Setup the bitmap for the pmm allocator */
     total_usable &= ~((uint64_t)0xFFF); // Round the amount of memory down
-    sprint("\nMemory 1: ");
-    sprint_hex(pmm_allocate(1));
-    sprint("\nMemory 2: ");
-    sprint_hex(pmm_allocate(1));
-    sprint("\nMemory 3: ");
-    uint64_t testing_free = pmm_allocate(1);
-    sprint_hex(testing_free);
-    pmm_unallocate((void *)testing_free, 1);
-    sprint("\nMemory 4: ");
-    sprint_hex(pmm_allocate(1));
-    sprint("\nMemory 5: ");
-    testing_free = pmm_allocate(0x3000);
-    sprint_hex(testing_free);
-    pmm_unallocate((void *)testing_free, 0x3000);
-    sprint("\nMemory 6: ");
-    sprint_hex(pmm_allocate(0x3000));
 }
 
 uint64_t pmm_find_free(uint64_t size) {

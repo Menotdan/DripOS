@@ -2,24 +2,32 @@
 
 uint64_t current_pml4t = 0;
 
-uint64_t get_pml4t() {
+uint64_t vmm_get_pml4t() {
     uint64_t ret;
     asm volatile("movq %%cr3, %0;":"=r"(ret));
     return ret;
 }
 
-void set_pml4t(uint64_t new) {
+void vmm_set_pml4t(uint64_t new) {
     asm volatile("movq %0, %%cr3;"::"r"(new) : "memory");
 }
-// qookie's fancy paging code
+
+// void vmm_flush_addr(uint64_t address) {
+
+// }
+
+void vmm_flush_tlb() {
+    vmm_set_pml4t(vmm_get_pml4t());
+}
+
 pt_off_t vmm_virt_to_offs(void *virt) {
 	uintptr_t addr = (uintptr_t)virt;
 
 	pt_off_t off = {
-		.pml4_off =	(addr & ((size_t)0x1ff << 39)) >> 39,
-		.pdp_off =	(addr & ((size_t)0x1ff << 30)) >> 30,
-		.pd_off =	(addr & ((size_t)0x1ff << 21)) >> 21,
-		.pt_off =	(addr & ((size_t)0x1ff << 12)) >> 12,
+		.p4_off =	(addr & ((size_t) 0x1ff << 39)) >> 39,
+		.p3_off =	(addr & ((size_t) 0x1ff << 30)) >> 30,
+		.p2_off =	(addr & ((size_t) 0x1ff << 21)) >> 21,
+		.p1_off =	(addr & ((size_t) 0x1ff << 12)) >> 12,
 	};
 
 	return off;
@@ -28,118 +36,109 @@ pt_off_t vmm_virt_to_offs(void *virt) {
 void *vmm_offs_to_virt(pt_off_t offs) {
 	uintptr_t addr = 0;
 
-	addr |= offs.pml4_off << 39;
-	addr |= offs.pdp_off << 30;
-	addr |= offs.pd_off << 21;
-	addr |= offs.pt_off << 12;
+	addr |= offs.p4_off << 39;
+	addr |= offs.p3_off << 30;
+	addr |= offs.p2_off << 21;
+	addr |= offs.p1_off << 12;
 
 	return (void *)addr;
 }
 
-static inline pt_t *vmm_get_or_alloc_ent(pt_t *tab, size_t off, int flags) {
-    uint64_t ent_addr = tab->ents[off] & VMM_ADDR_MASK;
-    if (!ent_addr) {
-        ent_addr = tab->ents[off] = pmm_allocate(4096);
-        if (!ent_addr) {
-            return NULL;
-        }
-        tab->ents[off] |= flags | VMM_FLAG_PRESENT;
-        memset((void *)(ent_addr + VIRT_PHYS_BASE), 0, 4096);
+pt_ptr_t vmm_get_table(pt_off_t offs, pt_t *p4) {
+    pt_ptr_t ret;
+    
+    // Is the p3 present?
+    if (p4->ents[offs.p4_off] & VMM_PRESENT) {
+        ret.p3 = (pt_t *) (p4->ents[offs.p4_off] & ~(0xfff));
+    } else {
+        ret.p3 = (pt_t *) (((size_t) pmm_allocate(0x1000)) + NORMAL_VMA_OFFSET);
+        p4->ents[offs.p4_off] = ((uint64_t)ret.p3 - NORMAL_VMA_OFFSET)
+            | VMM_PRESENT | VMM_WRITE;
+        // Store the new entry in the table, as W/S/P (Writeable, supervisor, present)
+        memset((uint8_t *) ret.p3, 0, 0x1000); // Clear the table
     }
 
-    return (pt_t *)(ent_addr + VIRT_PHYS_BASE);
+    // Is the p2 present?
+    if (ret.p3->ents[offs.p3_off] & VMM_PRESENT) {
+        ret.p2 = (pt_t *) (ret.p3->ents[offs.p3_off] & ~(0xfff));
+    } else {
+        ret.p2 = (pt_t *) (((size_t) pmm_allocate(0x1000)) + NORMAL_VMA_OFFSET);
+        ret.p3->ents[offs.p3_off] = ((uint64_t)ret.p2 - NORMAL_VMA_OFFSET)
+            | VMM_PRESENT | VMM_WRITE;
+        // Store the new entry in the table, as W/S/P (Writeable, supervisor, present)
+        memset((uint8_t *) ret.p2, 0, 0x1000); // Clear the table
+    }
+
+    // Is the p1 present?
+    if (ret.p2->ents[offs.p2_off] & VMM_PRESENT) {
+        ret.p1 = (pt_t *) (ret.p2->ents[offs.p2_off] & ~(0xfff));
+    } else {
+        ret.p1 = (pt_t *) (((size_t) pmm_allocate(0x1000)) + NORMAL_VMA_OFFSET);
+        ret.p2->ents[offs.p2_off] = ((uint64_t)ret.p1 - NORMAL_VMA_OFFSET)
+            | VMM_PRESENT | VMM_WRITE;
+        // Store the new entry in the table, as W/S/P (Writeable, supervisor, present)
+        memset((uint8_t *) ret.p1, 0, 0x1000); // Clear the table
+    }
+
+    return ret;
+}
+
+int vmm_unmap_pages(pt_t *pml4, void *virt, size_t count) {
+    pt_off_t offsets;
+    pt_ptr_t table_addresses;
+    int ret = 0;
+
+    for (uint64_t i = 0; i < count; i++) {
+        // Get table offset data
+        offsets = vmm_virt_to_offs((char *) virt + (i * 0x1000));
+        table_addresses = vmm_get_table(offsets, pml4);
+        if (table_addresses.p1) {
+            // If the entry is already empty
+            if (!(table_addresses.p1->ents[offsets.p1_off] & VMM_PRESENT)) {
+                ret = 2;
+                continue;
+            }
+            // Clear VMM_PRESENT
+            table_addresses.p1->ents[offsets.p1_off] &= ~(VMM_PRESENT);
+        } else {
+            ret = 1;
+            continue; // couldn't allocate a p1 for some reason or another
+        }
+    }
+
+    return ret;
 }
 
 int vmm_map_pages(pt_t *pml4, void *virt, void *phys, size_t count, int perms) {
-    int higher_perms = perms & (VMM_FLAG_WRITE);
+    pt_off_t offsets;
+    pt_ptr_t table_addresses;
+    int ret = 0;
 
-    while (count--) {
-        pt_off_t offs = vmm_virt_to_offs(virt);
+    for (uint64_t i = 0; i < count; i++) {
+        offsets = vmm_virt_to_offs((char *) virt + (i * 0x1000));
+        table_addresses = vmm_get_table(offsets, pml4);
+        if (table_addresses.p1) {
+            if (table_addresses.p1->ents[offsets.p1_off] & VMM_PRESENT) {
+                ret = 2;
+                continue;
+            }
 
-        pt_t *pml4_virt = (pt_t *)((uint64_t)pml4 + VIRT_PHYS_BASE);
-        pt_t *pdp_virt = vmm_get_or_alloc_ent(pml4_virt, offs.pml4_off, higher_perms);
-        pt_t *pd_virt = vmm_get_or_alloc_ent(pdp_virt, offs.pdp_off, higher_perms);
-        pt_t *pt_virt = vmm_get_or_alloc_ent(pd_virt, offs.pd_off, higher_perms);
-        pt_virt->ents[offs.pt_off] = (uint64_t)phys | perms | VMM_FLAG_PRESENT;
-
-        virt = (void *)((uintptr_t)virt + 0x1000);
-        phys = (void *)((uintptr_t)phys + 0x1000);
+            // Map the physical address to the virtual one by setting it's entry
+            table_addresses.p1->ents[offsets.p1_off] = ((((uint64_t) phys) & ~(0xfff))
+                + (i * 0x1000)) | VMM_PRESENT | VMM_WRITE | perms;
+        } else {
+            ret = 1;
+            continue; // For some reason, the p1 pointer was null
+        }
     }
 
-    return 1;
-} 
-
-int map_phys_virt(void *phys, void *virt, size_t count, int perms) {
-    return vmm_map_pages((pt_t *)get_pml4t(), virt, phys, count, perms);
+    return ret;
 }
 
-// table_address_t table_address_from_pos(table_address_t table_pos) {
-//     page_table_t *data;
-//     table_address_t ret = table_pos;
-//     data = (page_table_t *)current_pml4t;
-//     uint64_t data_temp;
-//     data_temp = data->data[table_pos.pml4t_pos];
-//     ret.pdpt_exists = data_temp & 0xfff;
-//     if (!(ret.pdpt_exists)) {
-//         ret.pdt_exists = 0;
-//         ret.pt_exists = 0;
-//         ret.pte_exists = 0;
-//         ret.address = 0;
-//         return ret;
-//     }
+int vmm_map(void *phys, void *virt, size_t count, int perms) {
+    return vmm_map_pages((pt_t *) vmm_get_pml4t(), virt, phys, count, perms);
+}
 
-//     data = (page_table_t *)(data_temp & (~0xfff));
-//     data_temp = data->data[table_pos.pdpt_pos];
-//     ret.pdt_exists = data_temp & 0xfff;
-//     if (!(ret.pdt_exists)) {
-//         ret.pt_exists = 0;
-//         ret.pte_exists = 0;
-//         ret.address = 0;
-//         return ret;
-//     }
-
-//     data = (page_table_t *)(data_temp & (~0xfff));
-//     data_temp = data->data[table_pos.pdt_pos];
-//     ret.pt_exists = data_temp & 0xfff;
-//     if (!(ret.pt_exists)) {
-//         ret.pte_exists = 0;
-//         ret.address = 0;
-//         return ret;
-//     }
-
-//     data = (page_table_t *)(data_temp & (~0xfff));
-//     data_temp = data->data[table_pos.pt_pos];
-//     ret.pte_exists = data_temp & 0xfff;
-
-//     ret.address = ((uint64_t)data) + (table_pos.pt_pos * 8);
-//     return ret;
-// }
-
-// table_address_t address_to_table_pos(uint64_t address) {
-//     // Convert a virtual address into a table position
-//     table_address_t ret;
-//     uint64_t page_addr = address & ~(0xfff);
-//     ret.pml4t_pos = (page_addr & ((uint64_t)0x1ff << 39)) >> 39;
-//     ret.pdpt_pos = (page_addr & ((uint64_t)0x1ff << 30)) >> 30;
-//     ret.pdt_pos = (page_addr & ((uint64_t)0x1ff << 21)) >> 21;
-//     ret.pt_pos = (page_addr & ((uint64_t)0x1ff << 12)) >> 12;
-//     ret = table_address_from_pos(ret);
-    
-//     return ret;
-// }
-
-// uint64_t map_virtual_physical(uint64_t free12K, uint64_t physical, uint64_t virtual) {
-//     uint64_t amount_used;
-//     table_address_t table_pos = address_to_table_pos(virtual);
-
-//     if (table_pos.address == 0) {
-//         // The table space we wanted is not filled
-//         if (!table_pos.pte_exists) {
-
-//         }
-//     }
-// }
-
-// void setup_paging(uint64_t size_of_free_space, uint64_t free_space, uint64_t framebuffer_address, uint64_t framebuffer_size) {     
-//     current_pml4t = DEFAULT_PML4T;
-// }
+int vmm_unmap(void *virt, size_t count) {
+    return vmm_unmap_pages((pt_t *) vmm_get_pml4t(), virt, count);
+}
