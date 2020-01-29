@@ -137,13 +137,7 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 		sprintf("\nCalculated framebuffer size: %lu", framebuffer_size);
 		sprintf("\nCalculated framebuffer pages: %lu", framebuffer_pages);
 		vmm_map((void *) phys_framebuffer, (void *) phys_framebuffer, framebuffer_pages, 0);
-		sprintf("\nDone mapping.");
-		while (1) {
-			uint64_t current_color = 0xff;
-			for (uint64_t pixel = 0; pixel < mbd->framebuffer_height * mbd->framebuffer_width; pixel++) {
-				*((uint32_t *) (mbd->framebuffer_addr + (pixel * 4))) = (uint32_t) current_color;
-			}
-		}
+		sprintf("\nMapped framebuffer.");
 	}
 	sprint("\nCPU name: ");
 	get_cpu_name(cpu_name);

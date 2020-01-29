@@ -109,7 +109,7 @@ uint8_t *phys_to_bitmap(uint64_t phys_addr) {
 /* Setup a bitmap which may be pointed to by another bitmap */
 void set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem, uint64_t offset) {
     // Calculate the bitmap size in bytes, we add 8 to account for the size data
-    uint64_t bitmap_size = (((size_of_mem) + (0x1000 * 8) - 1) / (0x1000 * 8)) + 8;
+    uint64_t bitmap_size = (size_of_mem / (0x1000 * 8)) + 8;
     // Number of pages needed for the bitmap
     uint64_t bitmap_pages = ((bitmap_size + 16) + 0x1000 - 1) / 0x1000;
     bitmap_pages += ((offset + 0x1000 - 1) / 0x1000);
@@ -153,59 +153,52 @@ void configure_mem(multiboot_info_t *mbd) {
     for (; remaining > 0; remaining -= sizeof(multiboot_memory_map_t)) {
         multiboot_memory_map_t *mmap = (multiboot_memory_map_t *)(current);
 
-        char buf1[19];
-        char buf2[19];
-        uint64_t start = mmap->addr;
-        uint64_t end = start + mmap->len;
-        htoa(start, buf1);
-        htoa(end, buf2);
-        
-        sprint("\nEntry:\n  ");
-        sprint(buf1);
-        sprint(" - ");
-        sprint(buf2);
-        sprint("\n  Type: ");
         /* Bitmap setup for use with the initial page table setup */
         if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
-            sprint("Usable");
-
-            total_usable += mmap->len;
-
             if (remaining == mbd->mmap_length) {
                 // Found lower 640K of memory, ignore it, as to not overwrite stuff
             } else {
                 // Check if the kernel is in this block
-                sprintf("\nAddress: %lx", mmap->addr);
-                sprint("\nKernel start: ");
-                sprint_hex((uint64_t) __kernel_start - KERNEL_VMA_OFFSET);
-                sprint("\nKernel end: ");
-                sprint_hex((uint64_t)__kernel_end - KERNEL_VMA_OFFSET);
                 if ((uint64_t) __kernel_start - KERNEL_VMA_OFFSET >= (mmap->addr) && 
                 ((uint64_t) __kernel_end - KERNEL_VMA_OFFSET) < (mmap->len + mmap->addr) 
                 - ((mmap->len + mmap->addr) / 0x1000 / 8)) {
                     // The kernel is here and so we setup the bitmap
                     bitmap = (uint8_t *) (((((uint64_t) __kernel_end - KERNEL_VMA_OFFSET) + NORMAL_VMA_OFFSET) + 0x1000) & ~(0xfff));
                     set_bitmap(bitmap, 0, mmap->len, (((uint64_t) __kernel_end + 0x1000 - KERNEL_VMA_OFFSET) & ~(0xfff)) - (mmap->addr));
-                    sprint("\nFirst bitmap set!");
+                    sprintf("\nFirst bitmap set!");
                     break;
                 }
             }
+        }
+        current += sizeof(multiboot_memory_map_t);
+    }
+    // TODO: update loops and also map stuff in the second loop and make the first loop smaller
+    sprintf("\nSetting up the rest of higher half memory...");
+
+    for (; remaining > 0; remaining -= sizeof(multiboot_memory_map_t)) {
+        multiboot_memory_map_t *mmap = (multiboot_memory_map_t *)(current);
+        
+        sprintf("\nEntry:\n  ");
+        sprintf("%lx - %lx", mmap->addr, mmap->addr + mmap->len);
+        sprintf("\n  Type: ");
+
+        /* Bitmap setup for use with the initial page table setup */
+        if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
+            sprintf("Usable");
+            total_usable += mmap->len & ~(0xfff);
         } else if (mmap->type == MULTIBOOT_MEMORY_RESERVED) {
-            sprint("Reserved");
+            sprintf("Reserved");
         } else if (mmap->type == MULTIBOOT_MEMORY_ACPI_RECLAIMABLE) {
-            sprint("ACPI Reclaimable");
+            sprintf("ACPI Reclaimable");
         } else if (mmap->type == MULTIBOOT_MEMORY_NVS) {
-            sprint("NVS");
+            sprintf("NVS");
         } else if (mmap->type == MULTIBOOT_MEMORY_BADRAM) {
-            sprint("Bad memory");
+            sprintf("Bad memory");
         }
 
         current += sizeof(multiboot_memory_map_t);
-        memset((uint8_t *)buf1, 0, 19);
-        memset((uint8_t *)buf2, 0, 19);
     }
-    /* Setup the bitmap for the pmm allocator */
-    total_usable &= ~((uint64_t)0xFFF); // Round the amount of memory down
+    sprintf("\nTotal usable memory: %lx bytes", total_usable);
 }
 
 uint64_t pmm_find_free(uint64_t size) {
