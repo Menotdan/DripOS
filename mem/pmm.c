@@ -186,6 +186,14 @@ void configure_mem(multiboot_info_t *mbd) {
         if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
             sprintf("Usable");
             total_usable += mmap->len & ~(0xfff);
+
+            if ((uint64_t) __kernel_start - KERNEL_VMA_OFFSET >= (mmap->addr) && 
+            ((uint64_t) __kernel_end - KERNEL_VMA_OFFSET) < (mmap->len + mmap->addr) 
+            - ((mmap->len + mmap->addr) / 0x1000 / 8)) {
+                sprintf(" - Kernel block");
+            } else {
+                // Setup mappings for this block
+            }
         } else if (mmap->type == MULTIBOOT_MEMORY_RESERVED) {
             sprintf("Reserved");
         } else if (mmap->type == MULTIBOOT_MEMORY_ACPI_RECLAIMABLE) {
