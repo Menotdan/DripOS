@@ -139,10 +139,9 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 		vmm_map((void *) phys_framebuffer, (void *) phys_framebuffer, framebuffer_pages, 0);
 		sprintf("\nDone mapping.");
 		while (1) {
-			for (uint64_t color_temp = 0; color_temp < 0xffff; color_temp++) {
-				for (uint64_t pixel = 0; pixel < mbd->framebuffer_width * mbd->framebuffer_height; pixel++) {
-					*((uint32_t *) (mbd->framebuffer_addr + (pixel * 4))) = (0xffffff / (pixel + 1 + (0xffff - color_temp))) * mbd->framebuffer_width * mbd->framebuffer_height;
-				}
+			uint64_t current_color = 0xff;
+			for (uint64_t pixel = 0; pixel < mbd->framebuffer_height * mbd->framebuffer_width; pixel++) {
+				*((uint32_t *) (mbd->framebuffer_addr + (pixel * 4))) = (uint32_t) current_color;
 			}
 		}
 	}
