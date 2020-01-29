@@ -123,6 +123,8 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 	sprintf("\nMemory upper: %lu", mbd->mem_upper);
 	sprintf("\nFramebuffer height: %u", mbd->framebuffer_height);
 	sprintf("\nKernel end: %lx", end_of_code);
+	sprintf("\n\nVESA info:\n  Colors: %u\n  Red pos: %u\n  Green pos: %u\n  Blue pos: %u", (uint32_t) mbd->framebuffer_palette_num_colors, (uint32_t) mbd->framebuffer_red_field_position, (uint32_t) mbd->framebuffer_green_field_position, (uint32_t) mbd->framebuffer_blue_field_position);
+	sprintf("\n  Framebuffer pitch: %u\n  Framebuffer size: %lu\n  Framebuffer width: %lu", mbd->framebuffer_pitch, (uint64_t) (mbd->framebuffer_height * mbd->framebuffer_pitch), mbd->framebuffer_width);
 	sprint("\nInitializing stage 1 paging and reading memory map");
 	if (mbd->flags & MULTIBOOT_INFO_MEM_MAP) {
 		sprintf("\nMemory map exists. Address: %x", mbd->mmap_addr);
@@ -131,8 +133,18 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 		uint64_t phys_framebuffer = mbd->framebuffer_addr & ~(0xfff);
 		uint64_t framebuffer_size = mbd->framebuffer_height * mbd->framebuffer_pitch;
 		uint64_t framebuffer_pages = (framebuffer_size + 0x1000 - 1) / 0x1000;
+		// framebuffer_pages += 3;
+		sprintf("\nCalculated framebuffer size: %lu", framebuffer_size);
+		sprintf("\nCalculated framebuffer pages: %lu", framebuffer_pages);
 		vmm_map((void *) phys_framebuffer, (void *) phys_framebuffer, framebuffer_pages, 0);
-		*((uint32_t *) mbd->framebuffer_addr) = 0xFFFFFFFF;
+		sprintf("\nDone mapping.");
+		while (1) {
+			for (uint64_t color_temp = 0; color_temp < 0xffff; color_temp++) {
+				for (uint64_t pixel = 0; pixel < mbd->framebuffer_width * mbd->framebuffer_height; pixel++) {
+					*((uint32_t *) (mbd->framebuffer_addr + (pixel * 4))) = (0xffffff / (pixel + 1 + (0xffff - color_temp))) * mbd->framebuffer_width * mbd->framebuffer_height;
+				}
+			}
+		}
 	}
 	sprint("\nCPU name: ");
 	get_cpu_name(cpu_name);
