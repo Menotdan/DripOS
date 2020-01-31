@@ -144,6 +144,10 @@ void set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem
     }
 }
 
+uint64_t get_free_mem() {
+    return total_usable;
+}
+
 /* Configure memory mapping and such */
 void configure_mem(multiboot_info_t *mbd) {
     // Current mmap address

@@ -93,10 +93,10 @@ void execute_command(char input[]) {
           kprint("No!");
   } else if (strcmp(input, "free") == 0) {
         char temp[25];
-        int_to_ascii(memory_remaining, temp);
+        int_to_ascii(get_free_mem()/1024/1024, temp);
         kprint("Memory available: ");
         kprint(temp);
-        kprint(" bytes\n");
+        kprint(" MiB\n");
         int_to_ascii(used_mem, temp);
         kprint("Memory used: ");
         kprint(temp);

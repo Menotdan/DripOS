@@ -281,12 +281,9 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
     Log("Clearing screen...", 1);
     update_display();
     clear_screen();
-	
+
     prevtick = tick;
     logo_draw();
-    while (1) {
-        asm volatile("hlt");
-    }
     play(300);
     wait(15);
     play(500);
@@ -297,22 +294,25 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
     update_display();
     clear_screen();
 
-    kprint("DripOS 0.0030\n"); //Version
+    kprint("DripOS 0.0030 (x86_64)\n"); //Version
     sprintd("DripOS 0.0030 loaded"); //Version
 
     kprint("Type help for commands\nType shutdown to shutdown\n\n");
     kprint("Memory available: ");
     char test[25];
-    int_to_ascii(memory_remaining, test);
+    uint64_to_ascii(get_free_mem()/1024/1024, test);
     kprint(test);
-    kprint(" bytes\n");
+    kprint(" MiB\n");
     kprint("drip@DripOS> ");
     set_RTC_register(0x4, 13);
     sprint("\nHour: ");
     sprint_uint(get_RTC_register(0x4));
     sprintd("Entering multitask/system management loop");
+	// while (1) {
+    //     asm volatile("hlt");
+    // }
 
-    initTasking();
+    init_tasking();
 }
 
 void user_input(char input[]) {

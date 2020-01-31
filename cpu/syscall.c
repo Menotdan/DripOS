@@ -7,17 +7,23 @@ void syscall_handle(registers_t *r) {
     // uint16_t ah = (uint16_t)((r->eax & 0xffff0000) >> 16);
     sprint("\nsyscall ");
     sprint_uint(al);
+    sprintf("\nBy task %u", running_task->pid);
     if (al == 0) {
         /* Exit syscall */
-        kill_task(running_task->pid); // TODO: Prevent anyone else from getting the
-        // stack memory, so that it can be safely discarded when we are done
-        global_esp_old = (uint64_t)running_task->start_esp;
-        global_old_task = running_task;
-        pick_task();
-        // We can now discard the stack memory
-        global_esp = running_task->regs.rsp;
+        running_task->state = DEAD_TASK;
+        //sprintf("\nState: %u Pid: %u", (uint8_t) running_task->state, running_task->pid);
+        if (dead_task_queue) {
+            Task *queue_iterator = dead_task_queue;
+            while (queue_iterator->next_dead) {
+                //sprintf("\nLoop");
+                queue_iterator = queue_iterator->next_dead;
+            }
+            queue_iterator->next_dead = running_task;
+        } else {
+            dead_task_queue = running_task;
+        }
         switch_task = 1;
-        
-        return; // bye bye
+        //sprintf("\nEscaped!");
+        return; // bye bye :P
     }
 }

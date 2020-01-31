@@ -6,7 +6,7 @@
 [extern switch_task]
 [extern global_esp]
 [extern global_esp_old]
-[extern store_values]
+[extern swap_task]
 [extern schedule_task]
 [extern breakA]
 [extern free]
@@ -89,16 +89,9 @@ irq_common_stub:
     mov rbx, [switch_task]
     cmp rbx, 1
     jne testLabel
-    ;call breakA
-    mov rbx, 0
-    mov [switch_task], rbx
-    mov rdi, rsp ; Safety, irq_handler probably changed eax
-    cld
-    call store_values ; Store current registers pointer to running_task
-    mov rsp, [global_esp] ; Change ESP
-    mov rdi, rsp ; Set param
-    cld
-    call schedule_task ; Pick next task and set it in return
+
+    mov rdi, rsp ; Param
+    call swap_task ; Changes the interrupt frame
 testLabel:
     add rsp, 16 ; DR6 and ss
 
@@ -121,16 +114,9 @@ syscall_handler:
     mov rbx, [switch_task]
     cmp rbx, 1
     jne no_switch
-    mov rsp, [global_esp] ; Change ESP
-    ; TODO: call free on the old ESP
-    mov rdi, rsp ; Get the ESP of the old task
-    mov rsi, 0x4000 ; Size of the stack
-    call free ; Free the memory
-    mov rdi, [global_old_task]
-    mov rsi, [task_size]
-    call free
-    mov rax, rsp ; Set param to the current stack frame
-    call schedule_task ; Pick next task and set it in return
+    
+    mov rdi, rsp ; Set parameter
+    call swap_task ; Swap out values on the stack
 no_switch:
     add rsp, 16
     popaq

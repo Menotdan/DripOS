@@ -150,16 +150,18 @@ void irq_handler(registers_t *r) {
     if (interrupt_handlers[r->int_no] != 0) {
         handler = interrupt_handlers[r->int_no];
         handler(r);
-        // Task *iterator = (&main_task)->next;
-        // while (iterator->pid != 0) {
-        //     /* Set all the tasks waiting for this IRQ to Running */
-        //     if (iterator->state == IRQ_WAIT) {
-        //         if (iterator->waiting == (r->int_no-32)) {
-        //             iterator->state = RUNNING;
-        //         }
-        //     }
-        //     iterator = iterator->next;
-        // }
+        if (loaded == 1) {
+            Task *iterator = (&main_task)->next;
+            while (iterator->pid != 0) {
+                /* Set all the tasks waiting for this IRQ to Running */
+                if (iterator->state == IRQ_WAIT) {
+                    if (iterator->waiting == (r->int_no-32)) {
+                        iterator->state = RUNNING;
+                    }
+                }
+                iterator = iterator->next;
+            }
+        }
     } 
     else {
         if (loaded == 1) {

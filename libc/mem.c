@@ -41,16 +41,16 @@ void memset32(uint32_t *dest, uint32_t val, uint64_t len) {
 }
 
 void * kmalloc(uint64_t size) {
-    void *ptr = get_pointer((pmm_allocate(size + 8) + NORMAL_VMA_OFFSET) + 8);
-    uint64_t *size_ptr = (uint64_t *) ptr;
-    size_ptr--;
-    *size_ptr = size + 8;
-    return ptr;
+    uint64_t *size_ptr = (uint64_t *) ((uint64_t) pmm_allocate(size + 0x1000) + NORMAL_VMA_OFFSET);
+    void *ret_ptr = size_ptr + 0x200; // 0x1000 / 8 because it's a 64 bit increment size
+    *size_ptr = size + 0x1000;
+    sprintf("\n[KMALLOC] Allocated %lu bytes at %lx", *size_ptr, ret_ptr);
+    return ret_ptr;
 }
 
 void free(void * addr) {
-    uint64_t *ptr = (uint64_t *) addr;
-    ptr--;
-    sprintf("\nFreeing addr %lx and %lu bytes", ((uint64_t) addr - 8), *ptr);
-    pmm_unallocate(virt_to_phys((void *) ((uint64_t) addr - 8)), *ptr);
+    uint64_t *size_ptr = addr;
+    size_ptr -= 0x200;
+    sprintf("\n[FREE] Freeing addr %lx and %lu bytes", ((uint64_t) addr + 0x1000), *size_ptr);
+    pmm_unallocate(addr, *size_ptr);
 }

@@ -44,7 +44,9 @@ void play_sound(uint32_t nFrequence, uint32_t ticks) {
     play(nFrequence); // Set the PIT for the speaker to play the frequency requested
     start_sound = tick; // Current timer tick
     len_sound = ticks; // Length
-    createTask(kmalloc(sizeof(Task)), sound_handler, "Sound stopper");
+    Task *sound_handle_task = kmalloc(sizeof(Task));
+    createTask(sound_handle_task, sound_handler, "Sound stopper");
+    sprintf("\nSound handler PID: %u", sound_handle_task->pid);
 }
 
 void pgw() {

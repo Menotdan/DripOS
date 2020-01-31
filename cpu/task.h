@@ -19,6 +19,7 @@
 #define BLOCKED 1
 #define SLEEPING 2
 #define IRQ_WAIT 3
+#define DEAD_TASK 4
 /* Priorities */
 #define HIGH 3
 #define NORMAL 2
@@ -26,7 +27,7 @@
 #define VERY_LOW 0
 /* Cursor max (cursor pos wont be updated for tasks with a cursor_pos greater than this) */
 #define CURSOR_MAX 4000000000
-extern void initTasking();
+extern void init_tasking();
  
 typedef struct {
     uint64_t rax, rbx, rcx, rdx, rsi, rdi, rsp, rbp, r8, r9, r10, r11, r12, r13, r14, r15, rip, rflags, cr3;
@@ -37,6 +38,7 @@ typedef struct Task {
     uint8_t *start_esp; // The original allocated memory for the stack of this process
     uint32_t ticks_cpu_time;
     struct Task *next;
+    struct Task *next_dead;
     uint8_t priority;
     uint32_t pid; // Process id of the task
     uint8_t state; // The state the task is in
@@ -50,7 +52,7 @@ typedef struct Task {
     uint32_t since_last_task;
 } Task;
 
-void initTasking();
+void init_tasking();
 extern uint32_t createTask(Task *task, void (*main)(), char *task_name);
 extern int32_t kill_task(uint32_t pid); // 
 extern void yield(); // Yield, will be optional
@@ -64,6 +66,7 @@ Task *get_task_from_pid(uint32_t pid);
 
 Task *running_task;
 Task *global_old_task;
+Task *dead_task_queue;
 void store_global(uint32_t f, registers_t *ok);
 void irq_schedule();
 uint32_t global_esp;
