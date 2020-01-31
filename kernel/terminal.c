@@ -233,8 +233,8 @@ void execute_command(char input[]) {
 		sprint("\nMemory Remaining: ");
 		sprint(temp);
 		sprint(" bytes\n");
-		free(test1, 0x1000);
-		free(test2, 0x1000);
+		free(test1);
+		free(test2);
 	} else if (strcmp(input, "testMemBlocks") == 0) {
 		for (int c = 0; c < 1; c++) {
 			sprintd("Allocating 4096 bytes...");
@@ -249,7 +249,7 @@ void execute_command(char input[]) {
 			sprintd("Data:");
 			sprint_uint(*testy2);
 			sprintd("Freeing memory...");
-			free(testy1, 0x1000);
+			free(testy1);
 			sprintd("Allocating 4096 bytes...");
 			uint32_t *testy3 = (uint32_t *)kmalloc(0x1000);
 			sprintd("Moving data...");
@@ -257,9 +257,9 @@ void execute_command(char input[]) {
 			sprintd("Data:");
 			sprint_uint(*testy3);
 			sprintd("Freeing memory...");
-			free(testy2, 0x1000);
+			free(testy2);
 			sprintd("Freeing memory...");
-			free(testy3, 0x1000);
+			free(testy3);
 		}
 	} else if (strcmp(input, "time") == 0) {
 		read_rtc();

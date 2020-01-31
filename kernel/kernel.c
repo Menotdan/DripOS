@@ -21,6 +21,7 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include "../cpu/task.h"
 #include "../drivers/ps2.h"
 #include "../drivers/vesa.h"
+#include "../libc/color_math.h"
 
 //codes
 int prevtick = 0;
@@ -126,6 +127,8 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 	sprintf("\n\nVESA info:\n  Colors: %u\n  Red pos: %u\n  Green pos: %u\n  Blue pos: %u", (uint32_t) mbd->framebuffer_palette_num_colors, (uint32_t) mbd->framebuffer_red_field_position, (uint32_t) mbd->framebuffer_green_field_position, (uint32_t) mbd->framebuffer_blue_field_position);
 	sprintf("\n  Framebuffer pitch: %u\n  Framebuffer size: %lu\n  Framebuffer width: %lu", mbd->framebuffer_pitch, (uint64_t) (mbd->framebuffer_height * mbd->framebuffer_pitch), mbd->framebuffer_width);
 	sprint("\nInitializing stage 1 paging and reading memory map");
+	//isr_install();
+	//irq_install();
 	if (mbd->flags & MULTIBOOT_INFO_MEM_MAP) {
 		sprintf("\nMemory map exists. Address: %x", mbd->mmap_addr);
 		sprintf("\n Size: %u", mbd->mmap_length);
@@ -137,7 +140,43 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 		sprintf("\nCalculated framebuffer size: %lu", framebuffer_size);
 		sprintf("\nCalculated framebuffer pages: %lu", framebuffer_pages);
 		vmm_map((void *) phys_framebuffer, (void *) phys_framebuffer, framebuffer_pages, 0);
+		vmm_flush_tlb();
 		sprintf("\nMapped framebuffer.");
+		// uint8_t v = 255;
+		// uint8_t h = 0;
+		// uint8_t s = 255;
+		// while (1) {
+		// 	HsvColor color_dat;
+		// 	color_dat.h = h;
+		// 	color_dat.s = s;
+		// 	color_dat.v = v;
+		// 	for (uint64_t pixel = 0; pixel < mbd->framebuffer_width * mbd->framebuffer_height; pixel++) {
+		// 		RgbColor rgb_dat = HsvToRgb(color_dat);
+		// 		//sprintf("\nHSV: %u %u %u\nRGB: %u %u %u", (uint32_t) color_dat.h, (uint32_t) color_dat.s, (uint32_t) color_dat.v, (uint32_t) rgb_dat.r, (uint32_t) rgb_dat.g, (uint32_t) rgb_dat.b);
+		// 		//sprintf("\n\nwriting to pos: %lx", mbd->framebuffer_addr + (pixel * 4));
+		// 		*((uint32_t *) (mbd->framebuffer_addr + (pixel * 4))) = (uint32_t) ((uint32_t) rgb_dat.r << mbd->framebuffer_red_field_position) | ((uint32_t) rgb_dat.g << mbd->framebuffer_green_field_position) | ((uint32_t) rgb_dat.b << mbd->framebuffer_blue_field_position);
+		// 		if (color_dat.h >= H_MAX) {
+		// 			color_dat.h = 0;
+		// 		} else {
+		// 			color_dat.h++;
+		// 		}
+		// 		if (color_dat.s == S_MIN) {
+		// 			color_dat.s = 255;
+		// 		} else {
+		// 			color_dat.s--;
+		// 		}
+		// 		if (color_dat.v == V_MIN) {
+		// 			color_dat.v = 255;
+		// 		} else {
+		// 			color_dat.v--;
+		// 		}
+		// 	}
+		// 	if (h >= H_MAX) {
+		// 		h = 0;
+		// 	} else {
+		// 		h++;
+		// 	}
+		// }
 	}
 	sprint("\nCPU name: ");
 	get_cpu_name(cpu_name);
@@ -145,12 +184,18 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 	sprint("\n");
 	
 	sprint("\nSetting up interrupts, so I can have exception handlers when my paging dies");
-	isr_install();
-	irq_install();
-	
+
 	while (1) {
-		asm volatile("hlt");
+		uint64_t test = (uint64_t) kmalloc(1048568);
+		sprintf("\nMemory: %lx", test);
+		*(uint64_t *) test = 0x123456789;
+		if (*(uint64_t *) test != 0x123456789) {
+			sprintf("\nBroken memory, set to %lx", *(uint64_t *) test);
+		}
+ 		//free((void *) test);
 	}
+	
+
 	setup_screen();
 	/* VESA SET? */
 	if ((mbd->flags & MULTIBOOT_INFO_VBE_INFO)) {
@@ -232,12 +277,15 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
 	}
 	Log("Test done", 1);
 
-	free(testOnStart, 0x1000);
+	free(testOnStart);
 	Log("Clearing screen...", 1);
 	update_display();
 	clear_screen();
 	prevtick = tick;
 	logo_draw();
+	while (1) {
+		asm volatile("hlt");
+	}
 	play(300);
 	wait(15);
 	play(500);

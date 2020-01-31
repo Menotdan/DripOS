@@ -222,9 +222,9 @@ int32_t kill_task(uint32_t pid) {
         return 1; // This should never be reached but eh, safety first
     }
     if (pid != running_task->pid) {
-        free(to_kill->start_esp, 0x4000);
+        free(to_kill->start_esp);
     }
-    free(to_kill->scancode_buffer, 512);
+    free(to_kill->scancode_buffer);
     prev_task->next = temp_kill; // Remove killed task from the chain
     return 0; // Worked... hopefully lol
 }

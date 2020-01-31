@@ -61,7 +61,7 @@ void snake_main() {
             if (scancode_to_ascii(scan, 0) == 'q') {
                 set_focused_task(get_task_from_pid(1));
                 cleanup_framebuffer(current_buffer);
-                free(game_snake.head, sizeof(segment_t));
+                free(game_snake.head);
                 exit();
             } else if (scan == LARROW) {
                 game_snake.head->moving_dir = 1;

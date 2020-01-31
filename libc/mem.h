@@ -9,12 +9,12 @@ void memset(uint8_t *dest, uint8_t val, uint64_t len);
 void memset32(uint32_t *dest, uint32_t val, uint64_t len);
 
 /* kmalloc */
-void * kmalloc(uint32_t size);
+void * kmalloc(uint64_t size);
 
 uint32_t kmalloc_bitmap(uint32_t size);
 
 /* Free some memory */
-void free(void * address, uint32_t size);
+void free(void * address);
 
 /* Get a pointer from an address */
 void *get_pointer(uint64_t addr);

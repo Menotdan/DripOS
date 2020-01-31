@@ -135,6 +135,9 @@ void isr_handler(registers_t *r) {
     sprint_uint(r->int_no);
     sprint(" Message: ");
     sprint(exception_messages[r->int_no]);
+    uint64_t cr2;
+    asm volatile("movq %%cr2, %0;":"=r"(cr2));
+    sprintf("\nRIP: %lx CR2: %lx ERR: %lu\n", r->rip, cr2, r->err_code);
     while (1);
 }
 

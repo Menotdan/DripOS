@@ -1,4 +1,5 @@
 #include "pmm.h"
+#include "vmm.h"
 #include "../libc/mem.h"
 #include "../drivers/screen.h"
 #include "../drivers/serial.h"
@@ -74,6 +75,7 @@ uint8_t *get_next_bitmap(uint8_t *bitmap_start) {
 
     uint8_t *bitmap_cur = bitmap_start;
     bitmap_cur += *(uint64_t *)bitmap_start; // Jump to the end of the map
+    sprintf("\nNew bitmap: %lx", *(uint64_t *)bitmap_cur);
     return (uint8_t *) *(uint64_t *)bitmap_cur;
 }
 
@@ -108,8 +110,9 @@ uint8_t *phys_to_bitmap(uint64_t phys_addr) {
 
 /* Setup a bitmap which may be pointed to by another bitmap */
 void set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem, uint64_t offset) {
-    // Calculate the bitmap size in bytes, we add 8 to account for the size data
-    uint64_t bitmap_size = (size_of_mem / (0x1000 * 8)) + 8;
+    // Calculate the bitmap size in bits, we add 64 bits to account for the size data
+    uint64_t bitmap_bits = (size_of_mem / 0x1000) + 64;
+    uint64_t bitmap_size = (bitmap_bits + 8 - 1) / 8;
     // Number of pages needed for the bitmap
     uint64_t bitmap_pages = ((bitmap_size + 16) + 0x1000 - 1) / 0x1000;
     bitmap_pages += ((offset + 0x1000 - 1) / 0x1000);
@@ -120,11 +123,12 @@ void set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem
     }
 
     // Clear the bitmap, including the pointer
-    memset(bitmap_start, 0, (bitmap_size) + 16);
+    memset(bitmap_start, 0, (bitmap_size) + 24);
     // Set the size, not including the pointer
     *(uint64_t *) bitmap_start = (bitmap_size);
     // Set the represented address of the bitmap
     *(uint64_t *) (bitmap_start + bitmap_size + 8) = (uint64_t)bitmap_start - offset;
+    *(uint64_t *) (bitmap_start + bitmap_size) = 0;
     // Now to set the bitmap as allocated
 
     uint64_t bitmap_bit = 0;
@@ -174,6 +178,10 @@ void configure_mem(multiboot_info_t *mbd) {
     }
     // TODO: update loops and also map stuff in the second loop and make the first loop smaller
     sprintf("\nSetting up the rest of higher half memory...");
+    
+    // Reset iterator values
+    current = ((uint64_t)mbd->mmap_addr) & 0xffffffff;
+    remaining = mbd->mmap_length;
 
     for (; remaining > 0; remaining -= sizeof(multiboot_memory_map_t)) {
         multiboot_memory_map_t *mmap = (multiboot_memory_map_t *)(current);
@@ -190,9 +198,14 @@ void configure_mem(multiboot_info_t *mbd) {
             if ((uint64_t) __kernel_start - KERNEL_VMA_OFFSET >= (mmap->addr) && 
             ((uint64_t) __kernel_end - KERNEL_VMA_OFFSET) < (mmap->len + mmap->addr) 
             - ((mmap->len + mmap->addr) / 0x1000 / 8)) {
+                vmm_remap((void *) mmap->addr, (void *) (mmap->addr + NORMAL_VMA_OFFSET), (mmap->len + 0x1000 - 1) / 0x1000, 0);
+                vmm_flush_tlb();
                 sprintf(" - Kernel block");
+            } else if (mmap->addr == 0) {
+                sprintf(" - Lower 640K (needed for setting up CPUs)");
             } else {
                 // Setup mappings for this block
+                map_mem_block(mmap->addr, mmap->len, (uint64_t) mmap->type);
             }
         } else if (mmap->type == MULTIBOOT_MEMORY_RESERVED) {
             sprintf("Reserved");

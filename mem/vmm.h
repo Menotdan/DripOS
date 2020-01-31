@@ -47,11 +47,15 @@ typedef struct used_free12K
     uint8_t used_pt;
 } used_free12K_t;
 
+void vmm_flush_tlb();
 void vmm_set_pml4t(uint64_t new);
 void *vmm_offs_to_virt(pt_off_t offs);
+void *virt_to_phys(void *virt);
 int vmm_map_pages(pt_t *pml4, void *virt, void *phys, size_t count, int perms);
 int vmm_unmap_pages(pt_t *pml4, void *virt, size_t count);
 int vmm_map(void *phys, void *virt, size_t count, int perms);
+int vmm_remap(void *phys, void *virt, size_t count, int perms);
 int vmm_unmap(void *virt, size_t count);
+int map_mem_block(uint64_t block_start, uint64_t block_len, uint64_t block_type);
 uint64_t vmm_get_pml4t();
 pt_off_t vmm_virt_to_offs(void *virt);

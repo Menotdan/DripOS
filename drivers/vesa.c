@@ -31,7 +31,7 @@ vesa_buffer_t new_framebuffer(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
 }
 
 void cleanup_framebuffer(vesa_buffer_t framebuffer) {
-    free(framebuffer.graphics_vid_buffer, framebuffer.video_buffer_size);
+    free(framebuffer.graphics_vid_buffer);
     update_display();
 }
 

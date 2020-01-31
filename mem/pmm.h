@@ -28,4 +28,7 @@ uint64_t pmm_find_free(uint64_t size);
 uint64_t pmm_allocate(uint64_t size);
 void pmm_unallocate(void * address, uint64_t size);
 
+void set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem, uint64_t offset);
+uint8_t *get_last_bitmap(uint8_t *bitmap_start);
+
 #endif
