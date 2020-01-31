@@ -127,8 +127,8 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
     sprintf("\n\nVESA info:\n  Colors: %u\n  Red pos: %u\n  Green pos: %u\n  Blue pos: %u", (uint32_t) mbd->framebuffer_palette_num_colors, (uint32_t) mbd->framebuffer_red_field_position, (uint32_t) mbd->framebuffer_green_field_position, (uint32_t) mbd->framebuffer_blue_field_position);
     sprintf("\n  Framebuffer pitch: %u\n  Framebuffer size: %lu\n  Framebuffer width: %lu", mbd->framebuffer_pitch, (uint64_t) (mbd->framebuffer_height * mbd->framebuffer_pitch), mbd->framebuffer_width);
     sprint("\nInitializing stage 1 paging and reading memory map");
-    isr_install();
-    irq_install();
+    //isr_install();
+    //irq_install();
     if (mbd->flags & MULTIBOOT_INFO_MEM_MAP) {
         sprintf("\nMemory map exists. Address: %x", mbd->mmap_addr);
         sprintf("\n Size: %u", mbd->mmap_length);
@@ -185,15 +185,15 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
     
     sprint("\nSetting up interrupts, so I can have exception handlers when my paging dies");
 
-    while (1) {
-        uint64_t test = (uint64_t) kmalloc(1048568);
-        sprintf("\nMemory: %lx", test);
-        *(uint64_t *) test = 0x123456789;
-        if (*(uint64_t *) test != 0x123456789) {
-            sprintf("\nBroken memory, set to %lx", *(uint64_t *) test);
-        }
-         //free((void *) test);
-    }
+    // while (1) {
+    //     uint64_t test = (uint64_t) kmalloc(1048568);
+    //     sprintf("\nMemory: %lx", test);
+    //     *(uint64_t *) test = 0x123456789;
+    //     if (*(uint64_t *) test != 0x123456789) {
+    //         sprintf("\nBroken memory, set to %lx", *(uint64_t *) test);
+    //     }
+    //      //free((void *) test);
+    // }
     
 
     setup_screen();
@@ -281,6 +281,7 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
     Log("Clearing screen...", 1);
     update_display();
     clear_screen();
+	
     prevtick = tick;
     logo_draw();
     while (1) {
