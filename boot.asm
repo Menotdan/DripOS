@@ -28,14 +28,14 @@ dd HEIGHT
 dd DEPTH
 
 %macro gen_pd_2mb 3
-	%assign i %1
-	%rep %2
-		dq (i | 0x83)
-		%assign i i+0x200000
-	%endrep
-	%rep %3
-		dq 0
-	%endrep
+    %assign i %1
+    %rep %2
+        dq (i | 0x83)
+        %assign i i+0x200000
+    %endrep
+    %rep %3
+        dq 0
+    %endrep
 %endmacro
 
 section .data

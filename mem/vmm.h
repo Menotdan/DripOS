@@ -4,8 +4,8 @@
 #include "../libc/mem.h"
 #define DEFAULT_PML4T 0x1000
 #define VMM_ADDR_MASK ~(0xfff)
-#define VMM_PRESENT	(1<<0)
-#define VMM_WRITE		(1<<1)
+#define VMM_PRESENT    (1<<0)
+#define VMM_WRITE        (1<<1)
 #define VIRT_PHYS_BASE 0x1000000000000000
 
 typedef struct table_address
@@ -27,10 +27,10 @@ typedef struct page_table
 } pt_t;
 
 typedef struct {
-	size_t p4_off; // PML4T
-	size_t p3_off; // PDPT
-	size_t p2_off; // PDT
-	size_t p1_off; // PT
+    size_t p4_off; // PML4T
+    size_t p3_off; // PDPT
+    size_t p2_off; // PDT
+    size_t p1_off; // PT
 } pt_off_t;
 
 typedef struct {

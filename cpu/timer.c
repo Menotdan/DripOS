@@ -80,10 +80,10 @@ void init_timer(uint32_t freq) {
 }
 
 void wait(uint32_t ms) {
-	prev = tick;
-	while(tick < ms*10 + prev) {
+    prev = tick;
+    while(tick < ms*10 + prev) {
         asm volatile("hlt");
-	}
+    }
 }
 
 void sleep(uint32_t ms) {

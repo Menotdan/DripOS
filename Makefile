@@ -17,15 +17,15 @@ MEM = 6G # Memory for qemu
 O_LEVEL = 3
 # -g: Use debugging symbols in gcc
 CFLAGS = -g -fno-pic               \
-	-z max-page-size=0x1000        \
-	-mno-sse                       \
-	-mno-sse2                      \
-	-mno-mmx                       \
-	-mno-80387                     \
-	-mno-red-zone                  \
-	-mcmodel=kernel                \
-	-ffreestanding                 \
-	-fno-stack-protector           \
+    -z max-page-size=0x1000        \
+    -mno-sse                       \
+    -mno-sse2                      \
+    -mno-mmx                       \
+    -mno-80387                     \
+    -mno-red-zone                  \
+    -mcmodel=kernel                \
+    -ffreestanding                 \
+    -fno-stack-protector           \
     -fno-omit-frame-pointer
 
 # First rule is run by default

@@ -23,27 +23,27 @@ void vmm_flush_tlb() {
 
 pt_off_t vmm_virt_to_offs(void *virt) {
     //sprintf("\nVIRT: %lx", virt);
-	uintptr_t addr = (uintptr_t)virt;
+    uintptr_t addr = (uintptr_t)virt;
 
-	pt_off_t off = {
-		.p4_off =	(addr & ((size_t) 0x1ff << 39)) >> 39,
-		.p3_off =	(addr & ((size_t) 0x1ff << 30)) >> 30,
-		.p2_off =	(addr & ((size_t) 0x1ff << 21)) >> 21,
-		.p1_off =	(addr & ((size_t) 0x1ff << 12)) >> 12,
-	};
+    pt_off_t off = {
+        .p4_off =    (addr & ((size_t) 0x1ff << 39)) >> 39,
+        .p3_off =    (addr & ((size_t) 0x1ff << 30)) >> 30,
+        .p2_off =    (addr & ((size_t) 0x1ff << 21)) >> 21,
+        .p1_off =    (addr & ((size_t) 0x1ff << 12)) >> 12,
+    };
 
-	return off;
+    return off;
 }
 
 void *vmm_offs_to_virt(pt_off_t offs) {
-	uintptr_t addr = 0;
+    uintptr_t addr = 0;
 
-	addr |= offs.p4_off << 39;
-	addr |= offs.p3_off << 30;
-	addr |= offs.p2_off << 21;
-	addr |= offs.p1_off << 12;
+    addr |= offs.p4_off << 39;
+    addr |= offs.p3_off << 30;
+    addr |= offs.p2_off << 21;
+    addr |= offs.p1_off << 12;
 
-	return (void *)addr;
+    return (void *)addr;
 }
 
 pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4) {
