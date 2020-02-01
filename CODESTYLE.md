@@ -21,8 +21,8 @@ Includes with brackets
 Other includes
 
 2. Global variables (try to minimize)
-3. Exposed functions
-4. Unexposed functions
+3. Unexposed functions
+4. Exposed functions
 
 ## C header files
 1. Includes (in headers only include what you need for exposed functions and types)
