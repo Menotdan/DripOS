@@ -3,7 +3,7 @@ snake_case variable names
 
 snake_case for implementation functions
 
-snake_case for interface functions, except where following libc
+snake_case for interface functions, except where following libc naming for whatever reason lel
 
 # Code format
 1. East const
