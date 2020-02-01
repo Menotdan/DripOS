@@ -9,6 +9,7 @@
 uint8_t *cur_map = 0;
 uint64_t total_memory = 0;
 uint64_t total_usable = 0;
+uint64_t total_used = 0;
 uint64_t new_addr = 0;
 uint64_t prev_addr = 0;
 uint64_t memory_remaining = 0;
@@ -146,6 +147,10 @@ void set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem
 
 uint64_t get_free_mem() {
     return total_usable;
+}
+
+uint64_t get_used_mem() {
+    return total_used;
 }
 
 /* Configure memory mapping and such */
@@ -295,6 +300,8 @@ uint64_t pmm_allocate(uint64_t size) {
         }
     }
 
+    total_usable -= size;
+    total_used += size;
     return free_addr - NORMAL_VMA_OFFSET; // yey we found something :D
 }
 
@@ -328,4 +335,6 @@ void pmm_unallocate(void * address, uint64_t size) {
         uint8_t extra_bytes = bits_to_use / 8;
         set_bit(bitmap_to_free, (bits_to_use % 8), (distance_bytes + size_bytes + extra_bytes), 0);
     }
+    total_usable += size;
+    total_used -= size;
 }

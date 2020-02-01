@@ -85,18 +85,11 @@ void execute_command(char input[]) {
   } else if (strcmp(input, "fmem") == 0) {
           kprint("No!");
   } else if (strcmp(input, "free") == 0) {
-        char temp[25];
-        int_to_ascii(get_free_mem()/1024/1024, temp);
-        kprint("Memory available: ");
-        kprint(temp);
-        kprint(" MiB\n");
-        int_to_ascii(used_mem, temp);
-        kprint("Memory used: ");
-        kprint(temp);
-        kprint(" bytes");
+        kprintf("Memory available: %lu MiB", get_free_mem()/1024/1024);
+        kprintf("\nMemory used: %lu MiB", get_used_mem()/1024/1024);
   } else if (strcmp(input, "uptime") == 0) {
           uint32_t tempTick = tick;
-          uint32_t uptimeSeconds = 0;//tempTick / 100;
+          uint32_t uptimeSeconds = 0;
         uint32_t uptimeMinutes = 0;
         uint32_t uptimeHours = 0;
         uint32_t uptimeDays = 0;
