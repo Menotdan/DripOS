@@ -251,7 +251,7 @@ void pick_task() {
     Task *temp_iterator = (&main_task)->next;
 
     while (temp_iterator->pid != 0) {
-        sprintf("\nLowest time: %x Lowest time name: %s\nIterator name: %s", lowest_time, lowest_time_task->name, temp_iterator->name);
+        //sprintf("\nLowest time: %x Lowest time name: %s\nIterator name: %s", lowest_time, lowest_time_task->name, temp_iterator->name);
         if ((temp_iterator->since_last_task < lowest_time) && temp_iterator->state == RUNNING) {
             lowest_time = temp_iterator->since_last_task;
             lowest_time_task = temp_iterator;
@@ -262,7 +262,7 @@ void pick_task() {
     if (lowest_time_task->state != RUNNING) {
         sprintf("\nError");
         while (1) {
-            asm volatile("hlt");
+            asm volatile("int $22"); // yes
         }
     } 
     running_task = lowest_time_task;

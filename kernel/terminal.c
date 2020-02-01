@@ -8,7 +8,7 @@
 #include "../drivers/screen.h"
 #include "../fs/hdd.h"
 #include "../fs/hddw.h"
-//#include "../fs/fat32.h"
+
 #include "../libc/stdio.h"
 #include <stdint.h>
 #include "../libc/mem.h"
@@ -22,33 +22,26 @@
 
 int arg = 0; //Is an argument being taken?
 int argt = 0; //Which Command Is taking the argument?
-uint32_t task2 = 0;
-Task bg_task_timer;
-//char *current_buffer;
-//char *previous_buffer;
-//uint32_t current_buffer_pos = 0;
-//uint32_t previous_buffer_pos = 0;
+
 void bg_task() {
     while (1)
     {
-        sprintf("\nTimer 1 working!");
+        //sprintf("\nTimer 1 working!");
         char done[32];
         uint64_to_ascii(tick, done);
         kprint_no_move(done, 0, 0);
     }
 }
 
-Task bg_task_timer2;
 void bg_task2() {
     while (1)
     {
-        sprintf("\nTimer 2 working!");
+        //sprintf("\nTimer 2 working!");
         char done[32];
         uint64_to_ascii(tick, done);
         kprint_no_move(done, 18, 0);
     }
 }
-
 
 void read_disk(uint32_t sector) {
     char str2[32];
@@ -165,9 +158,9 @@ void execute_command(char input[]) {
     } else if (strcmp(input, "help") == 0) {
         kprint("Commands: snake, ps, kill, uptime, scan, testDrive, fmem, help, shutdown, panic, print, clear, bgtask, bgoff, read, drives, select, testMem, free\n");
     } else if (strcmp(input, "cpu") == 0) {
-        char cpuid_output[4][4]; // Four uint8_ts
-        __get_cpuid(0, (unsigned int *)cpuid_output[0], (unsigned int *)cpuid_output[1], (unsigned int *)cpuid_output[2], (unsigned int *)cpuid_output[3]);
-        kprint((char *)cpuid_output);
+        char cpu_name[32];
+        get_cpu_name(cpu_name);
+        kprintf("\nCPU name: %s", cpu_name);
     } else if (strcmp(input, "clear") == 0){
         clear_screen();
     } else if (match("print", input) == -2) {
@@ -183,11 +176,11 @@ void execute_command(char input[]) {
         uint32_t tone_freq = atoi(afterSpace(input));
         play_sound(tone_freq, 500);
     } else if (strcmp(input, "bgtask") == 0) {
-        //Task *temp_task1 = kmalloc(sizeof(Task));
+        Task *temp_task1 = kmalloc(sizeof(Task));
         Task *temp_task2 = kmalloc(sizeof(Task));
 
-        //task = create_task(temp_task1, bg_task, "Tick counter");
-        task2 = create_task(temp_task2, bg_task2, "Tick counter");
+        create_task(temp_task1, bg_task, "Tick counter");
+        create_task(temp_task2, bg_task2, "Tick counter");
 
         kprint("Background task started!");
     } else if (strcmp(input, "ps") == 0) {

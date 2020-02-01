@@ -114,7 +114,7 @@ char *exception_messages[] = {
     "Reserved",
     "Assert Error",
     "Out of memory",
-    "Reserved",
+    "Bad selected task state",
     "Reserved",
 
     "Reserved",
@@ -176,9 +176,9 @@ void irq_handler(registers_t *r) {
 
     if (r->int_no >= 40) port_byte_out(0xA0, 0x20); /* slave */
     port_byte_out(0x20, 0x20); /* master */
-    if (switch_task == 1) {
-        sprintf("\n[IRQ] switching task");
-    }
+    // if (switch_task == 1) {
+    //     sprintf("\n[IRQ] switching task");
+    // }
 }
 
 void irq_install() {

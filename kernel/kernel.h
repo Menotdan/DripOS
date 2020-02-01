@@ -16,6 +16,7 @@ void halt();
 void shutdown();
 void panic();
 void memory();
+void get_cpu_name(char *str);
 int stdinpass;
 int loaded;
 char key_buffer[2000];

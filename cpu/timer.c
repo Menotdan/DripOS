@@ -23,7 +23,7 @@ uint32_t switch_task = 0;
 
 static void timer_callback(registers_t *regs) {
     tick++;
-    sprintf("\nTick: %lu", tick);
+    //sprintf("\nTick: %lu", tick);
     if (loaded == 1) {
         time_slice_left--;
         /* Unsleep sleeping processes */
@@ -37,10 +37,10 @@ static void timer_callback(registers_t *regs) {
             }
             iterator = iterator->next;
         }
-        sprintf("\nTime slice left: %u", time_slice_left);
+        //sprintf("\nTime slice left: %u", time_slice_left);
         running_task->ticks_cpu_time++;
         if (time_slice_left == 0 && loaded == 1) {
-            sprintf("\nSwitching");
+            //sprintf("\nSwitching");
             if (running_task->next->priority == NORMAL) {
                 time_slice_left = 8; // 16 ms
             }
@@ -53,7 +53,7 @@ static void timer_callback(registers_t *regs) {
             /* Set the switch task variable, which indicates to the assembly handler
             that the next task is ready to be loaded */
             switch_task = 1;
-            sprintf("\nSwitch task: %u", switch_task);
+            //sprintf("\nSwitch task: %u", switch_task);
         }
     }
 
@@ -91,6 +91,6 @@ void wait(uint32_t ms) {
 void sleep(uint32_t ms) {
     running_task->state = SLEEPING;
     running_task->waiting = ms + tick;
-    sprintf("\nTask %u sleeping for %u ms", running_task->pid, ms);
+    //sprintf("\nTask %u sleeping for %u ms", running_task->pid, ms);
     yield();
 }
