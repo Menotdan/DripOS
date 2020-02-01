@@ -8,11 +8,11 @@ void init_timer(uint32_t freq);
 void wait(uint32_t ms);
 void sleep(uint32_t ms);
 
-uint32_t tick;
+extern uint64_t tick;
 int lSnd;
 int pSnd;
 int task;
-uint32_t switch_task;
-uint32_t time_slice_left;
+extern uint32_t switch_task;
+extern uint32_t time_slice_left;
 
 #endif

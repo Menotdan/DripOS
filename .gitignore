@@ -12,4 +12,12 @@ write*
 **/*.old*
 *.mp3
 **/*.mp3
+out/*
+programs/*
+out
+programs
 .vscode
+.gitignore
+isodir/*
+isodir
+dripmount

@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define MEMORY_MAPPED 0x2800000
+
 void user_input(char input[]);
 int getstate();
 void Log(char *message, int type);
@@ -14,6 +16,7 @@ void halt();
 void shutdown();
 void panic();
 void memory();
+void get_cpu_name(char *str);
 int stdinpass;
 int loaded;
 char key_buffer[2000];

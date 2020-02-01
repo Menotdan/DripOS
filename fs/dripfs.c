@@ -73,7 +73,7 @@ dripfs_128_128_t dfs_table_find_128x128(dripfs_sector_table_t *start_table, uint
         writeFromBuffer(table_sector, 0);
     }
     current_index_2 = 0;
-    free(scan_table, 512);
+    free(scan_table);
     if (current_index == 128) {
         current_index = 127; // If the value is max, set it to the actual index of the array
     }
@@ -101,7 +101,7 @@ uint32_t dfs_table_128x128_add_new(uint32_t sector_to_write, dripfs_sector_table
     table->sectors[to_write.index2] = sector_to_write;
     memcpy((uint8_t *)table, writeBuffer, 512);
     writeFromBuffer(start_table->sectors[to_write.index1], 0);
-    free(table, 512);
+    free(table);
     return 0;
 }
 
@@ -196,8 +196,8 @@ void dfs_new_folder(char *name, uint32_t entry_sector, uint32_t table_sector, ui
     sprint("\nTable sector: ");
     sprint_uint(table_sector);
     writeFromBuffer(table_sector, 0);
-    free(dir, 512);
-    free(table, 512);
+    free(dir);
+    free(table);
 }
 
 void dfs_new_file(char *name, uint32_t entry_sector, uint32_t table_sector, uint32_t parent_dir_sector, uint8_t dev, uint8_t controller) {
@@ -214,7 +214,7 @@ void dfs_new_file(char *name, uint32_t entry_sector, uint32_t table_sector, uint
     readToBuffer(parent_dir_sector); // Read the parent directory's entry sector
     memcpy(readBuffer, (uint8_t *)parent_folder, 512); // Copy it to the allocated memory
     uint32_t file_table = parent_folder->file_table_sector; // Store the table sector in memory
-    free(parent_folder, 512); // Free the allocated memory, as we no longer need it
+    free(parent_folder); // Free the allocated memory, as we no longer need it
     /* Now we do some table nonsense */
     dripfs_sector_table_t *parent_dir_table = kmalloc(512); // Allocate memory for the table
     readToBuffer(file_table);
@@ -240,8 +240,8 @@ void dfs_new_file(char *name, uint32_t entry_sector, uint32_t table_sector, uint
     sprint("\nTable sector: ");
     sprint_uint(table_sector);
     writeFromBuffer(table_sector, 0); // Write table to table sector
-    free(dir, 512); // Free space
-    free(table, 512);
+    free(dir); // Free space
+    free(table);
 }
 
 uint32_t dfs_calculate_sectors(uint32_t p) {
@@ -305,7 +305,7 @@ void dfs_write_file(dripfs_file_entry_t *file, uint8_t *data, uint32_t bytes, ui
                 data_temp += 512;
             }
         }
-        free(temp_table, 512);
+        free(temp_table);
     }
 }
 
@@ -364,5 +364,5 @@ void dfs_format(char *volume_name, uint8_t dev, uint8_t controller) {
     sprint(" ");
     sprint_uint(read_entry->id);
     dfs_write_file(read_entry, data, 512, 0, 0, 0);
-    free(data, 512);
+    free(data);
 }

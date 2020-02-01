@@ -12,6 +12,7 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include <string.h>
 #include "../libc/mem.h"
 #include "../mem/pmm.h"
+#include "../mem/vmm.h"
 #include "../cpu/timer.h"
 #include "../drivers/time.h"
 #include "terminal.h"
@@ -20,6 +21,9 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include "../cpu/task.h"
 #include "../drivers/ps2.h"
 #include "../drivers/vesa.h"
+#include "../libc/color_math.h"
+
+const char version[] = "0.0030";
 
 //codes
 int prevtick = 0;
@@ -31,14 +35,15 @@ uint32_t position = 0;
 int prompttype = 0;
 int stdinpass = 0;
 int loaded = 0;
-uint32_t lowerMemSize;
-uint32_t upperMemSize;
-uint32_t largestUseableMem = 0;
-uint32_t memAddr = 0;
+uint64_t mem_size;
+uint64_t total_mem = 0;
+uint64_t largest_usable_mem = 0;
+uint64_t mem_addr = 0;
 multiboot_memory_map_t* mmap;
 char key_buffer[2000];
 char key_buffer_up[2000];
 char key_buffer_down[2000];
+char cpu_name[33];
 uint8_t *vidmem;
 uint16_t width;
 uint16_t height;
@@ -52,213 +57,297 @@ uint32_t char_w;
 uint32_t char_h;
 
 void after_load() {
-	while (1 == 1) {
-		
-	}
+    while (1 == 1) {
+        
+    }
 }
 
 void Log(char *message, int type) {
-	if (type == 1) { // Info
-		kprint("\n[");
-		kprint_color("INFO", color_from_rgb(0,0,255), color_from_rgb(0,0,0));
-		kprint("]: ");
-		kprint_color(message, color_from_rgb(0,255,255), color_from_rgb(0,0,0));
-	} else if (type == 2) { // Warn
-		kprint("\n[");
-		kprint_color("WARN", color_from_rgb(255,255,0), color_from_rgb(0,0,0));
-		kprint("]: ");
-		kprint_color(message, color_from_rgb(155, 155, 0), color_from_rgb(0,0,0));
-	} else if (type == 3) { // Good
-		kprint("\n[");
-		kprint_color("SUCCESS", color_from_rgb(0,255,0), color_from_rgb(0,0,0));
-		kprint("]: ");
-		kprint_color(message, color_from_rgb(0,155,0), color_from_rgb(0,0,0));
-	}
+    if (type == 1) { // Info
+        kprint("\n[");
+        kprint_color("INFO", color_from_rgb(0,0,255), color_from_rgb(0,0,0));
+        kprint("]: ");
+        kprint_color(message, color_from_rgb(0,255,255), color_from_rgb(0,0,0));
+    } else if (type == 2) { // Warn
+        kprint("\n[");
+        kprint_color("WARN", color_from_rgb(255,255,0), color_from_rgb(0,0,0));
+        kprint("]: ");
+        kprint_color(message, color_from_rgb(155, 155, 0), color_from_rgb(0,0,0));
+    } else if (type == 3) { // Good
+        kprint("\n[");
+        kprint_color("SUCCESS", color_from_rgb(0,255,0), color_from_rgb(0,0,0));
+        kprint("]: ");
+        kprint_color(message, color_from_rgb(0,155,0), color_from_rgb(0,0,0));
+    }
 }
 
 void interrupt_test() {
-	asm("int $32");
+    asm("int $32");
 }
 
-void kmain(multiboot_info_t* mbd, unsigned int endOfCode) {
-	//set_text_mode(1);
-	// Read memory map
-	init_serial();
-	if (mbd->flags & MULTIBOOT_INFO_MEMORY)
-    {
-		lowerMemSize = (uint32_t)mbd->mem_lower;
-		upperMemSize = (uint32_t)mbd->mem_upper;
+void get_cpu_name(char *str) {
+    asm volatile (
+        "  mov      $0x80000002, %%eax\n"
+        "  cpuid\n"
+        "  stosl\n"
+        "  mov      %%ebx, %%eax\n"
+        "  stosl\n"
+        "  mov      %%ecx, %%eax\n"
+        "  stosl\n"
+        "  mov      %%edx, %%eax\n"
+        "  stosl\n"
+        "  mov      $0x80000003, %%eax\n"
+        "  cpuid\n"
+        "  stosl\n"
+        "  mov      %%ebx, %%eax\n"
+        "  stosl\n"
+        "  mov      %%ecx, %%eax\n"
+        "  stosl\n"
+        "  mov      %%edx, %%eax\n"
+        "  stosl\n"
+        "  mov      $0x80000004, %%eax\n"
+        "  cpuid\n"
+        "  stosl\n"
+        "  mov      %%ebx, %%eax\n"
+        "  stosl\n"
+
+        :
+        : "D" (str)
+        : "rax", "rbx", "rcx", "rdx"
+    );
+}
+
+void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
+    // Read memory map
+    init_serial();
+    sprint_uint64(0xffffffffffffffff);
+    sprintf("\nMultiboot header: %lu", (uint64_t) mbd);
+    sprintf("\nMemory lower: %lu", mbd->mem_lower);
+    sprintf("\nMemory upper: %lu", mbd->mem_upper);
+    sprintf("\nFramebuffer height: %u", mbd->framebuffer_height);
+    sprintf("\nKernel end: %lx", end_of_code);
+    sprintf("\n\nVESA info:\n  Colors: %u\n  Red pos: %u\n  Green pos: %u\n  Blue pos: %u", (uint32_t) mbd->framebuffer_palette_num_colors, (uint32_t) mbd->framebuffer_red_field_position, (uint32_t) mbd->framebuffer_green_field_position, (uint32_t) mbd->framebuffer_blue_field_position);
+    sprintf("\n  Framebuffer pitch: %u\n  Framebuffer size: %lu\n  Framebuffer width: %lu", mbd->framebuffer_pitch, (uint64_t) (mbd->framebuffer_height * mbd->framebuffer_pitch), mbd->framebuffer_width);
+    sprint("\nInitializing stage 1 paging and reading memory map");
+    //isr_install();
+    //irq_install();
+    if (mbd->flags & MULTIBOOT_INFO_MEM_MAP) {
+        sprintf("\nMemory map exists. Address: %x", mbd->mmap_addr);
+        sprintf("\n Size: %u", mbd->mmap_length);
+        configure_mem(mbd);
+        uint64_t phys_framebuffer = mbd->framebuffer_addr & ~(0xfff);
+        uint64_t framebuffer_size = mbd->framebuffer_height * mbd->framebuffer_pitch;
+        uint64_t framebuffer_pages = (framebuffer_size + 0x1000 - 1) / 0x1000;
+        // framebuffer_pages += 3;
+        sprintf("\nCalculated framebuffer size: %lu", framebuffer_size);
+        sprintf("\nCalculated framebuffer pages: %lu", framebuffer_pages);
+        vmm_map((void *) phys_framebuffer, (void *) phys_framebuffer, framebuffer_pages, 0);
+        vmm_flush_tlb();
+        sprintf("\nMapped framebuffer.");
+        // uint8_t v = 255;
+        // uint8_t h = 0;
+        // uint8_t s = 255;
+        // while (1) {
+        //     HsvColor color_dat;
+        //     color_dat.h = h;
+        //     color_dat.s = s;
+        //     color_dat.v = v;
+        //     for (uint64_t pixel = 0; pixel < mbd->framebuffer_width * mbd->framebuffer_height; pixel++) {
+        //         RgbColor rgb_dat = HsvToRgb(color_dat);
+        //         //sprintf("\nHSV: %u %u %u\nRGB: %u %u %u", (uint32_t) color_dat.h, (uint32_t) color_dat.s, (uint32_t) color_dat.v, (uint32_t) rgb_dat.r, (uint32_t) rgb_dat.g, (uint32_t) rgb_dat.b);
+        //         //sprintf("\n\nwriting to pos: %lx", mbd->framebuffer_addr + (pixel * 4));
+        //         *((uint32_t *) (mbd->framebuffer_addr + (pixel * 4))) = (uint32_t) ((uint32_t) rgb_dat.r << mbd->framebuffer_red_field_position) | ((uint32_t) rgb_dat.g << mbd->framebuffer_green_field_position) | ((uint32_t) rgb_dat.b << mbd->framebuffer_blue_field_position);
+        //         if (color_dat.h >= H_MAX) {
+        //             color_dat.h = 0;
+        //         } else {
+        //             color_dat.h++;
+        //         }
+        //         if (color_dat.s == S_MIN) {
+        //             color_dat.s = 255;
+        //         } else {
+        //             color_dat.s--;
+        //         }
+        //         if (color_dat.v == V_MIN) {
+        //             color_dat.v = 255;
+        //         } else {
+        //             color_dat.v--;
+        //         }
+        //     }
+        //     if (h >= H_MAX) {
+        //         h = 0;
+        //     } else {
+        //         h++;
+        //     }
+        // }
     }
-    if (mbd->flags & MULTIBOOT_INFO_MEM_MAP)
-    {
-        for (mmap = (struct multiboot_mmap_entry*)mbd->mmap_addr; (uint32_t)mmap < (mbd->mmap_addr + mbd->mmap_length); mmap = (struct multiboot_mmap_entry*)((uint32_t)mmap + mmap->size + sizeof(mmap->size)))
-        {
-			//uint32_t addrH = mmap->addr_high;
-            uint32_t addrL = mmap->addr_low;
-            //uint32_t lenH = mmap->len_high;
-            uint32_t lenL = mmap->len_low;
-			uint8_t mType = mmap->type;
-			if (mType == 1) {
-				if (lenL > largestUseableMem) {
-					largestUseableMem = abs(lenL - abs(endOfCode-addrL));
-					memAddr = abs(addrL + abs(endOfCode-addrL));
-				}
-			}
-        }
-		set_addr(memAddr, largestUseableMem);
-		
+    sprint("\nCPU name: ");
+    get_cpu_name(cpu_name);
+    sprint(cpu_name);
+    sprint("\n");
+    
+    sprint("\nSetting up interrupts, so I can have exception handlers when my paging dies");
+
+    // while (1) {
+    //     uint64_t test = (uint64_t) kmalloc(1048568);
+    //     sprintf("\nMemory: %lx", test);
+    //     *(uint64_t *) test = 0x123456789;
+    //     if (*(uint64_t *) test != 0x123456789) {
+    //         sprintf("\nBroken memory, set to %lx", *(uint64_t *) test);
+    //     }
+    //      //free((void *) test);
+    // }
+    
+
+    setup_screen();
+    /* VESA SET? */
+    if ((mbd->flags & MULTIBOOT_INFO_VBE_INFO)) {
+        // VBE ready
+        sprint("\nWidth: ");
+        sprint_uint(mbd->framebuffer_width);
+        width = mbd->framebuffer_width;
+        sprint("\nHeight: ");
+        sprint_uint(mbd->framebuffer_height);
+        height = mbd->framebuffer_height;
+        sprint("\nFramebuffer address: ");
+        sprint_uint(mbd->framebuffer_addr);
+        sprint("\nColors: ");
+        sprint_uint(mbd->framebuffer_palette_num_colors);
+        vidmem = (uint8_t *)mbd->framebuffer_addr;
+        sprint("\nBPP: ");
+        sprint_uint(mbd->framebuffer_bpp);
+        sprint("\nBytes per pixel: ");
+        sprint_uint(mbd->framebuffer_bpp/8);
+        sprint("\nBytes per line: ");
+        sprint_uint(mbd->framebuffer_pitch);
+        sprint("\nLeftover: ");
+        sprint_uint(mbd->framebuffer_bpp%8);
+        bbp = mbd->framebuffer_bpp/8;
+        extra_bits = mbd->framebuffer_bpp%8;
+        sprint("\nPitch: ");
+        sprint_uint(mbd->framebuffer_pitch);
+        bpl = mbd->framebuffer_pitch;
+        red_byte = mbd->framebuffer_red_field_position;
+        green_byte = mbd->framebuffer_green_field_position;
+        blue_byte = mbd->framebuffer_blue_field_position;
+        sprint("\nChar width: ");
+        sprint_uint(width/8);
+        sprint("\nChar height: ");
+        sprint_uint(height/8);
+        current_buffer = new_framebuffer(0, 0, width/2, height);
     }
-	setup_screen();
-	/* VESA SET? */
-	if ((mbd->flags & 0x800) == 0x800) {
-		// VBE ready
-		sprint("\nWidth: ");
-		sprint_uint(mbd->framebuffer_width);
-		width = mbd->framebuffer_width;
-		sprint("\nHeight: ");
-		sprint_uint(mbd->framebuffer_height);
-		height = mbd->framebuffer_height;
-		sprint("\nFramebuffer address: ");
-		sprint_uint(mbd->framebuffer_addr_low);
-		sprint("\nColors: ");
-		sprint_uint(mbd->framebuffer_palette_num_colors);
-		vidmem = (uint8_t *)mbd->framebuffer_addr_low;
-		sprint("\nBPP: ");
-		sprint_uint(mbd->framebuffer_bpp);
-		sprint("\nBytes per pixel: ");
-		sprint_uint(mbd->framebuffer_bpp/8);
-		sprint("\nBytes per line: ");
-		sprint_uint(mbd->framebuffer_pitch);
-		sprint("\nLeftover: ");
-		sprint_uint(mbd->framebuffer_bpp%8);
-		bbp = mbd->framebuffer_bpp/8;
-		extra_bits = mbd->framebuffer_bpp%8;
-		sprint("\nPitch: ");
-		sprint_uint(mbd->framebuffer_pitch);
-		bpl = mbd->framebuffer_pitch;
-		red_byte = mbd->framebuffer_red_field_position;
-		green_byte = mbd->framebuffer_green_field_position;
-		blue_byte = mbd->framebuffer_blue_field_position;
-		sprint("\nChar width: ");
-		sprint_uint(width/8);
-		sprint("\nChar height: ");
-		sprint_uint(height/8);
-		current_buffer = new_framebuffer(0, 0, width/2, height);
-	}
 
-	clear_screen();
-	// Initialize everything with a startup log
-	Log("Loaded memory", 1);
-	isr_install();
-	Log("ISR Enabled", 1);
-	init_timer(1193);
+    clear_screen();
+    // Initialize everything with a startup log
+    Log("Loaded memory", 1);
+    isr_install();
+    Log("ISR Enabled", 1);
+    init_timer(1193);
 
-	Log("Timer enabled", 1);
-	Log("Loading PS/2", 1);
-	init_ps2();
-	Log("PS/2 enabled", 3);
-	irq_install();
-	Log("Interrupts Enabled", 1);
+    Log("Timer enabled", 1);
+    Log("Loading PS/2", 1);
+    init_ps2();
+    Log("PS/2 enabled", 3);
+    irq_install();
+    Log("Interrupts Enabled", 1);
 
-	Log("Scanning for drives", 1);
-	drive_scan();
-	Log("Drive scan done", 1);
+    Log("Scanning for drives", 1);
+    drive_scan();
+    Log("Drive scan done", 1);
 
-	Log("Starting the HDD driver", 1);
-	init_hdd();
-	init_hddw();
-	Log("Done", 1);
+    Log("Starting the HDD driver", 1);
+    init_hdd();
+    init_hddw();
+    Log("Done", 1);
 
-	//Log("Formatting drive with Drip FS", 1);
-	//dfs_format("DripOS", 1, 1);
-	//Log("Done!", 3);
-	// Log("Formatting drive...", 1);
-	// user_input("select 1");
-	// format();
-	// Log("Formatted", 1);
-	// init_fat();
-	// Log("Initialized", 1);
+    //Log("Formatting drive with Drip FS", 1);
+    //dfs_format("DripOS", 1, 1);
+    //Log("Done!", 3);
+    // Log("Formatting drive...", 1);
+    // user_input("select 1");
+    // format();
+    // Log("Formatted", 1);
+    // init_fat();
+    // Log("Initialized", 1);
 
-	Log("Testing mem", 1);
-	uint32_t *testOnStart = (uint32_t *)kmalloc(0x1000);
-	*testOnStart = 33;
-	if (*testOnStart == 33) {
-		Log("Test passed!", 3);
-	} else {
-		Log("Test failed!", 2);
-	}
-	Log("Test done", 1);
+    Log("Testing mem", 1);
+    uint32_t *testOnStart = (uint32_t *)kmalloc(0x1000);
+    *testOnStart = 33;
+    if (*testOnStart == 33) {
+        Log("Test passed!", 3);
+    } else {
+        Log("Test failed!", 2);
+    }
+    Log("Test done", 1);
 
-	free(testOnStart, 0x1000);
-	Log("Clearing screen...", 1);
-	update_display();
-	clear_screen();
-	prevtick = tick;
-	logo_draw();
-	play(300);
-	wait(15);
-	play(500);
-	wait(15);
-	play(580);
-	wait(30);
-	nosound();
-	update_display();
-	clear_screen();
+    free(testOnStart);
+    Log("Clearing screen...", 1);
+    update_display();
+    clear_screen();
 
-	kprint("DripOS 0.0030\n"); //Version
-	sprintd("DripOS 0.0030 loaded"); //Version
+    prevtick = tick;
+    logo_draw();
+    play(300);
+    wait(15);
+    play(500);
+    wait(15);
+    play(580);
+    wait(30);
+    nosound();
+    update_display();
+    clear_screen();
 
-	kprint("Type help for commands\nType shutdown to shutdown\n\n");
-	kprint("Memory available: ");
-	char test[25];
-	int_to_ascii(memory_remaining, test);
-	kprint(test);
-	kprint(" bytes\n");
-	kprint("drip@DripOS> ");
-	set_RTC_register(0x4, 13);
-	sprint("\nHour: ");
-	sprint_uint(get_RTC_register(0x4));
-	sprintd("Entering multitask/system management loop");
+    kprintf("DripOS %s (x86_64)\n", version); //Version
 
-	initTasking();
+    kprint("Type help for commands\nType shutdown to shutdown\n\n");
+    kprintf("Memory available: %lu MiB\n", get_free_mem()/1024/1024);
+    kprint("drip@DripOS> ");
+    set_RTC_register(0x4, 13);
+    sprint("\nHour: ");
+    sprint_uint(get_RTC_register(0x4));
+    sprintd("Entering multitask/system management loop");
+	// while (1) {
+    //     asm volatile("hlt");
+    // }
+
+    init_tasking();
 }
 
 void user_input(char input[]) {
-	//sprintd(input);
-	if (stdinpass == 0){
-		execute_command(input);
-	}
-	else {
-		stdinpass = 0;
-		//stdin_call(input);
-	}
+    //sprintd(input);
+    if (stdinpass == 0){
+        execute_command(input);
+    }
+    else {
+        stdinpass = 0;
+        //stdin_call(input);
+    }
 }
 
 void halt() {
-	asm volatile("hlt");
+    asm volatile("hlt");
 }
 
 void shutdown() {
-	kprint("System shutdown");
-	state = 1;
+    kprint("System shutdown");
+    state = 1;
 }
 
 void panic() {
-	state = 2;
+    state = 2;
 }
 
 int getstate() {
-	return state;
+    return state;
 }
 
 // void check_crash() {
-// 	//0x7263
-// 	read(128, 0);
-// 	if (readOut[0] == 0x7263) {
-// 		kprint("NOTICE: Last time your OS stopped, it was from a crash.\n");
-// 	}
-// 	writeIn[0] = 0x0000;
-// 	write(128);
+//     //0x7263
+//     read(128, 0);
+//     if (readOut[0] == 0x7263) {
+//         kprint("NOTICE: Last time your OS stopped, it was from a crash.\n");
+//     }
+//     writeIn[0] = 0x0000;
+//     write(128);
 // }
 
 // ^ this was use in old time for bad thing

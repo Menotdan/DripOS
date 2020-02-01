@@ -48,7 +48,7 @@ void remove_at_end(list_t *l) {
         return;
     }
     if (new_head->next) {
-        free(new_head->next, sizeof(node_t));
+        free(new_head->next);
         new_head->next = 0;
     }
     l->head = new_head;
@@ -61,10 +61,10 @@ void destroy_list(list_t *l) {
     node_t *next;
     while (current) {
         next = current->next;
-        free(current, sizeof(node_t));
+        free(current);
         current = next;
     }
-    free(l, sizeof(list_t));
+    free(l);
 }
 
 uint32_t data_at_index(uint32_t index, list_t *l) {

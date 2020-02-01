@@ -4,13 +4,13 @@ Task *running_task;
 Task main_task;
 Task kickstart;
 static Task temp;
-Task *next_temp;
 uint32_t old_stack_ptr;
 uint32_t pid_max = 0;
 uint32_t global_esp = 0;
 uint32_t global_esp_old = 0;
 uint32_t task_size = sizeof(Task);
 Task *global_old_task;
+Task *dead_task_queue = (Task *) 0;
 Registers *regs;
 Task *focus_tasks;
 extern uint32_t suicide_stack;
@@ -31,8 +31,21 @@ Task *get_task_from_pid(uint32_t pid) {
 
 static void otherMain() {
     loaded = 1;
+    sprintf("\nIn main");
     while (1) {
         asm volatile("hlt");
+    }
+}
+
+static void task_cleaner() {
+    Task *next;
+    while (1) {
+        sleep(2000);
+        while (dead_task_queue != 0) {
+            next = dead_task_queue->next_dead;
+            kill_task(dead_task_queue->pid);
+            dead_task_queue = next;
+        }
     }
 }
 
@@ -44,78 +57,59 @@ Task *get_focused_task() {
     return focus_tasks;
 }
 
-void new_stack(uint32_t address) {
-    asm __volatile__("xchg %%esp, %0\n\t"
-        : "=r"(old_stack_ptr)
-        : "0"(address)
-        );
-}
-
-void initTasking() {
+void init_tasking() {
     // Get EFLAGS and CR3
-    asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(temp.regs.cr3)::"%eax"); // No paging yet
-    asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(temp.regs.eflags)::"%eax");
+    asm volatile("movq %%cr3, %%rax; movq %%rax, %0;":"=m"(temp.regs.cr3)::"%rax"); // No paging yet
+    asm volatile("pushfq; movq (%%rsp), %%rax; movq %%rax, %0; popfq;":"=m"(temp.regs.rflags)::"%rax");
 
-    createTask(&main_task, otherMain, "Idle task");
-    createTask(&kickstart, 0, "no");
+    create_task(&main_task, otherMain, "Idle task");
+    create_task(&kickstart, 0, "no");
     pid_max = 1;
     main_task.next = &main_task;
     kickstart.next = &main_task;
     main_task.cursor_pos = CURSOR_MAX;
-    Task *temp = kmalloc(sizeof(Task));
-    //createTask(temp, task_cleaner, "Task handler");
-    temp->cursor_pos = CURSOR_MAX;
+    Task *cleaner = kmalloc(sizeof(Task));
+    create_task(cleaner, task_cleaner, "Task cleaner");
+    cleaner->cursor_pos = CURSOR_MAX;
+    sprintf("\nCleaner PID: %u", cleaner->pid);
+    // while (1) {
+    //     asm volatile("hlt");
+    // }
 
     init_terminal();
     running_task = &kickstart;
     otherMain();
 }
  
-uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *pagedir) { // No paging yet
-    asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(temp.regs.cr3)::"%eax"); // No paging yet
-    asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(temp.regs.eflags)::"%eax");
-    task->regs.eax = 0;
-    task->regs.ebx = 0;
-    task->regs.ecx = 0;
-    task->regs.edx = 0;
-    task->regs.esi = 0;
-    task->regs.edi = 0;
-    task->regs.eflags = temp.regs.eflags;
-    task->regs.eip = (uint32_t) main;
-    task->regs.cr3 = (uint32_t)temp.regs.cr3; // No paging yet
-    task->regs.esp = ((uint32_t)kmalloc(0x4000) & (~0xf)) + 0x4000; // Allocate 16KB for the process stack
-    task->start_esp = (uint8_t *)task->regs.esp - 0x4000;
+uint32_t create_task(Task *task, void (*main)(), char *task_name) {//, uint32_t *pagedir) { // No paging yet
+    asm volatile("movq %%cr3, %%rax; movq %%rax, %0;":"=m"(temp.regs.cr3)::"%rax");
+    task->regs.rax = 0;
+    task->regs.rbx = 0;
+    task->regs.rcx = 0;
+    task->regs.rdx = 0;
+    task->regs.rsi = 0;
+    task->regs.rdi = 0;
+    task->regs.r8 = 0;
+    task->regs.r9 = 0;
+    task->regs.r10 = 0;
+    task->regs.r11 = 0;
+    task->regs.r12 = 0;
+    task->regs.r13 = 0;
+    task->regs.r14 = 0;
+    task->regs.r15 = 0;
+    task->regs.rflags = temp.regs.rflags;
+    task->regs.rip = (uint64_t) main;
+    task->regs.cr3 = (uint64_t)temp.regs.cr3;
+    task->regs.rsp = ((uint64_t)kmalloc(0x4000) & (~0xf)) + 0x4000; // Allocate 16KB for the process stack
+    task->start_esp = (uint8_t *)task->regs.rsp - 0x4000;
     task->scancode_buffer = kmalloc(512); // 512 chars for each task's keyboard buffer
-    task->regs.ebp = 0;
+    task->regs.rbp = 0;
     task->cursor_pos = get_cursor_offset();
     task->buffer = current_buffer;
-    
-
     strcpy((char *)&task->name, task_name);
 
-    registers_t tempregs;
-    tempregs.eax = 0;
-    tempregs.ebx = 0;
-    tempregs.ecx = 0;
-    tempregs.edx = 0;
-    tempregs.esi = 0;
-    tempregs.edi = 0;
-    tempregs.eflags = temp.regs.eflags;
-    tempregs.eip = (uint32_t) main;
-    tempregs.ebp = 0;
-    tempregs.cs = 0x8;
-    tempregs.ds = 0x10;
-    tempregs.esp = task->regs.esp;
-    tempregs.dr6 = 0;
-    tempregs.err_code = 0;
-    tempregs.int_no = 1234;
-    task->regs.esp -= sizeof(registers_t);
-    uint8_t *stack_insert_buffer = get_pointer(task->regs.esp);
-    memcpy((uint8_t *)&tempregs, stack_insert_buffer, sizeof(registers_t));
-    //breakA();
-
-    next_temp = main_task.next;
-    task->next = next_temp;
+    task->next = main_task.next;
+    task->next_dead = 0;
     main_task.next = task;
     task->pid = pid_max;
     task->ticks_cpu_time = 0;
@@ -140,15 +134,23 @@ void yield() {
 void schedule_task(registers_t *r) {
     // Set values for context switch
     regs = &running_task->regs;
-    r->eflags = regs->eflags | 0x200;
-    r->eax = regs->eax;
-    r->ebx = regs->ebx;
-    r->ecx = regs->ecx;
-    r->edx = regs->edx;
-    r->edi = regs->edi;
-    r->esi = regs->esi;
-    r->eip = regs->eip;
-    r->ebp = regs->ebp;
+    r->rflags = regs->rflags | 0x200;
+    r->rax = regs->rax;
+    r->rbx = regs->rbx;
+    r->rcx = regs->rcx;
+    r->rdx = regs->rdx;
+    r->rdi = regs->rdi;
+    r->rsi = regs->rsi;
+    r->rip = regs->rip;
+    r->rbp = regs->rbp;
+    r->r8 = regs->r8;
+    r->r9 = regs->r9;
+    r->r10 = regs->r10;
+    r->r11 = regs->r11;
+    r->r12 = regs->r12;
+    r->r13 = regs->r13;
+    r->r14 = regs->r14;
+    r->r15 = regs->r15;
     if (running_task->cursor_pos < CURSOR_MAX) {
         set_cursor_offset(running_task->cursor_pos);
     }
@@ -157,13 +159,13 @@ void schedule_task(registers_t *r) {
 
 void sprint_tasks() {
     Task *temp_list = &main_task;
-    uint32_t oof = 1;
+    uint32_t found_task = 1;
     uint32_t loop = 0;
     while (1) {
         if (loop > pid_max) {
             break;
         }
-        if (temp_list->pid == 0 && oof != 1) {
+        if (temp_list->pid == 0 && found_task != 1) {
             break;
         }
         sprint("\n");
@@ -173,43 +175,48 @@ void sprint_tasks() {
         sprint("  ");
         sprint(temp_list->name);
         temp_list = temp_list->next;
-        oof = 0;
+        found_task = 0;
         loop++;
     }
 }
 
 int32_t kill_task(uint32_t pid) {
-    if (pid == 0 || pid == 1) {
+    if (pid == 0 || pid == 1 || pid == 2) {
         return 2; // Permission denied
     }
-    Task *temp_kill = &main_task;
+    sprintf("\nKilling PID: %u", pid);
+    if (pid == running_task->pid) {
+        sprintf("\nBad code eeeee PID: %u", pid);
+    }
+    Task *after_target = &main_task;
     Task *to_kill = 0;
-    Task *prev_task;
+    Task *before_target;
     uint32_t loop = 0;
     while (1) {
         if (loop > pid_max) {
             break;
         }
-        if (temp_kill->next->pid == pid) {
-            to_kill = temp_kill->next; // Process to kill
-            prev_task = temp_kill; // Process before
-            temp_kill = temp_kill->next->next; // Process after
+        if (after_target->next->pid == pid) {
+            to_kill = after_target->next; // Process to kill
+            before_target = after_target; // Process before
+            after_target = after_target->next->next; // Process after
             break;
         }
-        if (temp_kill->next->pid == 0) {
+        if (after_target->next->pid == 0) {
             return 1; // Task not found, looped back to 0
         }
         loop++;
-        temp_kill = temp_kill->next;
+        after_target = after_target->next;
     }
-    if ((uint32_t)to_kill == 0) {
+    if ((uint64_t)to_kill == 0) {
         return 1; // This should never be reached but eh, safety first
     }
     if (pid != running_task->pid) {
-        free(to_kill->start_esp, 0x4000);
+        free(to_kill->start_esp);
     }
-    free(to_kill->scancode_buffer, 512);
-    prev_task->next = temp_kill; // Remove killed task from the chain
+    free(to_kill->scancode_buffer);
+    before_target->next = after_target; // Remove killed task from the chain
+    free(to_kill);
     return 0; // Worked... hopefully lol
 }
 
@@ -245,34 +252,74 @@ void pick_task() {
     Task *temp_iterator = (&main_task)->next;
 
     while (temp_iterator->pid != 0) {
+        //sprintf("\nLowest time: %x Lowest time name: %s\nIterator name: %s", lowest_time, lowest_time_task->name, temp_iterator->name);
         if ((temp_iterator->since_last_task < lowest_time) && temp_iterator->state == RUNNING) {
             lowest_time = temp_iterator->since_last_task;
             lowest_time_task = temp_iterator;
         }
         temp_iterator = temp_iterator->next;
     }
+    //sprintf("\nPID: %u\nState: %u", lowest_time_task->pid, (uint32_t) lowest_time_task->state);
+    if (lowest_time_task->state != RUNNING) {
+        sprintf("\nError");
+        while (1) {
+            asm volatile("int $22"); // yes
+        }
+    } 
     running_task = lowest_time_task;
     running_task->since_last_task += 1; // Times selected since last task started
 }
 
-void store_values(registers_t *r) {
+void swap_task(registers_t *r) {
     regs = &running_task->regs; // Get registers
     /* Set old registers */
-    regs->eflags = r->eflags;
-    regs->eax = r->eax;
-    regs->ebx = r->ebx;
-    regs->ecx = r->ecx;
-    regs->edx = r->edx;
-    regs->edi = r->edi;
-    regs->esi = r->esi;
-    regs->eip = r->eip;
-    regs->esp = r->esp-40;
-    regs->ebp = r->ebp;
+    regs->rflags = r->rflags;
+    regs->rax = r->rax;
+    regs->rbx = r->rbx;
+    regs->rcx = r->rcx;
+    regs->rdx = r->rdx;
+    regs->rdi = r->rdi;
+    regs->rsi = r->rsi;
+    regs->rip = r->rip;
+    //sprintf("\nOld RIP: %lx", regs->rip);
+    regs->rsp = r->rsp;
+    regs->rbp = r->rbp;
+    regs->r8 = r->r8;
+    regs->r9 = r->r9;
+    regs->r10 = r->r10;
+    regs->r11 = r->r11;
+    regs->r12 = r->r12;
+    regs->r13 = r->r13;
+    regs->r14 = r->r14;
+    regs->r15 = r->r15;
     if (running_task->cursor_pos < CURSOR_MAX)  {
         running_task->cursor_pos = get_cursor_offset();
     }
     running_task->buffer = current_buffer;
     pick_task();
     regs = &running_task->regs; // Get registers again
-    global_esp = regs->esp;
+    /* Set new registers for the interrupt frame */
+    r->rflags = regs->rflags;
+    r->rax = regs->rax;
+    r->rbx = regs->rbx;
+    r->rcx = regs->rcx;
+    r->rdx = regs->rdx;
+    r->rdi = regs->rdi;
+    r->rsi = regs->rsi;
+    r->rbp = regs->rbp;
+    r->rsp = regs->rsp;
+    r->rip = regs->rip;
+    //sprintf("\nNew RIP: %lx", r->rip);
+    r->r8 = regs->r8;
+    r->r9 = regs->r9;
+    r->r10 = regs->r10;
+    r->r11 = regs->r11;
+    r->r12 = regs->r12;
+    r->r13 = regs->r13;
+    r->r14 = regs->r14;
+    r->r15 = regs->r15;
+    if (running_task->cursor_pos < CURSOR_MAX) {
+        set_cursor_offset(running_task->cursor_pos);
+    }
+    current_buffer = running_task->buffer;
 }

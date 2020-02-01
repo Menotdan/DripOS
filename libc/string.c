@@ -22,8 +22,34 @@ void int_to_ascii(int n, char str[]) {
     reverse(str);
 }
 
+void int64_to_ascii(int64_t n, char str[]) {
+    int i, sign;
+    if ((sign = n) < 0) n = -n; // if number is less than 0, invert it
+    i = 0;
+    do {
+        str[i++] = n % 10 + '0';
+    } while ((n /= 10) > 0);
+
+    if (sign < 0) str[i++] = '-';
+    str[i] = '\0';
+
+    reverse(str);
+}
+
 void uint_to_ascii(unsigned int n, char str[]) {
     int i;
+    i = 0;
+    do {
+        str[i++] = n % 10 + '0';
+    } while ((n /= 10) > 0);
+
+    str[i] = '\0';
+
+    reverse(str);
+}
+
+void uint64_to_ascii(uint64_t n, char str[]) {
+    uint64_t i;
     i = 0;
     do {
         str[i++] = n % 10 + '0';
@@ -53,6 +79,30 @@ int atoi(char *str)
     return result; 
 } 
 
+void htoa(uint64_t in, char out[]) {
+    uint32_t pos = 0;
+    uint8_t tmp;
+
+    out[pos++] = '0';
+    out[pos++] = 'x';
+
+    for (uint16_t i = 60; i > 0; i -= 4) {
+        tmp = (uint8_t)((in >> i) & 0xf);
+        if (tmp >= 0xa) {
+            out[pos++] = (tmp - 0xa) + 'A';
+        } else {
+            out[pos++] = tmp + '0';
+        }
+    }
+
+    tmp = (uint8_t)(in & 0xf);
+    if (tmp >= 0xa) {
+        out[pos++] = (tmp - 0xa) + 'A';
+    } else {
+        out[pos++] = tmp + '0';
+    }
+    out[pos] = '\0'; // nullify 
+}
 
 void hex_to_ascii(int n, char str[]) {
     append(str, '0');
@@ -154,7 +204,7 @@ int match(char s1[], char s2[]) { //how many characters match, before the first 
         //char hello[100];
         //int_to_ascii(i, hello);
         //kprint(hello);
-        if (s1[i] == remove_null("\0") || s2[i] == remove_null("\0")) return i - 1;
+        if (s1[i] == '\0' || s2[i] == '\0') return i - 1;
         ret = i;
     }
     if (strcmp(s1, s2) == 0) {

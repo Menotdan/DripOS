@@ -21,22 +21,22 @@
 // static void keyboard_callback(registers_t *regs) {
 //     /* The PIC leaves us the scancode in port 0x60 */
 //     uint8_t scancode = port_byte_in(0x60);
-	
-// 	//kprint_int(scancode);
+    
+//     //kprint_int(scancode);
 
-// 	bool iskeyup = false;
-// 	if (scancode >= KEYUPOFFSET) {
-// 		iskeyup = true;
-// 		scancode -= KEYUPOFFSET;
-// 	}
-// 	//kprint("\nKey Buffer before: ");
-// 	//kprint(key_buffer);
-// 	key_handler(scancode, iskeyup);
-// 	//kprint("\nKey Buffer after: ");
-// 	//kprint(key_buffer);
+//     bool iskeyup = false;
+//     if (scancode >= KEYUPOFFSET) {
+//         iskeyup = true;
+//         scancode -= KEYUPOFFSET;
+//     }
+//     //kprint("\nKey Buffer before: ");
+//     //kprint(key_buffer);
+//     key_handler(scancode, iskeyup);
+//     //kprint("\nKey Buffer after: ");
+//     //kprint(key_buffer);
 //     UNUSED(regs);
 // }
 
 // void init_keyboard() {
-// 	register_interrupt_handler(IRQ1, keyboard_callback);
+//     register_interrupt_handler(IRQ1, keyboard_callback);
 // }

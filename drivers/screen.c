@@ -1,4 +1,6 @@
 #include "screen.h"
+#include <stdint.h>
+#include <stdarg.h>
 #include "../cpu/ports.h"
 #include "../cpu/types.h"
 #include <stddef.h>
@@ -201,6 +203,71 @@ void kprint_no_update(char *message) {
     kprint_at_no_update(message, -1, -1);
 }
 
+void kprintf(char *message, ...) {
+    va_list format_list;
+    uint64_t index = 0;
+    uint8_t big = 0;
+
+    va_start(format_list, message);
+
+    while (message[index]) {
+        if (message[index] == '%') {
+            index++;
+            if (message[index] == 'l') {
+                index++;
+                big = 1;
+            }
+            switch (message[index]) {
+                case 'x':
+                    if (big) {
+                        char hex_buffer[20];
+                        htoa(va_arg(format_list, uint64_t), hex_buffer);
+                        kprint_no_update(hex_buffer);
+                    } else {
+                        char hex_buffer[20];
+                        htoa(va_arg(format_list, uint32_t), hex_buffer);
+                        kprint_no_update(hex_buffer);
+                    }
+                    break;
+                case 'd':
+                    if (big) {
+                        char int_buffer[32];
+                        int64_to_ascii(va_arg(format_list, int64_t), int_buffer);
+                        kprint_no_update(int_buffer);
+                    } else {
+                        char int_buffer[32];
+                        int_to_ascii(va_arg(format_list, int32_t), int_buffer);
+                        kprint_no_update(int_buffer);
+                    }
+                    break;
+                case 'u':
+                    if (big) {
+                        char int_buffer[32];
+                        uint64_to_ascii(va_arg(format_list, uint64_t), int_buffer);
+                        kprint_no_update(int_buffer);
+                    } else {
+                        char int_buffer[32];
+                        uint_to_ascii(va_arg(format_list, uint32_t), int_buffer);
+                        kprint_no_update(int_buffer);
+                    }
+                    break;
+                case 's':
+                    kprint_no_update(va_arg(format_list, char *));
+                    break;
+                default :
+                    break;
+            }
+        } else {
+            char print[2] = {message[index], 0};
+            kprint_no_update(print);
+        }
+        index++;
+    }
+
+    va_end(format_list);
+    update_display();
+}
+
 void kprint_color(char *message, color_t fg, color_t bg) {
     kprint_at_col(message, -1, -1, fg, bg);
 }
@@ -217,25 +284,25 @@ void crash_screen(registers_t *crash_state, char *msg, uint8_t printReg) {
     if (printReg == 1) {
         set_cursor_offset(get_offset(30, 11));
         kprint("eip: ");
-        kprint_uint(crash_state->eip);
+        kprint_uint(crash_state->rip);
         set_cursor_offset(get_offset(5, 12));
         kprint("eax: ");
-        kprint_uint(crash_state->eax);
+        kprint_uint(crash_state->rax);
         kprint("   ebx: ");
-        kprint_uint(crash_state->ebx);
+        kprint_uint(crash_state->rbx);
         kprint("   ecx: ");
-        kprint_uint(crash_state->ecx);
+        kprint_uint(crash_state->rcx);
         kprint("   edx: ");
-        kprint_uint(crash_state->edx);
+        kprint_uint(crash_state->rdx);
         set_cursor_offset(get_offset(5, 13));
         kprint("edi: ");
-        kprint_uint(crash_state->edi);
+        kprint_uint(crash_state->rdi);
         kprint("   esi: ");
-        kprint_uint(crash_state->esi);
+        kprint_uint(crash_state->rsi);
         kprint("   esp: ");
-        kprint_uint(crash_state->esp);
+        kprint_uint(crash_state->rsp);
         kprint("   ebp: ");
-        kprint_uint(crash_state->ebp);
+        kprint_uint(crash_state->rbp);
         set_cursor_offset(get_offset(14, 14));
         kprint("cs: ");
         kprint_uint(crash_state->cs);
@@ -244,19 +311,19 @@ void crash_screen(registers_t *crash_state, char *msg, uint8_t printReg) {
         //kprint("   ss: ");
         //kprint_uint(crash_state->ss);
         kprint("\nTask eip: ");
-        kprint_uint(running_task->regs.eip);
+        kprint_uint(running_task->regs.rip);
         kprint("\nTask eax: ");
-        kprint_uint(running_task->regs.eax);
+        kprint_uint(running_task->regs.rax);
         kprint("\nTask ebx: ");
-        kprint_uint(running_task->regs.ebx);
+        kprint_uint(running_task->regs.rbx);
         kprint("\nTask ecx: ");
-        kprint_uint(running_task->regs.ecx);
+        kprint_uint(running_task->regs.rcx);
         kprint("\nTask edx: ");
-        kprint_uint(running_task->regs.edx);
+        kprint_uint(running_task->regs.rdx);
         kprint("\nDebug 6: ");
         kprint_uint(crash_state->dr6);
         kprint("\nEFLAGS: ");
-        kprint_uint(crash_state->eflags);
+        kprint_uint(crash_state->rflags);
         kprint("\nOOF: ");
         kprint_uint(oof);
         kprint(" EAX: ");
