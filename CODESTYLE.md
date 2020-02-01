@@ -10,9 +10,13 @@ snake_case for interface functions, except where following libc
 
 ## C source files
 1. Includes in the following order:
+
 Include for this source file's header
+
 Includes with brackets
+
 Other includes
+
 2. Global variables (try to minimize)
 3. Exposed functions
 4. Unexposed functions
