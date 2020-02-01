@@ -7,6 +7,7 @@ snake_case for interface functions, except where following libc
 1. East const
 2. Right pointers
 3. Include guards (using NAME_H format)
+4. No braces on newlines
 
 ## C source files
 1. Includes in the following order:
