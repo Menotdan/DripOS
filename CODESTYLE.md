@@ -25,7 +25,8 @@ Other includes
 ## C header files
 1. Includes (in headers only include what you need for exposed functions and types)
 2. Defines and macros
-3. Exposed variables
-4. Exposed functions with return type of void
-5. Other exposed functions (Group by return type)
-6. Include argument names in function declaration
+3. Enums, structs, types
+4. Exposed variables
+5. Exposed functions with return type of void
+6. Other exposed functions (Group by return type)
+7. Include argument names in function declaration
