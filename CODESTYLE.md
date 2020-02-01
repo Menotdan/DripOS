@@ -1,6 +1,8 @@
 # Naming conventions
 snake_case variable names
+
 snake_case for implementation functions
+
 snake_case for interface functions, except where following libc
 
 # Code format
