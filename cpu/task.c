@@ -62,14 +62,14 @@ void init_tasking() {
     asm volatile("movq %%cr3, %%rax; movq %%rax, %0;":"=m"(temp.regs.cr3)::"%rax"); // No paging yet
     asm volatile("pushfq; movq (%%rsp), %%rax; movq %%rax, %0; popfq;":"=m"(temp.regs.rflags)::"%rax");
 
-    createTask(&main_task, otherMain, "Idle task");
-    createTask(&kickstart, 0, "no");
+    create_task(&main_task, otherMain, "Idle task");
+    create_task(&kickstart, 0, "no");
     pid_max = 1;
     main_task.next = &main_task;
     kickstart.next = &main_task;
     main_task.cursor_pos = CURSOR_MAX;
     Task *cleaner = kmalloc(sizeof(Task));
-    createTask(cleaner, task_cleaner, "Task cleaner");
+    create_task(cleaner, task_cleaner, "Task cleaner");
     cleaner->cursor_pos = CURSOR_MAX;
     sprintf("\nCleaner PID: %u", cleaner->pid);
     // while (1) {
@@ -81,7 +81,7 @@ void init_tasking() {
     otherMain();
 }
  
-uint32_t createTask(Task *task, void (*main)(), char *task_name) {//, uint32_t *pagedir) { // No paging yet
+uint32_t create_task(Task *task, void (*main)(), char *task_name) {//, uint32_t *pagedir) { // No paging yet
     asm volatile("movq %%cr3, %%rax; movq %%rax, %0;":"=m"(temp.regs.cr3)::"%rax");
     task->regs.rax = 0;
     task->regs.rbx = 0;
@@ -251,6 +251,7 @@ void pick_task() {
     Task *temp_iterator = (&main_task)->next;
 
     while (temp_iterator->pid != 0) {
+        sprintf("\nLowest time: %x Lowest time name: %s\nIterator name: %s", lowest_time, lowest_time_task->name, temp_iterator->name);
         if ((temp_iterator->since_last_task < lowest_time) && temp_iterator->state == RUNNING) {
             lowest_time = temp_iterator->since_last_task;
             lowest_time_task = temp_iterator;

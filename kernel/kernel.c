@@ -23,6 +23,8 @@ asm(".pushsection .text._start\r\njmp kmain\r\n.popsection\r\n");
 #include "../drivers/vesa.h"
 #include "../libc/color_math.h"
 
+const char version[] = "0.0030";
+
 //codes
 int prevtick = 0;
 int login = 1;
@@ -294,15 +296,10 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
     update_display();
     clear_screen();
 
-    kprint("DripOS 0.0030 (x86_64)\n"); //Version
-    sprintd("DripOS 0.0030 loaded"); //Version
+    kprintf("DripOS %s (x86_64)\n", version); //Version
 
     kprint("Type help for commands\nType shutdown to shutdown\n\n");
-    kprint("Memory available: ");
-    char test[25];
-    uint64_to_ascii(get_free_mem()/1024/1024, test);
-    kprint(test);
-    kprint(" MiB\n");
+    kprintf("Memory available: %lu MiB\n", get_free_mem()/1024/1024);
     kprint("drip@DripOS> ");
     set_RTC_register(0x4, 13);
     sprint("\nHour: ");

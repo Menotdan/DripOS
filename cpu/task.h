@@ -53,11 +53,12 @@ typedef struct Task {
 } Task;
 
 void init_tasking();
-extern uint32_t createTask(Task *task, void (*main)(), char *task_name);
+extern uint32_t create_task(Task *task, void (*main)(), char *task_name);
 extern int32_t kill_task(uint32_t pid); // 
 extern void yield(); // Yield, will be optional
 extern void switchTask(); // The function which actually switches
 extern void print_tasks(); // Print all the tasks
+void sprint_tasks();
 void pick_task(); // Pick a task to be scheduled
 void schedule_task(registers_t *r); // Load the task into a registers_t
 void set_focused_task(Task *new_focus);

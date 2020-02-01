@@ -192,6 +192,8 @@ void fixer(char s[]) {
  * Returns <0 if s1<s2, 0 if s1==s2, >0 if s1>s2 */
 int strcmp(const char s1[], char s2[]) {
     int i;
+    sprintf("\nString 1 char 1: %u\nString 2 char 1: %u", (uint32_t) s1[0], (uint32_t) s2[0]);
+    sprintf("\nstring1: %s string2: %s", s1, s2);
     for (i = 0; s1[i] == s2[i]; i++) {
         if (s1[i] == '\0') return 0;
     }
@@ -204,7 +206,7 @@ int match(char s1[], char s2[]) { //how many characters match, before the first 
         //char hello[100];
         //int_to_ascii(i, hello);
         //kprint(hello);
-        if (s1[i] == remove_null("\0") || s2[i] == remove_null("\0")) return i - 1;
+        if (s1[i] == '\0' || s2[i] == '\0') return i - 1;
         ret = i;
     }
     if (strcmp(s1, s2) == 0) {

@@ -45,7 +45,7 @@ void play_sound(uint32_t nFrequence, uint32_t ticks) {
     start_sound = tick; // Current timer tick
     len_sound = ticks; // Length
     Task *sound_handle_task = kmalloc(sizeof(Task));
-    createTask(sound_handle_task, sound_handler, "Sound stopper");
+    create_task(sound_handle_task, sound_handler, "Sound stopper");
     sprintf("\nSound handler PID: %u", sound_handle_task->pid);
 }
 

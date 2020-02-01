@@ -26,6 +26,9 @@ void keyboard_handler(registers_t *r) {
         char scan = port_byte_in(0x60);
         sprintf("\nGot key %x", ((uint32_t) scan) & 0xff);
         if (loaded) {
+            if (scan == 0xf) {
+                sprint_tasks();
+            }
             *(get_focused_task()->scancode_buffer + get_focused_task()->scancode_buffer_pos) = scan;
             get_focused_task()->scancode_buffer_pos++;
         }

@@ -1,4 +1,6 @@
 #include "screen.h"
+#include <stdint.h>
+#include <stdarg.h>
 #include "../cpu/ports.h"
 #include "../cpu/types.h"
 #include <stddef.h>
@@ -199,6 +201,71 @@ void kprint(char *message) {
 
 void kprint_no_update(char *message) {
     kprint_at_no_update(message, -1, -1);
+}
+
+void kprintf(char *message, ...) {
+    va_list format_list;
+    uint64_t index = 0;
+    uint8_t big = 0;
+
+    va_start(format_list, message);
+
+    while (message[index]) {
+        if (message[index] == '%') {
+            index++;
+            if (message[index] == 'l') {
+                index++;
+                big = 1;
+            }
+            switch (message[index]) {
+                case 'x':
+                    if (big) {
+                        char hex_buffer[20];
+                        htoa(va_arg(format_list, uint64_t), hex_buffer);
+                        kprint_no_update(hex_buffer);
+                    } else {
+                        char hex_buffer[20];
+                        htoa(va_arg(format_list, uint32_t), hex_buffer);
+                        kprint_no_update(hex_buffer);
+                    }
+                    break;
+                case 'd':
+                    if (big) {
+                        char int_buffer[32];
+                        int64_to_ascii(va_arg(format_list, int64_t), int_buffer);
+                        kprint_no_update(int_buffer);
+                    } else {
+                        char int_buffer[32];
+                        int_to_ascii(va_arg(format_list, int32_t), int_buffer);
+                        kprint_no_update(int_buffer);
+                    }
+                    break;
+                case 'u':
+                    if (big) {
+                        char int_buffer[32];
+                        uint64_to_ascii(va_arg(format_list, uint64_t), int_buffer);
+                        kprint_no_update(int_buffer);
+                    } else {
+                        char int_buffer[32];
+                        uint_to_ascii(va_arg(format_list, uint32_t), int_buffer);
+                        kprint_no_update(int_buffer);
+                    }
+                    break;
+                case 's':
+                    kprint_no_update(va_arg(format_list, char *));
+                    break;
+                default :
+                    break;
+            }
+        } else {
+            char print[2] = {message[index], 0};
+            kprint_no_update(print);
+        }
+        index++;
+    }
+
+    va_end(format_list);
+    update_display();
 }
 
 void kprint_color(char *message, color_t fg, color_t bg) {

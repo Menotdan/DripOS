@@ -52,5 +52,5 @@ void free(void * addr) {
     uint64_t *size_ptr = addr;
     size_ptr -= 0x200;
     sprintf("\n[FREE] Freeing addr %lx and %lu bytes", ((uint64_t) addr + 0x1000), *size_ptr);
-    pmm_unallocate(addr, *size_ptr);
+    pmm_unallocate(virt_to_phys(addr), *size_ptr);
 }

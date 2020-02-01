@@ -30,15 +30,16 @@ static void timer_callback(registers_t *regs) {
         while (iterator->pid != 0) {
             /* Set all tasks waiting for this tick to running */
             if (iterator->state == SLEEPING) {
-                if (iterator->waiting == tick) {
+                if (iterator->waiting <= tick) {
                     iterator->state = RUNNING;
                 }
             }
             iterator = iterator->next;
         }
-
+        sprintf("\nTime slice left: %u", time_slice_left);
         running_task->ticks_cpu_time++;
         if (time_slice_left == 0 && loaded == 1) {
+            sprintf("\nSwitching");
             if (running_task->next->priority == NORMAL) {
                 time_slice_left = 8; // 16 ms
             }

@@ -18,6 +18,7 @@
 void clear_screen();
 void kprint_at(char *message, int col, int row);
 void kprint(char *message);
+void kprintf(char *message, ...);
 void kprint_uint_no_update(unsigned int num);
 void kprint_int_no_update(int num);
 void kprint_uint(unsigned int num);
