@@ -307,6 +307,7 @@ uint64_t pmm_allocate(uint64_t size) {
 
 void pmm_unallocate(void * address, uint64_t size) {
     // Get the bitmap
+    uint64_t byte_size = size;
     uint8_t *bitmap_to_free = phys_to_bitmap((uint64_t) address);
 
     if (!bitmap_to_free) {
@@ -335,6 +336,7 @@ void pmm_unallocate(void * address, uint64_t size) {
         uint8_t extra_bytes = bits_to_use / 8;
         set_bit(bitmap_to_free, (bits_to_use % 8), (distance_bytes + size_bytes + extra_bytes), 0);
     }
-    total_usable += size;
-    total_used -= size;
+    total_usable += byte_size;
+    total_used -= byte_size;
+    sprintf("\nNew used %lu", total_used);
 }

@@ -188,25 +188,25 @@ int32_t kill_task(uint32_t pid) {
     if (pid == running_task->pid) {
         sprintf("\nBad code eeeee PID: %u", pid);
     }
-    Task *temp_kill = &main_task;
+    Task *after_target = &main_task;
     Task *to_kill = 0;
-    Task *prev_task;
+    Task *before_target;
     uint32_t loop = 0;
     while (1) {
         if (loop > pid_max) {
             break;
         }
-        if (temp_kill->next->pid == pid) {
-            to_kill = temp_kill->next; // Process to kill
-            prev_task = temp_kill; // Process before
-            temp_kill = temp_kill->next->next; // Process after
+        if (after_target->next->pid == pid) {
+            to_kill = after_target->next; // Process to kill
+            before_target = after_target; // Process before
+            after_target = after_target->next->next; // Process after
             break;
         }
-        if (temp_kill->next->pid == 0) {
+        if (after_target->next->pid == 0) {
             return 1; // Task not found, looped back to 0
         }
         loop++;
-        temp_kill = temp_kill->next;
+        after_target = after_target->next;
     }
     if ((uint64_t)to_kill == 0) {
         return 1; // This should never be reached but eh, safety first
@@ -215,7 +215,8 @@ int32_t kill_task(uint32_t pid) {
         free(to_kill->start_esp);
     }
     free(to_kill->scancode_buffer);
-    prev_task->next = temp_kill; // Remove killed task from the chain
+    before_target->next = after_target; // Remove killed task from the chain
+    free(to_kill);
     return 0; // Worked... hopefully lol
 }
 

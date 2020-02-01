@@ -146,10 +146,10 @@ int vmm_map_pages(pt_t *pml4, void *virt, void *phys, size_t count, int perms) {
             // Map the physical address to the virtual one by setting it's entry
             table_addresses.p1->ents[offsets.p1_off] = ((((uint64_t) phys) & ~(0xfff))
                 + (i * 0x1000)) | VMM_PRESENT | VMM_WRITE | perms;
-            if (offsets.p2_off == 6) {
-                sprintf("\nMapped P1: %u P2: %u P3: %u P4: %u Data: %lx", (uint32_t) offsets.p1_off, (uint32_t) offsets.p2_off, (uint32_t) offsets.p3_off, (uint32_t) offsets.p4_off, table_addresses.p1->ents[offsets.p1_off]);
-                sprintf("\nP1 addr: %lx", table_addresses.p1);
-            }
+            //if (offsets.p2_off == 6) {
+            //    sprintf("\nMapped P1: %u P2: %u P3: %u P4: %u Data: %lx", (uint32_t) offsets.p1_off, (uint32_t) offsets.p2_off, (uint32_t) offsets.p3_off, (uint32_t) offsets.p4_off, table_addresses.p1->ents[offsets.p1_off]);
+            //    sprintf("\nP1 addr: %lx", table_addresses.p1);
+            //}
             //sprintf("\nMapped %lx with table %lx", table_addresses.p1->ents[offsets.p1_off], table_addresses.p1);
         } else {
             ret = 1;
@@ -172,10 +172,10 @@ int vmm_remap_pages(pt_t *pml4, void *virt, void *phys, size_t count, int perms)
             // Map the physical address to the virtual one by setting it's entry
             table_addresses.p1->ents[offsets.p1_off] = ((((uint64_t) phys) & ~(0xfff))
                 + (i * 0x1000)) | VMM_PRESENT | VMM_WRITE | perms;
-            if (offsets.p2_off == 6) {
-                sprintf("\nMapped P1: %u P2: %u P3: %u P4: %u Data: %lx", (uint32_t) offsets.p1_off, (uint32_t) offsets.p2_off, (uint32_t) offsets.p3_off, (uint32_t) offsets.p4_off, table_addresses.p1->ents[offsets.p1_off]);
-                sprintf("\nP1 addr: %lx", table_addresses.p1);
-            }
+            //if (offsets.p2_off == 6) {
+            //    sprintf("\nMapped P1: %u P2: %u P3: %u P4: %u Data: %lx", (uint32_t) offsets.p1_off, (uint32_t) offsets.p2_off, (uint32_t) offsets.p3_off, (uint32_t) offsets.p4_off, table_addresses.p1->ents[offsets.p1_off]);
+            //    sprintf("\nP1 addr: %lx", table_addresses.p1);
+            //}
         } else {
             ret = 1;
             continue; // For some reason, the p1 pointer was null

@@ -13,7 +13,7 @@ LINKER = x86_64-elf-ld
 32BITLINKER = i686-elf-ld
 incPath = ~/DripOS/include
 GDB = gdb
-MEM = 6G # Memory for qemu
+MEM = 2G # Memory for qemu
 O_LEVEL = 3
 # -g: Use debugging symbols in gcc
 CFLAGS = -g -fno-pic               \
