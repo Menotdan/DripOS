@@ -9,13 +9,16 @@ snake_case for interface functions, except where following libc
 3. Include guards (using NAME_H format)
 
 ## C source files
-1. Includes
+1. Includes in the following order:
+Include for this source file's header
+Includes with brackets
+Other includes
 2. Global variables (try to minimize)
 3. Exposed functions
 4. Unexposed functions
 
 ## C header files
-1. Includes (in headers only include what you need for exposed functions and such)
+1. Includes (in headers only include what you need for exposed functions and types)
 2. Defines and macros
 3. Exposed variables
 4. Exposed functions with return type of void
