@@ -139,7 +139,7 @@ void isr_handler(registers_t *r) {
     asm volatile("movq %%cr2, %0;":"=r"(cr2));
     sprintf("\nRIP: %lx CR2: %lx ERR: %lu\n", r->rip, cr2, r->err_code);
     clear_screen();
-    kprintf("\nKernel panic!\nRAX: %lx RBX: %lx RCX: %lx\nRDX: %lx RDI: %lx RSI: %lx\nR08: %lx R09: %lx R10: %lx\nR11: %lx R12: %lx R13: %lx\nR14: %lx R15: %lx RBP: %lx\nRSP: %lx RIP: %lx FLG: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rbp, r->rsp, r->rip, r->rflags);
+    kprintf("\nKernel panic!\n\n%s\n\nRAX: %lx RBX: %lx RCX: %lx\nRDX: %lx RDI: %lx RSI: %lx\nR08: %lx R09: %lx R10: %lx\nR11: %lx R12: %lx R13: %lx\nR14: %lx R15: %lx RBP: %lx\nRSP: %lx RIP: %lx FLG: %lx", exception_messages[r->int_no], r->rax, r->rbx, r->rcx, r->rdx, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rbp, r->rsp, r->rip, r->rflags);
     kprintf("\n\n\n%lx %lx %lx\n%lx %lx %lx\n%lx\n\n\n\n\nActual dump:\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n");
     while (1);
 }
@@ -176,6 +176,9 @@ void irq_handler(registers_t *r) {
 
     if (r->int_no >= 40) port_byte_out(0xA0, 0x20); /* slave */
     port_byte_out(0x20, 0x20); /* master */
+    if (switch_task == 1) {
+        sprintf("\n[IRQ] switching task");
+    }
 }
 
 void irq_install() {

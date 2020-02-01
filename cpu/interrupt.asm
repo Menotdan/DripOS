@@ -12,6 +12,7 @@
 [extern free]
 [extern global_old_task]
 [extern task_size]
+[extern sprintf]
 
 %macro pushaq 0
     push rax      ; save current rax
@@ -48,6 +49,10 @@
     pop rbx       ; restore current rbx
     pop rax       ; restore current rax
 %endmacro
+
+section .rodata
+string db 10,'Switching task',0 ; "\nSwitching task"
+string_printf db 10,'Switch_task var: %u',0
 
 section .text
 
@@ -86,9 +91,17 @@ irq_common_stub:
                              ; pointer to a registers_t
     cld
     call irq_handler
+    mov rdi, string_printf
+    mov rsi, [switch_task]
+    call sprintf
     mov rbx, [switch_task]
     cmp rbx, 1
     jne testLabel
+    xor rbx, rbx
+    mov [switch_task], rbx
+
+    mov rdi, string
+    call sprintf
 
     mov rdi, rsp ; Param
     call swap_task ; Changes the interrupt frame
@@ -114,6 +127,8 @@ syscall_handler:
     mov rbx, [switch_task]
     cmp rbx, 1
     jne no_switch
+    xor rbx, rbx
+    mov [switch_task], rbx
     
     mov rdi, rsp ; Set parameter
     call swap_task ; Swap out values on the stack

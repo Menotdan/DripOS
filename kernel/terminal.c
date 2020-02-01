@@ -183,10 +183,10 @@ void execute_command(char input[]) {
         uint32_t tone_freq = atoi(afterSpace(input));
         play_sound(tone_freq, 500);
     } else if (strcmp(input, "bgtask") == 0) {
-        Task *temp_task1 = kmalloc(sizeof(Task));
+        //Task *temp_task1 = kmalloc(sizeof(Task));
         Task *temp_task2 = kmalloc(sizeof(Task));
 
-        task = create_task(temp_task1, bg_task, "Tick counter");
+        //task = create_task(temp_task1, bg_task, "Tick counter");
         task2 = create_task(temp_task2, bg_task2, "Tick counter");
 
         kprint("Background task started!");

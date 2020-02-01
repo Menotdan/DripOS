@@ -23,6 +23,7 @@ uint32_t switch_task = 0;
 
 static void timer_callback(registers_t *regs) {
     tick++;
+    sprintf("\nTick: %lu", tick);
     if (loaded == 1) {
         time_slice_left--;
         /* Unsleep sleeping processes */
@@ -52,6 +53,7 @@ static void timer_callback(registers_t *regs) {
             /* Set the switch task variable, which indicates to the assembly handler
             that the next task is ready to be loaded */
             switch_task = 1;
+            sprintf("\nSwitch task: %u", switch_task);
         }
     }
 
