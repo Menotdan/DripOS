@@ -8,7 +8,7 @@ int sound = 0;
 
 void sound_off() {
     if (sound_dis == true) {
-        nosound();
+        no_sound();
     }
 }
 

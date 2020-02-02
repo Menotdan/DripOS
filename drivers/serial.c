@@ -1,29 +1,28 @@
 #include "serial.h"
-#include <stdarg.h>
-#include <string.h>
 #include "../cpu/timer.h"
+#include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
-#define PORT 0x3f8   /* COM1 */
- 
-void init_serial() {
-   port_byte_out(PORT + 1, 0x00);    // Disable all interrupts
-   port_byte_out(PORT + 3, 0x80);    // Enable DLAB (set baud rate divisor)
-   port_byte_out(PORT + 0, 0x03);    // Set divisor to 3 (lo byte) 38400 baud
-   port_byte_out(PORT + 1, 0x00);    //                  (hi byte)
-   port_byte_out(PORT + 3, 0x03);    // 8 bits, no parity, one stop bit
-   port_byte_out(PORT + 2, 0xC7);    // Enable FIFO, clear them, with 14-byte threshold
-   port_byte_out(PORT + 4, 0x0B);    // IRQs enabled, RTS/DSR set
-}
-
+#define PORT 0x3f8 /* COM1 */
 
 int is_transmit_empty() {
-   return port_byte_in(PORT + 5) & 0x20;
+    return port_byte_in(PORT + 5) & 0x20;
 }
- 
+
+void init_serial() {
+    port_byte_out(PORT + 1, 0x00); // Disable all interrupts
+    port_byte_out(PORT + 3, 0x80); // Enable DLAB (set baud rate divisor)
+    port_byte_out(PORT + 0, 0x03); // Set divisor to 3 (lo byte) 38400 baud
+    port_byte_out(PORT + 1, 0x00); //                  (hi byte)
+    port_byte_out(PORT + 3, 0x03); // 8 bits, no parity, one stop bit
+    port_byte_out(PORT + 2, 0xC7); // Enable FIFO, clear them, with 14-byte threshold
+    port_byte_out(PORT + 4, 0x0B); // IRQs enabled, RTS/DSR set
+}
+
 void write_serial(char a) {
-   while (is_transmit_empty() == 0);
-   port_byte_out(PORT,a);
+    while (is_transmit_empty() == 0);
+    port_byte_out(PORT, a);
 }
 
 void sprint(char *message) {
@@ -102,7 +101,7 @@ void sprintf(char *message, ...) {
                 case 's':
                     sprint(va_arg(format_list, char *));
                     break;
-                default :
+                default:
                     break;
             }
         } else {

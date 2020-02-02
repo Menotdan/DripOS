@@ -21,3 +21,5 @@ programs
 isodir/*
 isodir
 dripmount
+.clang-format
+emit_format

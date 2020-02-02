@@ -24,12 +24,13 @@ void keyboard_handler(registers_t *r) {
     char is_mouse = (port_byte_in(0x64) & 0x20) >> 5;
     if (is_mouse == 0) {
         char scan = port_byte_in(0x60);
-        //sprintf("\nGot key %x", ((uint32_t) scan) & 0xff);
+        // sprintf("\nGot key %x", ((uint32_t) scan) & 0xff);
         if (loaded) {
             if (scan == 0xf) {
                 sprint_tasks();
             }
-            *(get_focused_task()->scancode_buffer + get_focused_task()->scancode_buffer_pos) = scan;
+            *(get_focused_task()->scancode_buffer +
+                get_focused_task()->scancode_buffer_pos) = scan;
             get_focused_task()->scancode_buffer_pos++;
         }
     } else {

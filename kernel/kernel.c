@@ -292,7 +292,7 @@ void kmain(multiboot_info_t* mbd, uint32_t end_of_code) {
     wait(15);
     play(580);
     wait(30);
-    nosound();
+    no_sound();
     update_display();
     clear_screen();
 

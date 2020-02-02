@@ -1,6 +1,6 @@
-#pragma once
-#include <stdbool.h>
-#include "../cpu/types.h"
+#ifndef KEYBOARD_H
+
+#define KEYBOARD_H
 #define BACKSPACE 0x0E
 #define ENTER 0x1C
 #define LSHIFT 0x2A
@@ -8,5 +8,4 @@
 #define KEYUPOFFSET 0x80
 #define SC_MAX 57
 
-//extern int keytimeout[256];
-void init_keyboard();
+#endif

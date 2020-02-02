@@ -1,8 +1,8 @@
-#include <stdlib.h>
 #include "sound.h"
 #include "../cpu/ports.h"
-#include "../cpu/timer.h"
 #include "../cpu/task.h"
+#include "../cpu/timer.h"
+#include <stdlib.h>
 
 uint32_t start_sound; // The start of a sound
 uint32_t len_sound; // Length of the sound
@@ -13,8 +13,8 @@ void play(uint32_t nFrequence) {
     if (nFrequence > 0) {
         Div = 1193180 / nFrequence;
         port_byte_out(0x43, 0xb6);
-        port_byte_out(0x42, (uint8_t) (Div) );
-        port_byte_out(0x42, (uint8_t) (Div >> 8));
+        port_byte_out(0x42, (uint8_t)(Div));
+        port_byte_out(0x42, (uint8_t)(Div >> 8));
 
         tmp = port_byte_in(0x61);
         if (tmp != (tmp | 3)) {
@@ -23,18 +23,17 @@ void play(uint32_t nFrequence) {
     } else {
         Div = 1193180 / 1;
         port_byte_out(0x43, 0xb6);
-        port_byte_out(0x42, (uint8_t) (Div) );
-        port_byte_out(0x42, (uint8_t) (Div >> 8));
+        port_byte_out(0x42, (uint8_t)(Div));
+        port_byte_out(0x42, (uint8_t)(Div >> 8));
 
         tmp = port_byte_in(0x61);
         if (tmp != (tmp | 3)) {
             port_byte_out(0x61, tmp | 3);
         }
     }
-    
 }
 
-void nosound() {
+void no_sound() {
     uint8_t tmp = port_byte_in(0x61) & 0xFC;
 
     port_byte_out(0x61, tmp);
@@ -62,12 +61,10 @@ void sound_handler() {
         /* If the sound is done playing, stop it, otherwise switch tasks */
         sleep(len_sound);
         if ((tick - start_sound >= len_sound)) {
-            nosound();
+            no_sound();
             exit();
-        } else
-        {
+        } else {
             sleep(10);
         }
-        
     }
 }
