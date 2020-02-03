@@ -25,23 +25,15 @@ enum DRIVES {
     SECONDARY_IDE = 0x170
 };
 
-enum RW {
-    READ = 0x20,
-    WRITE = 0x30
-};
+enum RW { READ = 0x20, WRITE = 0x30 };
 
-enum PIO {
-    p28 = 0,
-    p48 = 1
-};
+enum PIO { p28 = 0, p48 = 1 };
 
-typedef struct hdd_size
-{
+typedef struct hdd_size {
     uint32_t MAX_LBA;
     uint16_t MAX_LBA_HIGH;
     uint8_t HIGH_USED;
-} __attribute__ ((packed)) hdd_size_t;
-
+} __attribute__((packed)) hdd_size_t;
 
 void clear_ata_buffer();
 int ata_pio28(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr);

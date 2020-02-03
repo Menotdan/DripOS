@@ -1,12 +1,12 @@
-#include <stdint.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <libc.h>
-#include <time.h>
 #include "../cpu/isr.h"
+#include <libc.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <time.h>
 
 #define IDE_MASTER 0
-#define IDE_SLAVE  1
+#define IDE_SLAVE 1
 
 #define IDE_DEFAULT_PRIMARY 0x1F0
 #define IDE_DEFAULT_SECONDARY 0x170
@@ -33,9 +33,9 @@
 #define MASTER_DRIVE_DETECT 0xA0 // Master drive detection
 #define SLAVE_DRIVE_DETECT 0xB0 // Slave drive detection
 
-#define ATA_SR_BSY     0x80    // Busy
-#define ATA_SR_DRQ     0x08    // Data request ready
-#define ATA_SR_ERR     0x01    // Error
+#define ATA_SR_BSY 0x80 // Busy
+#define ATA_SR_DRQ 0x08 // Data request ready
+#define ATA_SR_ERR 0x01 // Error
 
 #define ATA_READ 1
 #define ATA_WRITE 2
@@ -69,8 +69,8 @@ uint16_t tmp;
 uint16_t readB;
 
 void clear_ata_buffer() {
-    for(int i=0; i<256; i++) {
-        ata_buffer[i]=0;
+    for (int i = 0; i < 256; i++) {
+        ata_buffer[i] = 0;
     }
 }
 
@@ -91,58 +91,66 @@ void init_hdd() {
     register_interrupt_handler(IRQ15, secondary_handler);
 }
 
+void ata_wait_bsy_clear(uint16_t base) {
+    while ((port_byte_in(base + ATA_PORT_ALT_STATUS) & (1 << 7))); // wait for BSY
+}
+
+void ata_wait_rdy_set(uint16_t base) {
+    while (!(port_byte_in(base + ATA_PORT_ALT_STATUS) & (1 << 6))); // wait for rdy
+}
+
+void ata_wait_drq_set(uint16_t base) {
+    while (!(port_byte_in(base + ATA_PORT_ALT_STATUS) & (1 << 3))); // wait for drq
+}
+
+void ata_delay(uint16_t base) {
+    /* 400 ns delay to wait for drive to set port */
+    port_byte_in(base + ATA_PORT_ALT_STATUS);
+    port_byte_in(base + ATA_PORT_ALT_STATUS);
+    port_byte_in(base + ATA_PORT_ALT_STATUS);
+    port_byte_in(base + ATA_PORT_ALT_STATUS);
+    port_byte_in(base + ATA_PORT_ALT_STATUS);
+}
+
 int ata_pio28(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr) {
     if (nodrives == 0) {
-        int cycle=0;
-        port_byte_out(base+ATA_PORT_DRV, drive);
-        //PIO28
-        port_byte_out(base+ATA_PORT_FEATURES, 0x00);
-        port_byte_out(base+ATA_PORT_SCT_COUNT, 0x01);
-        port_byte_out(base+ATA_PORT_SCT_NUMBER, (unsigned char)addr);
-        port_byte_out(base+ATA_PORT_CYL_LOW, (unsigned char)(addr >> 8));
-        port_byte_out(base+ATA_PORT_CYL_HIGH, (unsigned char)(addr >> 16));
-        //type
-        if(type==ATA_READ) {
-            port_byte_out(base+ATA_PORT_COMMAND, 0x20);  // Send command
-        }
-        else {
-            port_byte_out(base+ATA_PORT_COMMAND, 0x30);
-        }
-
-        //wait for BSY clear and DRQ set
-        cycle=0;
-        for(int i=0; i<1000; i++) {
-            port_byte_in(base+ATA_PORT_ALT_STATUS);  //Delay
-            port_byte_in(base+ATA_PORT_ALT_STATUS);
-            port_byte_in(base+ATA_PORT_ALT_STATUS);
-            port_byte_in(base+ATA_PORT_ALT_STATUS);
-            if( (port_byte_in(base+ATA_PORT_ALT_STATUS) & 0x88)==0x08 ) {  //drq is set
-                cycle=1;
-                break;    
-            }    
-        }
-        if(cycle==0) {
-            port_byte_in(base+ATA_PORT_ALT_STATUS); //Delay so the drive can set its port values
-            port_byte_in(base+ATA_PORT_ALT_STATUS);
-            port_byte_in(base+ATA_PORT_ALT_STATUS);
-            port_byte_in(base+ATA_PORT_ALT_STATUS);
-            if( (port_byte_in(base+ATA_PORT_ALT_STATUS) & 0x01)==0x01 ) {
-                kprint("");
-            } 
-            return 1;
+        int cycle = 0;
+        /* Wait for bits, set drive, wait again, and send commands */
+        ata_wait_bsy_clear(base);
+        ata_wait_rdy_set(base);
+        port_byte_out(base + ATA_PORT_DRV, drive | ((uint8_t)(addr >> 24)) & 0xF);
+        /* 400 ns delay for the drive port to get set */
+        ata_delay(base);
+        ata_wait_bsy_clear(base);
+        ata_wait_rdy_set(base);
+        /* Send sector count data and such */
+        port_byte_out(base + ATA_PORT_FEATURES, 0x00);
+        port_byte_out(base + ATA_PORT_SCT_COUNT, 0x01);
+        port_byte_out(base + ATA_PORT_SCT_NUMBER, (unsigned char)addr);
+        port_byte_out(base + ATA_PORT_CYL_LOW, (unsigned char)(addr >> 8));
+        port_byte_out(base + ATA_PORT_CYL_HIGH, (unsigned char)(addr >> 16));
+        // type of operation
+        if (type == ATA_READ) {
+            port_byte_out(base + ATA_PORT_COMMAND, 0x20); // Send command
+        } else {
+            port_byte_out(base + ATA_PORT_COMMAND, 0x30);
         }
 
-        if( (port_byte_in(base+ATA_PORT_ALT_STATUS) & 0x01)==0x01 ) {
-            kprint("");
+        /* Wait for BSY clear and DRQ set */
+
+        ata_wait_bsy_clear(base);
+        ata_wait_drq_set(base);
+
+        /* If the drive error bit is set */
+        if (port_byte_in(base + ATA_PORT_ALT_STATUS) & 0x01) {
+            sprintf("\n[ATA]: Drive error bit set (PIO 28)");
             return 2;
         }
 
-        for (int idx = 0; idx < 256; idx++)
-        {
-            if(type==ATA_READ) {
+        for (int idx = 0; idx < 256; idx++) {
+            if (type == ATA_READ) {
                 ata_buffer[idx] = port_word_in(base + ATA_PORT_DATA);
-            }
-            else {
+            } else {
                 port_word_out(base + ATA_PORT_DATA, ata_buffer[idx]);
             }
         }
@@ -156,64 +164,46 @@ int ata_pio28(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr) {
 
 int ata_pio48(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr) {
     if (nodrives == 0) {
-        int cycle=0;
-        port_byte_out(base+ATA_PORT_DRV, drive);
-        //PIO48
-        port_byte_out(base+ATA_PORT_FEATURES, 0x00); // NULL 1
-        port_byte_out(base+ATA_PORT_FEATURES, 0x00); // NULL 2
-        port_byte_out(base+ATA_PORT_SCT_COUNT, 0x0); // High sector count
-        port_byte_out(base+ATA_PORT_SCT_NUMBER, 0); // High sector num
-        port_byte_out(base+ATA_PORT_CYL_LOW, 0); // High low Cyl
-        port_byte_out(base+ATA_PORT_CYL_HIGH, 0); // High high Cyl
-        port_byte_out(base+ATA_PORT_SCT_COUNT, 0x01); // Low sector count
-        port_byte_out(base+ATA_PORT_SCT_NUMBER, (unsigned char)addr); // Low sector num
-        port_byte_out(base+ATA_PORT_CYL_LOW, (unsigned char)(addr >> 8)); // Low low Cyl
-        port_byte_out(base+ATA_PORT_CYL_HIGH, (unsigned char)(addr >> 16)); // Low high Cyl
-        //type
-        if(type==ATA_READ) {
-            port_byte_out(base+ATA_PORT_COMMAND, 0x24);  // Send command
-        }
-        else {
-            port_byte_out(base+ATA_PORT_COMMAND, 0x34);
-        }
-
-        //wait for BSY clear and DRQ set
-        cycle=0;
-        for(int i=0; i<1000; i++) {
-            port_byte_in(base+ATA_PORT_ALT_STATUS);  //Delay
-            port_byte_in(base+ATA_PORT_ALT_STATUS);
-            port_byte_in(base+ATA_PORT_ALT_STATUS);
-            port_byte_in(base+ATA_PORT_ALT_STATUS);
-            if( (port_byte_in(base+ATA_PORT_ALT_STATUS) & 0x88)==0x08 ) {  //drq is set
-                cycle=1;
-                break;    
-            }    
-        }
-        if(cycle==0) {
-            port_byte_in(base+ATA_PORT_ALT_STATUS); //Delay so the drive can set its port values
-            port_byte_in(base+ATA_PORT_ALT_STATUS);
-            port_byte_in(base+ATA_PORT_ALT_STATUS);
-            port_byte_in(base+ATA_PORT_ALT_STATUS);
-            if( (port_byte_in(base+ATA_PORT_ALT_STATUS) & 0x01)==0x01 ) {
-                kprint("");
-            } 
-            return 1;
+        int cycle = 0;
+        ata_wait_bsy_clear(base);
+        ata_wait_rdy_set(base);
+        port_byte_out(base + ATA_PORT_DRV, drive);
+        ata_delay(base);
+        ata_wait_bsy_clear(base);
+        ata_wait_rdy_set(base);
+        // Sector number and count for 48 bit PIO
+        port_byte_out(base + ATA_PORT_FEATURES, 0x00); // NULL 1
+        port_byte_out(base + ATA_PORT_FEATURES, 0x00); // NULL 2
+        port_byte_out(base + ATA_PORT_SCT_COUNT, 0x0); // High sector count
+        port_byte_out(base + ATA_PORT_SCT_NUMBER, 0); // High sector num
+        port_byte_out(base + ATA_PORT_CYL_LOW, 0); // High low Cyl
+        port_byte_out(base + ATA_PORT_CYL_HIGH, 0); // High high Cyl
+        port_byte_out(base + ATA_PORT_SCT_COUNT, 0x01); // Low sector count
+        port_byte_out(base + ATA_PORT_SCT_NUMBER, (unsigned char)addr); // Low sector num
+        port_byte_out(base + ATA_PORT_CYL_LOW, (unsigned char)(addr >> 8)); // Low low Cyl
+        port_byte_out(
+            base + ATA_PORT_CYL_HIGH, (unsigned char)(addr >> 16)); // Low high Cyl
+        // type
+        if (type == ATA_READ) {
+            port_byte_out(base + ATA_PORT_COMMAND, 0x24); // Send command
+        } else {
+            port_byte_out(base + ATA_PORT_COMMAND, 0x34);
         }
 
-        if( (port_byte_in(base+ATA_PORT_ALT_STATUS) & 0x01)==0x01 ) {
-            kprint("");
+        ata_wait_bsy_clear(base);
+        ata_wait_drq_set(base);
+
+        if (port_byte_in(base + ATA_PORT_ALT_STATUS) & 0x01) {
+            sprintf("\n[ATA]: Drive error bit set (PIO 48)");
             return 2;
         }
 
-        if(type==ATA_READ) {
-            for (int idx = 0; idx < 256; idx++)
-            {
+        if (type == ATA_READ) {
+            for (int idx = 0; idx < 256; idx++) {
                 ata_buffer[idx] = port_word_in(base + ATA_PORT_DATA);
             }
-        }
-        else {
-            for (int idx = 0; idx < 256; idx++)
-            {
+        } else {
+            for (int idx = 0; idx < 256; idx++) {
                 port_word_out(base + ATA_PORT_DATA, ata_buffer[idx]);
             }
         }
@@ -222,65 +212,6 @@ int ata_pio48(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr) {
         kprint("No drives found on this system!");
         return 1;
     }
-}
-
-void new_scan() {
-    mp = ata_pio28(0x1F0, ATA_READ, 0xE0, 0x0);
-    ms = ata_pio28(0x1F0, ATA_READ, 0xF0, 0x0);
-    sp = ata_pio28(0x170, ATA_READ, 0xE0, 0x0);
-    ss = ata_pio28(0x170, ATA_READ, 0xF0, 0x0);
-    mp48 = ata_pio48(0x1F0, ATA_READ, 0x40, 0x0);
-    ms48 = ata_pio48(0x1F0, ATA_READ, 0x50, 0x0);
-    sp48 = ata_pio48(0x170, ATA_READ, 0x40, 0x0);
-    ss48 = ata_pio48(0x170, ATA_READ, 0x50, 0x0);
-    // PIO28 Drives
-    if (mp == 0) {
-        ata_drive = MASTER_DRIVE;
-        ata_controler = PRIMARY_IDE;
-        ata_pio = 0;
-    }
-    else if (ms == 0) {
-        ata_drive = SLAVE_DRIVE;
-        ata_controler = PRIMARY_IDE;
-        ata_pio = 0;
-    }
-    else if (sp == 0) {
-        ata_drive = MASTER_DRIVE;
-        ata_controler = SECONDARY_IDE;
-        ata_pio = 0;
-    }
-    else if (ss == 0) {
-        ata_drive = SLAVE_DRIVE;
-        ata_controler = SECONDARY_IDE;
-        ata_pio = 0;
-    }
-    // PIO48 Drives
-    else if (mp48 == 0) {
-        ata_drive = MASTER_DRIVE_PIO48;
-        ata_controler = PRIMARY_IDE;
-        ata_pio = 1;
-    }
-    else if (ms48 == 0) {
-        ata_drive = SLAVE_DRIVE_PIO48;
-        ata_controler = PRIMARY_IDE;
-        ata_pio = 1;
-    }
-    else if (sp48 == 0) {
-        ata_drive = MASTER_DRIVE_PIO48;
-        ata_controler = SECONDARY_IDE;
-        ata_pio = 1;
-    }
-    else if (ss48 == 0) {
-        ata_drive = SLAVE_DRIVE_PIO48;
-        ata_controler = SECONDARY_IDE;
-        ata_pio = 1;
-    } else {
-        clear_ata_buffer();
-        nodrives = 1;
-        return;
-    }
-    clear_ata_buffer();
-    return;
 }
 
 void drive_scan() {
@@ -320,7 +251,7 @@ void drive_scan() {
         // Detect Slave Drive
         port_byte_out(ATA_PORT_PRIMARY_DRIVE_DETECT, SLAVE_DRIVE_DETECT);
         wait(1);
-        //uint16_t tmp;
+        // uint16_t tmp;
         tmp = port_byte_in(ATA_PORT_PRIMARY_STATUS);
         if (tmp & 0x40) {
             // Slave drive exists
@@ -434,37 +365,36 @@ void drive_scan() {
         nodrives = 1;
         return;
     }
-
 }
 
 hdd_size_t drive_sectors(uint8_t devP, uint8_t controllerP) {
     hdd_size_t size;
-    uint16_t controller = 0x170 + controllerP*0x80;
+    uint16_t controller = 0x170 + controllerP * 0x80;
+    /* Unused */
     uint16_t deviceBit = (devP << 4) + (1 << 6);
-    if (deviceBit == 0) {
-
-    }
+    if (deviceBit == 0);
     read(0, 0); // Start drive
-    while ((port_byte_in(controller+7) & 0x40) == 0); // Wait for the drive to be ready
+    ata_wait_bsy_clear(controller);
+    ata_wait_rdy_set(controller);
     if (ata_pio == 0) {
         port_byte_out(controller + 7, 0xF8); // Send the command
-        while ((port_byte_in(controller + 7) & 0x80) != 0); // Wait for BSY to clear
-        size.MAX_LBA = (uint32_t)port_byte_in(controller+3);
-        size.MAX_LBA += (uint32_t)port_byte_in(controller+4) <<8;
-        size.MAX_LBA += (uint32_t)port_byte_in(controller+5) <<16;
-        size.MAX_LBA += ((uint32_t)port_byte_in(controller+6) & 0xF) <<24;
+        ata_wait_bsy_clear(controller);
+        size.MAX_LBA = (uint32_t)port_byte_in(controller + 3);
+        size.MAX_LBA += (uint32_t)port_byte_in(controller + 4) << 8;
+        size.MAX_LBA += (uint32_t)port_byte_in(controller + 5) << 16;
+        size.MAX_LBA += ((uint32_t)port_byte_in(controller + 6) & 0xF) << 24;
     } else {
         port_byte_out(controller + 7, 0x27); // Send the command
-        while ((port_byte_in(controller + 7) & 0x80) != 0); // Wait for BSY to clear
-        size.MAX_LBA =  (uint32_t)port_byte_in(controller+3);
-        size.MAX_LBA += (uint32_t)port_byte_in(controller+4) <<8;
-        size.MAX_LBA += (uint32_t)port_byte_in(controller+5) <<16;
+        ata_wait_bsy_clear(controller);
+        size.MAX_LBA = (uint32_t)port_byte_in(controller + 3);
+        size.MAX_LBA += (uint32_t)port_byte_in(controller + 4) << 8;
+        size.MAX_LBA += (uint32_t)port_byte_in(controller + 5) << 16;
 
-        port_byte_out(controller+2, 0x80); // Set HOB to 1
+        port_byte_out(controller + 2, 0x80); // Set HOB to 1
 
-        size.MAX_LBA += (uint32_t)port_byte_in(controller+3)<<24;
-        size.MAX_LBA_HIGH = (uint32_t)port_byte_in(controller+4);
-        size.MAX_LBA_HIGH += (uint32_t)port_byte_in(controller+5) << 8;
+        size.MAX_LBA += (uint32_t)port_byte_in(controller + 3) << 24;
+        size.MAX_LBA_HIGH = (uint32_t)port_byte_in(controller + 4);
+        size.MAX_LBA_HIGH += (uint32_t)port_byte_in(controller + 5) << 8;
         size.HIGH_USED = 1;
     }
     return size;
