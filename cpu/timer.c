@@ -1,29 +1,29 @@
 #include "timer.h"
+#include "../drivers/keyboard.h"
+#include "../drivers/screen.h"
+#include "../drivers/sound.h"
+#include "../drivers/stdin.h"
+#include "../kernel/kernel.h"
+#include "../libc/function.h"
 #include "isr.h"
 #include "ports.h"
-#include "../libc/function.h"
-#include "../drivers/screen.h"
-#include "../drivers/keyboard.h"
-#include "../drivers/stdin.h"
-#include "../drivers/sound.h"
 #include "soundManager.h"
-#include <string.h>
-#include "../kernel/kernel.h"
 #include "task.h"
+#include <string.h>
 
-uint64_t tick = 0; //Ticks
-uint64_t prev = 0; //Previous ticks for wait() function
-int lSnd = 0; //Length of sound
-int task = 0; //is task on?
-int pSnd = 0; //ticks before sound started
+uint64_t tick = 0; // Ticks
+uint64_t prev = 0; // Previous ticks for wait() function
+int lSnd = 0; // Length of sound
+int task = 0; // is task on?
+int pSnd = 0; // ticks before sound started
 uint32_t okok = 0;
 uint32_t time_slice_left = 1;
-//registers_t *temp;
+// registers_t *temp;
 uint32_t switch_task = 0;
 
 static void timer_callback(registers_t *regs) {
     tick++;
-    //sprintf("\nTick: %lu", tick);
+    // sprintf("\nTick: %lu", tick);
     if (loaded == 1) {
         time_slice_left--;
         /* Unsleep sleeping processes */
@@ -37,10 +37,10 @@ static void timer_callback(registers_t *regs) {
             }
             iterator = iterator->next;
         }
-        //sprintf("\nTime slice left: %u", time_slice_left);
+        // sprintf("\nTime slice left: %u", time_slice_left);
         running_task->ticks_cpu_time++;
         if (time_slice_left == 0 && loaded == 1) {
-            //sprintf("\nSwitching");
+            // sprintf("\nSwitching");
             if (running_task->next->priority == NORMAL) {
                 time_slice_left = 8; // 16 ms
             }
@@ -53,7 +53,7 @@ static void timer_callback(registers_t *regs) {
             /* Set the switch task variable, which indicates to the assembly handler
             that the next task is ready to be loaded */
             switch_task = 1;
-            //sprintf("\nSwitch task: %u", switch_task);
+            // sprintf("\nSwitch task: %u", switch_task);
         }
     }
 
@@ -66,8 +66,8 @@ void config_timer(uint32_t frequency) {
 
     /* Caluclate the bytes to send to the PIT,
     where the bytes indicate the frequency */
-    uint8_t low  = (uint8_t)(divisor & 0xFF);
-    uint8_t high = (uint8_t)( (divisor >> 8) & 0xFF);
+    uint8_t low = (uint8_t)(divisor & 0xFF);
+    uint8_t high = (uint8_t)((divisor >> 8) & 0xFF);
 
     /* Send the command to set the frequency */
     port_byte_out(0x43, 0x36); /* Command port */
@@ -83,7 +83,7 @@ void init_timer(uint32_t freq) {
 
 void wait(uint32_t ms) {
     prev = tick;
-    while(tick < ms*10 + prev) {
+    while (tick < ms * 10 + prev) {
         asm volatile("hlt");
     }
 }
@@ -91,6 +91,6 @@ void wait(uint32_t ms) {
 void sleep(uint32_t ms) {
     running_task->state = SLEEPING;
     running_task->waiting = ms + tick;
-    //sprintf("\nTask %u sleeping for %u ms", running_task->pid, ms);
+    // sprintf("\nTask %u sleeping for %u ms", running_task->pid, ms);
     yield();
 }

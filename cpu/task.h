@@ -1,18 +1,18 @@
 #ifndef TASK_H
 #define TASK_H
-#include <stdint.h>
-#include "isr.h"
-#include "../drivers/vesa.h"
-#include "../libc/mem.h"
-#include "../drivers/screen.h"
-#include <string.h>
-#include "../kernel/kernel.h"
-#include "../kernel/terminal.h"
 #include "../cpu/isr.h"
+#include "../drivers/screen.h"
 #include "../drivers/serial.h"
 #include "../drivers/sound.h"
-#include <debug.h>
+#include "../drivers/vesa.h"
+#include "../kernel/kernel.h"
+#include "../kernel/terminal.h"
+#include "../libc/mem.h"
+#include "isr.h"
 #include "timer.h"
+#include <debug.h>
+#include <stdint.h>
+#include <string.h>
 
 /* Task states */
 #define RUNNING 0
@@ -28,11 +28,12 @@
 /* Cursor max (cursor pos wont be updated for tasks with a cursor_pos greater than this) */
 #define CURSOR_MAX 4000000000
 extern void init_tasking();
- 
+
 typedef struct {
-    uint64_t rax, rbx, rcx, rdx, rsi, rdi, rsp, rbp, r8, r9, r10, r11, r12, r13, r14, r15, rip, rflags, cr3;
+    uint64_t rax, rbx, rcx, rdx, rsi, rdi, rsp, rbp, r8, r9, r10, r11, r12, r13, r14, r15,
+        rip, rflags, cr3;
 } __attribute__((__packed__)) Registers;
- 
+
 typedef struct Task {
     Registers regs;
     uint8_t *start_esp; // The original allocated memory for the stack of this process
@@ -42,7 +43,8 @@ typedef struct Task {
     uint8_t priority;
     uint32_t pid; // Process id of the task
     uint8_t state; // The state the task is in
-    uint32_t waiting; // If state is SLEEPING, this is the tick to restart the task, if the state is IRQ_WAIT, this is the IRQ that it is waiting for
+    uint32_t waiting; // If state is SLEEPING, this is the tick to restart the task, if the
+                      // state is IRQ_WAIT, this is the IRQ that it is waiting for
     uint32_t cursor_pos;
     vesa_buffer_t buffer;
     char name[21];
@@ -54,8 +56,8 @@ typedef struct Task {
 
 void init_tasking();
 extern uint32_t create_task(Task *task, void (*main)(), char *task_name);
-extern int32_t kill_task(uint32_t pid); // 
-extern void yield(); // Yield, will be optional
+extern int32_t kill_task(uint32_t pid); // Kills a task
+extern void yield(); // Yield, will be optional, mostly used in kernel functions
 extern void switchTask(); // The function which actually switches
 extern void print_tasks(); // Print all the tasks
 void sprint_tasks();

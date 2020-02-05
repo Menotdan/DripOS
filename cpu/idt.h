@@ -20,7 +20,7 @@ typedef struct {
     uint16_t middle_offset; /* Middle 16 bits of handler function address */
     uint32_t high_offset; /* Highest 32 bits of handler function address */
     uint32_t end0;
-} __attribute__((packed)) idt_gate_t ;
+} __attribute__((packed)) idt_gate_t;
 
 /* A pointer to the array of interrupt handlers.
  * Assembly instruction 'lidt' will read it */
@@ -32,7 +32,6 @@ typedef struct {
 #define IDT_ENTRIES 256
 idt_gate_t idt[IDT_ENTRIES];
 idt_register_t idt_reg;
-
 
 /* Functions implemented in idt.c */
 void set_idt_gate(int n, uint64_t handler);

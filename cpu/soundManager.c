@@ -15,7 +15,7 @@ void sound_off() {
 void sound_on() {
     if (sound_en == true) {
         if (sound > 0) {
-            play((uint32_t) sound);
+            play((uint32_t)sound);
         }
     }
 }

@@ -10,7 +10,7 @@ uint32_t global_esp = 0;
 uint32_t global_esp_old = 0;
 uint32_t task_size = sizeof(Task);
 Task *global_old_task;
-Task *dead_task_queue = (Task *) 0;
+Task *dead_task_queue = (Task *)0;
 Registers *regs;
 Task *focus_tasks;
 extern uint32_t suicide_stack;
@@ -59,8 +59,10 @@ Task *get_focused_task() {
 
 void init_tasking() {
     // Get EFLAGS and CR3
-    asm volatile("movq %%cr3, %%rax; movq %%rax, %0;":"=m"(temp.regs.cr3)::"%rax"); // No paging yet
-    asm volatile("pushfq; movq (%%rsp), %%rax; movq %%rax, %0; popfq;":"=m"(temp.regs.rflags)::"%rax");
+    asm volatile("movq %%cr3, %%rax; movq %%rax, %0;"
+                 : "=m"(temp.regs.cr3)::"%rax"); // No paging yet
+    asm volatile("pushfq; movq (%%rsp), %%rax; movq %%rax, %0; popfq;"
+                 : "=m"(temp.regs.rflags)::"%rax");
 
     create_task(&main_task, otherMain, "Idle task");
     create_task(&kickstart, 0, "no");
@@ -80,9 +82,9 @@ void init_tasking() {
     running_task = &kickstart;
     otherMain();
 }
- 
-uint32_t create_task(Task *task, void (*main)(), char *task_name) {//, uint32_t *pagedir) { // No paging yet
-    asm volatile("movq %%cr3, %%rax; movq %%rax, %0;":"=m"(temp.regs.cr3)::"%rax");
+
+uint32_t create_task(Task *task, void (*main)(), char *task_name) {
+    asm volatile("movq %%cr3, %%rax; movq %%rax, %0;" : "=m"(temp.regs.cr3)::"%rax");
     task->regs.rax = 0;
     task->regs.rbx = 0;
     task->regs.rcx = 0;
@@ -98,9 +100,10 @@ uint32_t create_task(Task *task, void (*main)(), char *task_name) {//, uint32_t 
     task->regs.r14 = 0;
     task->regs.r15 = 0;
     task->regs.rflags = temp.regs.rflags;
-    task->regs.rip = (uint64_t) main;
+    task->regs.rip = (uint64_t)main;
     task->regs.cr3 = (uint64_t)temp.regs.cr3;
-    task->regs.rsp = ((uint64_t)kmalloc(0x4000) & (~0xf)) + 0x4000; // Allocate 16KB for the process stack
+    task->regs.rsp = ((uint64_t)kmalloc(0x4000) & (~0xf)) +
+        0x4000; // Allocate 16KB for the process stack
     task->start_esp = (uint8_t *)task->regs.rsp - 0x4000;
     task->scancode_buffer = kmalloc(512); // 512 chars for each task's keyboard buffer
     task->regs.rbp = 0;
@@ -243,7 +246,6 @@ void print_tasks() {
     }
 }
 
-
 /* Task selector */
 void pick_task() {
     // Select new running task
@@ -252,20 +254,23 @@ void pick_task() {
     Task *temp_iterator = (&main_task)->next;
 
     while (temp_iterator->pid != 0) {
-        //sprintf("\nLowest time: %x Lowest time name: %s\nIterator name: %s", lowest_time, lowest_time_task->name, temp_iterator->name);
-        if ((temp_iterator->since_last_task < lowest_time) && temp_iterator->state == RUNNING) {
+        // sprintf("\nLowest time: %x Lowest time name: %s\nIterator name: %s", lowest_time,
+        // lowest_time_task->name, temp_iterator->name);
+        if ((temp_iterator->since_last_task < lowest_time) &&
+            temp_iterator->state == RUNNING) {
             lowest_time = temp_iterator->since_last_task;
             lowest_time_task = temp_iterator;
         }
         temp_iterator = temp_iterator->next;
     }
-    //sprintf("\nPID: %u\nState: %u", lowest_time_task->pid, (uint32_t) lowest_time_task->state);
+    // sprintf("\nPID: %u\nState: %u", lowest_time_task->pid, (uint32_t)
+    // lowest_time_task->state);
     if (lowest_time_task->state != RUNNING) {
         sprintf("\nError");
         while (1) {
             asm volatile("int $22"); // yes
         }
-    } 
+    }
     running_task = lowest_time_task;
     running_task->since_last_task += 1; // Times selected since last task started
 }
@@ -281,7 +286,7 @@ void swap_task(registers_t *r) {
     regs->rdi = r->rdi;
     regs->rsi = r->rsi;
     regs->rip = r->rip;
-    //sprintf("\nOld RIP: %lx", regs->rip);
+    // sprintf("\nOld RIP: %lx", regs->rip);
     regs->rsp = r->rsp;
     regs->rbp = r->rbp;
     regs->r8 = r->r8;
@@ -292,7 +297,7 @@ void swap_task(registers_t *r) {
     regs->r13 = r->r13;
     regs->r14 = r->r14;
     regs->r15 = r->r15;
-    if (running_task->cursor_pos < CURSOR_MAX)  {
+    if (running_task->cursor_pos < CURSOR_MAX) {
         running_task->cursor_pos = get_cursor_offset();
     }
     running_task->buffer = current_buffer;
@@ -309,7 +314,7 @@ void swap_task(registers_t *r) {
     r->rbp = regs->rbp;
     r->rsp = regs->rsp;
     r->rip = regs->rip;
-    //sprintf("\nNew RIP: %lx", r->rip);
+    // sprintf("\nNew RIP: %lx", r->rip);
     r->r8 = regs->r8;
     r->r9 = regs->r9;
     r->r10 = regs->r10;

@@ -1,16 +1,16 @@
-#include <serial.h>
-#include <libc.h>
 #include "isr.h"
-#include "idt.h"
-#include "../drivers/screen.h"
 #include "../drivers/keyboard.h"
-#include <string.h>
-#include "timer.h"
-#include "ports.h"
+#include "../drivers/screen.h"
 #include "../fs/hdd.h"
 #include "../kernel/kernel.h"
+#include "idt.h"
+#include "ports.h"
 #include "task.h"
+#include "timer.h"
 #include <debug.h>
+#include <libc.h>
+#include <serial.h>
+#include <string.h>
 
 isr_t interrupt_handlers[256];
 isr_t handler;
@@ -62,7 +62,7 @@ void isr_install() {
     port_byte_out(0x21, 0x01);
     port_byte_out(0xA1, 0x01);
     port_byte_out(0x21, 0x0);
-    port_byte_out(0xA1, 0x0); 
+    port_byte_out(0xA1, 0x0);
 
     // Install the IRQs
     set_idt_gate(32, (uint64_t)irq0);
@@ -81,7 +81,7 @@ void isr_install() {
     set_idt_gate(45, (uint64_t)irq13);
     set_idt_gate(46, (uint64_t)irq14);
     set_idt_gate(47, (uint64_t)irq15);
-    
+
     // Syscall handler
     set_idt_gate(0x80, (uint64_t)sys);
 
@@ -89,58 +89,40 @@ void isr_install() {
 }
 
 /* To print the message which defines every exception */
-char *exception_messages[] = {
-    "Division By Zero",
-    "Debug",
-    "Non Maskable Interrupt",
-    "Breakpoint",
-    "Into Detected Overflow",
-    "Out of Bounds",
-    "Invalid Opcode",
+char *exception_messages[] = {"Division By Zero", "Debug", "Non Maskable Interrupt",
+    "Breakpoint", "Into Detected Overflow", "Out of Bounds", "Invalid Opcode",
     "No Coprocessor",
 
-    "Double Fault",
-    "Coprocessor Segment Overrun",
-    "Bad TSS",
-    "Segment Not Present",
-    "Stack Fault",
-    "General Protection Fault",
-    "Page Fault",
-    "Unknown Interrupt",
+    "Double Fault", "Coprocessor Segment Overrun", "Bad TSS", "Segment Not Present",
+    "Stack Fault", "General Protection Fault", "Page Fault", "Unknown Interrupt",
 
-    "Coprocessor Fault",
-    "Alignment Check",
-    "Machine Check",
-    "Reserved",
-    "Assert Error",
-    "Out of memory",
-    "Bad selected task state",
-    "Reserved",
+    "Coprocessor Fault", "Alignment Check", "Machine Check", "Reserved", "Assert Error",
+    "Out of memory", "Bad selected task state", "Reserved",
 
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved"
-};
+    "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved",
+    "Reserved"};
 
 void isr_handler(registers_t *r) {
-    //sprint("\nCalls to switch: ");
-    //sprint_uint(global_esp);
-    //crash_screen(r, exception_messages[r->int_no], 1);
     sprint("\nException! Number: ");
     sprint_uint(r->int_no);
     sprint(" Message: ");
     sprint(exception_messages[r->int_no]);
     uint64_t cr2;
-    asm volatile("movq %%cr2, %0;":"=r"(cr2));
+    asm volatile("movq %%cr2, %0;" : "=r"(cr2));
     sprintf("\nRIP: %lx CR2: %lx ERR: %lu\n", r->rip, cr2, r->err_code);
-    //clear_screen();
-    sprintf("\nKernel panic!\n\n%s\n\nRAX: %lx RBX: %lx RCX: %lx\nRDX: %lx RDI: %lx RSI: %lx\nR08: %lx R09: %lx R10: %lx\nR11: %lx R12: %lx R13: %lx\nR14: %lx R15: %lx RBP: %lx\nRSP: %lx RIP: %lx FLG: %lx", exception_messages[r->int_no], r->rax, r->rbx, r->rcx, r->rdx, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rbp, r->rsp, r->rip, r->rflags);
-    sprintf("\n\n\n%lx %lx %lx\n%lx %lx %lx\n%lx\n\n\n\n\nActual dump:\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n");
+    clear_screen();
+    kprintf("\nKernel panic!\n\n%s\n\nRAX: %lx RBX: %lx RCX: %lx\nRDX: %lx RDI: %lx RSI: "
+            "%lx\nR08: %lx R09: %lx R10: %lx\nR11: %lx R12: %lx R13: %lx\nR14: %lx R15: "
+            "%lx RBP: %lx\nRSP: %lx RIP: %lx FLG: %lx",
+        exception_messages[r->int_no], r->rax, r->rbx, r->rcx, r->rdx, r->rdi, r->rsi,
+        r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rbp, r->rsp,
+        r->rip, r->rflags);
+    kprintf("\n\n\n%lx %lx %lx\n%lx %lx %lx\n%lx\n\n\n\n\nActual dump:\n%lx %lx %lx\n%lx "
+            "%lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx "
+            "%lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx "
+            "%lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx "
+            "%lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx %lx %lx\n%lx "
+            "%lx %lx\n");
     while (1);
 }
 
@@ -158,17 +140,12 @@ void irq_handler(registers_t *r) {
             while (iterator->pid != 0) {
                 /* Set all the tasks waiting for this IRQ to Running */
                 if (iterator->state == IRQ_WAIT) {
-                    if (iterator->waiting == (r->int_no-32)) {
+                    if (iterator->waiting == (r->int_no - 32)) {
                         iterator->state = RUNNING;
                     }
                 }
                 iterator = iterator->next;
             }
-        }
-    } 
-    else {
-        if (loaded == 1) {
-            kprint("");
         }
     }
     /* After every interrupt we need to send an EOI to the PICs
@@ -176,13 +153,9 @@ void irq_handler(registers_t *r) {
 
     if (r->int_no >= 40) port_byte_out(0xA0, 0x20); /* slave */
     port_byte_out(0x20, 0x20); /* master */
-    // if (switch_task == 1) {
-    //     sprintf("\n[IRQ] switching task");
-    // }
 }
 
 void irq_install() {
     /* Enable interruptions */
     asm volatile("sti");
-    //init_hdd();
 }
