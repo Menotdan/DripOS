@@ -1,9 +1,9 @@
 #ifndef PMM_H
 #define PMM_H
 
-#include <stdint.h>
-#include "../multiboot.h"
 #include "../libc/symbols.h"
+#include "../multiboot.h"
+#include <stdint.h>
 
 #define MAPPED_DEF 0x40000000 // We have a 1 GiB of deafault mapped memory
 #define KERNEL_VMA_OFFSET 0xFFFFFFFF80000000 // Kernel VMA offset
@@ -28,9 +28,10 @@ uint64_t pmm_find_free(uint64_t size);
 uint64_t pmm_allocate(uint64_t size);
 uint64_t get_free_mem(); // Get remaining memory
 uint64_t get_used_mem(); // Get used memory
-void pmm_unallocate(void * address, uint64_t size);
+void pmm_unallocate(void *address, uint64_t size);
 
-void set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem, uint64_t offset);
+void set_bitmap(
+    uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem, uint64_t offset);
 uint8_t *get_last_bitmap(uint8_t *bitmap_start);
 
 #endif

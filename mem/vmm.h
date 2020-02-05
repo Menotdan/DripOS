@@ -1,16 +1,15 @@
-#include <stdint.h>
-#include <stddef.h>
-#include "pmm.h"
 #include "../libc/mem.h"
+#include "pmm.h"
+#include <stddef.h>
+#include <stdint.h>
 #define DEFAULT_PML4T 0x1000
 #define VMM_ADDR_MASK ~(0xfff)
-#define VMM_PRESENT    (1<<0)
-#define VMM_WRITE        (1<<1)
-#define VMM_HUGE  (1<<7)
+#define VMM_PRESENT (1 << 0)
+#define VMM_WRITE (1 << 1)
+#define VMM_HUGE (1 << 7)
 #define VIRT_PHYS_BASE 0x1000000000000000
 
-typedef struct table_address
-{
+typedef struct table_address {
     uint64_t address; // The address of the page table entry this struct references
     uint16_t pml4t_pos; // The entry in the pml4t this struct references
     uint16_t pdpt_pos; // The entry in the pdpt this struct references
@@ -22,8 +21,7 @@ typedef struct table_address
     uint16_t pte_exists; // Does the entry in the PT exist?
 } table_address_t;
 
-typedef struct page_table
-{
+typedef struct page_table {
     uint64_t ents[512];
 } pt_t;
 
@@ -40,9 +38,7 @@ typedef struct {
     pt_t *p1; // PT address
 } pt_ptr_t;
 
-
-typedef struct used_free12K
-{
+typedef struct used_free12K {
     uint8_t used_pdpt;
     uint8_t used_pdt;
     uint8_t used_pt;

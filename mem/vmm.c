@@ -5,16 +5,16 @@ uint64_t current_pml4t = 0;
 
 uint64_t vmm_get_pml4t() {
     uint64_t ret;
-    asm volatile("movq %%cr3, %0;":"=r"(ret));
+    asm volatile("movq %%cr3, %0;" : "=r"(ret));
     return ret;
 }
 
 void vmm_set_pml4t(uint64_t new) {
-    asm volatile("movq %0, %%cr3;"::"r"(new) : "memory");
+    asm volatile("movq %0, %%cr3;" ::"r"(new) : "memory");
 }
 
 void vmm_invlpg(uint64_t new) {
-    asm volatile("invlpg (%0);"::"r"(new) : "memory");
+    asm volatile("invlpg (%0);" ::"r"(new) : "memory");
 }
 
 void vmm_flush_tlb() {
@@ -22,14 +22,13 @@ void vmm_flush_tlb() {
 }
 
 pt_off_t vmm_virt_to_offs(void *virt) {
-    //sprintf("\nVIRT: %lx", virt);
     uintptr_t addr = (uintptr_t)virt;
 
     pt_off_t off = {
-        .p4_off =    (addr & ((size_t) 0x1ff << 39)) >> 39,
-        .p3_off =    (addr & ((size_t) 0x1ff << 30)) >> 30,
-        .p2_off =    (addr & ((size_t) 0x1ff << 21)) >> 21,
-        .p1_off =    (addr & ((size_t) 0x1ff << 12)) >> 12,
+        .p4_off = (addr & ((size_t)0x1ff << 39)) >> 39,
+        .p3_off = (addr & ((size_t)0x1ff << 30)) >> 30,
+        .p2_off = (addr & ((size_t)0x1ff << 21)) >> 21,
+        .p1_off = (addr & ((size_t)0x1ff << 12)) >> 12,
     };
 
     return off;
@@ -48,88 +47,69 @@ void *vmm_offs_to_virt(pt_off_t offs) {
 
 pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4) {
     pt_ptr_t ret;
-    p4 = (pt_t *) ((uint64_t) p4 + NORMAL_VMA_OFFSET);
-    //sprintf("\nP4: %lx", p4);
+    p4 = (pt_t *)((uint64_t)p4 + NORMAL_VMA_OFFSET);
     // Is the p3 present?
     if (p4->ents[offs->p4_off] & VMM_PRESENT) {
-        ret.p3 = (pt_t *) ((p4->ents[offs->p4_off] & ~(0xfff)) + NORMAL_VMA_OFFSET);
-        //sprintf("\nBad pointer lel: %lx Pointer without offset: %lx", ret.p3, p4->ents[offs->p4_off] & ~(0xfff));
-        //sprintf("\nP4: %lx", offs->p4_off);
+        ret.p3 = (pt_t *)((p4->ents[offs->p4_off] & ~(0xfff)) + NORMAL_VMA_OFFSET);
     } else {
         size_t pmm_ret = pmm_allocate(0x1000);
-        //sprintf("\nPMM ret: %lx", pmm_ret);
-        ret.p3 = (pt_t *) ((pmm_ret + NORMAL_VMA_OFFSET));
-        p4->ents[offs->p4_off] = ((uint64_t)ret.p3 - NORMAL_VMA_OFFSET)
-            | VMM_PRESENT | VMM_WRITE;
-        //sprintf("\nMath test: %lx Math test 2: %lx", (pmm_ret + NORMAL_VMA_OFFSET) + 1, pmm_ret);
-        //sprintf("\nBad pointer lel: %lx Pointer without offset: %lx", ret.p3, p4->ents[offs->p4_off] & ~(0xfff));
-        
+        ret.p3 = (pt_t *)((pmm_ret + NORMAL_VMA_OFFSET));
+        p4->ents[offs->p4_off] =
+            ((uint64_t)ret.p3 - NORMAL_VMA_OFFSET) | VMM_PRESENT | VMM_WRITE;
         // Store the new entry in the table, as W/S/P (Writeable, supervisor, present)
-        memset((uint8_t *) ret.p3, 0, 0x1000); // Clear the table
-        vmm_invlpg((uint64_t) vmm_offs_to_virt(*offs));
+        memset((uint8_t *)ret.p3, 0, 0x1000); // Clear the table
+        vmm_invlpg((uint64_t)vmm_offs_to_virt(*offs));
     }
 
     // Is the p2 present?
     if (ret.p3->ents[offs->p3_off] & VMM_PRESENT) {
-        ret.p2 = (pt_t *) ((ret.p3->ents[offs->p3_off] & ~(0xfff)) + NORMAL_VMA_OFFSET);
+        ret.p2 = (pt_t *)((ret.p3->ents[offs->p3_off] & ~(0xfff)) + NORMAL_VMA_OFFSET);
     } else {
-        ret.p2 = (pt_t *) (((size_t) pmm_allocate(0x1000)) + NORMAL_VMA_OFFSET);
-        ret.p3->ents[offs->p3_off] = ((uint64_t)ret.p2 - NORMAL_VMA_OFFSET)
-            | VMM_PRESENT | VMM_WRITE;
+        ret.p2 = (pt_t *)(((size_t)pmm_allocate(0x1000)) + NORMAL_VMA_OFFSET);
+        ret.p3->ents[offs->p3_off] =
+            ((uint64_t)ret.p2 - NORMAL_VMA_OFFSET) | VMM_PRESENT | VMM_WRITE;
         // Store the new entry in the table, as W/S/P (Writeable, supervisor, present)
-        memset((uint8_t *) ret.p2, 0, 0x1000); // Clear the table
-        vmm_invlpg((uint64_t) vmm_offs_to_virt(*offs));
+        memset((uint8_t *)ret.p2, 0, 0x1000); // Clear the table
+        vmm_invlpg((uint64_t)vmm_offs_to_virt(*offs));
     }
 
     // Is the p1 present and not huge?
-    if ((ret.p2->ents[offs->p2_off] & VMM_PRESENT) && !((ret.p2->ents[offs->p2_off] & VMM_HUGE))) {
-        ret.p1 = (pt_t *) ((ret.p2->ents[offs->p2_off] & ~(0xfff)) + NORMAL_VMA_OFFSET);
+    if ((ret.p2->ents[offs->p2_off] & VMM_PRESENT) &&
+        !((ret.p2->ents[offs->p2_off] & VMM_HUGE))) {
+        ret.p1 = (pt_t *)((ret.p2->ents[offs->p2_off] & ~(0xfff)) + NORMAL_VMA_OFFSET);
     } else {
         uint64_t old_p2 = ret.p2->ents[offs->p2_off] & ~(0xfff);
         old_p2 &= ~(VMM_HUGE); // Remove the huge flag
-        // sprintf("\nOld P2: %lx", old_p2);
         uint8_t is_huge = 0;
 
         if ((ret.p2->ents[offs->p2_off] & VMM_HUGE)) {
             is_huge = 1;
         }
 
-        ret.p1 = (pt_t *) (((size_t) pmm_allocate(0x1000)) + NORMAL_VMA_OFFSET);
-        //sprintf("\nNew P1: %lx", ret.p1);
-        memset((uint8_t *) ret.p1, 0, 0x1000); // Clear the table
+        ret.p1 = (pt_t *)(((size_t)pmm_allocate(0x1000)) + NORMAL_VMA_OFFSET);
+        memset((uint8_t *)ret.p1, 0, 0x1000); // Clear the table
         // Map the old mappings but in 4 KiB if the table is huge, and invalidate the old
         // table.
         if (is_huge) {
             for (uint16_t i = 0; i < 512; i++) {
-                ret.p1->ents[i] = (old_p2 + (i * 0x1000))
-                    | (ret.p2->ents[offs->p2_off] & 0xfff & ~(VMM_HUGE));
-                vmm_invlpg(((uint64_t) vmm_offs_to_virt(*offs)) + (i * 0x1000));
+                ret.p1->ents[i] = (old_p2 + (i * 0x1000)) |
+                    (ret.p2->ents[offs->p2_off] & 0xfff & ~(VMM_HUGE));
+                vmm_invlpg(((uint64_t)vmm_offs_to_virt(*offs)) + (i * 0x1000));
             }
         }
         // Store the new entry in the table, as W/S/P (Writeable, supervisor, present)
-        ret.p2->ents[offs->p2_off] = ((uint64_t)ret.p1 - NORMAL_VMA_OFFSET)
-            | VMM_PRESENT | VMM_WRITE;
+        ret.p2->ents[offs->p2_off] =
+            ((uint64_t)ret.p1 - NORMAL_VMA_OFFSET) | VMM_PRESENT | VMM_WRITE;
     }
-    //sprintf("\nP1 allocated: %lx", ret.p1);
-    // if ((uint64_t) ret.p1 == 0xFFFF800000400000) {
-    //     sprintf("\n[VMM ERROR EEEEEEE]: Got weird table addr lel");
-    //     sprintf("\n[VMM ERROR EEEEEEE]: P1: %u P2: %u P3: %u P4: %u", offs->p1_off, offs->p2_off, offs->p3_off, offs->p4_off);
-    //     while (1) {
-    //         /* code */
-    //     }
-        
-    // }
 
     return ret;
 }
 
 void *virt_to_phys(void *virt) {
     pt_off_t offsets = vmm_virt_to_offs(virt);
-    pt_ptr_t pointers = vmm_get_table(&offsets, (pt_t *) vmm_get_pml4t());
-    pt_t *table = (pt_t *) pointers.p1;
-    //sprintf("\nP1: %u P2: %u P3: %u P4: %u Data: %lx", (uint32_t) offsets.p1_off, (uint32_t) offsets.p2_off, (uint32_t) offsets.p3_off, (uint32_t) offsets.p4_off, table->ents[offsets.p1_off]);
-    //sprintf("\nP1 addr: %lx", table);
-    return (void *) (table->ents[offsets.p1_off] & ~(0xfff));
+    pt_ptr_t pointers = vmm_get_table(&offsets, (pt_t *)vmm_get_pml4t());
+    pt_t *table = (pt_t *)pointers.p1;
+    return (void *)(table->ents[offsets.p1_off] & ~(0xfff));
 }
 
 int vmm_unmap_pages(pt_t *pml4, void *virt, size_t count) {
@@ -141,7 +121,7 @@ int vmm_unmap_pages(pt_t *pml4, void *virt, size_t count) {
 
     for (uint64_t i = 0; i < count; i++) {
         // Get table offset data
-        offsets = vmm_virt_to_offs((char *) virt + (i * 0x1000));
+        offsets = vmm_virt_to_offs((char *)virt + (i * 0x1000));
         table_addresses = vmm_get_table(&offsets, pml4);
         if (table_addresses.p1) {
             // If the entry is already empty
@@ -155,7 +135,7 @@ int vmm_unmap_pages(pt_t *pml4, void *virt, size_t count) {
             ret = 1;
             continue; // couldn't allocate a p1 for some reason or another
         }
-        vmm_invlpg((uint64_t) virt + (i * 0x1000));
+        vmm_invlpg((uint64_t)virt + (i * 0x1000));
     }
 
     return ret;
@@ -169,8 +149,7 @@ int vmm_map_pages(pt_t *pml4, void *virt, void *phys, size_t count, int perms) {
     sprintf("\n[VMM]: Mapping %lx to %lx", phys, virt);
 
     for (uint64_t i = 0; i < count; i++) {
-        //sprintf("\nVirtual: %lx Phys: %lx", ((uint64_t) virt + (i * 0x1000)) & ~(0xfff), (uint64_t) ((((uint64_t) phys) & ~(0xfff)) + (i * 0x1000)));
-        offsets = vmm_virt_to_offs((char *) (((uint64_t) virt + (i * 0x1000)) & ~(0xfff)));
+        offsets = vmm_virt_to_offs((char *)(((uint64_t)virt + (i * 0x1000)) & ~(0xfff)));
         table_addresses = vmm_get_table(&offsets, pml4);
         if (table_addresses.p1) {
             if (table_addresses.p1->ents[offsets.p1_off] & VMM_PRESENT) {
@@ -179,18 +158,14 @@ int vmm_map_pages(pt_t *pml4, void *virt, void *phys, size_t count, int perms) {
             }
 
             // Map the physical address to the virtual one by setting it's entry
-            table_addresses.p1->ents[offsets.p1_off] = ((((uint64_t) phys) & ~(0xfff))
-                + (i * 0x1000)) | VMM_PRESENT | VMM_WRITE | perms;
-            //if (offsets.p2_off == 6) {
-            //    sprintf("\nMapped P1: %u P2: %u P3: %u P4: %u Data: %lx", (uint32_t) offsets.p1_off, (uint32_t) offsets.p2_off, (uint32_t) offsets.p3_off, (uint32_t) offsets.p4_off, table_addresses.p1->ents[offsets.p1_off]);
-            //    sprintf("\nP1 addr: %lx", table_addresses.p1);
-            //}
-            //sprintf("\nMapped %lx with table %lx", table_addresses.p1->ents[offsets.p1_off], table_addresses.p1);
+            table_addresses.p1->ents[offsets.p1_off] =
+                ((((uint64_t)phys) & ~(0xfff)) + (i * 0x1000)) | VMM_PRESENT | VMM_WRITE |
+                perms;
         } else {
             ret = 1;
             continue; // For some reason, the p1 pointer was null
         }
-        vmm_invlpg((uint64_t) virt + (i * 0x1000));
+        vmm_invlpg((uint64_t)virt + (i * 0x1000));
     }
 
     return ret;
@@ -204,42 +179,33 @@ int vmm_remap_pages(pt_t *pml4, void *virt, void *phys, size_t count, int perms)
     sprintf("\n[VMM]: Remapping %lx to %lx", phys, virt);
 
     for (uint64_t i = 0; i < count; i++) {
-        offsets = vmm_virt_to_offs((char *) virt + (i * 0x1000));
+        offsets = vmm_virt_to_offs((char *)virt + (i * 0x1000));
         table_addresses = vmm_get_table(&offsets, pml4);
         if (table_addresses.p1) {
             // Map the physical address to the virtual one by setting it's entry
-            table_addresses.p1->ents[offsets.p1_off] = ((((uint64_t) phys) & ~(0xfff))
-                + (i * 0x1000)) | VMM_PRESENT | VMM_WRITE | perms;
-            // sprintf("\nMapped data: %lx", table_addresses.p1->ents[offsets.p1_off]);
-            // if (table_addresses.p1->ents[offsets.p1_off] & 0x40) {
-            //     sprintf("\nBad");
-            //     while(1);
-                
-            // }
-            //if (offsets.p2_off == 6) {
-            //    sprintf("\nMapped P1: %u P2: %u P3: %u P4: %u Data: %lx", (uint32_t) offsets.p1_off, (uint32_t) offsets.p2_off, (uint32_t) offsets.p3_off, (uint32_t) offsets.p4_off, table_addresses.p1->ents[offsets.p1_off]);
-            //    sprintf("\nP1 addr: %lx", table_addresses.p1);
-            //}
+            table_addresses.p1->ents[offsets.p1_off] =
+                ((((uint64_t)phys) & ~(0xfff)) + (i * 0x1000)) | VMM_PRESENT | VMM_WRITE |
+                perms;
         } else {
             ret = 1;
             continue; // For some reason, the p1 pointer was null
         }
-        vmm_invlpg((uint64_t) virt + (i * 0x1000));
+        vmm_invlpg((uint64_t)virt + (i * 0x1000));
     }
 
     return ret;
 }
 
 int vmm_map(void *phys, void *virt, size_t count, int perms) {
-    return vmm_map_pages((pt_t *) vmm_get_pml4t(), virt, phys, count, perms);
+    return vmm_map_pages((pt_t *)vmm_get_pml4t(), virt, phys, count, perms);
 }
 
 int vmm_remap(void *phys, void *virt, size_t count, int perms) {
-    return vmm_remap_pages((pt_t *) vmm_get_pml4t(), virt, phys, count, perms);
+    return vmm_remap_pages((pt_t *)vmm_get_pml4t(), virt, phys, count, perms);
 }
 
 int vmm_unmap(void *virt, size_t count) {
-    return vmm_unmap_pages((pt_t *) vmm_get_pml4t(), virt, count);
+    return vmm_unmap_pages((pt_t *)vmm_get_pml4t(), virt, count);
 }
 
 int map_mem_block(uint64_t block_start, uint64_t block_len, uint64_t block_type) {
@@ -251,7 +217,7 @@ int map_mem_block(uint64_t block_start, uint64_t block_len, uint64_t block_type)
 
     /* Calculate rounded length of the block */
     int ret = 0;
-    
+
     uint64_t block_end = block_start + block_len;
     uint64_t block_pages;
 
@@ -262,18 +228,26 @@ int map_mem_block(uint64_t block_start, uint64_t block_len, uint64_t block_type)
 
     if (block_type == MULTIBOOT_MEMORY_AVAILABLE) {
         // Virtual map enough space for a bitmap, set the bitmap, and continue mapping
-        uint64_t bitmap_space_needed = ((block_pages + 8 - 1) / 8) + 16; // Round up the bytes
-        uint64_t bitmap_pages_needed = (bitmap_space_needed + 0x1000 - 1) / 0x1000; // Round up the pages
+        uint64_t bitmap_space_needed =
+            ((block_pages + 8 - 1) / 8) + 16; // Round up the bytes
+        uint64_t bitmap_pages_needed =
+            (bitmap_space_needed + 0x1000 - 1) / 0x1000; // Round up the pages
 
         // Map space for bitmap
-        vmm_map((void *) block_start, (void *) (block_start + NORMAL_VMA_OFFSET), bitmap_pages_needed, 0);
+        vmm_map((void *)block_start, (void *)(block_start + NORMAL_VMA_OFFSET),
+            bitmap_pages_needed, 0);
         // Setup the bitmap
-        set_bitmap((uint8_t *) (block_start + NORMAL_VMA_OFFSET), get_last_bitmap(bitmap), block_len, 0);
+        set_bitmap((uint8_t *)(block_start + NORMAL_VMA_OFFSET), get_last_bitmap(bitmap),
+            block_len, 0);
         // Map the rest of the block
-        ret = vmm_map((void *) (block_start + bitmap_space_needed), (void *) (block_start + bitmap_space_needed + NORMAL_VMA_OFFSET), block_pages - bitmap_pages_needed, 0);
+        ret = vmm_map((void *)(block_start + bitmap_space_needed),
+            (void *)(block_start + bitmap_space_needed + NORMAL_VMA_OFFSET),
+            block_pages - bitmap_pages_needed, 0);
     } else {
-        // Just map the whole block, no bitmap size calculations needed, since it's not usable
-        ret = vmm_map((void *) block_start, (void *) (block_start + NORMAL_VMA_OFFSET), block_pages, 0);
+        // Just map the whole block, no bitmap size calculations needed, since it's not
+        // usable
+        ret = vmm_map(
+            (void *)block_start, (void *)(block_start + NORMAL_VMA_OFFSET), block_pages, 0);
     }
     vmm_flush_tlb();
     return ret;
