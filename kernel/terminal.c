@@ -1,32 +1,31 @@
-#include "kernel.h"
-#include "debug.h"
-#include <string.h>
 #include "../cpu/soundManager.h"
 #include "../cpu/timer.h"
+#include "../drivers/screen.h"
 #include "../drivers/sound.h"
 #include "../drivers/time.h"
-#include "../drivers/screen.h"
 #include "../fs/hdd.h"
 #include "../fs/hddw.h"
+#include "debug.h"
+#include "kernel.h"
+#include <string.h>
 
-#include "../libc/stdio.h"
-#include <stdint.h>
-#include "../libc/mem.h"
-#include "../mem/pmm.h"
-#include <serial.h>
+#include "../builtinapps/snake.h"
 #include "../cpu/task.h"
 #include "../drivers/stdin.h"
 #include "../drivers/vesa.h"
-#include "../builtinapps/snake.h"
+#include "../libc/mem.h"
+#include "../libc/stdio.h"
+#include "../mem/pmm.h"
 #include <cpuid.h>
+#include <serial.h>
+#include <stdint.h>
 
-int arg = 0; //Is an argument being taken?
-int argt = 0; //Which Command Is taking the argument?
+int arg = 0; // Is an argument being taken?
+int argt = 0; // Which Command Is taking the argument?
 
 void bg_task() {
-    while (1)
-    {
-        //sprintf("\nTimer 1 working!");
+    while (1) {
+        // sprintf("\nTimer 1 working!");
         char done[32];
         uint64_to_ascii(tick, done);
         kprint_no_move(done, 0, 0);
@@ -34,9 +33,8 @@ void bg_task() {
 }
 
 void bg_task2() {
-    while (1)
-    {
-        //sprintf("\nTimer 2 working!");
+    while (1) {
+        // sprintf("\nTimer 2 working!");
         char done[32];
         uint64_to_ascii(tick, done);
         kprint_no_move(done, 18, 0);
@@ -45,22 +43,22 @@ void bg_task2() {
 
 void read_disk(uint32_t sector) {
     char str2[32];
-    kprint ("\nSector ");
+    kprint("\nSector ");
     kprint_int(sector);
     kprint(" contents:\n\n");
- 
+
     //! read sector from disk
     readToBuffer(sector);
     uint8_t *temp = readBuffer;
-    for (int l = 0; l<256; l++) {
+    for (int l = 0; l < 256; l++) {
         uint16_t good = *temp;
         temp++;
-        good += (uint16_t) (*temp << 8);
+        good += (uint16_t)(*temp << 8);
         temp++;
         hex_to_ascii(good, str2);
         kprint(str2);
         kprint(" ");
-        for (int i = 0; i<32; i++) {
+        for (int i = 0; i < 32; i++) {
             str2[i] = 0;
         }
     }
@@ -78,47 +76,40 @@ void execute_command(char input[]) {
     sprintd(input);
     sprintd("Command recieved");
     kprint("\n");
-  if (strcmp(input, "shutdown") == 0) {
+    if (strcmp(input, "shutdown") == 0) {
         shutdown();
-  } else if (strcmp(input, "panic") == 0) {
+    } else if (strcmp(input, "panic") == 0) {
         panic();
-  } else if (strcmp(input, "fmem") == 0) {
-          kprint("No!");
-  } else if (strcmp(input, "free") == 0) {
-        kprintf("Memory available: %lu MiB", get_free_mem()/1024/1024);
-        kprintf("\nMemory used: %lu MiB", get_used_mem()/1024/1024);
-  } else if (strcmp(input, "uptime") == 0) {
-          uint32_t tempTick = tick;
-          uint32_t uptimeSeconds = 0;
+    } else if (strcmp(input, "fmem") == 0) {
+        kprint("No!");
+    } else if (strcmp(input, "free") == 0) {
+        kprintf("Memory available: %lu MiB", get_free_mem() / 1024 / 1024);
+        kprintf("\nMemory used: %lu MiB", get_used_mem() / 1024 / 1024);
+    } else if (strcmp(input, "uptime") == 0) {
+        uint32_t tempTick = tick;
+        uint32_t uptimeSeconds = 0;
         uint32_t uptimeMinutes = 0;
         uint32_t uptimeHours = 0;
         uint32_t uptimeDays = 0;
-        while (tempTick >= 1000)
-        {
+        while (tempTick >= 1000) {
             tempTick -= 1000;
             uptimeSeconds += 1;
         }
 
-        while (uptimeSeconds >= 60)
-        {
+        while (uptimeSeconds >= 60) {
             uptimeSeconds -= 60;
             uptimeMinutes += 1;
         }
-        
 
-        while (uptimeMinutes >= 60)
-        {
+        while (uptimeMinutes >= 60) {
             uptimeMinutes -= 60;
             uptimeHours += 1;
         }
 
-
-        while (uptimeHours >= 24)
-        {
+        while (uptimeHours >= 24) {
             uptimeHours -= 24;
             uptimeDays += 1;
         }
-
 
         kprint("Up ");
         kprint_uint(uptimeDays);
@@ -149,12 +140,13 @@ void execute_command(char input[]) {
         kprint("\nPress Q to quit");
         create_task(kmalloc(sizeof(Task)), snake_main, "Snake game");
     } else if (strcmp(input, "help") == 0) {
-        kprint("Commands: snake, ps, kill, uptime, scan, testDrive, fmem, help, shutdown, panic, print, clear, bgtask, bgoff, read, drives, select, testMem, free\n");
+        kprint("Commands: snake, ps, kill, uptime, scan, testDrive, fmem, help, shutdown, "
+               "panic, print, clear, bgtask, bgoff, read, drives, select, testMem, free\n");
     } else if (strcmp(input, "cpu") == 0) {
         char cpu_name[32];
         get_cpu_name(cpu_name);
         kprintf("\nCPU name: %s", cpu_name);
-    } else if (strcmp(input, "clear") == 0){
+    } else if (strcmp(input, "clear") == 0) {
         clear_screen();
     } else if (match("print", input) == -2) {
         kprint("Not enough args!");
@@ -252,7 +244,7 @@ void execute_command(char input[]) {
         kprint_int(month);
         kprint("/");
         kprint_int(day);
-        if(hour - 5 <= 10) {
+        if (hour - 5 <= 10) {
             kprint(" 0");
             kprint_int(hour);
         } else {
@@ -289,7 +281,7 @@ void execute_command(char input[]) {
         kprint("Not enough args!");
     } else if ((match(input, "read") + 1) == 4) {
         read_disk(atoi(afterSpace(input)));
-        //kprint(atoi(afterSpace(input)));
+        // kprint(atoi(afterSpace(input)));
     } else if (match("select", input) == -2) {
         kprint("Not enough args!");
     } else if ((match(input, "select") + 1) == 6) {
@@ -350,7 +342,7 @@ void execute_command(char input[]) {
         } else {
             kprint("Not a valid drive!\n");
         }
-        //kprint(atoi(afterSpace(input)));
+        // kprint(atoi(afterSpace(input)));
     } else if (match("copy", input) == -2) {
         kprint("Not enough args!");
     } else if ((match(input, "copy") + 1) == 4) {
@@ -381,7 +373,7 @@ void execute_command(char input[]) {
             kprint("Secondary IDE, Slave Drive (Drive 4): Offline\n");
         }
     } else if (strcmp("fatTest", input) == 0) {
-        vesa_buffer_t test = new_framebuffer((width/2)+1, 0, (width/2), height);
+        vesa_buffer_t test = new_framebuffer((width / 2) + 1, 0, (width / 2), height);
         vesa_buffer_t temp = swap_display(test);
         uint32_t cursor_off = get_cursor_offset();
         set_cursor_offset(0);
@@ -400,69 +392,70 @@ void execute_command(char input[]) {
 }
 
 uint8_t key_handler(uint8_t scancode, bool keyup, uint8_t shift) {
-    if (scancode == LARROW && keyup != true){
+    if (scancode == LARROW && keyup != true) {
         if (position > 0) {
             position -= 1;
             int cOffset = get_cursor_offset();
-            set_cursor_offset(get_offset(get_offset_col(cOffset)-1, get_offset_row(cOffset)));
+            set_cursor_offset(
+                get_offset(get_offset_col(cOffset) - 1, get_offset_row(cOffset)));
         }
-    } else if (scancode == RARROW && keyup != true){
+    } else if (scancode == RARROW && keyup != true) {
         if (position < uinlen) {
             position += 1;
             int cOffset = get_cursor_offset();
-            set_cursor_offset(get_offset(get_offset_col(cOffset)+1, get_offset_row(cOffset)));
+            set_cursor_offset(
+                get_offset(get_offset_col(cOffset) + 1, get_offset_row(cOffset)));
         }
-    } else if (scancode == UPARROW && keyup != true){
+    } else if (scancode == UPARROW && keyup != true) {
         uint32_t loop = 0;
         uint32_t loop2 = 0;
-        while (loop2 < (uint32_t)strlen(key_buffer))
-        {
+        while (loop2 < (uint32_t)strlen(key_buffer)) {
             key_buffer_down[loop] = key_buffer[loop];
             loop2++;
         }
-        
-        while (loop < (uint32_t)strlen(key_buffer_up))
-        {
+
+        while (loop < (uint32_t)strlen(key_buffer_up)) {
             key_buffer[loop] = key_buffer_up[loop];
             loop++;
         }
         key_buffer[strlen(key_buffer_up)] = remove_null("\0");
 
         int cOffset = get_cursor_offset();
-        set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
-        for (uint32_t g = 0; g < uinlen; g++)
-        {
+        set_cursor_offset(get_offset(
+            get_offset_col(cOffset) + uinlen - position, get_offset_row(cOffset)));
+        for (uint32_t g = 0; g < uinlen; g++) {
             kprint_backspace();
         }
-        //kprint_backspace();
+        // kprint_backspace();
         cOffset = get_cursor_offset();
         set_cursor_offset(get_offset(get_offset_col(cOffset), get_offset_row(cOffset)));
         if (key_buffer != 0) {
             kprint(key_buffer);
         }
-        //sprintd(key_buffer);
-        //set_cursor_offset(get_offset(get_offset_col(offsetTemp)-1, get_offset_row(offsetTemp)));
+        // sprintd(key_buffer);
+        // set_cursor_offset(get_offset(get_offset_col(offsetTemp)-1,
+        // get_offset_row(offsetTemp)));
         uinlen = strlen(key_buffer_up);
         position = uinlen;
-    }
-    else if (strcmp(sc_name[scancode], "Backspace") == 0 && keyup != true) {
+    } else if (strcmp(sc_name[scancode], "Backspace") == 0 && keyup != true) {
         if (uinlen > 0) {
             backspacep(key_buffer, position);
             uint32_t offsetTemp = get_cursor_offset();
             int cOffset = get_cursor_offset();
-            set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
-            for (uint32_t g = 0; g < uinlen; g++)
-            {
+            set_cursor_offset(get_offset(
+                get_offset_col(cOffset) + uinlen - position, get_offset_row(cOffset)));
+            for (uint32_t g = 0; g < uinlen; g++) {
                 kprint_backspace();
             }
-            //kprint_backspace();
+            // kprint_backspace();
             cOffset = get_cursor_offset();
             set_cursor_offset(get_offset(get_offset_col(cOffset), get_offset_row(cOffset)));
             if (key_buffer != 0) {
                 kprint(key_buffer);
             }
-            //sprintd(key_buffer);
-            set_cursor_offset(get_offset(get_offset_col(offsetTemp)-1, get_offset_row(offsetTemp)));
+            // sprintd(key_buffer);
+            set_cursor_offset(
+                get_offset(get_offset_col(offsetTemp) - 1, get_offset_row(offsetTemp)));
             uinlen -= 1;
             position -= 1;
         }
@@ -470,16 +463,17 @@ uint8_t key_handler(uint8_t scancode, bool keyup, uint8_t shift) {
         appendp(key_buffer, sc_ascii[scancode], position);
         uint32_t offsetTemp = get_cursor_offset();
         int cOffset = get_cursor_offset();
-        set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
-        for (uint32_t g = 0; g < uinlen; g++)
-        {
+        set_cursor_offset(get_offset(
+            get_offset_col(cOffset) + uinlen - position, get_offset_row(cOffset)));
+        for (uint32_t g = 0; g < uinlen; g++) {
             kprint_backspace();
         }
         cOffset = get_cursor_offset();
         if (key_buffer != 0) {
             kprint(key_buffer);
         }
-        set_cursor_offset(get_offset(get_offset_col(offsetTemp)+1, get_offset_row(offsetTemp)));
+        set_cursor_offset(
+            get_offset(get_offset_col(offsetTemp) + 1, get_offset_row(offsetTemp)));
         uinlen++;
         position++;
     } else if (strcmp(sc_name[scancode], "ERROR") == 0 && keyup != true) {
@@ -489,14 +483,14 @@ uint8_t key_handler(uint8_t scancode, bool keyup, uint8_t shift) {
         shift = 1;
     } else if (strcmp(sc_name[scancode], "RShift") == 0 && keyup != true) {
         shift = 1;
-    }  else if (strcmp(sc_name[scancode], "LShift") == 0 && keyup == true) {
+    } else if (strcmp(sc_name[scancode], "LShift") == 0 && keyup == true) {
         shift = 0;
     } else if (strcmp(sc_name[scancode], "RShift") == 0 && keyup == true) {
         shift = 0;
     } else if (strcmp(sc_name[scancode], "Enter") == 0 && keyup != true) {
         for (uint32_t q = 0; q < uinlen; q++) {
             key_buffer_up[q] = key_buffer[q];
-            key_buffer_up[q+1] = '\0';
+            key_buffer_up[q + 1] = '\0';
         }
         user_input(key_buffer);
         for (uint32_t i = 0; i < 2000; i++) {
@@ -507,35 +501,38 @@ uint8_t key_handler(uint8_t scancode, bool keyup, uint8_t shift) {
     } else {
         if (shift == 0) {
             if (!keyup) {
-                if (scancode < SC_MAX){
+                if (scancode < SC_MAX) {
                     appendp(key_buffer, sc_ascii[scancode], position);
 
                     uint32_t offsetTemp = get_cursor_offset();
                     int cOffset = get_cursor_offset();
-                    set_cursor_offset(get_offset(get_offset_col(cOffset)+(uinlen-position), get_offset_row(cOffset)));
+                    set_cursor_offset(
+                        get_offset(get_offset_col(cOffset) + (uinlen - position),
+                            get_offset_row(cOffset)));
                     cOffset = get_cursor_offset();
-                    for (uint32_t g = 0; g < uinlen; g++)
-                    {
+                    for (uint32_t g = 0; g < uinlen; g++) {
                         kprint_backspace();
                     }
                     if (key_buffer != 0) {
                         kprint(key_buffer);
                     }
-                    set_cursor_offset(get_offset(get_offset_col(offsetTemp)+1, get_offset_row(offsetTemp)));
+                    set_cursor_offset(get_offset(
+                        get_offset_col(offsetTemp) + 1, get_offset_row(offsetTemp)));
                     uinlen++;
                     position++;
                 }
             }
         } else if (shift == 1) {
             if (!keyup) {
-                if (scancode < SC_MAX){
+                if (scancode < SC_MAX) {
                     appendp(key_buffer, sc_ascii_uppercase[scancode], position);
 
                     uint32_t offsetTemp = get_cursor_offset();
                     int cOffset = get_cursor_offset();
-                    set_cursor_offset(get_offset(get_offset_col(cOffset)+uinlen-position, get_offset_row(cOffset)));
-                    for (uint32_t g = 0; g < uinlen; g++)
-                    {
+                    set_cursor_offset(
+                        get_offset(get_offset_col(cOffset) + uinlen - position,
+                            get_offset_row(cOffset)));
+                    for (uint32_t g = 0; g < uinlen; g++) {
                         kprint_backspace();
                     }
                     cOffset = get_cursor_offset();
@@ -543,7 +540,8 @@ uint8_t key_handler(uint8_t scancode, bool keyup, uint8_t shift) {
                         kprint(key_buffer);
                     }
 
-                    set_cursor_offset(get_offset(get_offset_col(offsetTemp)+1, get_offset_row(offsetTemp)));
+                    set_cursor_offset(get_offset(
+                        get_offset_col(offsetTemp) + 1, get_offset_row(offsetTemp)));
                     uinlen++;
                     position++;
                 }
@@ -558,15 +556,15 @@ void terminal_task() {
     uint32_t prev_offset = 0;
     color_t under_cursor[6];
     color_t under_cursor_new[6];
-    under_cursor[0] = color_from_rgb(0,0,0);
-    under_cursor[1] = color_from_rgb(0,0,0);
-    under_cursor[2] = color_from_rgb(0,0,0);
-    under_cursor[3] = color_from_rgb(0,0,0);
-    under_cursor[4] = color_from_rgb(0,0,0);
-    under_cursor[5] = color_from_rgb(0,0,0);
-    while (1)
-    {
-        unsigned char scan = (unsigned char)getcode(); // Waiting for a scancode from the keyboard
+    under_cursor[0] = color_from_rgb(0, 0, 0);
+    under_cursor[1] = color_from_rgb(0, 0, 0);
+    under_cursor[2] = color_from_rgb(0, 0, 0);
+    under_cursor[3] = color_from_rgb(0, 0, 0);
+    under_cursor[4] = color_from_rgb(0, 0, 0);
+    under_cursor[5] = color_from_rgb(0, 0, 0);
+    while (1) {
+        unsigned char scan =
+            (unsigned char)getcode(); // Waiting for a scancode from the keyboard
         if (scan != 0xE0) {
             if (scan > 0x80) {
                 scan = scan - 0x80;
@@ -577,43 +575,49 @@ void terminal_task() {
                 uint32_t cur_y = (uint32_t)get_offset_row(get_cursor_offset());
                 if ((uint32_t)get_cursor_offset() != prev_offset) {
                     sprint("\nMoving cursor");
-                    cur_x = (cur_x*8)+1;
-                    cur_y = cur_y*8;
+                    cur_x = (cur_x * 8) + 1;
+                    cur_y = cur_y * 8;
                     cur_y += 10;
-                    under_cursor_new[0] = get_pixel(cur_x,cur_y);
+                    under_cursor_new[0] = get_pixel(cur_x, cur_y);
                     draw_pixel(cur_x, cur_y, 255, 255, 255);
                     cur_x++;
-                    under_cursor_new[1] = get_pixel(cur_x,cur_y);
+                    under_cursor_new[1] = get_pixel(cur_x, cur_y);
                     draw_pixel(cur_x, cur_y, 255, 255, 255);
                     cur_x++;
-                    under_cursor_new[2] = get_pixel(cur_x,cur_y);
+                    under_cursor_new[2] = get_pixel(cur_x, cur_y);
                     draw_pixel(cur_x, cur_y, 255, 255, 255);
                     cur_x++;
-                    under_cursor_new[3] = get_pixel(cur_x,cur_y);
+                    under_cursor_new[3] = get_pixel(cur_x, cur_y);
                     draw_pixel(cur_x, cur_y, 255, 255, 255);
                     cur_x++;
-                    under_cursor_new[4] = get_pixel(cur_x,cur_y);
+                    under_cursor_new[4] = get_pixel(cur_x, cur_y);
                     draw_pixel(cur_x, cur_y, 255, 255, 255);
                     cur_x++;
-                    under_cursor_new[5] = get_pixel(cur_x,cur_y);
+                    under_cursor_new[5] = get_pixel(cur_x, cur_y);
                     draw_pixel(cur_x, cur_y, 255, 255, 255);
 
                     cur_x = (uint32_t)get_offset_col(prev_offset);
                     cur_y = (uint32_t)get_offset_row(prev_offset);
-                    cur_x = (cur_x*8)+1;
-                    cur_y = cur_y*8;
+                    cur_x = (cur_x * 8) + 1;
+                    cur_y = cur_y * 8;
                     cur_y += 10;
-                    draw_pixel(cur_x, cur_y, under_cursor[0].red, under_cursor[0].green, under_cursor[0].blue);
+                    draw_pixel(cur_x, cur_y, under_cursor[0].red, under_cursor[0].green,
+                        under_cursor[0].blue);
                     cur_x++;
-                    draw_pixel(cur_x, cur_y, under_cursor[1].red, under_cursor[1].green, under_cursor[1].blue);
+                    draw_pixel(cur_x, cur_y, under_cursor[1].red, under_cursor[1].green,
+                        under_cursor[1].blue);
                     cur_x++;
-                    draw_pixel(cur_x, cur_y, under_cursor[2].red, under_cursor[2].green, under_cursor[2].blue);
+                    draw_pixel(cur_x, cur_y, under_cursor[2].red, under_cursor[2].green,
+                        under_cursor[2].blue);
                     cur_x++;
-                    draw_pixel(cur_x, cur_y, under_cursor[3].red, under_cursor[3].green, under_cursor[3].blue);
+                    draw_pixel(cur_x, cur_y, under_cursor[3].red, under_cursor[3].green,
+                        under_cursor[3].blue);
                     cur_x++;
-                    draw_pixel(cur_x, cur_y, under_cursor[4].red, under_cursor[4].green, under_cursor[4].blue);
+                    draw_pixel(cur_x, cur_y, under_cursor[4].red, under_cursor[4].green,
+                        under_cursor[4].blue);
                     cur_x++;
-                    draw_pixel(cur_x, cur_y, under_cursor[5].red, under_cursor[5].green, under_cursor[5].blue);
+                    draw_pixel(cur_x, cur_y, under_cursor[5].red, under_cursor[5].green,
+                        under_cursor[5].blue);
 
                     update_display();
 
@@ -631,11 +635,12 @@ void terminal_task() {
 }
 
 void init_terminal() {
-    //sprint_uint(123456);
-    //current_buffer = kmalloc(2000);
-    //previous_buffer = kmalloc(2000);
+    // sprint_uint(123456);
+    // current_buffer = kmalloc(2000);
+    // previous_buffer = kmalloc(2000);
     Task *term = kmalloc(sizeof(Task));
     uint8_t terminal_pid = create_task(term, terminal_task, "Terminal");
     set_focused_task(term);
-    if (terminal_pid){};
+    if (terminal_pid) {
+    };
 }

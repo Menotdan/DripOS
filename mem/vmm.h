@@ -6,6 +6,7 @@
 #define VMM_ADDR_MASK ~(0xfff)
 #define VMM_PRESENT    (1<<0)
 #define VMM_WRITE        (1<<1)
+#define VMM_HUGE  (1<<7)
 #define VIRT_PHYS_BASE 0x1000000000000000
 
 typedef struct table_address
@@ -48,6 +49,7 @@ typedef struct used_free12K
 } used_free12K_t;
 
 void vmm_flush_tlb();
+void vmm_invlpg(uint64_t new);
 void vmm_set_pml4t(uint64_t new);
 void *vmm_offs_to_virt(pt_off_t offs);
 void *virt_to_phys(void *virt);

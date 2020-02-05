@@ -114,11 +114,10 @@ void ata_delay(uint16_t base) {
 
 int ata_pio28(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr) {
     if (nodrives == 0) {
-        int cycle = 0;
         /* Wait for bits, set drive, wait again, and send commands */
         ata_wait_bsy_clear(base);
         ata_wait_rdy_set(base);
-        port_byte_out(base + ATA_PORT_DRV, drive | ((uint8_t)(addr >> 24)) & 0xF);
+        port_byte_out(base + ATA_PORT_DRV, drive | (((uint8_t)(addr >> 24)) & 0xF));
         /* 400 ns delay for the drive port to get set */
         ata_delay(base);
         ata_wait_bsy_clear(base);
@@ -164,7 +163,6 @@ int ata_pio28(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr) {
 
 int ata_pio48(uint16_t base, uint8_t type, uint16_t drive, uint32_t addr) {
     if (nodrives == 0) {
-        int cycle = 0;
         ata_wait_bsy_clear(base);
         ata_wait_rdy_set(base);
         port_byte_out(base + ATA_PORT_DRV, drive);
@@ -372,7 +370,7 @@ hdd_size_t drive_sectors(uint8_t devP, uint8_t controllerP) {
     uint16_t controller = 0x170 + controllerP * 0x80;
     /* Unused */
     uint16_t deviceBit = (devP << 4) + (1 << 6);
-    if (deviceBit == 0);
+    if (deviceBit == 0) {};
     read(0, 0); // Start drive
     ata_wait_bsy_clear(controller);
     ata_wait_rdy_set(controller);

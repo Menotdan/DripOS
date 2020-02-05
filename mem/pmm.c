@@ -4,6 +4,7 @@
 #include "../drivers/screen.h"
 #include "../drivers/serial.h"
 #include "../cpu/timer.h"
+#include <debug.h>
 
 /* Some globals for the PMM to use as needed */
 uint8_t *cur_map = 0;
@@ -117,7 +118,8 @@ void set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem
     // Number of pages needed for the bitmap
     uint64_t bitmap_pages = ((bitmap_size + 16) + 0x1000 - 1) / 0x1000;
     bitmap_pages += ((offset + 0x1000 - 1) / 0x1000);
-
+    sprintf("\nNew bitmap at %lx for %lu pages", bitmap_start, bitmap_pages);
+    breakA();
     if (old_bitmap) { // If old_bitmap is not 0
         // Set the bitmap pointer for the old bitmap to the new one
         *(uint64_t *) ((uint64_t) old_bitmap + *(uint64_t *) old_bitmap) = (uint64_t) bitmap_start;
@@ -243,12 +245,21 @@ uint64_t pmm_find_free(uint64_t size) {
         // For each byte in the bitmap
         for (uint64_t bytes_iterated = 0; bytes_iterated < bitmap_size; bytes_iterated++) {
             // For each bit in the byte
+            if (*(cur_map + 8 + bytes_iterated) == 0xff) {
+                continue;
+            }
             for (uint64_t bits_iterated = 0; bits_iterated < 8; bits_iterated++) {
                 // If the bit here is 0
+                //sprintf("\nBit: %lu", get_bit(cur_map, bits_iterated, bytes_iterated));
+                //sprintf("\nByte: %lu Bit: %lu", bytes_iterated, bits_iterated);
                 if (!get_bit(cur_map, bits_iterated, bytes_iterated)) {
+                    // Increment the found free bits
                     found_free_bits += 1;
                     if (!first_addr) {
+                        // Find the first address in a list of contigous blocks
+                        // and calculate the address the list represents
                         first_addr = (get_represented_addr(cur_map) + (((bytes_iterated * 8) + (bits_iterated)) * 0x1000));
+                        //sprintf("\nGot new first address %lx", first_addr);
                     }
                 } else {
                     found_free_bits = 0;
@@ -256,11 +267,12 @@ uint64_t pmm_find_free(uint64_t size) {
                 }
                 // Found enough space
                 if (found_free_bits == size) {
+                    //sprintf("\n[PMM]: Found %lu free bits", found_free_bits);
                     return first_addr;
                 }
             }
         }
-
+        
         // Get bitmap data for the next bitmap
         cur_map = get_next_bitmap(cur_map);
         if (cur_map != 0) {
@@ -273,8 +285,10 @@ uint64_t pmm_find_free(uint64_t size) {
 }
 
 uint64_t pmm_allocate(uint64_t size) {
+    //sprintf("\n[PMM]: Allocating %lu", size);
     uint64_t needed = ((size + 0x1000 - 1)) / 0x1000; // Calculate needed pages
     uint64_t free_addr = pmm_find_free(needed); // Find the pages in bitmap land
+    //sprintf("\n[PMM]: Found needed page count: %lu and free address %lx", needed, free_addr);
 
     if (!free_addr) {
         sprint("\n[PMM] Warning: couldn't find free space of size ");
@@ -286,11 +300,13 @@ uint64_t pmm_allocate(uint64_t size) {
 
     // Difference between the start of the memory represented by the map and the found addr
     uint64_t difference = free_addr - get_represented_addr(cur_map);
+    //sprintf("\nAlloc Distance: %lx", difference);
     difference /= 0x1000;
 
     uint64_t cur_byte = difference / 8;
     uint8_t cur_bit = difference % 8;
     for (; needed > 0; needed--) {
+        //sprintf("\nMarking Byte: %lu Bit: %lu", cur_byte, cur_bit);
         set_bit(cur_map, cur_bit, cur_byte, 1); // mark as allocated
 
         cur_bit++;
@@ -302,11 +318,13 @@ uint64_t pmm_allocate(uint64_t size) {
 
     total_usable -= size;
     total_used += size;
+    //sprintf("\n[PMM]: Returning %lx", free_addr);
     return free_addr - NORMAL_VMA_OFFSET; // yey we found something :D
 }
 
 void pmm_unallocate(void * address, uint64_t size) {
     // Get the bitmap
+    //sprintf("\n[PMM]: Freeing %lx for %lu bytes", address, size);
     uint64_t byte_size = size;
     uint8_t *bitmap_to_free = phys_to_bitmap((uint64_t) address);
 
@@ -316,27 +334,35 @@ void pmm_unallocate(void * address, uint64_t size) {
         return;
     }
 
-    uint64_t distance = (uint64_t) address - (get_represented_addr(bitmap_to_free) - NORMAL_VMA_OFFSET);
-    uint64_t distance_pages = (distance + 0x1000 - 1) / 0x1000;
-
-    // Calculate bitmap positions
-    uint8_t distance_bits = distance_pages % 8;
-    uint64_t distance_bytes = distance_pages / 8;
+    uint64_t difference = (uint64_t) address - (get_represented_addr(bitmap_to_free) - NORMAL_VMA_OFFSET);
 
     size = (size + 0x1000 - 1) / 0x1000;
-    uint8_t size_bits = (size % 8);
-    uint64_t size_bytes = size / 8;
 
-    for (uint64_t bytes = 0; bytes < size_bytes; bytes++) {
-        *(bitmap_to_free + 8 + distance_bytes + bytes) = 0;
+    uint64_t bitmap_size = get_bitmap_size(bitmap_to_free);
+
+    uint64_t size_bytes = ((size + 0x1000 - 1) / 0x1000);
+    uint64_t difference_bytes = ((difference + 0x1000 - 1) / 0x1000);
+    //sprintf("\nUnalloc Distance: %lx", difference);
+    if ((size_bytes + difference_bytes) > bitmap_size) {
+        sprintf("\n[PMM] Warning: Trying to free too much space! (%lu bitmap bytes from size %lu and from bitmap at %lx)", size_bytes, bitmap_size, bitmap_to_free);
+        return;
     }
 
-    for (uint64_t bits = 0; bits < size_bits; bits++) {
-        uint8_t bits_to_use = bits + distance_bits;
-        uint8_t extra_bytes = bits_to_use / 8;
-        set_bit(bitmap_to_free, (bits_to_use % 8), (distance_bytes + size_bytes + extra_bytes), 0);
+    difference /= 0x1000;
+
+    uint64_t cur_byte = difference / 8;
+    uint8_t cur_bit = difference % 8;
+    for (; size > 0; size--) {
+        //sprintf("\nMarking Byte: %lu Bit: %lu", cur_byte, cur_bit);
+        set_bit(cur_map, cur_bit, cur_byte, 0); // mark as free
+
+        cur_bit++;
+        if (cur_bit == 8) {
+            cur_byte++;
+            cur_bit = 0;
+        }
     }
     total_usable += byte_size;
     total_used -= byte_size;
-    sprintf("\nNew used %lu", total_used);
+    //sprintf("\nNew used %lu", total_used);
 }

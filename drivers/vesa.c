@@ -19,6 +19,7 @@ vesa_buffer_t new_framebuffer(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
     vesa_buffer_t ret;
     ret.video_buffer_size = (w * h) * bbp;
     ret.graphics_vid_buffer = kmalloc(ret.video_buffer_size);
+    sprintf("\n[VID_BUF] Clearing addr %lx for %u bytes", ret.graphics_vid_buffer, ret.video_buffer_size);
     memset32((uint32_t *)ret.graphics_vid_buffer, 0, ((ret.video_buffer_size) / 4));
     ret.x = x;
     ret.y = y;

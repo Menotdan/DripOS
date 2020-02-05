@@ -13,9 +13,9 @@ void vmm_set_pml4t(uint64_t new) {
     asm volatile("movq %0, %%cr3;"::"r"(new) : "memory");
 }
 
-// void vmm_flush_addr(uint64_t address) {
-
-// }
+void vmm_invlpg(uint64_t new) {
+    asm volatile("invlpg (%0);"::"r"(new) : "memory");
+}
 
 void vmm_flush_tlb() {
     vmm_set_pml4t(vmm_get_pml4t());
@@ -66,6 +66,7 @@ pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4) {
         
         // Store the new entry in the table, as W/S/P (Writeable, supervisor, present)
         memset((uint8_t *) ret.p3, 0, 0x1000); // Clear the table
+        vmm_invlpg((uint64_t) vmm_offs_to_virt(*offs));
     }
 
     // Is the p2 present?
@@ -77,18 +78,47 @@ pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4) {
             | VMM_PRESENT | VMM_WRITE;
         // Store the new entry in the table, as W/S/P (Writeable, supervisor, present)
         memset((uint8_t *) ret.p2, 0, 0x1000); // Clear the table
+        vmm_invlpg((uint64_t) vmm_offs_to_virt(*offs));
     }
 
-    // Is the p1 present?
-    if (ret.p2->ents[offs->p2_off] & VMM_PRESENT) {
+    // Is the p1 present and not huge?
+    if ((ret.p2->ents[offs->p2_off] & VMM_PRESENT) && !((ret.p2->ents[offs->p2_off] & VMM_HUGE))) {
         ret.p1 = (pt_t *) ((ret.p2->ents[offs->p2_off] & ~(0xfff)) + NORMAL_VMA_OFFSET);
     } else {
+        uint64_t old_p2 = ret.p2->ents[offs->p2_off] & ~(0xfff);
+        old_p2 &= ~(VMM_HUGE); // Remove the huge flag
+        // sprintf("\nOld P2: %lx", old_p2);
+        uint8_t is_huge = 0;
+
+        if ((ret.p2->ents[offs->p2_off] & VMM_HUGE)) {
+            is_huge = 1;
+        }
+
         ret.p1 = (pt_t *) (((size_t) pmm_allocate(0x1000)) + NORMAL_VMA_OFFSET);
+        //sprintf("\nNew P1: %lx", ret.p1);
+        memset((uint8_t *) ret.p1, 0, 0x1000); // Clear the table
+        // Map the old mappings but in 4 KiB if the table is huge, and invalidate the old
+        // table.
+        if (is_huge) {
+            for (uint16_t i = 0; i < 512; i++) {
+                ret.p1->ents[i] = (old_p2 + (i * 0x1000))
+                    | (ret.p2->ents[offs->p2_off] & 0xfff & ~(VMM_HUGE));
+                vmm_invlpg(((uint64_t) vmm_offs_to_virt(*offs)) + (i * 0x1000));
+            }
+        }
+        // Store the new entry in the table, as W/S/P (Writeable, supervisor, present)
         ret.p2->ents[offs->p2_off] = ((uint64_t)ret.p1 - NORMAL_VMA_OFFSET)
             | VMM_PRESENT | VMM_WRITE;
-        // Store the new entry in the table, as W/S/P (Writeable, supervisor, present)
-        memset((uint8_t *) ret.p1, 0, 0x1000); // Clear the table
     }
+    //sprintf("\nP1 allocated: %lx", ret.p1);
+    // if ((uint64_t) ret.p1 == 0xFFFF800000400000) {
+    //     sprintf("\n[VMM ERROR EEEEEEE]: Got weird table addr lel");
+    //     sprintf("\n[VMM ERROR EEEEEEE]: P1: %u P2: %u P3: %u P4: %u", offs->p1_off, offs->p2_off, offs->p3_off, offs->p4_off);
+    //     while (1) {
+    //         /* code */
+    //     }
+        
+    // }
 
     return ret;
 }
@@ -97,8 +127,8 @@ void *virt_to_phys(void *virt) {
     pt_off_t offsets = vmm_virt_to_offs(virt);
     pt_ptr_t pointers = vmm_get_table(&offsets, (pt_t *) vmm_get_pml4t());
     pt_t *table = (pt_t *) pointers.p1;
-    sprintf("\nP1: %u P2: %u P3: %u P4: %u Data: %lx", (uint32_t) offsets.p1_off, (uint32_t) offsets.p2_off, (uint32_t) offsets.p3_off, (uint32_t) offsets.p4_off, table->ents[offsets.p1_off]);
-    sprintf("\nP1 addr: %lx", table);
+    //sprintf("\nP1: %u P2: %u P3: %u P4: %u Data: %lx", (uint32_t) offsets.p1_off, (uint32_t) offsets.p2_off, (uint32_t) offsets.p3_off, (uint32_t) offsets.p4_off, table->ents[offsets.p1_off]);
+    //sprintf("\nP1 addr: %lx", table);
     return (void *) (table->ents[offsets.p1_off] & ~(0xfff));
 }
 
@@ -106,6 +136,8 @@ int vmm_unmap_pages(pt_t *pml4, void *virt, size_t count) {
     pt_off_t offsets;
     pt_ptr_t table_addresses;
     int ret = 0;
+
+    sprintf("\n[VMM]: Unmapping %lx", virt);
 
     for (uint64_t i = 0; i < count; i++) {
         // Get table offset data
@@ -123,6 +155,7 @@ int vmm_unmap_pages(pt_t *pml4, void *virt, size_t count) {
             ret = 1;
             continue; // couldn't allocate a p1 for some reason or another
         }
+        vmm_invlpg((uint64_t) virt + (i * 0x1000));
     }
 
     return ret;
@@ -132,6 +165,8 @@ int vmm_map_pages(pt_t *pml4, void *virt, void *phys, size_t count, int perms) {
     pt_off_t offsets;
     pt_ptr_t table_addresses;
     int ret = 0;
+
+    sprintf("\n[VMM]: Mapping %lx to %lx", phys, virt);
 
     for (uint64_t i = 0; i < count; i++) {
         //sprintf("\nVirtual: %lx Phys: %lx", ((uint64_t) virt + (i * 0x1000)) & ~(0xfff), (uint64_t) ((((uint64_t) phys) & ~(0xfff)) + (i * 0x1000)));
@@ -155,6 +190,7 @@ int vmm_map_pages(pt_t *pml4, void *virt, void *phys, size_t count, int perms) {
             ret = 1;
             continue; // For some reason, the p1 pointer was null
         }
+        vmm_invlpg((uint64_t) virt + (i * 0x1000));
     }
 
     return ret;
@@ -165,6 +201,8 @@ int vmm_remap_pages(pt_t *pml4, void *virt, void *phys, size_t count, int perms)
     pt_ptr_t table_addresses;
     int ret = 0;
 
+    sprintf("\n[VMM]: Remapping %lx to %lx", phys, virt);
+
     for (uint64_t i = 0; i < count; i++) {
         offsets = vmm_virt_to_offs((char *) virt + (i * 0x1000));
         table_addresses = vmm_get_table(&offsets, pml4);
@@ -172,6 +210,12 @@ int vmm_remap_pages(pt_t *pml4, void *virt, void *phys, size_t count, int perms)
             // Map the physical address to the virtual one by setting it's entry
             table_addresses.p1->ents[offsets.p1_off] = ((((uint64_t) phys) & ~(0xfff))
                 + (i * 0x1000)) | VMM_PRESENT | VMM_WRITE | perms;
+            // sprintf("\nMapped data: %lx", table_addresses.p1->ents[offsets.p1_off]);
+            // if (table_addresses.p1->ents[offsets.p1_off] & 0x40) {
+            //     sprintf("\nBad");
+            //     while(1);
+                
+            // }
             //if (offsets.p2_off == 6) {
             //    sprintf("\nMapped P1: %u P2: %u P3: %u P4: %u Data: %lx", (uint32_t) offsets.p1_off, (uint32_t) offsets.p2_off, (uint32_t) offsets.p3_off, (uint32_t) offsets.p4_off, table_addresses.p1->ents[offsets.p1_off]);
             //    sprintf("\nP1 addr: %lx", table_addresses.p1);
@@ -180,6 +224,7 @@ int vmm_remap_pages(pt_t *pml4, void *virt, void *phys, size_t count, int perms)
             ret = 1;
             continue; // For some reason, the p1 pointer was null
         }
+        vmm_invlpg((uint64_t) virt + (i * 0x1000));
     }
 
     return ret;

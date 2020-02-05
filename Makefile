@@ -58,7 +58,7 @@ run: myos.iso
 	make clean
 
 run-kvm: myos.iso
-	- sudo qemu-system-x86_64 -enable-kvm -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+	- sudo qemu-system-x86_64 -enable-kvm -smp 4 -cpu host -d cpu_reset -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
 	make clean
 iso: myos.iso
 	cp myos.iso doneiso/
