@@ -82,3 +82,23 @@ void htoa(uint64_t in, char str[]) {
     }
     str[pos] = '\0'; // nullify 
 }
+
+void memcpy(uint8_t *src, uint8_t *dst, uint64_t count) {
+    for (uint64_t i = 0; i<count; i++)
+        *dst++ = *src++;
+}
+
+void memcpy32(uint32_t *src, uint32_t *dst, uint64_t count) {
+    for (uint64_t i = 0; i<count; i++)
+        *dst++ = *src++;
+}
+
+void memset(uint8_t *dst, uint8_t data, uint64_t count) {
+    for (uint64_t i = 0; i<count; i++)
+        *dst++ = data;
+}
+
+void memset32(uint32_t *dst, uint32_t data, uint64_t count) {
+    for (uint64_t i = 0; i<count; i++)
+        *dst++ = data;
+}
