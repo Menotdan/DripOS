@@ -1,5 +1,7 @@
 #include "serial.h"
+#include <stdarg.h>
 #include "io/ports.h"
+#include "klibc/string.h"
 
 void init_serial(uint16_t com_port) {
     port_outb(com_port + 1, 0); // Disable interrupts for this COM port
@@ -32,4 +34,73 @@ void sprint_com_port(char *s, uint16_t com_port) {
 // Print on COM1 by default
 void sprint(char *s) {
     sprint_com_port(s, COM1);
+}
+
+void sprintf(char *message, ...) {
+    va_list format_list;
+    uint64_t index = 0;
+    uint8_t big = 0;
+
+    va_start(format_list, message);
+
+    while (message[index]) {
+        if (message[index] == '%') {
+            index++;
+            if (message[index] == 'l') {
+                index++;
+                big = 1;
+            }
+            switch (message[index]) {
+                case 'x':
+                    if (big) {
+                        uint64_t data = va_arg(format_list, uint64_t);
+                        char data_buf[32];
+                        htoa(data, data_buf);
+                        sprint(data_buf);
+                    } else {
+                        uint32_t data = va_arg(format_list, uint32_t);
+                        char data_buf[32];
+                        htoa((uint64_t) data, data_buf);
+                        sprint(data_buf);
+                    }
+                    break;
+                case 'd':
+                    if (big) {
+                        int64_t data = va_arg(format_list, int64_t);
+                        char data_buf[32];
+                        itoa(data, data_buf);
+                        sprint(data_buf);
+                    } else {
+                        int32_t data = va_arg(format_list, int32_t);
+                        char data_buf[32];
+                        itoa((int64_t) data, data_buf);
+                        sprint(data_buf);
+                    }
+                    break;
+                case 'u':
+                    if (big) {
+                        uint64_t data = va_arg(format_list, uint64_t);
+                        char data_buf[32];
+                        utoa(data, data_buf);
+                        sprint(data_buf);
+                    } else {
+                        uint32_t data = va_arg(format_list, uint32_t);
+                        char data_buf[32];
+                        utoa((uint32_t) data, data_buf);
+                        sprint(data_buf);
+                    }
+                    break;
+                case 's':
+                    sprint(va_arg(format_list, char *));
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            write_serial(message[index], COM1);
+        }
+        index++;
+    }
+
+    va_end(format_list);
 }
