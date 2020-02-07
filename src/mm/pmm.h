@@ -11,6 +11,9 @@ typedef void *symbol[];
 extern symbol __kernel_end;
 extern symbol __kernel_start;
 
+extern void spinlock_lock(uint32_t *lock);
+extern void spinlock_unlock(uint32_t *lock);
+
 void pmm_memory_setup(multiboot_info_t *mboot_dat);
 void *pmm_alloc(uint64_t size);
 void pmm_unalloc(void *addr, uint64_t size);

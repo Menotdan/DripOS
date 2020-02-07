@@ -11,18 +11,26 @@ uint8_t *cur_map; // The current map last found by the free space finder
 uint64_t usable_mem; // The estimated amount of usable memory
 uint64_t used_mem; // The estimated amount of used memory
 
+uint32_t pmm_spinlock = 0; // The spinlock for the PMM
+
 /* Get a bit in the bitmap */
 uint8_t pmm_get_bit(uint8_t *bitmap_change, uint8_t bit, uint64_t byte) {
-    return ((*(bitmap_change + byte + 8) >> bit) & 1);
+    uint8_t ret = 0;
+    spinlock_lock(&pmm_spinlock);
+    ret = ((*(bitmap_change + byte + 8) >> bit) & 1);
+    spinlock_unlock(&pmm_spinlock);
+    return ret;
 }
 
 /* Set a bit in the bitmap */
 void pmm_set_bit(uint8_t *bitmap_change, uint8_t bit, uint64_t byte, uint8_t state) {
+    spinlock_lock(&pmm_spinlock); // Lock the PMM
     if (state == 0) {
         *(bitmap_change + byte + 8) &= ~(1 << bit);
     } else if (state == 1) {
         *(bitmap_change + byte + 8) = (*(bitmap_change + byte + 8) | (1 << bit));
     }
+    spinlock_unlock(&pmm_spinlock); // Unlock the PMM
 }
 
 /* Get the size of the bitmap from it's pointer */
@@ -128,11 +136,19 @@ bitmap_index pmm_get_bitmap(void *addr) {
 }
 
 uint64_t pmm_get_free_mem() {
-    return usable_mem;
+    uint64_t ret = 0;
+    spinlock_lock(&pmm_spinlock); // Wait for us to have the lock so we can get accurate size readings
+    ret = usable_mem; // Store the value
+    spinlock_unlock(&pmm_spinlock); // Unlock it 
+    return ret;
 }
 
 uint64_t pmm_get_used_mem() {
-    return used_mem;
+    uint64_t ret = 0;
+    spinlock_lock(&pmm_spinlock); // Wait for us to have the lock se we can get accurate size readings
+    ret = used_mem;
+    spinlock_unlock(&pmm_spinlock);
+    return ret;
 }
 
 void pmm_memory_setup(multiboot_info_t *mboot_dat) {
