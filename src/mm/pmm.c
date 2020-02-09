@@ -227,6 +227,7 @@ bitmap_index pmm_find_free(uint64_t pages) {
 
 void *pmm_alloc(uint64_t size) {
     spinlock_lock(&pmm_spinlock);
+    sprintf("\nAllocating");
     uint64_t pages_needed = (size + 0x1000 - 1) / 0x1000;
     bitmap_index free_space = pmm_find_free(pages_needed);
 

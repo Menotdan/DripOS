@@ -1,5 +1,6 @@
 #include "string.h"
 #include "math.h"
+#include "drivers/serial.h"
 
 uint64_t strlen(char str[]) {
     uint64_t len = 0;
@@ -9,9 +10,11 @@ uint64_t strlen(char str[]) {
 
 void reverse(char str[]) {
     uint64_t start_index = 0;
-    uint64_t end_index = strlen(str) - 1;
+    uint64_t end_index = 0;
+    if (strlen(str) > 0) {
+        end_index = strlen(str) - 1;
+    }
     char temp_buffer = 0;
-
     // Two indexes, one starts at 0, the other starts at strlen - 1
     // On each iteration, store the char at start_index in temp_buffer,
     // Store the char at end_index in the space at start_index,
@@ -30,7 +33,9 @@ void itoa(int64_t n, char str[]) {
     uint64_t i;
     i = 0;
     uint64_t abs_n = (int64_t) abs(n);
-
+    if (abs_n == 0) {
+        str[i++] = '0';
+    }
     while (abs_n > 0) {
         str[i++] = (abs_n % 10) + '0'; // Calculate the current lowest value digit and convert it
         abs_n /= 10;
@@ -48,6 +53,9 @@ void itoa(int64_t n, char str[]) {
 void utoa(uint64_t n, char str[]) {
     uint64_t i;
     i = 0;
+    if (n == 0) {
+        str[i++] = '0';
+    }
     while (n > 0) {
         str[i++] = (n % 10) + '0'; // Calculate the current lowest value digit and convert it
         n /= 10;
