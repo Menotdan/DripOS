@@ -36,6 +36,7 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
 int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t perms);
 int vmm_unmap_pages(void *phys, void *virt, void *p4, uint64_t count);
 void vmm_set_pml4t(uint64_t new);
+void *virt_to_phys(void *virt, pt_t *p4);
 uint64_t vmm_get_pml4t();
 
 #endif
