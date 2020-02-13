@@ -3,7 +3,7 @@
 #include "mm/vmm.h"
 #include "klibc/vector.h"
 #include "drivers/serial.h"
-#include "arch/amd64/io/msr.h"
+#include "io/msr.h"
 
 uint64_t lapic_base;
 vector_t cpu_vector;

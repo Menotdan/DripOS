@@ -17,7 +17,7 @@ void kmain(multiboot_info_t *mboot_dat) {
 
     sprintf("\nConfiguring APIC");
     configure_apic();
-    
+    asm volatile("sti");
 
     while (1) {
         asm volatile("hlt");
