@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include "sys/acpi/rsdt.h"
 
+#define APIC_BASE_MSR 0x1B
+#define APIC_BASE_MSR_ENABLE 0x800
+#define KERNEL_VM_OFFSET 0xFFFF800000000000
+
 typedef struct {
     uint8_t acpi_processor_id;
     uint8_t apic_id;
@@ -34,8 +38,6 @@ typedef struct {
     uint64_t local_apic_override;
 } __attribute__ ((packed)) madt_ent5_t;
 
-
-
 typedef struct {
     sdt_header_t header; // The header
     /* Data for the MADT */
@@ -45,5 +47,6 @@ typedef struct {
 } __attribute__ ((packed)) madt_t;
 
 void parse_madt();
+void configure_apic();
 
 #endif

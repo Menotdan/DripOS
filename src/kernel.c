@@ -15,7 +15,9 @@ void kmain(multiboot_info_t *mboot_dat) {
     sprintf("\nTest alloc: %lx", pmm_alloc(0x2000));
     sprintf("\nTest alloc 2: %lx", pmm_alloc(1));
 
-    parse_madt();
+    sprintf("\nConfiguring APIC");
+    configure_apic();
+    
 
     while (1) {
         asm volatile("hlt");
