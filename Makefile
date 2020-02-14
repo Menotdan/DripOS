@@ -39,7 +39,7 @@ kernel.elf: ${OBJ}
 	${CC} -Wl,-z,max-page-size=0x1000 -nostdlib -o $@ -T linker.ld $^
 
 run: myos.iso
-	- qemu-system-x86_64 -d guest_errors,int -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+	- qemu-system-x86_64 -d guest_errors,cpu_reset -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
 	make clean
 
 run-kvm: myos.iso
@@ -69,3 +69,4 @@ debug: myos.iso
 clean:
 	rm -rf *.bin *.dis *.o os-image.bin *.elf *.iso
 	rm -rf ${OBJ}
+	rm -rf $(shell find src/ -type f -name '*.d')

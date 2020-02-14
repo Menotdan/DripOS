@@ -23,6 +23,7 @@ void parse_madt() {
         uint64_t bytes_for_entries = madt->header.length - (sizeof(madt->header) + sizeof(madt->local_apic_addr) + sizeof(madt->apic_flags));
         lapic_base = (uint64_t) madt->local_apic_addr;
 
+        sprintf("\n[MADT]: MADT entries:");
         for (uint64_t e = 0; e < bytes_for_entries; e++) {
             uint8_t type = madt->entries[e++];
             uint8_t size = madt->entries[e++];
@@ -176,10 +177,20 @@ void configure_apic() {
     write_msr(APIC_BASE_MSR, (read_msr(APIC_BASE_MSR) | APIC_BASE_MSR_ENABLE) & ~(1<<10)); // Set the LAPIC enable bit
     write_lapic(0xF0, read_lapic(0xF0) | 0x1FF); // Enable spurious interrupts
 
+    uint8_t mapped_irqs[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     madt_ent2_t **isos = (madt_ent2_t **) vector_items(&iso_vector);
     for (uint64_t i = 0; i < iso_vector.items_count; i++) {
         madt_ent2_t *iso = isos[i];
         redirect_gsi(iso->irq_src, iso->gsi, iso->flags, 0);
+        if (iso->irq_src < 16) {
+            mapped_irqs[iso->irq_src] = 1;
+        }
+    }
+
+    for (uint8_t i = 0; i < 16; i++) {
+        if (!mapped_irqs[i]) {
+            redirect_gsi(i, (uint32_t) i, 0, 0);
+        }
     }
     
     madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);

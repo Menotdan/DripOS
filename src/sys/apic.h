@@ -48,5 +48,7 @@ typedef struct {
 
 void parse_madt();
 void configure_apic();
+void write_lapic(uint16_t offset, uint32_t data);
+uint32_t read_lapic(uint16_t offset);
 
 #endif
