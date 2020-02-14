@@ -141,10 +141,10 @@ uint8_t apic_write_redirection_table(uint32_t gsi, uint64_t data) {
     if (!valid_ioapic) {
         return 1;
     }
-    uint64_t valid_addr = (uint64_t) (valid_ioapic->ioapic_addr);
+    void * valid_addr = (void *) (uint64_t) (valid_ioapic->ioapic_addr); // Do some yucky cast to a void *
     uint32_t reg = ((gsi - gsi_base) * 2) + 16;
-    ioapic_write((void *) valid_addr, reg + 0, (uint32_t) data);
-    ioapic_write((void *) valid_addr, reg + 1, (uint32_t) (data >> 32));
+    ioapic_write(valid_addr, reg + 0, (uint32_t) data);
+    ioapic_write(valid_addr, reg + 1, (uint32_t) (data >> 32));
     return 0;
 }
 
@@ -167,22 +167,23 @@ uint64_t apic_read_redirection_table(uint32_t gsi) {
     }
 
     if (!valid_ioapic) {
-        return 0xFFFFFFFFFFFFFFFF; // return invalid data
+        return REDIRECT_TABLE_BAD_READ; // return bad read error
     }
-    uint64_t valid_addr = (uint64_t) (valid_ioapic->ioapic_addr);
-    uint32_t reg = ((gsi - gsi_base) * 2) + 16;
+    void *valid_addr = (void *) (uint64_t) (valid_ioapic->ioapic_addr); // The address of the correct IOAPIC
+    uint32_t reg = ((gsi - gsi_base) * 2) + 16; // Calculate the correct register
 
-    uint64_t data_read = (uint64_t) ioapic_read((void *) valid_addr, reg + 0);
-    data_read |= (uint64_t) (ioapic_read((void *) valid_addr, reg + 1)) << 32;
+    uint64_t data_read = (uint64_t) ioapic_read(valid_addr, reg + 0);
+    data_read |= (uint64_t) (ioapic_read(valid_addr, reg + 1)) << 32;
     return data_read;
 }
 
 void mask_gsi(uint32_t gsi) {
     uint64_t current_data = apic_read_redirection_table(gsi);
-    if (current_data == 0xFFFFFFFFFFFFFFFF) {
+    if (current_data == REDIRECT_TABLE_BAD_READ) {
         return;
     }
     apic_write_redirection_table(gsi, current_data | (1<<16));
+    sprintf("\n[APIC]: Masked GSI %u", gsi);
 }
 
 void redirect_gsi(uint8_t irq, uint32_t gsi, uint16_t flags, uint8_t apic) {
@@ -199,7 +200,7 @@ void redirect_gsi(uint8_t irq, uint32_t gsi, uint16_t flags, uint8_t apic) {
     // Add the APIC id of the target processor to handle this GSI
     redirect |= ((uint64_t) apic) << 56;
     apic_write_redirection_table(gsi, redirect);
-    sprintf("\n[APIC]: Mapped GSI %u to IRQ %u on APIC %u", gsi, (uint32_t) irq, (uint32_t) apic);
+    sprintf("\n[APIC]: Mapped GSI %u to IRQ %u on LAPIC %u", gsi, (uint32_t) irq, (uint32_t) apic);
 }
 
 void configure_apic() {
@@ -222,11 +223,22 @@ void configure_apic() {
     write_msr(APIC_BASE_MSR, (read_msr(APIC_BASE_MSR) | APIC_BASE_MSR_ENABLE) & ~(1<<10)); // Set the LAPIC enable bit
     write_lapic(0xF0, read_lapic(0xF0) | 0x1FF); // Enable spurious interrupts
 
+    /* Mask all GSIs */
+    madt_ent1_t **ioapics = (madt_ent1_t **) vector_items(&ioapic_vector);
+    for (uint64_t i = 0; i < ioapic_vector.items_count; i++) {
+        void *ioapic_base = (void *) (uint64_t) ioapics[i]->ioapic_addr; // Do some yucky cast to a void *
+        for (uint32_t gsi = ioapics[i]->gsi_base; gsi < apic_get_gsi_max(ioapic_base); gsi++) {
+            mask_gsi(gsi);
+        }
+    }
+
+    /* Map all the IRQ GSIs */
     uint8_t mapped_irqs[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     madt_ent2_t **isos = (madt_ent2_t **) vector_items(&iso_vector);
     for (uint64_t i = 0; i < iso_vector.items_count; i++) {
         madt_ent2_t *iso = isos[i];
         redirect_gsi(iso->irq_src, iso->gsi, iso->flags, 0);
+        /* Mark the GSI as already mapped */
         if (iso->gsi < 16) {
             mapped_irqs[iso->gsi] = 1;
         }
