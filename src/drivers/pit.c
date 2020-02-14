@@ -11,8 +11,8 @@ void timer_handler(int_reg_t *r) {
     UNUSED(r);
 }
 
-void set_pit_freq(uint64_t freq) {
-    uint64_t divisor = 1193180 / freq;
+void set_pit_freq() {
+    uint16_t divisor = 2386;
 
     /* Caluclate the bytes to send to the PIT,
     where the bytes indicate the frequency */

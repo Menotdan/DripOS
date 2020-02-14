@@ -4,7 +4,7 @@
 
 /* Interrupt register struct */
 typedef struct {
-    uint64_t r15, r14, r13, r12, r11, r10, r9, rsi, rdi, rbp, rdx, rcx, rbx, rax;
+    uint64_t r15, r14, r13, r12, r11, r10, r9, r8, rsi, rdi, rbp, rdx, rcx, rbx, rax;
     uint64_t int_num, int_err;
     uint64_t rip, cs, rflags, rsp, ss;
 } __attribute__((packed)) int_reg_t;

@@ -112,22 +112,24 @@ void ioapic_write(void *ioapic_base, uint32_t reg, uint32_t data) {
     *(volatile uint32_t *) ((uint64_t) ioapic_base + 16 + KERNEL_VM_OFFSET) = data;
 }
 
-uint8_t get_gsi_max(void *ioapic_base) {
+uint8_t apic_get_gsi_max(void *ioapic_base) {
     uint32_t data = ioapic_read(ioapic_base, 1) >> 16; // Read register 1
     uint8_t ret = (uint8_t) data;
     return ret & ~(1<<7);
 }
 
-void redirect_gsi(uint8_t irq, uint32_t gsi, uint16_t flags, uint8_t apic) {
+/* TODO: make a mask function */
+
+uint8_t apic_write_redirection_table(uint32_t gsi, uint64_t data) {
     madt_ent1_t *valid_ioapic = (madt_ent1_t *) 0;
     uint32_t gsi_base = 0;
 
-    /* Look for the  correct IOAPIC */
+    /* Look for the correct IOAPIC */
     madt_ent1_t **ioapics = (madt_ent1_t **) vector_items(&ioapic_vector);
     /* Iterate over every IOAPIC */
     for (uint64_t i = 0; i < ioapic_vector.items_count; i++) {
         madt_ent1_t *ioapic = ioapics[i]; // Get the data
-        uint32_t gsi_max = (uint32_t) get_gsi_max((void *) (uint64_t) ioapic->ioapic_addr) + ioapic->gsi_base;
+        uint32_t gsi_max = (uint32_t) apic_get_gsi_max((void *) (uint64_t) ioapic->ioapic_addr) + ioapic->gsi_base;
 
         if (ioapic->gsi_base <= gsi && gsi_max >= gsi) {
             /* Found the correct ioapic */
@@ -137,10 +139,54 @@ void redirect_gsi(uint8_t irq, uint32_t gsi, uint16_t flags, uint8_t apic) {
     }
 
     if (!valid_ioapic) {
+        return 1;
+    }
+    uint64_t valid_addr = (uint64_t) (valid_ioapic->ioapic_addr);
+    uint32_t reg = ((gsi - gsi_base) * 2) + 16;
+    ioapic_write((void *) valid_addr, reg + 0, (uint32_t) data);
+    ioapic_write((void *) valid_addr, reg + 1, (uint32_t) (data >> 32));
+    return 0;
+}
+
+uint64_t apic_read_redirection_table(uint32_t gsi) {
+    madt_ent1_t *valid_ioapic = (madt_ent1_t *) 0;
+    uint32_t gsi_base = 0;
+
+    /* Look for the correct IOAPIC */
+    madt_ent1_t **ioapics = (madt_ent1_t **) vector_items(&ioapic_vector);
+    /* Iterate over every IOAPIC */
+    for (uint64_t i = 0; i < ioapic_vector.items_count; i++) {
+        madt_ent1_t *ioapic = ioapics[i]; // Get the data
+        uint32_t gsi_max = (uint32_t) apic_get_gsi_max((void *) (uint64_t) ioapic->ioapic_addr) + ioapic->gsi_base;
+
+        if (ioapic->gsi_base <= gsi && gsi_max >= gsi) {
+            /* Found the correct ioapic */
+            valid_ioapic = ioapic;
+            gsi_base = valid_ioapic->gsi_base;
+        }
+    }
+
+    if (!valid_ioapic) {
+        return 0xFFFFFFFFFFFFFFFF; // return invalid data
+    }
+    uint64_t valid_addr = (uint64_t) (valid_ioapic->ioapic_addr);
+    uint32_t reg = ((gsi - gsi_base) * 2) + 16;
+
+    uint64_t data_read = (uint64_t) ioapic_read((void *) valid_addr, reg + 0);
+    data_read |= (uint64_t) (ioapic_read((void *) valid_addr, reg + 1)) << 32;
+    return data_read;
+}
+
+void mask_gsi(uint32_t gsi) {
+    uint64_t current_data = apic_read_redirection_table(gsi);
+    if (current_data == 0xFFFFFFFFFFFFFFFF) {
         return;
     }
+    apic_write_redirection_table(gsi, current_data | (1<<16));
+}
+
+void redirect_gsi(uint8_t irq, uint32_t gsi, uint16_t flags, uint8_t apic) {
     uint64_t redirect = (uint64_t) irq + 32; // Offset so that the actual interrupt the cpu gets is past exceptions
-    uint32_t reg = ((gsi - gsi_base) * 2) + 16;
 
     // active low
     if (flags & 1<<1) {
@@ -152,8 +198,7 @@ void redirect_gsi(uint8_t irq, uint32_t gsi, uint16_t flags, uint8_t apic) {
     }
     // Add the APIC id of the target processor to handle this GSI
     redirect |= ((uint64_t) apic) << 56;
-    ioapic_write((void *) (uint64_t) (valid_ioapic->ioapic_addr), reg + 0, (uint32_t) redirect);
-    ioapic_write((void *) (uint64_t) (valid_ioapic->ioapic_addr), reg + 1, (uint32_t) (redirect >> 32));
+    apic_write_redirection_table(gsi, redirect);
     sprintf("\n[APIC]: Mapped GSI %u to IRQ %u on APIC %u", gsi, (uint32_t) irq, (uint32_t) apic);
 }
 
@@ -182,8 +227,8 @@ void configure_apic() {
     for (uint64_t i = 0; i < iso_vector.items_count; i++) {
         madt_ent2_t *iso = isos[i];
         redirect_gsi(iso->irq_src, iso->gsi, iso->flags, 0);
-        if (iso->irq_src < 16) {
-            mapped_irqs[iso->irq_src] = 1;
+        if (iso->gsi < 16) {
+            mapped_irqs[iso->gsi] = 1;
         }
     }
 

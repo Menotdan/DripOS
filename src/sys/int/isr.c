@@ -18,6 +18,7 @@ void isr_handler(int_reg_t *r) {
         if (r->int_num < 32) {
             /* Exception */
             sprintf("\nException!");
+            sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx RSI: %lx \nR08: %lx R09: %lx R10: %lx \nR11: %lx R12: %lx R13: %lx \nR14: %lx R15: %lx RSP: %lx\n ERR: %lx INT: %lx RIP: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip);
             while (1) { asm volatile("hlt"); }
         }
         /* If the entry is present */
@@ -25,10 +26,11 @@ void isr_handler(int_reg_t *r) {
             /* Call the handler */
             handlers[r->int_num](r);
         } else {
-            sprintf("\nUnhandled interrupt %lu", r->int_num);
+            //sprintf("\nUnhandled interrupt %lu", r->int_num);
         }
     } else {
         sprintf("\nBad int no %lu", r->int_num);
+        sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx RSI: %lx \nR08: %lx R09: %lx R10: %lx \nR11: %lx R12: %lx R13: %lx \nR14: %lx R15: %lx RSP: %lx\n ERR: %lx INT: %lx RIP: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip);
         while (1) { asm volatile("hlt"); }
     }
     // If we make it here, send an EOI to our LAPIC
