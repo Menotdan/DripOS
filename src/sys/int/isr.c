@@ -2,6 +2,7 @@
 #include "idt.h"
 #include "drivers/serial.h"
 #include "drivers/pit.h"
+#include "drivers/ps2.h"
 #include "sys/apic.h"
 #include "io/ports.h"
 
@@ -294,5 +295,6 @@ void configure_idt() {
     set_idt_gate(255, (uint64_t) isr255);
     load_idt(); // Point to the IDT
     register_int_handler(32, timer_handler);
+    register_int_handler(33, keyboard_handler);
     asm volatile("sti"); // Enable interrupts and hope we dont die lmao
 }
