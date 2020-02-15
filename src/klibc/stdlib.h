@@ -7,5 +7,6 @@
 void *kmalloc(uint64_t size);
 void kfree(void *addr);
 void *krealloc(void *addr, uint64_t new_size);
+void *kcalloc(uint64_t size);
 
 #endif

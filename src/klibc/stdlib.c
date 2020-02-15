@@ -17,11 +17,17 @@ void kfree(void *addr) {
     }
 }
 
+void *kcalloc(uint64_t size) {
+    void *buffer = kmalloc(size);
+    memset((uint8_t *) buffer, 0, size);
+    return buffer;
+}
+
 void *krealloc(void *addr, uint64_t new_size) {
     uint64_t *size_data = (uint64_t *) ((uint64_t) addr - 0x1000);
     void *new_buffer = kmalloc(new_size);
     
-    /* Copy everything over */
+    /* Copy everything over, and only copy part if our new size is lower than the old size */
     if ((*size_data) - 0x1000 >= new_size) {
         memcpy((uint8_t *) addr, (uint8_t *) new_buffer, (new_size));
     } else {
