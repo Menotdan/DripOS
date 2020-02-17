@@ -23,7 +23,7 @@ void parse_madt() {
         uint64_t bytes_for_entries = madt->header.length - (sizeof(madt->header) + sizeof(madt->local_apic_addr) + sizeof(madt->apic_flags));
         lapic_base = (uint64_t) madt->local_apic_addr;
 
-        sprintf("\n[MADT]: MADT entries:");
+        sprintf("\n[MADT] MADT entries:");
         for (uint64_t e = 0; e < bytes_for_entries; e++) {
             uint8_t type = madt->entries[e++];
             uint8_t size = madt->entries[e++];
@@ -183,7 +183,7 @@ void mask_gsi(uint32_t gsi) {
         return;
     }
     apic_write_redirection_table(gsi, current_data | (1<<16));
-    sprintf("\n[APIC]: Masked GSI %u", gsi);
+    sprintf("\n[APIC] Masked GSI %u", gsi);
 }
 
 void redirect_gsi(uint8_t irq, uint32_t gsi, uint16_t flags, uint8_t apic) {
@@ -200,7 +200,7 @@ void redirect_gsi(uint8_t irq, uint32_t gsi, uint16_t flags, uint8_t apic) {
     // Add the APIC id of the target processor to handle this GSI
     redirect |= ((uint64_t) apic) << 56;
     apic_write_redirection_table(gsi, redirect);
-    sprintf("\n[APIC]: Mapped GSI %u to IRQ %u on LAPIC %u", gsi, (uint32_t) irq, (uint32_t) apic);
+    sprintf("\n[APIC] Mapped GSI %u to IRQ %u on LAPIC %u", gsi, (uint32_t) irq, (uint32_t) apic);
 }
 
 void configure_apic() {
@@ -252,6 +252,6 @@ void configure_apic() {
     
     madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
     for (uint64_t i = 0; i < cpu_vector.items_count; i++) {
-        sprintf("\n[APIC]: Vector APIC id: %lu", (uint32_t) cpus[i]->apic_id);
+        sprintf("\n[APIC] Vector APIC id: %lu", (uint32_t) cpus[i]->apic_id);
     }
 }
