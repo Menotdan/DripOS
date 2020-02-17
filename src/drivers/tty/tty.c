@@ -8,12 +8,14 @@ color_t default_bg = {0, 0, 0};
 tty_t base_tty;
 
 void tty_init(tty_t *tty, uint64_t font_width, uint64_t font_height) {
+    (void) font_width;
+    (void) font_height;
     tty->fg = default_fg;
     tty->bg = default_bg;
     tty->c_pos_x = 0;
     tty->c_pos_y = 0;
-    tty->rows = vesa_display_info.height / font_height;
-    tty->cols = vesa_display_info.width / font_width;
+    tty->rows = 25;//vesa_display_info.height / font_height;
+    tty->cols = 80;//vesa_display_info.width / font_width;
     tty->font = (uint8_t *) font8x8_basic;
 }
 
@@ -22,7 +24,9 @@ void tty_out(char c, tty_t *tty) {
         tty->c_pos_y += 1;
         tty->c_pos_x = 0;
     } else {
-        render_font((uint8_t (*) [8]) tty->font, c, tty->c_pos_x * 8, tty->c_pos_y * 8, tty->fg, tty->bg);
+        //render_font((uint8_t (*) [8]) tty->font, c, tty->c_pos_x * 8, tty->c_pos_y * 8, tty->fg, tty->bg);
+        char *buffer = (char *) 0xb8000;
+        buffer[((tty->c_pos_y * tty->cols) + tty->c_pos_x) * 2] = c;
         tty->c_pos_x++;
         if (tty->c_pos_x == tty->cols) {
             tty->c_pos_y += 1;

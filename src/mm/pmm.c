@@ -80,7 +80,9 @@ uint8_t *pmm_get_last_bitmap(uint8_t *bitmap_start) {
 
 /* Setup a bitmap which may be pointed to by another bitmap */
 void pmm_set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem, uint64_t offset) {
+    kprintf("\nNew bitmap ... ");
     spinlock_lock(&pmm_spinlock);
+    kprintf("Locked.");
     uint8_t *real_bitmap_pos = bitmap_start + offset;
     uint64_t *size_data_writing = (uint64_t *) real_bitmap_pos;
     uint64_t bitmap_bytes = (size_of_mem + (0x1000 * 8) - 1) / (0x1000 * 8); // Bitmap size in bytes
@@ -158,20 +160,26 @@ uint64_t pmm_get_used_mem() {
 }
 
 void pmm_memory_setup(multiboot_info_t *mboot_dat) {
+    kprintf(" ... in function");
     // Current mmap address
     uint64_t current = ((uint64_t)mboot_dat->mmap_addr) & 0xffffffff;
+    kprintf("\nmmap addr %lx", current);
     // Remaining mmap data
     uint64_t remaining = mboot_dat->mmap_length;
+    kprintf("\nmmap len %lu", remaining);
+    kprintf("\nmboot_dat: %lx", mboot_dat);
 
     // Iterate over the map for the first time
     for (; remaining > 0; remaining -= sizeof(multiboot_memory_map_t)) {
         multiboot_memory_map_t *mmap = (multiboot_memory_map_t *)(current);
-
+        kprintf("\n%lx - %lx", mmap->addr, mmap->addr + mmap->len);
         /* Bitmap setup for use with the initial page table setup */
         if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
             if (mmap->addr == 0 || remaining == mboot_dat->mmap_length) {
                 // Found lower 640K of memory, ignore it, as to not overwrite stuff
+                kprintf("\nFound low");
             } else {
+                kprintf("\nFound kernel");
                 // Is this the kernel block?
                 uint64_t kernel_start = ((uint64_t) __kernel_start) - KERNEL_VMA_OFFSET; // Find the non offset kernel start
                 uint64_t kernel_end = ((uint64_t) __kernel_end) - KERNEL_VMA_OFFSET; // Find the non offset kernel end
@@ -189,29 +197,13 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
         }
         current += sizeof(multiboot_memory_map_t);
     }
-    uint16_t divisor = 2386;
 
-    port_outb(0x43, 0xb6);
-    port_outb(0x42, (uint8_t)(divisor));
-    port_outb(0x42, (uint8_t)(divisor >> 8));
-
-    uint8_t tmp1 = port_inb(0x61);
-    if (tmp1 != (tmp1 | 3)) {
-        port_outb(0x61, tmp1 | 3);
-    }
-    for (uint32_t i = 0; i < 0xFFFFFFF; i++) {asm volatile("pause");}
-    uint8_t tmp2 = port_inb(0x61) & 0xFC;
-    port_outb(0x61, tmp2);
-    for (uint32_t i = 0; i < 0xFFFFFFF; i++) {asm volatile("pause");}
-    sprintf("\n[DripOS] Setting up display");
-    init_vesa(mboot_dat);
-    tty_init(&base_tty, 8, 8);
     /* Reset vars */
     // Current mmap address
     current = ((uint64_t)mboot_dat->mmap_addr) & 0xffffffff;
     // Remaining mmap data
     remaining = mboot_dat->mmap_length;
-
+    kprintf("\nNew parsing");
     // Iterate over the map for the first time
     for (; remaining > 0; remaining -= sizeof(multiboot_memory_map_t)) {
         multiboot_memory_map_t *mmap = (multiboot_memory_map_t *)(current);
@@ -265,19 +257,6 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
         }
         current += sizeof(multiboot_memory_map_t);
     }
-
-    port_outb(0x43, 0xb6);
-    port_outb(0x42, (uint8_t)(divisor));
-    port_outb(0x42, (uint8_t)(divisor >> 8));
-
-    tmp1 = port_inb(0x61);
-    if (tmp1 != (tmp1 | 3)) {
-        port_outb(0x61, tmp1 | 3);
-    }
-    for (uint32_t i = 0; i < 0xFFFFFFF; i++) {asm volatile("pause");}
-    tmp2 = port_inb(0x61) & 0xFC;
-    port_outb(0x61, tmp2);
-    for (uint32_t i = 0; i < 0xFFFFFFF; i++) {asm volatile("pause");}
 }
 
 bitmap_index pmm_find_free(uint64_t pages) {
