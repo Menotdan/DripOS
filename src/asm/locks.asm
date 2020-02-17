@@ -21,3 +21,11 @@ spin:
 spinlock_unlock:
     lock btr dword [rdi], 0 ; Set the bit to 0
     ret
+
+atomic_inc:
+    lock inc dword [rdi]
+    ret
+
+atomic_dec:
+    lock dec dword [rdi]
+    ret

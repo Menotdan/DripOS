@@ -1,53 +1,132 @@
 #ifndef KLIBC_DYNARRAY_H
 #define KLIBC_DYNARRAY_H
 #include "klibc/lock.h"
+#include "klibc/stdlib.h"
+#include <stddef.h>
 
-#define new_local_dynarray(name, type)                   \
-    lock_t dynarray_##name##_lock = 0;                   \
-    typedef struct dynarray_##name## {                   \
-        type data;                                       \
-        uint8_t present;                                 \
-    } dynarray_##name##_t;                               \
-    uint64_t dynarray_##name##_item_max = 4;             \
-    dynarray_##name##_t *##name## = kcalloc(sizeof(dynarray_##name##_t) * 4);
+#define dynarray_new(type, name) \
+    static struct { \
+        int refcount; \
+        int present; \
+        type data; \
+    } **name; \
+    static size_t name##_i = 0; \
+    static lock_t name##_lock = 0;
 
-#define new_dynarray(name, type)                         \
-    lock_t dynarray_##name##_lock = 0;                   \
-    typedef struct dynarray_##name## {                   \
-        type data;                                       \
-        uint8_t present;                                 \
-    } dynarray_##name##_t;                               \
-    uint64_t dynarray_##name##_item_max = 0;             \
-    dynarray_##name##_t *##name##;
+#define public_dynarray_new(type, name) \
+    struct __##name##_struct **name; \
+    size_t name##_i = 0; \
+    lock_t name##_lock = 0;
 
-#define init_global_dynarray(name)                       \
-    spinlock_lock(&dynarray_##name##_lock);              \
-    ##name## = kcalloc(sizeof(dynarray_##name##_t) * 4); \
-    spinlock_unlock(&dynarray_##name##_lock);
+#define public_dynarray_prototype(type, name) \
+    struct __##name##_struct { \
+        int refcount; \
+        int present; \
+        type data; \
+    }; \
+    extern struct __##name##_struct **name; \
+    extern size_t name##_i; \
+    extern lock_t name##_lock;
 
-#define dynarray_add(name, data)                         \
-    spinlock_lock(&dynarray_##name##_lock);              \
-    uint8_t found_data_##name##_dynarray = 0;            \
-    for (uint64_t i = 0; i < dynarray_##name##_item_max; i++) { \
-        if (!##name##[i].present) {                      \
-            ##name##[i].data = data;                     \
-            ##name##[i].present = 1;                     \
-        } else {                                         \
-            found_data_##name##_dynarray = 1;            \
-        }                                                \
-    }                                                    \
-    if (!found_data_##name##_dynarray) {                 \
-        ##name## = krealloc(##name##, sizeof(dynarray_##name##_t) * (dynarray_##name##_item_max + 4)); \
-        uint64_t ##name##_dynarray_offset = sizeof(dynarray_##name##_t) * (dynarray_##name##_item_max); \
-        uint8_t *##name##_dynarray_clear_buffer = (uint8_t *) ##name## + ##name##_dynarray_offset; \
-        memset(##name##_dynarray_clear_buffer, 0, 4 * sizeof(dynarray_##name##_t)); \
-        ##name##[dynarray_##name##_item_max].data = data; \
-        dynarray_##name##_item_max += 4                  \
-    }                                                    \
-    spinlock_unlock(&dynarray_##name##_lock);
+#define dynarray_remove(dynarray, element) ({ \
+    __label__ out; \
+    int ret; \
+    spinlock_lock(&dynarray##_lock); \
+    if (!dynarray[element]) { \
+        ret = -1; \
+        goto out; \
+    } \
+    ret = 0; \
+    dynarray[element]->present = 0; \
+    if (!atomic_dec(&dynarray[element]->refcount)) { \
+        kfree(dynarray[element]); \
+        dynarray[element] = 0; \
+    } \
+out: \
+    spinlock_unlock(&dynarray##_lock); \
+    ret; \
+})
 
-#define dynarray_remove(name, index)
+#define dynarray_unref(dynarray, element) ({ \
+    spinlock_lock(&dynarray##_lock); \
+    if (dynarray[element] && !atomic_dec(&dynarray[element]->refcount)) { \
+        kfree(dynarray[element]); \
+        dynarray[element] = 0; \
+    } \
+    spinlock_unlock(&dynarray##_lock); \
+})
 
-#define dynarray_get_elem(name, index)
+#define dynarray_getelem(type, dynarray, element) ({ \
+    spinlock_lock(&dynarray##_lock); \
+    type *ptr = NULL; \
+    if (dynarray[element] && dynarray[element]->present) { \
+        ptr = &dynarray[element]->data; \
+        atomic_inc(&dynarray[element]->refcount); \
+    } \
+    spinlock_unlock(&dynarray##_lock); \
+    ptr; \
+})
+
+#define dynarray_add(type, dynarray, element) ({ \
+    __label__ fnd; \
+    __label__ out; \
+    int ret = -1; \
+        \
+    spinlock_lock(&dynarray##_lock); \
+        \
+    size_t i; \
+    for (i = 0; i < dynarray##_i; i++) { \
+        if (!dynarray[i]) \
+            goto fnd; \
+    } \
+        \
+    dynarray##_i += 256; \
+    void *tmp = krealloc(dynarray, dynarray##_i * sizeof(void *)); \
+    if (!tmp) \
+        goto out; \
+    dynarray = tmp; \
+        \
+fnd: \
+    dynarray[i] = kalloc(sizeof(**dynarray)); \
+    if (!dynarray[i]) \
+        goto out; \
+    dynarray[i]->refcount = 1; \
+    dynarray[i]->present = 1; \
+    dynarray[i]->data = *element; \
+        \
+    ret = i; \
+        \
+out: \
+    spinlock_unlock(&dynarray##_lock); \
+    ret; \
+})
+
+#define dynarray_search(type, dynarray, i_ptr, cond, index) ({ \
+    __label__ fnd; \
+    __label__ out; \
+    type *ret = NULL; \
+        \
+    spinlock_lock(&dynarray##_lock); \
+        \
+    size_t i; \
+    size_t j = 0; \
+    for (i = 0; i < dynarray##_i; i++) { \
+        if (!dynarray[i] || !dynarray[i]->present) \
+            continue; \
+        type *elem = &dynarray[i]->data; \
+        if ((cond) && j++ == (index)) \
+            goto fnd; \
+    } \
+    goto out; \
+        \
+fnd: \
+    ret = &dynarray[i]->data; \
+    atomic_inc(&dynarray[i]->refcount); \
+    *(i_ptr) = i; \
+        \
+out: \
+    spinlock_unlock(&dynarray##_lock); \
+    ret; \
+})
 
 #endif
