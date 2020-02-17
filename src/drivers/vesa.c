@@ -31,3 +31,15 @@ void put_pixel(uint64_t x, uint64_t y, color_t color) {
     uint64_t offset = (y * vesa_display_info.pitch) + (x * 4);
     *(uint32_t *) ((uint64_t) vesa_display_info.framebuffer + offset) = color_dat;
 }
+
+void render_font(uint8_t font[128][8], char c, uint64_t x, uint64_t y, color_t fg, color_t bg) {
+    for (uint8_t iy = 0; iy < 8; iy++) {
+        for (uint8_t ix = 0; ix < 8; ix++) {
+            if ((font[(uint8_t) c][iy] >> ix) & 1) {
+                put_pixel((uint64_t) ix + x, (uint64_t) iy + y, fg);
+            } else {
+                put_pixel((uint64_t) ix + x, (uint64_t) iy + y, bg);
+            }
+        }
+    }
+}

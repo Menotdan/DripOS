@@ -17,8 +17,10 @@ void isr_handler(int_reg_t *r) {
     if (r->int_num < IDT_ENTRIES) {
         if (r->int_num < 32) {
             /* Exception */
+            uint64_t cr2;
+            asm volatile("movq %%cr2, %0;" : "=r"(cr2));
             sprintf("\nException!");
-            sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx RSI: %lx \nR08: %lx R09: %lx R10: %lx \nR11: %lx R12: %lx R13: %lx \nR14: %lx R15: %lx RSP: %lx\n ERR: %lx INT: %lx RIP: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip);
+            sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2);
             while (1) { asm volatile("hlt"); }
         }
         /* If the entry is present */
@@ -29,8 +31,10 @@ void isr_handler(int_reg_t *r) {
             //sprintf("\nUnhandled interrupt %lu", r->int_num);
         }
     } else {
+        uint64_t cr2;
+        asm volatile("movq %%cr2, %0;" : "=r"(cr2));
         sprintf("\nBad int no %lu", r->int_num);
-        sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx RSI: %lx \nR08: %lx R09: %lx R10: %lx \nR11: %lx R12: %lx R13: %lx \nR14: %lx R15: %lx RSP: %lx\n ERR: %lx INT: %lx RIP: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip);
+        sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2);
         while (1) { asm volatile("hlt"); }
     }
     // If we make it here, send an EOI to our LAPIC

@@ -26,5 +26,6 @@ extern vesa_info_t vesa_display_info;
 
 void init_vesa(multiboot_info_t *mb);
 void put_pixel(uint64_t x, uint64_t y, color_t color);
+void render_font(uint8_t font[128][8], char c, uint64_t x, uint64_t y, color_t fg, color_t bg);
 
 #endif
