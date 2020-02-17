@@ -1,8 +1,10 @@
 #include "pmm.h"
 #include "vmm.h"
+#include "io/ports.h"
 #include "klibc/string.h"
 #include "klibc/lock.h"
 #include "drivers/serial.h"
+#include "drivers/tty/tty.h"
 
 /* An implementation for managing a list of bitmaps that looks like this:
     bitmap_size | bitmap | bitmap_represented | next_entry
@@ -187,7 +189,23 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
         }
         current += sizeof(multiboot_memory_map_t);
     }
+    uint16_t divisor = 2386;
 
+    port_outb(0x43, 0xb6);
+    port_outb(0x42, (uint8_t)(divisor));
+    port_outb(0x42, (uint8_t)(divisor >> 8));
+
+    uint8_t tmp1 = port_inb(0x61);
+    if (tmp1 != (tmp1 | 3)) {
+        port_outb(0x61, tmp1 | 3);
+    }
+    for (uint32_t i = 0; i < 0xFFFFFFF; i++) {asm volatile("pause");}
+    uint8_t tmp2 = port_inb(0x61) & 0xFC;
+    port_outb(0x61, tmp2);
+    for (uint32_t i = 0; i < 0xFFFFFFF; i++) {asm volatile("pause");}
+    sprintf("\n[DripOS] Setting up display");
+    init_vesa(mboot_dat);
+    tty_init(&base_tty, 8, 8);
     /* Reset vars */
     // Current mmap address
     current = ((uint64_t)mboot_dat->mmap_addr) & 0xffffffff;
@@ -197,7 +215,7 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
     // Iterate over the map for the first time
     for (; remaining > 0; remaining -= sizeof(multiboot_memory_map_t)) {
         multiboot_memory_map_t *mmap = (multiboot_memory_map_t *)(current);
-        //sprintf("\n%lx - %lx", mmap->addr, mmap->addr + mmap->len);
+        kprintf("\n%lx - %lx", mmap->addr, mmap->addr + mmap->len);
         /* Bitmap setup for use with the initial page table setup */
         if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
             // Is this the kernel block?
@@ -247,6 +265,19 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
         }
         current += sizeof(multiboot_memory_map_t);
     }
+
+    port_outb(0x43, 0xb6);
+    port_outb(0x42, (uint8_t)(divisor));
+    port_outb(0x42, (uint8_t)(divisor >> 8));
+
+    tmp1 = port_inb(0x61);
+    if (tmp1 != (tmp1 | 3)) {
+        port_outb(0x61, tmp1 | 3);
+    }
+    for (uint32_t i = 0; i < 0xFFFFFFF; i++) {asm volatile("pause");}
+    tmp2 = port_inb(0x61) & 0xFC;
+    port_outb(0x61, tmp2);
+    for (uint32_t i = 0; i < 0xFFFFFFF; i++) {asm volatile("pause");}
 }
 
 bitmap_index pmm_find_free(uint64_t pages) {

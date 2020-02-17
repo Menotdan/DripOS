@@ -3,6 +3,7 @@
 #include "mm/vmm.h"
 #include "klibc/vector.h"
 #include "drivers/serial.h"
+#include "drivers/tty/tty.h"
 #include "io/msr.h"
 
 uint64_t lapic_base;
@@ -77,11 +78,11 @@ void parse_madt() {
 
             e += size - 3;
         }
-        sprintf("\nLAPIC addr: %lx", lapic_base);
-        sprintf("\nCPUs: %lu", cpu_vector.items_count);
-        sprintf("\nISOs: %lu", iso_vector.items_count);
-        sprintf("\nIOAPICs: %lu", ioapic_vector.items_count);
-        sprintf("\nNMIs: %lu", nmi_vector.items_count);
+        kprintf("\nLAPIC addr: %lx", lapic_base);
+        kprintf("\nCPUs: %lu", cpu_vector.items_count);
+        kprintf("\nISOs: %lu", iso_vector.items_count);
+        kprintf("\nIOAPICs: %lu", ioapic_vector.items_count);
+        kprintf("\nNMIs: %lu", nmi_vector.items_count);
         /* Handle cross page mapping for the LAPIC */
         if (lapic_base / 0x1000 != (lapic_base + 0x400) / 0x1000) {
             vmm_map((void *) lapic_base, (void *) (lapic_base + KERNEL_VM_OFFSET), 2, VMM_PRESENT | VMM_WRITE);
@@ -89,6 +90,8 @@ void parse_madt() {
             vmm_map((void *) lapic_base, (void *) (lapic_base + KERNEL_VM_OFFSET), 1, VMM_PRESENT | VMM_WRITE);
         }
         lapic_base += KERNEL_VM_OFFSET; // Offset it into virtual higher half
+    } else {
+        kprintf("\nNo MADT...");
     }
 }
 
@@ -252,6 +255,6 @@ void configure_apic() {
     
     madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
     for (uint64_t i = 0; i < cpu_vector.items_count; i++) {
-        sprintf("\n[APIC] Vector APIC id: %lu", (uint32_t) cpus[i]->apic_id);
+        kprintf("\n[APIC] Vector APIC id: %lu Flags: %u", (uint32_t) cpus[i]->apic_id, (uint32_t) cpus[i]->cpu_flags);
     }
 }

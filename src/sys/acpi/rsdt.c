@@ -1,5 +1,6 @@
 #include "rsdt.h"
 #include "mm/vmm.h"
+#include "drivers/tty/tty.h"
 
 uint64_t get_ebda() {
     uint16_t segment = *(uint16_t *) VIRTUAL_EBDA_PTR;
@@ -10,7 +11,8 @@ uint64_t get_ebda() {
 
     uint64_t real_addr = ((uint64_t) segment) << 4; // Bitshift the segment so it is a correct address
     real_addr += 0xFFFF800000000000; // offset the address by virtual offset
-
+    
+    kprintf("\nEBDA: %lx", real_addr);
     return real_addr;
 }
 
@@ -43,8 +45,9 @@ rsdp1_t *get_rsdp1(uint64_t ebda) {
         if (!check_rsdp_string(check)) {
             // If the string is correct
             // check the checksum
-
+            kprintf("\nRSDP str: %lx", check);
             if (!checksum_calc((uint8_t *) check, sizeof(rsdp1_t))) {
+                kprintf("\nRSDP checksum: %lx", check);
                 return check;
             }
         }
@@ -61,8 +64,9 @@ rsdp1_t *get_rsdp1(uint64_t ebda) {
         rsdp1_t *check = (rsdp1_t *) bios_range;
         if (!check_rsdp_string(check)) {
             // If the string is correct
-
+            kprintf("\nRSDP str: %lx", check);
             if (!checksum_calc((uint8_t *) check, sizeof(rsdp1_t))) {
+                kprintf("\nRSDP check: %lx", check);
                 return check;
             }
         }
@@ -89,6 +93,7 @@ sdt_header_t *get_root_sdt_header() {
                     VMM_PRESENT | VMM_WRITE);
                 uint64_t header_check = checksum_calc((uint8_t *) header, header->length);
                 if (!header_check) {
+                    kprintf("\nRSDT acpi 2: %lx", header);
                     return header;
                 } else {
                     return (sdt_header_t *) 0;
@@ -103,6 +108,7 @@ sdt_header_t *get_root_sdt_header() {
                 VMM_PRESENT | VMM_WRITE);
             uint64_t header_check = checksum_calc((uint8_t *) header, header->length);
             if (!header_check) {
+                kprintf("\nRSDT acpi 1: %lx", header);
                 return header;
             } else {
                 return (sdt_header_t *) 0;

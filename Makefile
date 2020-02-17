@@ -11,7 +11,7 @@ LINKER = x86_64-elf-ld
 
 incPath = ~/DripOS/src
 GDB = gdb
-MEM = 2G # Memory for qemu
+MEM = 20G # Memory for qemu
 O_LEVEL = 2 # Optimization level
 # Options for GCC
 CFLAGS = -g -fno-pic               \
@@ -43,7 +43,7 @@ run: myos.iso
 	make clean
 
 run-kvm: myos.iso
-	- sudo qemu-system-x86_64 -enable-kvm -smp 4 -cpu host -d cpu_reset -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+	- sudo qemu-system-x86_64 -enable-kvm -smp 2 -cpu host -d cpu_reset -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
 	make clean
 
 # Open the connection to qemu and load our kernel-object file with symbols
