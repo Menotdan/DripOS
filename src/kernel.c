@@ -21,10 +21,7 @@ void kmain(multiboot_info_t *mboot_dat) {
     configure_idt();
     sprintf("\n[DRIPOS]: Setting timer speed to 1000 hz");
     set_pit_freq();
-    //uint64_t oof = 0;
     while (1) {
-        //sprintf("\noof: %lx", oof);
-        //oof++;
         asm volatile("hlt");
     }
 }

@@ -200,35 +200,37 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
         //sprintf("\n%lx - %lx", mmap->addr, mmap->addr + mmap->len);
         /* Bitmap setup for use with the initial page table setup */
         if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
-            if (mmap->addr == 0 || remaining == mboot_dat->mmap_length) {
-                // Found lower 640K of memory, ignore it, as to not overwrite stuff
+            // Is this the kernel block?
+            uint64_t kernel_start = ((uint64_t) __kernel_start) - KERNEL_VMA_OFFSET; // Find the non offset kernel start
+            uint64_t kernel_end = ((uint64_t) __kernel_end) - KERNEL_VMA_OFFSET; // Find the non offset kernel end
+            uint64_t block_start = mmap->addr & ~(0xfff); // Round down the block start to a page
+            uint64_t block_end = (mmap->len + mmap->addr) & ~(0xfff); // Round down the block end to a page
+            uint64_t block_len = block_end - block_start; // Calculate the rounded block length
+            uint64_t bitmap_len = (block_len + (0x1000 * 8) - 1) / (0x1000 * 8);
+            bitmap_len += 16; // to account for size data and such
+            if (kernel_start >= block_start && kernel_end <= block_end) {
+                // This is indeed the kernel block, remap it
+                vmm_remap((void *) block_start, (void *) (block_start + NORMAL_VMA_OFFSET), (block_len / 0x1000), 
+                    VMM_PRESENT | VMM_WRITE);
             } else {
-                // Is this the kernel block?
-                uint64_t kernel_start = ((uint64_t) __kernel_start) - KERNEL_VMA_OFFSET; // Find the non offset kernel start
-                uint64_t kernel_end = ((uint64_t) __kernel_end) - KERNEL_VMA_OFFSET; // Find the non offset kernel end
-                uint64_t block_start = mmap->addr & ~(0xfff); // Round down the block start to a page
-                uint64_t block_end = (mmap->len + mmap->addr) & ~(0xfff); // Round down the block end to a page
-                uint64_t block_len = block_end - block_start; // Calculate the rounded block length
-                if (kernel_start >= block_start && kernel_end <= block_end) {
-                    // This is indeed the kernel block, remap it
-                    vmm_remap((void *) block_start, (void *) (block_start + NORMAL_VMA_OFFSET), (block_len / 0x1000), 
-                        VMM_PRESENT | VMM_WRITE);
-                    break;
-                } else {
+                if (mmap->addr != 0) {
                     // Map enough pages for a bitmap
                     uint64_t pages_mapped = 0;
                     //sprintf("\nBlock len: %lx", block_len);
                     vmm_map((void *) block_start, (void *) (block_start + NORMAL_VMA_OFFSET), 
-                        ((block_len / (0x1000 * 8)) + 0x1000 - 1) / 0x1000,
+                        (bitmap_len + 0x1000 - 1) / 0x1000,
                         VMM_PRESENT | VMM_WRITE);
                     pages_mapped += ((block_len / (0x1000 * 8)) + 0x1000 - 1) / 0x1000;
                     //sprintf("\nPages mapped: %lu", pages_mapped);
                     /* Set a bitmap for that block */
-                    pmm_set_bitmap((uint8_t *) block_start, base_bitmap, block_len, 0);
+                    pmm_set_bitmap((uint8_t *) block_start + NORMAL_VMA_OFFSET, base_bitmap, block_len, 0);
                     /* Map the rest of the memory */
                     vmm_map((void *) (block_start + (pages_mapped * 0x1000)), 
                         (void *) (block_start + (pages_mapped * 0x1000) + NORMAL_VMA_OFFSET),
                         (block_len / 0x1000) - pages_mapped, 
+                        VMM_PRESENT | VMM_WRITE);
+                } else {
+                    vmm_map((void *) block_start, (void *) (block_start + NORMAL_VMA_OFFSET), (block_len / 0x1000), 
                         VMM_PRESENT | VMM_WRITE);
                 }
             }

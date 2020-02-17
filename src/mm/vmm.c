@@ -81,9 +81,8 @@ pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4, uint16_t perms) {
         ret.p3 = (pt_t *)((p4->table[offs->p4_off] & ~(0xfff)) + NORMAL_VMA_OFFSET);
     } else {
         size_t pmm_ret = (size_t)pmm_alloc(0x1000);
-        ret.p3 = (pt_t *)((pmm_ret + NORMAL_VMA_OFFSET));
-        p4->table[offs->p4_off] =
-            ((uint64_t)ret.p3 - NORMAL_VMA_OFFSET) | perms;
+        ret.p3 = (pt_t *) ((pmm_ret + NORMAL_VMA_OFFSET));
+        p4->table[offs->p4_off] = ((uint64_t)ret.p3 - NORMAL_VMA_OFFSET) | perms;
         // Store the new entry in the table, as W/S/P (Writeable, supervisor, present)
         memset((uint8_t *)ret.p3, 0, 0x1000); // Clear the table
         vmm_invlpg((uint64_t)vmm_offs_to_virt(*offs));
@@ -94,8 +93,7 @@ pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4, uint16_t perms) {
         ret.p2 = (pt_t *)((ret.p3->table[offs->p3_off] & ~(0xfff)) + NORMAL_VMA_OFFSET);
     } else {
         ret.p2 = (pt_t *)(((size_t)pmm_alloc(0x1000)) + NORMAL_VMA_OFFSET);
-        ret.p3->table[offs->p3_off] =
-            ((uint64_t)ret.p2 - NORMAL_VMA_OFFSET) | perms;
+        ret.p3->table[offs->p3_off] = ((uint64_t)ret.p2 - NORMAL_VMA_OFFSET) | perms;
         // Store the new entry in the table, as W/S/P (Writeable, supervisor, present)
         memset((uint8_t *)ret.p2, 0, 0x1000); // Clear the table
         vmm_invlpg((uint64_t)vmm_offs_to_virt(*offs));
@@ -124,9 +122,8 @@ pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4, uint16_t perms) {
                 vmm_invlpg(((uint64_t)vmm_offs_to_virt(*offs)) + (i * 0x1000));
             }
         }
-        // Store the new entry in the table, as W/S/P (Writeable, supervisor, present)
-        ret.p2->table[offs->p2_off] =
-            ((uint64_t)ret.p1 - NORMAL_VMA_OFFSET) | perms;
+        // Store the new entry in the table
+        ret.p2->table[offs->p2_off] = ((uint64_t)ret.p1 - NORMAL_VMA_OFFSET) | perms;
     }
 
     return ret;
@@ -140,7 +137,7 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
     uint8_t *cur_virt = (uint8_t *) (((uint64_t) virt) & ~(0xfff));
     uint64_t cur_phys = ((uint64_t) phys) & ~(0xfff);
 
-    sprintf("\nVirt: %lx Phys: %lx\nPage count: %lu Perms: %x", cur_virt, cur_phys, count, (uint32_t) perms);
+    sprintf("\nNew mapping: Virt: %lx Phys: %lx\nPage count: %lu Perms: %x", cur_virt, cur_phys, count, (uint32_t) perms);
 
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
@@ -157,6 +154,7 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
             cur_virt += 0x1000;
             continue;
         }
+        vmm_invlpg((uint64_t) cur_virt - 0x1000);
     }
     spinlock_unlock(&vmm_spinlock);
     return ret;
@@ -170,7 +168,7 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
     uint8_t *cur_virt = (uint8_t *) (((uint64_t) virt) & ~(0xfff));
     uint64_t cur_phys = ((uint64_t) phys) & ~(0xfff);
 
-    //sprintf("\nVirt: %lx Phys: %lx\nPage count: %lu Perms: %x", cur_virt, cur_phys, count, (uint32_t) perms);
+    sprintf("\nRemap: Virt: %lx Phys: %lx\nPage count: %lu Perms: %x", cur_virt, cur_phys, count, (uint32_t) perms);
 
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
@@ -180,6 +178,7 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
         ptrs.p1->table[offs.p1_off] = cur_phys | (perms | VMM_PRESENT);
         cur_phys += 0x1000;
         cur_virt += 0x1000;
+        vmm_invlpg((uint64_t) cur_virt - 0x1000);
     }
 
     spinlock_unlock(&vmm_spinlock);
