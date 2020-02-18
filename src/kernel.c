@@ -18,6 +18,7 @@ void kmain(multiboot_info_t *mboot_dat) {
         pmm_memory_setup(mboot_dat);
     }
 
+    sprintf("\n[DripOS] Initializing TTY");
     init_vesa(mboot_dat);
     tty_init(&base_tty, 8, 8);
 
@@ -27,11 +28,6 @@ void kmain(multiboot_info_t *mboot_dat) {
     configure_idt();
     sprintf("\n[DripOS] Setting timer speed to 1000 hz");
     set_pit_freq();
-    sprintf("\n[DripOS] Setting up TTY");
-
-    pmm_alloc(0x9000);
-    pmm_alloc(0x9000);
-    pmm_alloc(0x1000);
 
     while (1) {
         asm volatile("hlt");
