@@ -80,9 +80,7 @@ uint8_t *pmm_get_last_bitmap(uint8_t *bitmap_start) {
 
 /* Setup a bitmap which may be pointed to by another bitmap */
 void pmm_set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem, uint64_t offset) {
-    //kprintf("\nNew bitmap ... ");
     spinlock_lock(&pmm_spinlock);
-    //kprintf("Locked.");
     uint8_t *real_bitmap_pos = bitmap_start + offset;
     uint64_t *size_data_writing = (uint64_t *) real_bitmap_pos;
     uint64_t bitmap_bytes = (size_of_mem + (0x1000 * 8) - 1) / (0x1000 * 8); // Bitmap size in bytes
@@ -160,26 +158,19 @@ uint64_t pmm_get_used_mem() {
 }
 
 void pmm_memory_setup(multiboot_info_t *mboot_dat) {
-    //kprintf(" ... in function");
     // Current mmap address
     uint64_t current = ((uint64_t)mboot_dat->mmap_addr) & 0xffffffff;
-    //kprintf("\nmmap addr %lx", current);
     // Remaining mmap data
     uint64_t remaining = mboot_dat->mmap_length;
-    //kprintf("\nmmap len %lu", remaining);
-    //kprintf("\nmboot_dat: %lx", mboot_dat);
 
     // Iterate over the map for the first time
     for (; remaining > 0; remaining -= sizeof(multiboot_memory_map_t)) {
         multiboot_memory_map_t *mmap = (multiboot_memory_map_t *)(current);
-        //kprintf("\n%lx - %lx", mmap->addr, mmap->addr + mmap->len);
         /* Bitmap setup for use with the initial page table setup */
         if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
             if (mmap->addr == 0 || remaining == mboot_dat->mmap_length) {
                 // Found lower 640K of memory, ignore it, as to not overwrite stuff
-                //kprintf("\nFound low");
             } else {
-                //kprintf("\nFound kernel");
                 // Is this the kernel block?
                 uint64_t kernel_start = ((uint64_t) __kernel_start) - KERNEL_VMA_OFFSET; // Find the non offset kernel start
                 uint64_t kernel_end = ((uint64_t) __kernel_end) - KERNEL_VMA_OFFSET; // Find the non offset kernel end
@@ -203,11 +194,9 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
     current = ((uint64_t)mboot_dat->mmap_addr) & 0xffffffff;
     // Remaining mmap data
     remaining = mboot_dat->mmap_length;
-    //kprintf("\nNew parsing");
     // Iterate over the map for the first time
     for (; remaining > 0; remaining -= sizeof(multiboot_memory_map_t)) {
         multiboot_memory_map_t *mmap = (multiboot_memory_map_t *)(current);
-        //kprintf("\n%lx - %lx", mmap->addr, mmap->addr + mmap->len);
         /* Bitmap setup for use with the initial page table setup */
         if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
             // Is this the kernel block?
@@ -226,12 +215,10 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
                 if (mmap->addr != 0) {
                     // Map enough pages for a bitmap
                     uint64_t pages_mapped = 0;
-                    //sprintf("\nBlock len: %lx", block_len);
                     vmm_map((void *) block_start, (void *) (block_start + NORMAL_VMA_OFFSET), 
                         (bitmap_len + 0x1000 - 1) / 0x1000,
                         VMM_PRESENT | VMM_WRITE);
                     pages_mapped += ((block_len / (0x1000 * 8)) + 0x1000 - 1) / 0x1000;
-                    //sprintf("\nPages mapped: %lu", pages_mapped);
                     /* Set a bitmap for that block */
                     pmm_set_bitmap((uint8_t *) block_start + NORMAL_VMA_OFFSET, base_bitmap, block_len, 0);
                     /* Map the rest of the memory */
@@ -248,9 +235,6 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
             uint64_t block_start = mmap->addr & ~(0xfff); // Round down the block start to a page
             uint64_t block_end = (mmap->len + mmap->addr) & ~(0xfff); // Round down the block end to a pag
             uint64_t block_len = block_end - block_start; // Calculate the rounded block length
-
-            //sprintf("\nType: %u Block len: %lx Pages: %lx", mmap->type, block_len, block_len / 0x1000);
-            //sprintf("\nAddr: %lx Len: %lx End: %lx", mmap->addr, mmap->len, mmap->addr + mmap->len);
 
             vmm_map((void *) block_start, (void *) (block_start + NORMAL_VMA_OFFSET), (block_len / 0x1000), 
                 VMM_PRESENT | VMM_WRITE);
@@ -298,7 +282,7 @@ bitmap_index pmm_find_free(uint64_t pages) {
 
 void *pmm_alloc(uint64_t size) {
     spinlock_lock(&pmm_spinlock);
-    sprintf("\nAllocating %lu", size);
+    //sprintf("\nAllocating %lu", size);
     uint64_t pages_needed = (size + 0x1000 - 1) / 0x1000;
     bitmap_index free_space = pmm_find_free(pages_needed);
 
@@ -317,7 +301,6 @@ void *pmm_alloc(uint64_t size) {
         }
         uint64_t free_space_offset = ((free_space.byte * 0x1000 * 8) + (free_space.bit * 0x1000));
         void *ret = (void *) (pmm_get_represented_addr(cur_map) + free_space_offset - NORMAL_VMA_OFFSET);
-        sprintf("\nAllocated %lx - %lx", ret, ((uint64_t) ret) + size);
         spinlock_unlock(&pmm_spinlock);
         return ret;
     } else {
