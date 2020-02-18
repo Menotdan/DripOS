@@ -13,19 +13,25 @@
 // Kernel main function, execution starts here :D
 void kmain(multiboot_info_t *mboot_dat) {
     init_serial(COM1);
-    tty_init(&base_tty, 8, 8);
     if (mboot_dat) {
-        kprintf("[DripOS]: Setting up memory bitmaps");
+        sprintf("[DripOS]: Setting up memory bitmaps");
         pmm_memory_setup(mboot_dat);
     }
 
-    kprintf("\n[DripOS] Configuring LAPICs and IOAPIC routing");
+    init_vesa(mboot_dat);
+    tty_init(&base_tty, 8, 8);
+
+    sprintf("\n[DripOS] Configuring LAPICs and IOAPIC routing");
     configure_apic();
     sprintf("\n[DripOS] Registering interrupts and setting interrupt flag");
     configure_idt();
     sprintf("\n[DripOS] Setting timer speed to 1000 hz");
     set_pit_freq();
     sprintf("\n[DripOS] Setting up TTY");
+
+    pmm_alloc(0x9000);
+    pmm_alloc(0x9000);
+    pmm_alloc(0x1000);
 
     while (1) {
         asm volatile("hlt");

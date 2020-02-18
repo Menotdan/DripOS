@@ -298,7 +298,7 @@ bitmap_index pmm_find_free(uint64_t pages) {
 
 void *pmm_alloc(uint64_t size) {
     spinlock_lock(&pmm_spinlock);
-    //sprintf("\nAllocating");
+    sprintf("\nAllocating %lu", size);
     uint64_t pages_needed = (size + 0x1000 - 1) / 0x1000;
     bitmap_index free_space = pmm_find_free(pages_needed);
 
@@ -317,6 +317,7 @@ void *pmm_alloc(uint64_t size) {
         }
         uint64_t free_space_offset = ((free_space.byte * 0x1000 * 8) + (free_space.bit * 0x1000));
         void *ret = (void *) (pmm_get_represented_addr(cur_map) + free_space_offset - NORMAL_VMA_OFFSET);
+        sprintf("\nAllocated %lx - %lx", ret, ((uint64_t) ret) + size);
         spinlock_unlock(&pmm_spinlock);
         return ret;
     } else {

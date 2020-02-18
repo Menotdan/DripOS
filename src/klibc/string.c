@@ -102,11 +102,13 @@ void memcpy32(uint32_t *src, uint32_t *dst, uint64_t count) {
 }
 
 void memset(uint8_t *dst, uint8_t data, uint64_t count) {
+    sprintf("\nMemset: %lx, %u, %lu", dst, (uint32_t) data, count);
     for (uint64_t i = 0; i<count; i++)
         *dst++ = data;
 }
 
 void memset32(uint32_t *dst, uint32_t data, uint64_t count) {
+    sprintf("\nMemset 32: %lx, %u, %lu", dst, (uint32_t) data, count * 4); //0x00ac6023
     for (uint64_t i = 0; i<count; i++)
         *dst++ = data;
 }

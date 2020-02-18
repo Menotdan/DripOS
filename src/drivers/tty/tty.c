@@ -14,8 +14,8 @@ void tty_init(tty_t *tty, uint64_t font_width, uint64_t font_height) {
     tty->bg = default_bg;
     tty->c_pos_x = 0;
     tty->c_pos_y = 0;
-    tty->rows = 25;//vesa_display_info.height / font_height;
-    tty->cols = 80;//vesa_display_info.width / font_width;
+    tty->rows = vesa_display_info.height / font_height;
+    tty->cols = vesa_display_info.width / font_width;
     tty->font = (uint8_t *) font8x8_basic;
 }
 
@@ -24,9 +24,9 @@ void tty_out(char c, tty_t *tty) {
         tty->c_pos_y += 1;
         tty->c_pos_x = 0;
     } else {
-        //render_font((uint8_t (*) [8]) tty->font, c, tty->c_pos_x * 8, tty->c_pos_y * 8, tty->fg, tty->bg);
-        char *buffer = (char *) 0xb8000;
-        buffer[((tty->c_pos_y * tty->cols) + tty->c_pos_x) * 2] = c;
+        render_font((uint8_t (*) [8]) tty->font, c, tty->c_pos_x * 8, tty->c_pos_y * 8, tty->fg, tty->bg);
+        //char *buffer = (char *) 0xb8000;
+        //buffer[((tty->c_pos_y * tty->cols) + tty->c_pos_x) * 2] = c;
         tty->c_pos_x++;
         if (tty->c_pos_x == tty->cols) {
             tty->c_pos_y += 1;
@@ -35,16 +35,15 @@ void tty_out(char c, tty_t *tty) {
     }
 
     if (tty->c_pos_y == tty->rows) {
-        char *buffer = (char *) 0xb8000;
-        for (uint64_t y = 0; y < tty->rows - 1; y++) {
-            for (uint64_t x = 0; x < tty->cols; x++) {
-                buffer[((y * tty->cols) + x) * 2] = buffer[(((y + 1) * tty->cols) + x) * 2];
-            }
-        }
-        for (uint64_t x = 0; x < tty->cols; x++) {
-            buffer[(((tty->rows - 1) * tty->cols) + x) * 2] = '\0';
-        }
+        vesa_scroll(8);
         tty->c_pos_y--;
+    }
+}
+
+void tty_seek(uint64_t x, uint64_t y) {
+    if (x < base_tty.cols && y < base_tty.rows) {
+        base_tty.c_pos_x = x;
+        base_tty.c_pos_y = y;
     }
 }
 

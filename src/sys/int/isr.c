@@ -1,5 +1,6 @@
 #include "isr.h"
 #include "idt.h"
+#include "drivers/tty/tty.h"
 #include "drivers/serial.h"
 #include "drivers/pit.h"
 #include "drivers/ps2.h"
@@ -19,8 +20,11 @@ void isr_handler(int_reg_t *r) {
             /* Exception */
             uint64_t cr2;
             asm volatile("movq %%cr2, %0;" : "=r"(cr2));
-            sprintf("\nException!");
-            sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2);
+            clear_buffer();
+            tty_seek(0, 0);
+            kprintf("\nException!");
+            kprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2);
+            flip_buffers();
             while (1) { asm volatile("hlt"); }
         }
         /* If the entry is present */
