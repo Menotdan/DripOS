@@ -170,7 +170,7 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
     uint8_t *cur_virt = (uint8_t *) (((uint64_t) virt) & ~(0xfff));
     uint64_t cur_phys = ((uint64_t) phys) & ~(0xfff);
 
-    kprintf("\nRemap: Virt: %lx Phys: %lx\nPage count: %lu Perms: %x", cur_virt, cur_phys, count, (uint32_t) perms);
+    //kprintf("\nRemap: Virt: %lx Phys: %lx\nPage count: %lu Perms: %x", cur_virt, cur_phys, count, (uint32_t) perms);
 
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
@@ -184,7 +184,7 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
     }
 
     spinlock_unlock(&vmm_spinlock);
-    kprintf("\nMapping done");
+    //kprintf("\nMapping done");
     return ret;
 }
 

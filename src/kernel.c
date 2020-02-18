@@ -12,6 +12,7 @@
 
 // Kernel main function, execution starts here :D
 void kmain(multiboot_info_t *mboot_dat) {
+    init_serial(COM1);
     tty_init(&base_tty, 8, 8);
     if (mboot_dat) {
         kprintf("[DripOS]: Setting up memory bitmaps");

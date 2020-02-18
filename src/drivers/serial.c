@@ -19,8 +19,13 @@ void serial_transmit_delay(uint16_t com_port) {
 }
 
 void write_serial(char data, uint16_t com_port) {
+#ifdef DEBUG
     serial_transmit_delay(com_port); // Wait for buffer to be ready
     port_outb(com_port, data); // Send the data to the COM port
+#else
+    (void) data;
+    (void) com_port;
+#endif
 }
 
 // Print, but you can select a port

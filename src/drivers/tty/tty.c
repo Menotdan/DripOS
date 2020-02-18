@@ -33,6 +33,19 @@ void tty_out(char c, tty_t *tty) {
             tty->c_pos_x = 0;
         }
     }
+
+    if (tty->c_pos_y == tty->rows) {
+        char *buffer = (char *) 0xb8000;
+        for (uint64_t y = 0; y < tty->rows - 1; y++) {
+            for (uint64_t x = 0; x < tty->cols; x++) {
+                buffer[((y * tty->cols) + x) * 2] = buffer[(((y + 1) * tty->cols) + x) * 2];
+            }
+        }
+        for (uint64_t x = 0; x < tty->cols; x++) {
+            buffer[(((tty->rows - 1) * tty->cols) + x) * 2] = '\0';
+        }
+        tty->c_pos_y--;
+    }
 }
 
 void kprint(char *s) {

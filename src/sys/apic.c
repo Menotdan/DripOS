@@ -16,6 +16,7 @@ void parse_madt() {
     madt_t *madt = (madt_t *) search_sdt_header("APIC");
 
     if (madt) {
+        kprintf("\n[MADT] Found MADT %lx", madt);
         /* Initialize all of our vectors */
         vector_init(&cpu_vector);
         vector_init(&iso_vector);
