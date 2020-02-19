@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "mm/pmm.h"
-#include "io/ports.h"
 #include "sys/apic.h"
 #include "sys/int/isr.h"
 #include "drivers/pit.h"
@@ -9,6 +8,9 @@
 #include "drivers/vesa.h"
 #include "drivers/tty/tty.h"
 #include "multiboot.h"
+
+/* Testing includes */
+#include "proc/scheduler.h"
 
 // Kernel main function, execution starts here :D
 void kmain(multiboot_info_t *mboot_dat) {
@@ -28,6 +30,8 @@ void kmain(multiboot_info_t *mboot_dat) {
     configure_idt();
     sprintf("\n[DripOS] Setting timer speed to 1000 hz");
     set_pit_freq();
+
+    schedule((int_reg_t *) 0);
 
     while (1) {
         asm volatile("hlt");

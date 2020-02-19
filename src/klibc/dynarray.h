@@ -4,6 +4,8 @@
 #include "klibc/stdlib.h"
 #include <stddef.h>
 
+#define DYNARRAY_START_SIZE 8
+
 #define dynarray_new(type, name) \
     static struct { \
         int refcount; \
@@ -12,6 +14,9 @@
     } **name; \
     static size_t name##_i = 0; \
     static lock_t name##_lock = 0;
+
+#define dynarray_init(name) \
+    name = kmalloc(sizeof(name) * DYNARRAY_START_SIZE);
 
 #define public_dynarray_new(type, name) \
     struct __##name##_struct **name; \
@@ -27,6 +32,20 @@
     extern struct __##name##_struct **name; \
     extern size_t name##_i; \
     extern lock_t name##_lock;
+
+#define dynarray_item_count(name) ({ \
+    spinlock_lock(&name##_lock); \
+    size_t ret; \
+    for (ret = 0; ret < name##_i; ret++) { \
+        if (!name[ret]) { \
+            break; \
+        } else if (!name[ret]->present) { \
+            break; \
+        } \
+    } \
+    spinlock_unlock(&name##_lock); \
+    ret; \
+})
 
 #define dynarray_remove(dynarray, element) ({ \
     __label__ out; \
@@ -87,7 +106,7 @@ out: \
     dynarray = tmp; \
         \
 fnd: \
-    dynarray[i] = kalloc(sizeof(**dynarray)); \
+    dynarray[i] = kmalloc(sizeof(**dynarray)); \
     if (!dynarray[i]) \
         goto out; \
     dynarray[i]->refcount = 1; \
