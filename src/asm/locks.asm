@@ -4,6 +4,8 @@ section .text
 
 global spinlock_lock
 global spinlock_unlock
+global atomic_inc
+global atomic_dec
 
 ; To be called like so
 ; spinlock_lock(uint32_t *lock)
@@ -24,8 +26,18 @@ spinlock_unlock:
 
 atomic_inc:
     lock inc dword [rdi]
+    pushf
+    pop rax
+    not rax
+    and rax, (1<<6)
+    shr rax, 6
     ret
 
 atomic_dec:
     lock dec dword [rdi]
+    pushf
+    pop rax
+    not rax
+    and rax, (1<<6)
+    shr rax, 6
     ret

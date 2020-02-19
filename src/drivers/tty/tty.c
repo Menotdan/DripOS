@@ -120,4 +120,5 @@ void kprintf(char *message, ...) {
     }
 
     va_end(format_list);
+    flip_buffers();
 }

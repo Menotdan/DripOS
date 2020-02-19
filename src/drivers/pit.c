@@ -1,17 +1,20 @@
 #include "pit.h"
 #include "io/ports.h"
 #include "drivers/serial.h"
-#include "klibc/stdlib.h"
 #include "drivers/tty/tty.h"
+#include "klibc/stdlib.h"
+#include "proc/scheduler.h"
 
 volatile uint64_t global_ticks = 0;
 
 void timer_handler(int_reg_t *r) {
     global_ticks++;
+    //kprintf("\nTick");
     if (global_ticks % 16 == 0) {
         flip_buffers(); // 60 hz :meme:
+        kprintf("\nScheduler");
+        schedule(r);
     }
-    UNUSED(r);
 }
 
 void set_pit_freq() {

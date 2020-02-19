@@ -8,7 +8,7 @@
 
 #define dynarray_new(type, name) \
     static struct { \
-        int refcount; \
+        uint32_t refcount; \
         int present; \
         type data; \
     } **name; \
@@ -25,7 +25,7 @@
 
 #define public_dynarray_prototype(type, name) \
     struct __##name##_struct { \
-        int refcount; \
+        uint32_t refcount; \
         int present; \
         type data; \
     }; \
@@ -35,12 +35,12 @@
 
 #define dynarray_item_count(name) ({ \
     spinlock_lock(&name##_lock); \
-    size_t ret; \
-    for (ret = 0; ret < name##_i; ret++) { \
-        if (!name[ret]) { \
-            break; \
-        } else if (!name[ret]->present) { \
-            break; \
+    size_t ret = 0; \
+    for (size_t i = 0; i < name##_i; i++) { \
+        if (name[i]) { \
+            if(name[i]->present) { \
+              ret++; \
+            } \
         } \
     } \
     spinlock_unlock(&name##_lock); \
