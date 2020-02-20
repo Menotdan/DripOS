@@ -21,5 +21,6 @@ void interrupt_lock() {
 void interrupt_unlock() {
     if (scheduler_start) {
         asm volatile("sti");
+        yield();
     }
 }
