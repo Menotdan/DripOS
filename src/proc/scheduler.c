@@ -9,7 +9,7 @@
 
 task_t *running_task;
 dynarray_new(task_t, tasks);
-uint64_t started = 0;
+uint8_t started = 0;
 lock_t scheduler_lock = 0;
 
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
@@ -18,11 +18,7 @@ void main_task() {
     kprintf("\nLoaded multitasking uwu");
     uint64_t count = 0;
     while (1) {
-        // volatile int nob = 0;
-        // (void) nob;
-        // volatile int yes = 1/nob;
-        // (void) yes;
-        kprintf("\nnob %lu", count++);
+        sprintf("\nnob %lu", count++);
     }
 }
 
@@ -30,11 +26,7 @@ void second_task() {
     kprintf("\nSecond task started");
     uint64_t count = 0;
     while (1) {
-        // volatile int nob = 0;
-        // (void) nob;
-        // volatile int yes = 1/nob;
-        // (void) yes;
-        kprintf("\nnob2 %lu", count++);
+        sprintf("\nnob2 %lu", count++);
     }
 }
 
@@ -171,3 +163,4 @@ void schedule(int_reg_t *r) {
 
     spinlock_unlock(&scheduler_lock);
 }
+

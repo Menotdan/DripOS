@@ -9,6 +9,7 @@ vesa_info_t vesa_display_info;
 lock_t vesa_lock = 0;
 
 void init_vesa(multiboot_info_t *mb) {
+    mb = (multiboot_info_t *) ((uint64_t) mb + 0xFFFF800000000000);
     /* Size info */
     vesa_display_info.width = mb->framebuffer_width;
     vesa_display_info.height = mb->framebuffer_height;
@@ -29,18 +30,18 @@ void init_vesa(multiboot_info_t *mb) {
 }
 
 void put_pixel(uint64_t x, uint64_t y, color_t color) {
-    spinlock_lock(&vesa_lock);
+    lock(&vesa_lock);
     uint32_t color_dat = (color.r << vesa_display_info.red_shift) |
         (color.g << vesa_display_info.green_shift) |
         (color.b << vesa_display_info.blue_shift);
     
     uint64_t offset = (y * vesa_display_info.pitch) + (x * 4);
     *(uint32_t *) ((uint64_t) vesa_display_info.framebuffer + offset) = color_dat;
-    spinlock_unlock(&vesa_lock);
+    unlock(&vesa_lock);
 }
 
 void render_font(uint8_t font[128][8], char c, uint64_t x, uint64_t y, color_t fg, color_t bg) {
-    //spinlock_lock(&vesa_lock);
+    lock(&vesa_lock);
     for (uint8_t iy = 0; iy < 8; iy++) {
         for (uint8_t ix = 0; ix < 8; ix++) {
             if ((font[(uint8_t) c][iy] >> ix) & 1) {
@@ -60,11 +61,11 @@ void render_font(uint8_t font[128][8], char c, uint64_t x, uint64_t y, color_t f
             }
         }
     }
-    spinlock_unlock(&vesa_lock);
+    unlock(&vesa_lock);
 }
 
 void vesa_scroll(uint64_t rows_shift) {
-    //spinlock_lock(&vesa_lock);
+    lock(&vesa_lock);
     uint64_t buf_pos = (uint64_t) vesa_display_info.framebuffer;
     /* Do the copy */
     dgbmemcpy32((uint32_t *) (buf_pos + (vesa_display_info.pitch * rows_shift)), (uint32_t *) (buf_pos), 
@@ -74,21 +75,21 @@ void vesa_scroll(uint64_t rows_shift) {
     dbgmemset32((uint32_t *) (buf_pos + vesa_display_info.framebuffer_size - (vesa_display_info.pitch * rows_shift)),
         0, (vesa_display_info.pitch * rows_shift) / 4,
             buf_pos, buf_pos + vesa_display_info.framebuffer_size);
-    spinlock_unlock(&vesa_lock);
+    unlock(&vesa_lock);
 }
 
 void flip_buffers() {
     sprintf("\nVESA lock: %u", vesa_lock);
-    //spinlock_lock(&vesa_lock);
+    lock(&vesa_lock);
     memcpy32(vesa_display_info.framebuffer, vesa_display_info.actual_framebuffer,
         vesa_display_info.framebuffer_pixels);
-    spinlock_unlock(&vesa_lock);
+    unlock(&vesa_lock);
 }
 
 void clear_buffer() {
-    //spinlock_lock(&vesa_lock);
+    lock(&vesa_lock);
     dbgmemset32(vesa_display_info.framebuffer, 0, vesa_display_info.framebuffer_pixels, (uint64_t) vesa_display_info.framebuffer, (uint64_t) vesa_display_info.framebuffer + vesa_display_info.framebuffer_size);
-    sprintf("\nFlip buffers clear");
-    flip_buffers();
-    spinlock_unlock(&vesa_lock);
+    memcpy32(vesa_display_info.framebuffer, vesa_display_info.actual_framebuffer,
+        vesa_display_info.framebuffer_pixels);
+    unlock(&vesa_lock);
 }

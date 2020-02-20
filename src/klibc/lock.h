@@ -16,4 +16,7 @@ extern uint32_t atomic_inc(uint32_t *data);
 extern uint32_t atomic_dec(uint32_t *data);
 #endif
 
+void lock(uint32_t *lock);
+void unlock(uint32_t *lock);
+
 #endif

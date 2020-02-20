@@ -15,9 +15,6 @@
     static size_t name##_i = 0; \
     static lock_t name##_lock = 0;
 
-#define dynarray_init(name) \
-    name = kmalloc(sizeof(name) * DYNARRAY_START_SIZE);
-
 #define public_dynarray_new(type, name) \
     struct __##name##_struct **name; \
     size_t name##_i = 0; \
@@ -106,7 +103,8 @@ out: \
     dynarray = tmp; \
         \
 fnd: \
-    dynarray[i] = kmalloc(sizeof(**dynarray)); \
+    dynarray[i] = kcalloc(sizeof(**dynarray)); \
+    sprintf("\nData: %lx", dynarray[i]); \
     if (!dynarray[i]) \
         goto out; \
     dynarray[i]->refcount = 1; \

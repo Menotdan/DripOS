@@ -37,4 +37,6 @@ typedef struct {
 void schedule(int_reg_t *r);
 void scheduler_init_bsp();
 
+extern uint8_t started;
+
 #endif

@@ -2,6 +2,7 @@
 #define TTY_H
 #include <stdint.h>
 #include "drivers/vesa.h"
+#include "klibc/lock.h"
 
 typedef struct {
     uint64_t c_pos_x;
@@ -11,6 +12,7 @@ typedef struct {
     uint8_t *font;
     color_t fg;
     color_t bg;
+    lock_t tty_lock;
 } tty_t;
 
 extern tty_t base_tty;

@@ -241,6 +241,7 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
         }
         current += sizeof(multiboot_memory_map_t);
     }
+    vmm_unmap((void *) 0, 1);
 }
 
 bitmap_index pmm_find_free(uint64_t pages) {
