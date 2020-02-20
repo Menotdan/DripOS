@@ -60,12 +60,11 @@ void kprint(char *s) {
 }
 
 void kprintf(char *message, ...) {
+    interrupt_lock();
     lock(&base_tty.tty_lock);
     va_list format_list;
     uint64_t index = 0;
     uint8_t big = 0;
-
-    sprintf("\nprint call");
 
     va_start(format_list, message);
 
@@ -131,4 +130,5 @@ void kprintf(char *message, ...) {
     va_end(format_list);
     flip_buffers();
     unlock(&base_tty.tty_lock);
+    interrupt_unlock();
 }

@@ -79,7 +79,6 @@ void vesa_scroll(uint64_t rows_shift) {
 }
 
 void flip_buffers() {
-    sprintf("\nVESA lock: %u", vesa_lock);
     lock(&vesa_lock);
     memcpy32(vesa_display_info.framebuffer, vesa_display_info.actual_framebuffer,
         vesa_display_info.framebuffer_pixels);

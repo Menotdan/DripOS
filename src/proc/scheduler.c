@@ -9,7 +9,7 @@
 
 task_t *running_task;
 dynarray_new(task_t, tasks);
-uint8_t started = 0;
+uint8_t scheduler_start = 0;
 lock_t scheduler_lock = 0;
 
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
@@ -18,15 +18,15 @@ void main_task() {
     kprintf("\nLoaded multitasking uwu");
     uint64_t count = 0;
     while (1) {
-        sprintf("\nnob %lu", count++);
+        kprintf("\nnob %lu", count++);
     }
 }
 
 void second_task() {
-    kprintf("\nSecond task started");
+    kprintf("\nSecond task scheduler_start");
     uint64_t count = 0;
     while (1) {
-        sprintf("\nnob2 %lu", count++);
+        kprintf("\nnob2 %lu", count++);
     }
 }
 
@@ -69,23 +69,16 @@ void scheduler_init_bsp() {
 }
 
 void schedule(int_reg_t *r) {
-    sprintf("\n[SCHEDULER] Spinning scheduler lock ... ");
     spinlock_lock(&scheduler_lock);
-    sprintf("Got lock.");
     uint64_t item_count = tasks_i;
-    sprintf("\nItem count %lu", item_count);
     task_t *lowest_selected = (task_t *) 0;
     uint64_t lowest_selected_count = 0xFFFFFFFFFFFFFFFF;
-    uint64_t lowest_selected_index = 0xff;
     for (uint64_t i = 0; i < item_count; i++) {
         task_t *task = dynarray_getelem(task_t, tasks, i);
         if (task) {
-            sprintf("\nCount: %lu", task->times_selected);
-            sprintf("\nLowest: %lu", lowest_selected_count);
             if (task->times_selected < lowest_selected_count) {
                 lowest_selected = task;
                 lowest_selected_count = task->times_selected;
-                lowest_selected_index = i;
             }
             dynarray_unref(tasks, i);
         }
@@ -98,12 +91,8 @@ void schedule(int_reg_t *r) {
 
     lowest_selected->times_selected++;
 
-    sprintf("\nRIP of new: %lx", lowest_selected->regs.rip);
-    sprintf("\nRIP of old %lx", r->rip);
-    sprintf("\nSelected: %lu", lowest_selected_index);
-
     /* Save old registers */
-    if (started) {
+    if (scheduler_start) {
         running_task->regs.rax = r->rax;
         running_task->regs.rbx = r->rbx;
         running_task->regs.rcx = r->rcx;
@@ -131,7 +120,7 @@ void schedule(int_reg_t *r) {
         running_task->regs.cr3 = vmm_get_pml4t();
     }
 
-    started = 1;
+    scheduler_start = 1;
     running_task = lowest_selected;
 
     /* Set new registers */

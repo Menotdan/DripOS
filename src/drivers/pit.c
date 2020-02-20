@@ -12,14 +12,14 @@ uint64_t scheduler_count = 0;
 
 void timer_handler(int_reg_t *r) {
     global_ticks++;
-    if (global_ticks % 16 == 0) {
-        kprintf("\nScheduler %lu", scheduler_count++);
+    if (global_ticks % 2 == 0) {
+        //kprintf("\nScheduler %lu", scheduler_count++);
         schedule(r);
     }
 }
 
 void set_pit_freq() {
-    uint16_t divisor = 2386;
+    uint16_t divisor = 1193;
 
     /* Caluclate the bytes to send to the PIT,
     where the bytes indicate the frequency */

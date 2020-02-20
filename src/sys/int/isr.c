@@ -1,5 +1,6 @@
 #include "isr.h"
 #include "idt.h"
+#include "proc/scheduler.h"
 #include "drivers/tty/tty.h"
 #include "drivers/serial.h"
 #include "drivers/pit.h"
@@ -306,5 +307,6 @@ void configure_idt() {
     load_idt(); // Point to the IDT
     register_int_handler(32, timer_handler);
     register_int_handler(33, keyboard_handler);
+    register_int_handler(254, schedule);
     asm volatile("sti"); // Enable interrupts and hope we dont die lmao
 }

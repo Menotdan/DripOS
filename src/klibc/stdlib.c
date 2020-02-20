@@ -38,3 +38,7 @@ void *krealloc(void *addr, uint64_t new_size) {
     kfree(addr);
     return new_buffer;
 }
+
+void yield() {
+    asm volatile("int $254");
+}

@@ -19,4 +19,7 @@ extern uint32_t atomic_dec(uint32_t *data);
 void lock(uint32_t *lock);
 void unlock(uint32_t *lock);
 
+void interrupt_lock();
+void interrupt_unlock();
+
 #endif
