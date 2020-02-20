@@ -9,10 +9,8 @@ volatile uint64_t global_ticks = 0;
 
 void timer_handler(int_reg_t *r) {
     global_ticks++;
-    //kprintf("\nTick");
     if (global_ticks % 16 == 0) {
-        flip_buffers(); // 60 hz :meme:
-        kprintf("\nScheduler");
+        sprintf("\nScheduler");
         schedule(r);
     }
 }

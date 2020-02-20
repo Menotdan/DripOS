@@ -25,7 +25,7 @@ void *kcalloc(uint64_t size) {
 
 void *krealloc(void *addr, uint64_t new_size) {
     uint64_t *size_data = (uint64_t *) ((uint64_t) addr - 0x1000);
-    void *new_buffer = kmalloc(new_size);
+    void *new_buffer = kcalloc(new_size);
     
     /* Copy everything over, and only copy part if our new size is lower than the old size */
     if ((*size_data) - 0x1000 >= new_size) {

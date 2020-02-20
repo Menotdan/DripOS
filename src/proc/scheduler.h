@@ -21,10 +21,12 @@ typedef struct {
 
 typedef struct {
     task_regs_t regs;
-    uint64_t times_selected;
-    uint8_t state;
-    uint8_t cpu;
+    uint64_t times_selected; // Times the task has been selected since last new task
+    uint8_t state; // State of the task
+    uint8_t cpu; // CPU the task is running on
     uint8_t waiting_irq; // The IRQ this task is waiting for
+
+    uint64_t pid;
 } task_t;
 
 typedef struct {

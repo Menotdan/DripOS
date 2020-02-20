@@ -3,6 +3,8 @@
 #include "klibc/string.h"
 #include <stdarg.h>
 
+#include "drivers/serial.h"
+
 color_t default_fg = {255, 255, 255};
 color_t default_bg = {0, 0, 0};
 tty_t base_tty;
@@ -57,6 +59,8 @@ void kprintf(char *message, ...) {
     va_list format_list;
     uint64_t index = 0;
     uint8_t big = 0;
+
+    sprintf("\nprint call");
 
     va_start(format_list, message);
 
@@ -120,5 +124,6 @@ void kprintf(char *message, ...) {
     }
 
     va_end(format_list);
+    sprintf("\nflip buffers");
     flip_buffers();
 }

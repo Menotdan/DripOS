@@ -108,7 +108,31 @@ void memset(uint8_t *dst, uint8_t data, uint64_t count) {
 }
 
 void memset32(uint32_t *dst, uint32_t data, uint64_t count) {
-    sprintf("\nMemset 32: %lx, %u, %lu", dst, (uint32_t) data, count * 4); //0x00ac6023
+    sprintf("\nMemset 32: %lx, %u, %lu", dst, (uint32_t) data, count * 4);
     for (uint64_t i = 0; i<count; i++)
         *dst++ = data;
+}
+
+/* TODO: REMOVE THESE LMAO */
+void dgbmemcpy32(uint32_t *src, uint32_t *dst, uint64_t count, uint64_t low_limit, uint64_t high_limit) {
+    for (uint64_t i = 0; i<count; i++) {
+        if ((uint64_t) dst > high_limit || (uint64_t) dst < low_limit 
+            || (uint64_t) src > high_limit || (uint64_t) src < low_limit) {
+            sprintf("\nBroke limit with %lx and %lx", (uint64_t) dst, (uint64_t) src);
+            while (1) {}
+            
+        }
+        *dst++ = *src++;
+    }
+}
+
+void dbgmemset32(uint32_t *dst, uint32_t data, uint64_t count, uint64_t low_limit, uint64_t high_limit) {
+    sprintf("\nMemset 32: %lx, %u, %lu", dst, (uint32_t) data, count * 4);
+    for (uint64_t i = 0; i<count; i++) {
+        if ((uint64_t) dst > high_limit || (uint64_t) dst < low_limit) {
+            sprintf("\nBroke limit with %lx", (uint64_t) dst);
+            while (1) {}
+        }
+        *dst++ = data;
+    }
 }
