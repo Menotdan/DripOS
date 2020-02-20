@@ -7,13 +7,9 @@
 
 volatile uint64_t global_ticks = 0;
 
-/* BAD */
-uint64_t scheduler_count = 0;
-
 void timer_handler(int_reg_t *r) {
     global_ticks++;
     if (global_ticks % 2 == 0) {
-        //kprintf("\nScheduler %lu", scheduler_count++);
         schedule(r);
     }
 }
