@@ -133,7 +133,7 @@ pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4, uint16_t perms) {
 }
 
 int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t perms) {
-    spinlock_lock(&vmm_spinlock);
+    lock(&vmm_spinlock);
 
     int ret = 0;
 
@@ -160,12 +160,12 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
         vmm_invlpg((uint64_t) cur_virt - 0x1000);
     }
     //kprintf("\nMapping done");
-    spinlock_unlock(&vmm_spinlock);
+    unlock(&vmm_spinlock);
     return ret;
 }
 
 int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t perms) {
-    spinlock_lock(&vmm_spinlock);
+    lock(&vmm_spinlock);
 
     int ret = 0;
 
@@ -185,13 +185,13 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
         vmm_invlpg((uint64_t) cur_virt - 0x1000);
     }
 
-    spinlock_unlock(&vmm_spinlock);
+    unlock(&vmm_spinlock);
     //kprintf("\nMapping done");
     return ret;
 }
 
 int vmm_unmap_pages(void *virt, void *p4, uint64_t count) {
-    spinlock_lock(&vmm_spinlock);
+    lock(&vmm_spinlock);
 
     int ret = 0;
 
@@ -212,7 +212,7 @@ int vmm_unmap_pages(void *virt, void *p4, uint64_t count) {
         }
     }
 
-    spinlock_unlock(&vmm_spinlock);
+    unlock(&vmm_spinlock);
     return ret;
 }
 

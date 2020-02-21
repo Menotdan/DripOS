@@ -21,5 +21,6 @@ void unlock(uint32_t *lock);
 
 void interrupt_lock();
 void interrupt_unlock();
+uint8_t check_interrupts();
 
 #endif

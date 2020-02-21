@@ -36,6 +36,9 @@ typedef struct {
 
 void schedule(int_reg_t *r);
 void scheduler_init_bsp();
+void enter_task();
+void exit_task();
+uint8_t cpu_in_task();
 
 extern uint8_t scheduler_start;
 

@@ -2,6 +2,8 @@
 #include "klibc/font.h"
 #include "klibc/string.h"
 #include "klibc/lock.h"
+#include "klibc/stdlib.h"
+#include "proc/scheduler.h"
 #include <stdarg.h>
 
 #include "drivers/serial.h"
@@ -60,7 +62,6 @@ void kprint(char *s) {
 }
 
 void kprintf(char *message, ...) {
-    interrupt_lock();
     lock(&base_tty.tty_lock);
     va_list format_list;
     uint64_t index = 0;
@@ -116,8 +117,13 @@ void kprintf(char *message, ...) {
                     }
                     break;
                 case 's':
-                    kprint(va_arg(format_list, char *));
+                    if (big) {
+                        (void) va_arg(format_list, uint64_t);
+                    } else {
+                        kprint(va_arg(format_list, char *));
+                    }
                     break;
+
                 default:
                     break;
             }
@@ -130,5 +136,5 @@ void kprintf(char *message, ...) {
     va_end(format_list);
     flip_buffers();
     unlock(&base_tty.tty_lock);
-    interrupt_unlock();
+    yield();
 }

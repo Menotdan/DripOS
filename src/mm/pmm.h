@@ -10,6 +10,8 @@ typedef void *symbol[];
 
 extern symbol __kernel_end;
 extern symbol __kernel_start;
+extern symbol __kernel_code_start;
+extern symbol __kernel_code_end;
 
 void pmm_memory_setup(multiboot_info_t *mboot_dat);
 void *pmm_alloc(uint64_t size);

@@ -10,6 +10,7 @@
 task_t *running_task;
 dynarray_new(task_t, tasks);
 uint8_t scheduler_start = 0;
+uint8_t in_task = 0; // TODO: move to a CPU-local
 lock_t scheduler_lock = 0;
 
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
@@ -69,7 +70,7 @@ void scheduler_init_bsp() {
 }
 
 void schedule(int_reg_t *r) {
-    spinlock_lock(&scheduler_lock);
+    lock(&scheduler_lock);
     uint64_t item_count = tasks_i;
     task_t *lowest_selected = (task_t *) 0;
     uint64_t lowest_selected_count = 0xFFFFFFFFFFFFFFFF;
@@ -114,9 +115,9 @@ void schedule(int_reg_t *r) {
 
         running_task->regs.cs = r->cs;
         running_task->regs.ss = r->ss;
-        uint64_t fs;
-        asm volatile("movq %%fs:(0), %0;" : "=r"(fs));
-        running_task->regs.fs = fs;
+        //uint64_t fs;
+        //asm volatile("movq %%fs:(0), %0;" : "=r"(fs));
+        //running_task->regs.fs = fs;
         running_task->regs.cr3 = vmm_get_pml4t();
     }
 
@@ -145,11 +146,30 @@ void schedule(int_reg_t *r) {
 
     r->cs = lowest_selected->regs.cs;
     r->ss = lowest_selected->regs.ss;
-    write_msr(0xC0000100, lowest_selected->regs.fs); // Write to FS.Base
+
+    //write_msr(0xC0000100, lowest_selected->regs.fs); // Write to FS.Base
     if (vmm_get_pml4t() != lowest_selected->regs.cr3) {
         vmm_set_pml4t(lowest_selected->regs.cr3);
     }
 
-    spinlock_unlock(&scheduler_lock);
+    unlock(&scheduler_lock);
 }
 
+/* Enter task context */
+void enter_task() {
+    if (scheduler_start) {
+        in_task = 1;
+    }
+}
+
+/* Exit task context */
+void exit_task() {
+    if (scheduler_start) {
+        in_task = 0;
+    }
+}
+
+/* Get if the current CPU is in a task */
+uint8_t cpu_in_task() {
+    return in_task;
+}

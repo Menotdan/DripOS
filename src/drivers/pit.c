@@ -10,8 +10,9 @@ volatile uint64_t global_ticks = 0;
 void timer_handler(int_reg_t *r) {
     global_ticks++;
     if (global_ticks % 2 == 0) {
-        schedule(r);
+        //schedule(r);
     }
+    UNUSED(r);
 }
 
 void set_pit_freq() {

@@ -31,7 +31,7 @@
     extern lock_t name##_lock;
 
 #define dynarray_item_count(name) ({ \
-    spinlock_lock(&name##_lock); \
+    lock(&name##_lock); \
     size_t ret = 0; \
     for (size_t i = 0; i < name##_i; i++) { \
         if (name[i]) { \
@@ -40,14 +40,14 @@
             } \
         } \
     } \
-    spinlock_unlock(&name##_lock); \
+    unlock(&name##_lock); \
     ret; \
 })
 
 #define dynarray_remove(dynarray, element) ({ \
     __label__ out; \
     int ret; \
-    spinlock_lock(&dynarray##_lock); \
+    lock(&dynarray##_lock); \
     if (!dynarray[element]) { \
         ret = -1; \
         goto out; \
@@ -59,27 +59,28 @@
         dynarray[element] = 0; \
     } \
 out: \
-    spinlock_unlock(&dynarray##_lock); \
+    unlock(&dynarray##_lock); \
     ret; \
 })
 
 #define dynarray_unref(dynarray, element) ({ \
-    spinlock_lock(&dynarray##_lock); \
+    lock(&dynarray##_lock); \
     if (dynarray[element] && !atomic_dec(&dynarray[element]->refcount)) { \
         kfree(dynarray[element]); \
         dynarray[element] = 0; \
     } \
-    spinlock_unlock(&dynarray##_lock); \
+    unlock(&dynarray##_lock); \
 })
 
 #define dynarray_getelem(type, dynarray, element) ({ \
-    spinlock_lock(&dynarray##_lock); \
+    lock(&dynarray##_lock); \
     type *ptr = NULL; \
+    sprintf("\ndynarray %lx", dynarray); \
     if (dynarray[element] && dynarray[element]->present) { \
         ptr = &dynarray[element]->data; \
         atomic_inc(&dynarray[element]->refcount); \
     } \
-    spinlock_unlock(&dynarray##_lock); \
+    unlock(&dynarray##_lock); \
     ptr; \
 })
 
@@ -88,7 +89,7 @@ out: \
     __label__ out; \
     int ret = -1; \
         \
-    spinlock_lock(&dynarray##_lock); \
+    lock(&dynarray##_lock); \
         \
     size_t i; \
     for (i = 0; i < dynarray##_i; i++) { \
@@ -114,7 +115,7 @@ fnd: \
     ret = i; \
         \
 out: \
-    spinlock_unlock(&dynarray##_lock); \
+    unlock(&dynarray##_lock); \
     ret; \
 })
 
@@ -123,7 +124,7 @@ out: \
     __label__ out; \
     type *ret = NULL; \
         \
-    spinlock_lock(&dynarray##_lock); \
+    lock(&dynarray##_lock); \
         \
     size_t i; \
     size_t j = 0; \
@@ -142,7 +143,7 @@ fnd: \
     *(i_ptr) = i; \
         \
 out: \
-    spinlock_unlock(&dynarray##_lock); \
+    unlock(&dynarray##_lock); \
     ret; \
 })
 

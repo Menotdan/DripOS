@@ -2,6 +2,8 @@
 #include "string.h"
 #include "mm/pmm.h"
 #include "mm/vmm.h"
+#include "proc/scheduler.h"
+#include "klibc/lock.h"
 
 void *kmalloc(uint64_t size) {
     uint64_t size_data = (uint64_t) pmm_alloc(size + 0x1000) + NORMAL_VMA_OFFSET;
@@ -40,5 +42,7 @@ void *krealloc(void *addr, uint64_t new_size) {
 }
 
 void yield() {
-    asm volatile("int $254");
+    if (scheduler_start && check_interrupts()) {
+        asm volatile("int $254");
+    }
 }

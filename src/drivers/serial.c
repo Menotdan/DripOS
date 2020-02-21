@@ -96,7 +96,11 @@ void sprintf(char *message, ...) {
                     }
                     break;
                 case 's':
-                    sprint(va_arg(format_list, char *));
+                    if (big) {
+                        (void) va_arg(format_list, uint64_t);
+                    } else {
+                        sprint(va_arg(format_list, char *));
+                    }
                     break;
                 default:
                     break;

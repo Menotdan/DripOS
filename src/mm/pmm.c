@@ -20,21 +20,21 @@ lock_t pmm_spinlock = 0; // The spinlock for the PMM
 /* Get a bit in the bitmap */
 uint8_t pmm_get_bit(uint8_t *bitmap_change, uint8_t bit, uint64_t byte) {
     uint8_t ret = 0;
-    //spinlock_lock(&pmm_spinlock);
+    //lock(&pmm_spinlock);
     ret = ((*(bitmap_change + byte + 8) >> bit) & 1);
-    //spinlock_unlock(&pmm_spinlock);
+    //unlock(&pmm_spinlock);
     return ret;
 }
 
 /* Set a bit in the bitmap */
 void pmm_set_bit(uint8_t *bitmap_change, uint8_t bit, uint64_t byte, uint8_t state) {
-    //spinlock_lock(&pmm_spinlock); // Lock the PMM
+    //lock(&pmm_spinlock); // Lock the PMM
     if (state == 0) {
         *(bitmap_change + byte + 8) &= ~(1 << bit);
     } else if (state == 1) {
         *(bitmap_change + byte + 8) = (*(bitmap_change + byte + 8) | (1 << bit));
     }
-    //spinlock_unlock(&pmm_spinlock); // Unlock the PMM
+    //unlock(&pmm_spinlock); // Unlock the PMM
 }
 
 /* Get the size of the bitmap from it's pointer */
@@ -80,7 +80,7 @@ uint8_t *pmm_get_last_bitmap(uint8_t *bitmap_start) {
 
 /* Setup a bitmap which may be pointed to by another bitmap */
 void pmm_set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of_mem, uint64_t offset) {
-    spinlock_lock(&pmm_spinlock);
+    lock(&pmm_spinlock);
     uint8_t *real_bitmap_pos = bitmap_start + offset;
     uint64_t *size_data_writing = (uint64_t *) real_bitmap_pos;
     uint64_t bitmap_bytes = (size_of_mem + (0x1000 * 8) - 1) / (0x1000 * 8); // Bitmap size in bytes
@@ -112,7 +112,7 @@ void pmm_set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of
             bitmap_bit = 0;
         }
     }
-    spinlock_unlock(&pmm_spinlock);
+    unlock(&pmm_spinlock);
 }
 
 bitmap_index pmm_get_bitmap(void *addr) {
@@ -143,17 +143,17 @@ bitmap_index pmm_get_bitmap(void *addr) {
 
 uint64_t pmm_get_free_mem() {
     uint64_t ret = 0;
-    spinlock_lock(&pmm_spinlock); // Wait for us to have the lock so we can get accurate size readings
+    lock(&pmm_spinlock); // Wait for us to have the lock so we can get accurate size readings
     ret = usable_mem; // Store the value
-    spinlock_unlock(&pmm_spinlock); // Unlock it 
+    unlock(&pmm_spinlock); // Unlock it 
     return ret;
 }
 
 uint64_t pmm_get_used_mem() {
     uint64_t ret = 0;
-    spinlock_lock(&pmm_spinlock); // Wait for us to have the lock se we can get accurate size readings
+    lock(&pmm_spinlock); // Wait for us to have the lock se we can get accurate size readings
     ret = used_mem;
-    spinlock_unlock(&pmm_spinlock);
+    unlock(&pmm_spinlock);
     return ret;
 }
 
@@ -242,6 +242,13 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
         current += sizeof(multiboot_memory_map_t);
     }
     vmm_unmap((void *) 0, 1);
+    // sprintf("\nUnmapping %lx - %lx", (vmm_get_pml4t() + KERNEL_VMA_OFFSET), (vmm_get_pml4t() + KERNEL_VMA_OFFSET + 4 * 0x1000));
+    // vmm_unmap((void *) (vmm_get_pml4t() + KERNEL_VMA_OFFSET), 4);
+    /* Remap kernel as nonwriteable */
+    uint64_t kernel_code_phys = (uint64_t) __kernel_code_start - KERNEL_VMA_OFFSET;
+    uint64_t kernel_code_end_phys = (uint64_t) __kernel_code_end - KERNEL_VMA_OFFSET;
+    vmm_remap((void *) kernel_code_phys, (void *) __kernel_code_start, 
+        (kernel_code_end_phys - kernel_code_phys) / 0x1000, VMM_PRESENT);
 }
 
 bitmap_index pmm_find_free(uint64_t pages) {
@@ -282,7 +289,7 @@ bitmap_index pmm_find_free(uint64_t pages) {
 }
 
 void *pmm_alloc(uint64_t size) {
-    spinlock_lock(&pmm_spinlock);
+    lock(&pmm_spinlock);
     //sprintf("\nAllocating %lu", size);
     uint64_t pages_needed = (size + 0x1000 - 1) / 0x1000;
     bitmap_index free_space = pmm_find_free(pages_needed);
@@ -302,17 +309,17 @@ void *pmm_alloc(uint64_t size) {
         }
         uint64_t free_space_offset = ((free_space.byte * 0x1000 * 8) + (free_space.bit * 0x1000));
         void *ret = (void *) (pmm_get_represented_addr(cur_map) + free_space_offset - NORMAL_VMA_OFFSET);
-        spinlock_unlock(&pmm_spinlock);
+        unlock(&pmm_spinlock);
         return ret;
     } else {
         sprintf("\n[PMM] Warning: couldn't find free space for size %lx", size);
-        spinlock_unlock(&pmm_spinlock);
+        unlock(&pmm_spinlock);
         return (void *) 0;
     }
 }
 
 void pmm_unalloc(void *addr, uint64_t size) {
-    spinlock_lock(&pmm_spinlock);
+    lock(&pmm_spinlock);
     uint64_t pages_needed = (size + 0x1000 - 1) / 0x1000;
     uint64_t virt_addr = (uint64_t) addr + NORMAL_VMA_OFFSET;
     bitmap_index to_free = pmm_get_bitmap((void *) virt_addr);
@@ -333,5 +340,5 @@ void pmm_unalloc(void *addr, uint64_t size) {
     } else {
         sprintf("\n[PMM] Warning: couldn't find bitmap for address %lx", addr);
     }
-    spinlock_unlock(&pmm_spinlock);
+    unlock(&pmm_spinlock);
 }
