@@ -1,150 +1,24 @@
 #ifndef KLIBC_DYNARRAY_H
 #define KLIBC_DYNARRAY_H
-#include "klibc/lock.h"
-#include "klibc/stdlib.h"
 #include <stddef.h>
+#include <stdint.h>
+#include "klibc/lock.h"
 
-#define DYNARRAY_START_SIZE 8
+typedef struct {
+    void *data;
+    uint32_t ref_count;
+    uint8_t present;
+} dynarray_elem_t;
 
-#define dynarray_new(type, name) \
-    static struct { \
-        uint32_t refcount; \
-        int present; \
-        type data; \
-    } **name; \
-    static size_t name##_i = 0; \
-    static lock_t name##_lock = 0;
+typedef struct {
+    dynarray_elem_t *base;
+    lock_t lock;
+    int64_t array_size;
+} dynarray_t;
 
-#define public_dynarray_new(type, name) \
-    struct __##name##_struct **name; \
-    size_t name##_i = 0; \
-    lock_t name##_lock = 0;
-
-#define public_dynarray_prototype(type, name) \
-    struct __##name##_struct { \
-        uint32_t refcount; \
-        int present; \
-        type data; \
-    }; \
-    extern struct __##name##_struct **name; \
-    extern size_t name##_i; \
-    extern lock_t name##_lock;
-
-#define dynarray_item_count(name) ({ \
-    lock(&name##_lock); \
-    size_t ret = 0; \
-    for (size_t i = 0; i < name##_i; i++) { \
-        if (name[i]) { \
-            if(name[i]->present) { \
-              ret++; \
-            } \
-        } \
-    } \
-    unlock(&name##_lock); \
-    ret; \
-})
-
-#define dynarray_remove(dynarray, element) ({ \
-    __label__ out; \
-    int ret; \
-    lock(&dynarray##_lock); \
-    if (!dynarray[element]) { \
-        ret = -1; \
-        goto out; \
-    } \
-    ret = 0; \
-    dynarray[element]->present = 0; \
-    if (!atomic_dec(&dynarray[element]->refcount)) { \
-        kfree(dynarray[element]); \
-        dynarray[element] = 0; \
-    } \
-out: \
-    unlock(&dynarray##_lock); \
-    ret; \
-})
-
-#define dynarray_unref(dynarray, element) ({ \
-    lock(&dynarray##_lock); \
-    if (dynarray[element] && !atomic_dec(&dynarray[element]->refcount)) { \
-        kfree(dynarray[element]); \
-        dynarray[element] = 0; \
-    } \
-    unlock(&dynarray##_lock); \
-})
-
-#define dynarray_getelem(type, dynarray, element) ({ \
-    lock(&dynarray##_lock); \
-    type *ptr = NULL; \
-    sprintf("\ndynarray %lx", dynarray); \
-    if (dynarray[element] && dynarray[element]->present) { \
-        ptr = &dynarray[element]->data; \
-        atomic_inc(&dynarray[element]->refcount); \
-    } \
-    unlock(&dynarray##_lock); \
-    ptr; \
-})
-
-#define dynarray_add(type, dynarray, element) ({ \
-    __label__ fnd; \
-    __label__ out; \
-    int ret = -1; \
-        \
-    lock(&dynarray##_lock); \
-        \
-    size_t i; \
-    for (i = 0; i < dynarray##_i; i++) { \
-        if (!dynarray[i]) \
-            goto fnd; \
-    } \
-        \
-    dynarray##_i += 256; \
-    void *tmp = krealloc(dynarray, dynarray##_i * sizeof(void *)); \
-    if (!tmp) \
-        goto out; \
-    dynarray = tmp; \
-        \
-fnd: \
-    dynarray[i] = kcalloc(sizeof(**dynarray)); \
-    sprintf("\nData: %lx", dynarray[i]); \
-    if (!dynarray[i]) \
-        goto out; \
-    dynarray[i]->refcount = 1; \
-    dynarray[i]->present = 1; \
-    dynarray[i]->data = *element; \
-        \
-    ret = i; \
-        \
-out: \
-    unlock(&dynarray##_lock); \
-    ret; \
-})
-
-#define dynarray_search(type, dynarray, i_ptr, cond, index) ({ \
-    __label__ fnd; \
-    __label__ out; \
-    type *ret = NULL; \
-        \
-    lock(&dynarray##_lock); \
-        \
-    size_t i; \
-    size_t j = 0; \
-    for (i = 0; i < dynarray##_i; i++) { \
-        if (!dynarray[i] || !dynarray[i]->present) \
-            continue; \
-        type *elem = &dynarray[i]->data; \
-        if ((cond) && j++ == (index)) \
-            goto fnd; \
-    } \
-    goto out; \
-        \
-fnd: \
-    ret = &dynarray[i]->data; \
-    atomic_inc(&dynarray[i]->refcount); \
-    *(i_ptr) = i; \
-        \
-out: \
-    unlock(&dynarray##_lock); \
-    ret; \
-})
+int dynarray_add(dynarray_t *dynarray, void *element, uint64_t size_of_elem);
+int dynarray_remove(dynarray_t *dynarray, int64_t element);
+void *dynarray_getelem(dynarray_t *dynarray, int64_t element);
+void dynarray_unref(dynarray_t *dynarray, int64_t element);
 
 #endif

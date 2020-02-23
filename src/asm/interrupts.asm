@@ -57,6 +57,9 @@ pop rax
 section .text
 isr_common:
     pushaq
+    xor ax, ax
+    mov es, ax
+    mov ds, ax
     cld
     xor rax, rax
     mov rdi, rsp

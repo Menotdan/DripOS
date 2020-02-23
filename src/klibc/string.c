@@ -8,6 +8,13 @@ uint64_t strlen(char str[]) {
     return len - 1;
 }
 
+void strcpy(char *src, char *dst) {
+    uint64_t len = strlen(src);
+    sprintf("\nStrcpy: %lx, %lx", src, dst);
+    for (uint64_t i = 0; i < len; i++)
+        *src++ = *dst++;
+}
+
 void reverse(char str[]) {
     uint64_t start_index = 0;
     uint64_t end_index = 0;
@@ -32,7 +39,8 @@ void reverse(char str[]) {
 void itoa(int64_t n, char str[]) {
     uint64_t i;
     i = 0;
-    uint64_t abs_n = (int64_t) abs(n);
+    int64_t n_inv = abs(n); // inverted n, if it was negative
+    uint64_t abs_n = (uint64_t) n_inv;
     if (abs_n == 0) {
         str[i++] = '0';
     }
@@ -41,7 +49,7 @@ void itoa(int64_t n, char str[]) {
         abs_n /= 10;
     }
 
-    if (abs_n != (uint64_t) n) {
+    if (n_inv != n) {
         str[i++] = '-';
     }
 
@@ -92,6 +100,7 @@ void htoa(uint64_t in, char str[]) {
 }
 
 void memcpy(uint8_t *src, uint8_t *dst, uint64_t count) {
+    sprintf("\nMemcpy: %lx, %lx", src, dst);
     for (uint64_t i = 0; i<count; i++)
         *dst++ = *src++;
 }

@@ -27,9 +27,10 @@ typedef struct {
 void init_vesa(multiboot_info_t *mb);
 void put_pixel(uint64_t x, uint64_t y, color_t color);
 void render_font(uint8_t font[128][8], char c, uint64_t x, uint64_t y, color_t fg, color_t bg);
-void vesa_scroll(uint64_t rows_shift);
+void vesa_scroll(uint64_t rows_shift, color_t bg);
 void flip_buffers();
 void clear_buffer();
+void fill_screen(color_t color);
 
 extern lock_t vesa_lock;
 extern vesa_info_t vesa_display_info;

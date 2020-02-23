@@ -42,7 +42,7 @@ void *krealloc(void *addr, uint64_t new_size) {
 }
 
 void yield() {
-    if (scheduler_start && check_interrupts()) {
+    if (scheduler_started && check_interrupts()) {
         asm volatile("int $254");
     }
 }

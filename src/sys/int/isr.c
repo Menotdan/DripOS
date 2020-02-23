@@ -23,28 +23,20 @@ void isr_handler(int_reg_t *r) {
             /* Exception */
             uint64_t cr2;
             asm volatile("movq %%cr2, %0;" : "=r"(cr2));
-            sprintf("\nException nerd");
             /* Ensure the display is not locked when we crash */
             unlock(&base_tty.tty_lock);
             unlock(&vesa_lock);
             clear_buffer();
-            tty_seek(0, 0);
+            tty_seek(0, 0, &base_tty);
             sprintf("\nException!");
             sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2);
-            uint64_t *old_stack = (uint64_t *) r->rsp;
-            sprintf("\n----Stack---- \n\n");
-            for (uint64_t i = 0; i < 50; i++) {
-                sprintf("%lx: %lx %lx", old_stack, *old_stack, *(old_stack + 1));
-                old_stack += 2;
-                sprintf("\n");
-            }
             while (1) { asm volatile("hlt"); }
         }
         /* If the entry is present */
         if (handlers[r->int_num]) {
             /* Call the handler */
             handlers[r->int_num](r);
-        } else {}
+        }
     } else {
         uint64_t cr2;
         asm volatile("movq %%cr2, %0;" : "=r"(cr2));
@@ -53,7 +45,6 @@ void isr_handler(int_reg_t *r) {
         while (1) { asm volatile("hlt"); }
     }
 
-    sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip);
     interrupt_unlock();
 
     // If we make it here, send an EOI to our LAPIC
@@ -321,6 +312,6 @@ void configure_idt() {
     load_idt(); // Point to the IDT
     register_int_handler(32, timer_handler);
     register_int_handler(33, keyboard_handler);
-    register_int_handler(254, schedule);
+    //register_int_handler(254, schedule);
     asm volatile("sti"); // Enable interrupts and hope we dont die lmao
 }

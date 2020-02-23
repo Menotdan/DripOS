@@ -1,6 +1,6 @@
 #include "scheduler.h"
 #include "klibc/dynarray.h"
-#include "klibc/vector.h"
+#include "klibc/stdlib.h"
 #include "klibc/string.h"
 #include "drivers/tty/tty.h"
 #include "drivers/serial.h"
@@ -8,9 +8,9 @@
 #include "mm/vmm.h"
 
 task_t *running_task;
-dynarray_new(task_t, tasks);
-uint8_t scheduler_start = 0;
-uint8_t in_task = 0; // TODO: move to a CPU-local
+dynarray_t tasks;
+dynarray_t processes;
+uint8_t scheduler_started = 0;
 lock_t scheduler_lock = 0;
 
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
@@ -24,7 +24,7 @@ void main_task() {
 }
 
 void second_task() {
-    kprintf("\nSecond task scheduler_start");
+    kprintf("\nSecond task scheduler_started");
     uint64_t count = 0;
     while (1) {
         kprintf("\nnob2 %lu", count++);
@@ -32,144 +32,86 @@ void second_task() {
 }
 
 void scheduler_init_bsp() {
-    /* Start up scheduler for the BSP */
-    sprintf("\n[SCHEDULER] Initializing tasking on the BSP");
-    task_t starting_task;
-    starting_task.regs = default_kernel_regs;
-    starting_task.times_selected = 0;
-    starting_task.state = 0;
-    starting_task.regs.fs = (uint64_t) kcalloc(sizeof(thread_info_block_t));
-    ((thread_info_block_t *) starting_task.regs.fs)->meta_pointer = starting_task.regs.fs;
-    starting_task.regs.cr3 = vmm_get_pml4t();
-    starting_task.regs.rip = (uint64_t) main_task;
-    starting_task.regs.rsp = (uint64_t) kcalloc(TASK_STACK);
-    sprintf("\n[SCHEDULER] Set Regs");
-
-    write_msr(0xC0000100, starting_task.regs.fs);
-    sprintf("\n[SCHEDULER] Set MSR");
-
-    sprintf("\n[SCHEDULER] Added item %u", (uint32_t) dynarray_add(task_t, tasks, &starting_task));
-
-    task_t starting_task2;
-    starting_task2.regs = default_kernel_regs;
-    starting_task2.times_selected = 0;
-    starting_task2.state = 0;
-    starting_task2.regs.fs = (uint64_t) kcalloc(sizeof(thread_info_block_t));
-    ((thread_info_block_t *) starting_task2.regs.fs)->meta_pointer = starting_task2.regs.fs;
-    starting_task2.regs.cr3 = vmm_get_pml4t();
-    starting_task2.regs.rip = (uint64_t) second_task;
-    starting_task2.regs.rsp = (uint64_t) kcalloc(TASK_STACK);
-    sprintf("\n[SCHEDULER] Set Regs");
-
-    write_msr(0xC0000100, starting_task2.regs.fs);
-    sprintf("\n[SCHEDULER] Set MSR");
-
-    sprintf("\n[SCHEDULER] Added item %u", (uint32_t) dynarray_add(task_t, tasks, &starting_task2));
-    running_task = dynarray_getelem(task_t, tasks, 0);
-    dynarray_unref(tasks, 0);
-}
-
-void schedule(int_reg_t *r) {
-    lock(&scheduler_lock);
-    uint64_t item_count = tasks_i;
-    task_t *lowest_selected = (task_t *) 0;
-    uint64_t lowest_selected_count = 0xFFFFFFFFFFFFFFFF;
-    for (uint64_t i = 0; i < item_count; i++) {
-        task_t *task = dynarray_getelem(task_t, tasks, i);
-        if (task) {
-            if (task->times_selected < lowest_selected_count) {
-                lowest_selected = task;
-                lowest_selected_count = task->times_selected;
-            }
-            dynarray_unref(tasks, i);
+    tasks.array_size = 0;
+    tasks.base = 0;
+    sprintf("\nElements: %ld", processes.array_size);
+    processes.array_size = 0;
+    processes.base = 0;
+    sprintf("\nElements: %ld", processes.array_size);
+    new_process(main_task, (void *) 0, "Main task");
+    new_process(second_task, (void *) 0, "Second task");
+    sprintf("\nElements: %ld", processes.array_size);
+    for (int64_t p = 0; p < processes.array_size; p++) {
+        process_t *proc = dynarray_getelem(&processes, p);
+        if (proc) {
+            sprintf("\nProc name: %s", proc->name);
+            sprintf("\nPID: %ld %ld", p, proc->pid);
         }
     }
-
-    if (!lowest_selected) {
-        lowest_selected = dynarray_getelem(task_t, tasks, 0);
-        dynarray_unref(tasks, 0);
-    }
-
-    lowest_selected->times_selected++;
-
-    /* Save old registers */
-    if (scheduler_start) {
-        running_task->regs.rax = r->rax;
-        running_task->regs.rbx = r->rbx;
-        running_task->regs.rcx = r->rcx;
-        running_task->regs.rdx = r->rdx;
-        running_task->regs.rbp = r->rbp;
-        running_task->regs.rdi = r->rdi;
-        running_task->regs.rsi = r->rsi;
-        running_task->regs.r8 = r->r8;
-        running_task->regs.r9 = r->r9;
-        running_task->regs.r10 = r->r10;
-        running_task->regs.r11 = r->r11;
-        running_task->regs.r12 = r->r12;
-        running_task->regs.r13 = r->r13;
-        running_task->regs.r14 = r->r14;
-        running_task->regs.r15 = r->r15;
-
-        running_task->regs.rsp = r->rsp;
-        running_task->regs.rip = r->rip;
-
-        running_task->regs.cs = r->cs;
-        running_task->regs.ss = r->ss;
-        //uint64_t fs;
-        //asm volatile("movq %%fs:(0), %0;" : "=r"(fs));
-        //running_task->regs.fs = fs;
-        running_task->regs.cr3 = vmm_get_pml4t();
-    }
-
-    scheduler_start = 1;
-    running_task = lowest_selected;
-
-    /* Set new registers */
-    r->rax = lowest_selected->regs.rax;
-    r->rbx = lowest_selected->regs.rbx;
-    r->rcx = lowest_selected->regs.rcx;
-    r->rdx = lowest_selected->regs.rdx;
-    r->rbp = lowest_selected->regs.rbp;
-    r->rdi = lowest_selected->regs.rdi;
-    r->rsi = lowest_selected->regs.rsi;
-    r->r8 = lowest_selected->regs.r8;
-    r->r9 = lowest_selected->regs.r9;
-    r->r10 = lowest_selected->regs.r10;
-    r->r11 = lowest_selected->regs.r11;
-    r->r12 = lowest_selected->regs.r12;
-    r->r13 = lowest_selected->regs.r13;
-    r->r14 = lowest_selected->regs.r14;
-    r->r15 = lowest_selected->regs.r15;
-
-    r->rsp = lowest_selected->regs.rsp;
-    r->rip = lowest_selected->regs.rip;
-
-    r->cs = lowest_selected->regs.cs;
-    r->ss = lowest_selected->regs.ss;
-
-    //write_msr(0xC0000100, lowest_selected->regs.fs); // Write to FS.Base
-    if (vmm_get_pml4t() != lowest_selected->regs.cr3) {
-        vmm_set_pml4t(lowest_selected->regs.cr3);
-    }
-
-    unlock(&scheduler_lock);
 }
 
-/* Enter task context */
-void enter_task() {
-    if (scheduler_start) {
-        in_task = 1;
+task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name) {
+    task_t *task = kcalloc(sizeof(task_t));
+
+    /* Setup new task */
+    task->regs = default_kernel_regs;
+    task->regs.rip = (uint64_t) main;
+    /* Create new address space */
+    uint64_t new_addr_space = (uint64_t) kcalloc(0x1000);
+    task->regs.cr3 = new_addr_space;
+    if (parent_addr_space_cr3) {
+        /* Copy old address space */
+        memcpy((uint8_t *) parent_addr_space_cr3, (uint8_t *) new_addr_space, 0x1000);
+    } else {
+        /* Copy the higher half mappings */
+        memcpy((uint8_t *) vmm_get_pml4t() + 0x800 + 0xFFFF800000000000, (uint8_t *) task->regs.cr3 + 0x800, 0x800);
     }
+
+    /* Create new thread info block */
+    thread_info_block_t *info = kmalloc(sizeof(thread_info_block_t));
+    info->meta_pointer = (uint64_t) info;
+    task->regs.fs = (uint64_t) info;
+    
+    /* Create new task stack */
+    task->regs.rsp = (uint64_t) kcalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE;
+
+    /* Set the name */
+    sprintf("\nTask strcpy");
+    strcpy(name, task->name);
+    sprintf("\nTask name: %s %s %lx %lx ", name, task->name, name, task->name);
+    sprint(name);
+
+    /* Initialize the other fields */
+    task->state = READY;
+    int tid = dynarray_add(&tasks, (void *) task, sizeof(task));
+    sprintf("\nTID: %ld", tid);
+    task_t *task_arr = dynarray_getelem(&tasks, tid);
+    task_arr->tid = tid;
+    task->tid = tid;
+    dynarray_unref(&tasks, tid);
+
+    return task;
 }
 
-/* Exit task context */
-void exit_task() {
-    if (scheduler_start) {
-        in_task = 0;
-    }
-}
+int new_process(void (*main)(), void *parent_addr_space_cr3, char *name) {
+    process_t *process = kcalloc(sizeof(process_t));
+    process->threads.base = 0;
+    process->threads.array_size = 0;
 
-/* Get if the current CPU is in a task */
-uint8_t cpu_in_task() {
-    return in_task;
+    task_t *base_task = new_task(main, parent_addr_space_cr3, name);
+    
+    dynarray_add(&process->threads, base_task, sizeof(task_t));
+    int pid = dynarray_add(&processes, process, sizeof(process));
+    sprintf("\nPID: %ld", pid);
+    process_t *elem = dynarray_getelem(&processes, pid);
+    elem->pid = pid;
+    sprintf("\nProcess strcpy");
+    strcpy(name, elem->name);
+    dynarray_unref(&processes, pid);
+
+    /* Cleanup, since items are in the dynarray */
+    kfree(base_task);
+    kfree(process);
+
+    return pid;
 }

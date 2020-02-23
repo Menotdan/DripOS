@@ -8,8 +8,8 @@
 
 #include "drivers/serial.h"
 
-color_t default_fg = {255, 255, 255};
-color_t default_bg = {0, 0, 0};
+color_t default_fg = {248, 248, 248};
+color_t default_bg = {56, 56, 56};
 tty_t base_tty;
 
 void tty_init(tty_t *tty, uint64_t font_width, uint64_t font_height) {
@@ -23,6 +23,7 @@ void tty_init(tty_t *tty, uint64_t font_width, uint64_t font_height) {
     tty->cols = vesa_display_info.width / font_width;
     tty->font = (uint8_t *) font8x8_basic;
     tty->tty_lock = 0;
+    tty_clear(tty);
 }
 
 void tty_out(char c, tty_t *tty) {
@@ -41,18 +42,24 @@ void tty_out(char c, tty_t *tty) {
     }
 
     if (tty->c_pos_y == tty->rows) {
-        vesa_scroll(8);
+        vesa_scroll(8, tty->bg);
         tty->c_pos_y--;
     }
 }
 
-void tty_seek(uint64_t x, uint64_t y) {
-    lock(&base_tty.tty_lock);
-    if (x < base_tty.cols && y < base_tty.rows) {
-        base_tty.c_pos_x = x;
-        base_tty.c_pos_y = y;
+void tty_seek(uint64_t x, uint64_t y, tty_t *tty) {
+    lock(&tty->tty_lock);
+    if (x < tty->cols && y < tty->rows) {
+        tty->c_pos_x = x;
+        tty->c_pos_y = y;
     }
-    unlock(&base_tty.tty_lock);
+    unlock(&tty->tty_lock);
+}
+
+void tty_clear(tty_t *tty) {
+    lock(&tty->tty_lock);
+    fill_screen(tty->bg);
+    unlock(&tty->tty_lock);
 }
 
 void kprint(char *s) {

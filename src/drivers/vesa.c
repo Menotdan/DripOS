@@ -64,17 +64,20 @@ void render_font(uint8_t font[128][8], char c, uint64_t x, uint64_t y, color_t f
     unlock(&vesa_lock);
 }
 
-void vesa_scroll(uint64_t rows_shift) {
+void vesa_scroll(uint64_t rows_shift, color_t bg) {
     lock(&vesa_lock);
+
+    uint32_t color_dat = (bg.r << vesa_display_info.red_shift) |
+        (bg.g << vesa_display_info.green_shift) |
+        (bg.b << vesa_display_info.blue_shift);
+
     uint64_t buf_pos = (uint64_t) vesa_display_info.framebuffer;
     /* Do the copy */
-    dgbmemcpy32((uint32_t *) (buf_pos + (vesa_display_info.pitch * rows_shift)), (uint32_t *) (buf_pos), 
-        vesa_display_info.framebuffer_pixels - ((vesa_display_info.pitch * rows_shift) / 4),
-            buf_pos, buf_pos + vesa_display_info.framebuffer_size);
+    memcpy32((uint32_t *) (buf_pos + (vesa_display_info.pitch * rows_shift)), (uint32_t *) (buf_pos), 
+        vesa_display_info.framebuffer_pixels - ((vesa_display_info.pitch * rows_shift) / 4));
     /* Do the clear */
-    dbgmemset32((uint32_t *) (buf_pos + vesa_display_info.framebuffer_size - (vesa_display_info.pitch * rows_shift)),
-        0, (vesa_display_info.pitch * rows_shift) / 4,
-            buf_pos, buf_pos + vesa_display_info.framebuffer_size);
+    memset32((uint32_t *) (buf_pos + vesa_display_info.framebuffer_size - (vesa_display_info.pitch * rows_shift)),
+        color_dat, (vesa_display_info.pitch * rows_shift) / 4);
     unlock(&vesa_lock);
 }
 
@@ -87,7 +90,25 @@ void flip_buffers() {
 
 void clear_buffer() {
     lock(&vesa_lock);
-    dbgmemset32(vesa_display_info.framebuffer, 0, vesa_display_info.framebuffer_pixels, (uint64_t) vesa_display_info.framebuffer, (uint64_t) vesa_display_info.framebuffer + vesa_display_info.framebuffer_size);
+
+    /* Set the buffer to 0 */
+    memset32(vesa_display_info.framebuffer, 0, vesa_display_info.framebuffer_pixels);
+    memcpy32(vesa_display_info.framebuffer, vesa_display_info.actual_framebuffer,
+        vesa_display_info.framebuffer_pixels);
+
+    unlock(&vesa_lock);
+}
+
+void fill_screen(color_t color) {
+    lock(&vesa_lock);
+
+    /* Create the color */
+    uint32_t color_dat = (color.r << vesa_display_info.red_shift) |
+                    (color.g << vesa_display_info.green_shift) |
+                    (color.b << vesa_display_info.blue_shift);
+
+    /* Fill and flip the buffers */
+    memset32(vesa_display_info.framebuffer, color_dat, vesa_display_info.framebuffer_pixels);
     memcpy32(vesa_display_info.framebuffer, vesa_display_info.actual_framebuffer,
         vesa_display_info.framebuffer_pixels);
     unlock(&vesa_lock);

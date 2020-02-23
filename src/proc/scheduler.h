@@ -2,6 +2,7 @@
 #define SCHEDULER_H
 #include <stdint.h>
 #include "sys/int/isr.h"
+#include "klibc/dynarray.h"
 
 #define READY 0
 #define RUNNING 1
@@ -9,7 +10,7 @@
 #define IRQ_WAIT 3
 #define SLEEP 4
 
-#define TASK_STACK 0x4000
+#define TASK_STACK_SIZE 0x4000
 
 typedef struct {
     uint64_t rax, rbx, rcx, rdx, rbp, rdi, rsi, r8, r9, r10, r11, r12, r13, r14, r15;
@@ -20,26 +21,37 @@ typedef struct {
 } task_regs_t;
 
 typedef struct {
-    task_regs_t regs;
+    char name[50]; // The name of the task
+
+    task_regs_t regs; // The task's registers
     uint64_t times_selected; // Times the task has been selected since last new task
     uint8_t state; // State of the task
     uint8_t cpu; // CPU the task is running on
     uint8_t waiting_irq; // The IRQ this task is waiting for
 
-    uint64_t pid;
+    int64_t tid; // Task ID
 } task_t;
 
 typedef struct {
+    char name[50]; // The name of the process
+
+    dynarray_t threads; // The threads this process has
+    int64_t pid; // Process ID
+} process_t;
+
+typedef struct {
     uint64_t meta_pointer;
+    int64_t tid;
 } __attribute__((packed)) thread_info_block_t;
 
 
 void schedule(int_reg_t *r);
 void scheduler_init_bsp();
-void enter_task();
-void exit_task();
-uint8_t cpu_in_task();
 
-extern uint8_t scheduler_start;
+task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name);
+int new_process(void (*main)(), void *parent_addr_space_cr3, char *name);
+
+
+extern uint8_t scheduler_started;
 
 #endif
