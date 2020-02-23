@@ -32,11 +32,8 @@ void *krealloc(void *addr, uint64_t new_size) {
     if (!addr) return new_buffer;
 
     /* Copy everything over, and only copy part if our new size is lower than the old size */
-    if ((*size_data) - 0x1000 >= new_size) {
-        memcpy((uint8_t *) addr, (uint8_t *) new_buffer, (new_size));
-    } else {
-        memcpy((uint8_t *) addr, (uint8_t *) new_buffer, (*size_data) - 0x1000);
-    }
+    memcpy((uint8_t *) addr, (uint8_t *) new_buffer, (*size_data) - 0x1000);
+
     kfree(addr);
     return new_buffer;
 }

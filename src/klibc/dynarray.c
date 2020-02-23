@@ -56,10 +56,8 @@ int dynarray_add(dynarray_t *dynarray, void *element, uint64_t size_of_elem) {
             goto fnd;
     }
 
-    sprintf("\nDynarray old size: %ld", dynarray->array_size);
     dynarray->array_size += 256;
-    sprintf("\nDynarray new size: %ld", dynarray->array_size);
-    void *tmp = krealloc(dynarray, dynarray->array_size * sizeof(dynarray_elem_t));
+    void *tmp = krealloc(dynarray->base, dynarray->array_size * sizeof(dynarray_elem_t));
     if (!tmp)
         goto out;
     dynarray->base = tmp;

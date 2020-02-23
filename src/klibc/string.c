@@ -10,9 +10,8 @@ uint64_t strlen(char str[]) {
 
 void strcpy(char *src, char *dst) {
     uint64_t len = strlen(src);
-    sprintf("\nStrcpy: %lx, %lx", src, dst);
     for (uint64_t i = 0; i < len; i++)
-        *src++ = *dst++;
+        *dst++ = *src++;
 }
 
 void reverse(char str[]) {
@@ -100,7 +99,6 @@ void htoa(uint64_t in, char str[]) {
 }
 
 void memcpy(uint8_t *src, uint8_t *dst, uint64_t count) {
-    sprintf("\nMemcpy: %lx, %lx", src, dst);
     for (uint64_t i = 0; i<count; i++)
         *dst++ = *src++;
 }
@@ -111,13 +109,11 @@ void memcpy32(uint32_t *src, uint32_t *dst, uint64_t count) {
 }
 
 void memset(uint8_t *dst, uint8_t data, uint64_t count) {
-    sprintf("\nMemset: %lx, %u, %lu", dst, (uint32_t) data, count);
     for (uint64_t i = 0; i<count; i++)
         *dst++ = data;
 }
 
 void memset32(uint32_t *dst, uint32_t data, uint64_t count) {
-    sprintf("\nMemset 32: %lx, %u, %lu", dst, (uint32_t) data, count * 4);
     for (uint64_t i = 0; i<count; i++)
         *dst++ = data;
 }

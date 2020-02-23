@@ -34,19 +34,28 @@ void second_task() {
 void scheduler_init_bsp() {
     tasks.array_size = 0;
     tasks.base = 0;
-    sprintf("\nElements: %ld", processes.array_size);
     processes.array_size = 0;
     processes.base = 0;
-    sprintf("\nElements: %ld", processes.array_size);
+
     new_process(main_task, (void *) 0, "Main task");
     new_process(second_task, (void *) 0, "Second task");
-    sprintf("\nElements: %ld", processes.array_size);
+
     for (int64_t p = 0; p < processes.array_size; p++) {
         process_t *proc = dynarray_getelem(&processes, p);
         if (proc) {
             sprintf("\nProc name: %s", proc->name);
-            sprintf("\nPID: %ld %ld", p, proc->pid);
+            sprintf("\nPID: %ld", proc->pid);
         }
+        dynarray_unref(&processes, p);
+    }
+
+    for (int64_t t = 0; t < tasks.array_size; t++) {
+        task_t *task = dynarray_getelem(&tasks, t);
+        if (task) {
+            sprintf("\nTask name: %s", task->name);
+            sprintf("\nTID: %ld", task->tid);
+        }
+        dynarray_unref(&tasks, t);
     }
 }
 
@@ -76,15 +85,11 @@ task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name) {
     task->regs.rsp = (uint64_t) kcalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE;
 
     /* Set the name */
-    sprintf("\nTask strcpy");
     strcpy(name, task->name);
-    sprintf("\nTask name: %s %s %lx %lx ", name, task->name, name, task->name);
-    sprint(name);
 
     /* Initialize the other fields */
     task->state = READY;
-    int tid = dynarray_add(&tasks, (void *) task, sizeof(task));
-    sprintf("\nTID: %ld", tid);
+    int tid = dynarray_add(&tasks, (void *) task, sizeof(task_t));
     task_t *task_arr = dynarray_getelem(&tasks, tid);
     task_arr->tid = tid;
     task->tid = tid;
@@ -101,11 +106,9 @@ int new_process(void (*main)(), void *parent_addr_space_cr3, char *name) {
     task_t *base_task = new_task(main, parent_addr_space_cr3, name);
     
     dynarray_add(&process->threads, base_task, sizeof(task_t));
-    int pid = dynarray_add(&processes, process, sizeof(process));
-    sprintf("\nPID: %ld", pid);
+    int pid = dynarray_add(&processes, process, sizeof(process_t));
     process_t *elem = dynarray_getelem(&processes, pid);
     elem->pid = pid;
-    sprintf("\nProcess strcpy");
     strcpy(name, elem->name);
     dynarray_unref(&processes, pid);
 

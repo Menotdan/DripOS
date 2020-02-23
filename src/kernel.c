@@ -33,6 +33,7 @@ void kmain(multiboot_info_t *mboot_dat) {
     set_pit_freq();
     scheduler_init_bsp();
     
+    sprintf("\n%s", "Sprintf test");
 
     while (1) {
         kprintf("n");
