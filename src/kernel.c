@@ -27,13 +27,12 @@ void kmain(multiboot_info_t *mboot_dat) {
     sprintf("\n[DripOS] Configuring LAPICs and IOAPIC routing");
     configure_apic();
 
+    scheduler_init_bsp();
+
     sprintf("\n[DripOS] Registering interrupts and setting interrupt flag");
     configure_idt();
     sprintf("\n[DripOS] Setting timer speed to 1000 hz");
     set_pit_freq();
-    scheduler_init_bsp();
-    
-    sprintf("\n%s", "Sprintf test");
 
     while (1) {
         kprintf("n");

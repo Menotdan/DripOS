@@ -11,6 +11,7 @@
 #define SLEEP 4
 
 #define TASK_STACK_SIZE 0x4000
+#define VM_OFFSET 0xFFFF800000000000
 
 typedef struct {
     uint64_t rax, rbx, rcx, rdx, rbp, rdi, rsi, r8, r9, r10, r11, r12, r13, r14, r15;
@@ -24,7 +25,11 @@ typedef struct {
     char name[50]; // The name of the task
 
     task_regs_t regs; // The task's registers
-    uint64_t times_selected; // Times the task has been selected since last new task
+    
+    uint64_t tsc_started; // The last time this task was started
+    uint64_t tsc_stopped; // The last time this task was stopped
+    uint64_t tsc_total; // The total time this task has been running for
+
     uint8_t state; // State of the task
     uint8_t cpu; // CPU the task is running on
     uint8_t waiting_irq; // The IRQ this task is waiting for
@@ -42,6 +47,9 @@ typedef struct {
 typedef struct {
     uint64_t meta_pointer;
     int64_t tid;
+    uint64_t tsc_started; // The last time this task was started
+    uint64_t tsc_stopped; // The last time this task was stopped
+    uint64_t tsc_total; // The total time this task has been running for
 } __attribute__((packed)) thread_info_block_t;
 
 

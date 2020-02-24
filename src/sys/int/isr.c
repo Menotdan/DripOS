@@ -26,10 +26,10 @@ void isr_handler(int_reg_t *r) {
             /* Ensure the display is not locked when we crash */
             unlock(&base_tty.tty_lock);
             unlock(&vesa_lock);
-            clear_buffer();
-            tty_seek(0, 0, &base_tty);
-            sprintf("\nException!");
-            sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2);
+            //tty_clear(&base_tty);
+            //tty_seek(0, 0, &base_tty);
+            kprintf("\nException!");
+            kprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2);
             while (1) { asm volatile("hlt"); }
         }
         /* If the entry is present */
@@ -45,10 +45,11 @@ void isr_handler(int_reg_t *r) {
         while (1) { asm volatile("hlt"); }
     }
 
-    interrupt_unlock();
+    //sprintf("\nInterrupt dump:\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip);
 
     // If we make it here, send an EOI to our LAPIC
     write_lapic(0xB0, 0);
+    interrupt_unlock();
 }
 
 void configure_idt() {
@@ -312,6 +313,6 @@ void configure_idt() {
     load_idt(); // Point to the IDT
     register_int_handler(32, timer_handler);
     register_int_handler(33, keyboard_handler);
-    //register_int_handler(254, schedule);
+    register_int_handler(254, schedule);
     asm volatile("sti"); // Enable interrupts and hope we dont die lmao
 }

@@ -10,7 +10,8 @@ volatile uint64_t global_ticks = 0;
 void timer_handler(int_reg_t *r) {
     global_ticks++;
     if (global_ticks % 2 == 0) {
-        //schedule(r);
+        sprintf("\nscheduler");
+        schedule(r);
     }
     UNUSED(r);
 }
