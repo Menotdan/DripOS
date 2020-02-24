@@ -15,8 +15,6 @@ void register_int_handler(uint8_t n, int_handler_t handler) {
 }
 
 void isr_handler(int_reg_t *r) {
-    interrupt_lock();
-
     /* If the int number is in range */
     if (r->int_num < IDT_ENTRIES) {
         if (r->int_num < 32) {
@@ -49,7 +47,6 @@ void isr_handler(int_reg_t *r) {
 
     // If we make it here, send an EOI to our LAPIC
     write_lapic(0xB0, 0);
-    interrupt_unlock();
 }
 
 void configure_idt() {
