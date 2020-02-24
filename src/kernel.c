@@ -35,7 +35,6 @@ void kmain(multiboot_info_t *mboot_dat) {
     set_pit_freq();
 
     while (1) {
-        kprintf("n");
-        //asm volatile("hlt");
+        asm volatile("hlt");
     }
 }

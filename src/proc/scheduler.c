@@ -26,6 +26,7 @@ void main_task() {
     uint64_t count = 0;
     while (1) {
         kprintf("\nnob %lu", count++);
+        //yield();
     }
 }
 
@@ -34,6 +35,7 @@ void second_task() {
     uint64_t count = 0;
     while (1) {
         kprintf("\nnob2 %lu", count++);
+        //yield();
     }
 }
 

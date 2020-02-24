@@ -6,6 +6,7 @@
 
 void lock(lock_t *lock) {
     spinlock_lock(lock);
+
 }
 
 void unlock(lock_t *lock) {
@@ -30,8 +31,6 @@ uint8_t check_interrupts() {
     }
     uint64_t rflags;
     asm volatile("pushfq; pop %%rax; movq %%rax, %0;" : "=r"(rflags) :: "rax");
-    sprintf("\nInterrupt flags: %lx", rflags);
     uint8_t int_flag = (uint8_t) ((rflags & (0x200)) >> 9);
-    sprintf("\nFlag: %u", (uint32_t) int_flag);
     return int_flag;
 }
