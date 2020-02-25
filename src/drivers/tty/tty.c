@@ -60,6 +60,7 @@ void tty_clear(tty_t *tty) {
     lock(&tty->tty_lock);
     fill_screen(tty->bg);
     unlock(&tty->tty_lock);
+    tty_seek(0, 0, tty);
 }
 
 void kprint(char *s) {

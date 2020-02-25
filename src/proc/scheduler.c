@@ -25,6 +25,7 @@ void main_task() {
     sprintf("\nLoaded multitasking uwu");
     uint64_t count = 0;
     while (1) {
+        tty_seek(0, 0, &base_tty);
         kprintf("\nnob %lu", count++);
         //yield();
     }
@@ -34,6 +35,7 @@ void second_task() {
     sprintf("\nSecond task scheduler_started");
     uint64_t count = 0;
     while (1) {
+        tty_seek(0, 1, &base_tty);
         kprintf("\nnob2 %lu", count++);
         //yield();
     }

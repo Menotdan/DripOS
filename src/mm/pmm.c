@@ -84,9 +84,15 @@ void pmm_set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of
     uint8_t *real_bitmap_pos = bitmap_start + offset;
     uint64_t *size_data_writing = (uint64_t *) real_bitmap_pos;
     uint64_t bitmap_bytes = (size_of_mem + (0x1000 * 8) - 1) / (0x1000 * 8); // Bitmap size in bytes
+
+    /* Calculate the number of unneeded bits on the last byte */
+    uint64_t pages_to_map = (size_of_mem + 0x1000 - 1) / 0x1000; // Get the size of the bitmap in bits
+    uint64_t extra_bits = pages_to_map % 8; // Extra bits that we dont use
+
     bitmap_bytes += 8; // To account for the bitmap size data stored in the bitmap itself
     memset(real_bitmap_pos, 0, bitmap_bytes + 16); // Clear the whole bitmap, including the size data and other data
 
+    /* Set size data for the bitmap */
     *size_data_writing = bitmap_bytes;
 
     if (old_bitmap) { // If old_bitmap is not null
@@ -96,8 +102,10 @@ void pmm_set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of
         *old_bitmap64 = (uint64_t) bitmap_start;
     }
 
+    /* Set the represented address by the bitmap */
     *(uint64_t *) (real_bitmap_pos + bitmap_bytes + 8) = (uint64_t) bitmap_start;
-    // Finally, mark the bitmap + the offset as used on the bitmap
+
+    /* Finally, mark the bitmap + the offset as used on the bitmap */
     uint64_t bitmap_size = bitmap_bytes + 16 + offset;
     uint64_t bitmap_pages = (bitmap_size + 0x1000 - 1) / 0x1000; // Calculate the bitmap size in pages, rounded up
 
@@ -110,6 +118,14 @@ void pmm_set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of
         if (bitmap_bit == 8) {
             bitmap_byte++;
             bitmap_bit = 0;
+        }
+    }
+
+    bitmap_byte = bitmap_bytes - 1;
+    bitmap_bit = 8 - extra_bits;
+    if (bitmap_bit < 8) {
+        for (uint64_t i = 0; i < extra_bits; i++) {
+            pmm_set_bit(real_bitmap_pos, bitmap_bit + i, bitmap_byte, 1);
         }
     }
     unlock(&pmm_spinlock);
