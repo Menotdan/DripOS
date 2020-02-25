@@ -23,5 +23,6 @@ void tty_clear(tty_t *tty);
 void tty_init(tty_t *tty, uint64_t font_width, uint64_t font_height);
 void kprint(char *s);
 void kprintf(char *message, ...);
+void kprintf_at(uint64_t x, uint64_t y, char *msg, ...);
 
 #endif

@@ -35,6 +35,7 @@ typedef struct {
     uint8_t waiting_irq; // The IRQ this task is waiting for
 
     int64_t tid; // Task ID
+    int64_t parent_pid; // The pid of the parent process
 } task_t;
 
 typedef struct {

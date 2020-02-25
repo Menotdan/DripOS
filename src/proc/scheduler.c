@@ -25,9 +25,7 @@ void main_task() {
     sprintf("\nLoaded multitasking uwu");
     uint64_t count = 0;
     while (1) {
-        tty_seek(0, 0, &base_tty);
-        kprintf("\nnob %lu", count++);
-        //yield();
+        kprintf_at(0, 0, "\nnob %lu", count++);
     }
 }
 
@@ -35,9 +33,7 @@ void second_task() {
     sprintf("\nSecond task scheduler_started");
     uint64_t count = 0;
     while (1) {
-        tty_seek(0, 1, &base_tty);
-        kprintf("\nnob2 %lu", count++);
-        //yield();
+        kprintf_at(0, 1, "\nnob2 %lu", count++);
     }
 }
 
@@ -61,18 +57,21 @@ void scheduler_init_bsp() {
         if (proc) {
             sprintf("\nProc name: %s", proc->name);
             sprintf("\nPID: %ld", proc->pid);
+            for (int64_t t = 0; t < proc->threads.array_size; t++) {
+                task_t *task = dynarray_getelem(&proc->threads, t);
+                if (task) {
+                    sprintf("\n  Task for %ld", proc->pid);
+                    sprintf("\n    Task name: %s", task->name);
+                    sprintf("\n    TID: %ld", task->tid);
+                    sprintf("\n    Parent pid: %ld", task->parent_pid);
+                }
+                dynarray_unref(&proc->threads, t);
+            }
         }
         dynarray_unref(&processes, p);
     }
 
-    for (int64_t t = 0; t < tasks.array_size; t++) {
-        task_t *task = dynarray_getelem(&tasks, t);
-        if (task) {
-            sprintf("\nTask name: %s", task->name);
-            sprintf("\nTID: %ld", task->tid);
-        }
-        dynarray_unref(&tasks, t);
-    }
+    
 
     running_task = (task_t *) dynarray_getelem(&tasks, 0);
 }
@@ -115,6 +114,9 @@ task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name) {
     task_t *task_arr = dynarray_getelem(&tasks, tid);
     task_arr->tid = tid;
     task->tid = tid;
+    /* Default parent pid is -1 */
+    task->parent_pid = -1;
+    task_arr->parent_pid = -1;
     dynarray_unref(&tasks, tid);
 
     unlock(&scheduler_lock);
@@ -131,13 +133,24 @@ int new_process(void (*main)(), void *parent_addr_space_cr3, char *name) {
     /* Lock the scheduler here so that new_task doesnt try to lock when we have the lock */
     lock(&scheduler_lock);
 
-    /* Add the task and process to the dynarray */
-    dynarray_add(&process->threads, base_task, sizeof(task_t));
-
+    /* Set name and PID */
     int pid = dynarray_add(&processes, process, sizeof(process_t));
     process_t *elem = dynarray_getelem(&processes, pid);
     elem->pid = pid;
     strcpy(name, elem->name);
+
+    /* Set the base_task parent pid to our new pid */
+    base_task->parent_pid = pid;
+
+    /* Add the task and process to the threads dynarray for the process */
+    dynarray_add(&elem->threads, base_task, sizeof(task_t));
+
+    /* Set the parent PID in the global threads list */
+    task_t *task_arr_elem = dynarray_getelem(&tasks, base_task->tid);
+    task_arr_elem->parent_pid = pid;
+
+    dynarray_unref(&tasks, base_task->tid);
+
     dynarray_unref(&processes, pid);
 
     /* Cleanup, since items are in the dynarray */
@@ -212,7 +225,12 @@ void schedule(int_reg_t *r) {
 
     int64_t tid_run = pick_task();
 
-    /* Unref the running task, so we can change it */
+    /* If we were previously running the task, then it is ready again since we are switching */
+    if (running_task->state == RUNNING) {
+        running_task->state = READY;
+    }
+
+    /* Unref the running task, so we can swap it ou */
     dynarray_unref(&tasks, running_task->tid);
     if (tid_run == -1) {
         /* Idle */
@@ -220,6 +238,8 @@ void schedule(int_reg_t *r) {
     } else {
         running_task = dynarray_getelem(&tasks, tid_run);
     }
+
+    running_task->state = RUNNING;
 
     r->rax = running_task->regs.rax;
     r->rbx = running_task->regs.rbx;
