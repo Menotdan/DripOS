@@ -25,7 +25,7 @@ void main_task() {
     sprintf("\nLoaded multitasking uwu");
     uint64_t count = 0;
     while (1) {
-        kprintf_at(0, 0, "\nnob %lu", count++);
+        kprintf("\nCounter 1: %lu", count++);
     }
 }
 
@@ -33,7 +33,7 @@ void second_task() {
     sprintf("\nSecond task scheduler_started");
     uint64_t count = 0;
     while (1) {
-        kprintf_at(0, 1, "\nnob2 %lu", count++);
+        kprintf("\nCounter 2: %lu", count++);
     }
 }
 
@@ -84,6 +84,7 @@ task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name) {
     /* Setup new task */
     task->regs = default_kernel_regs;
     task->regs.rip = (uint64_t) main;
+
     /* Create new address space */
     uint64_t new_addr_space = (uint64_t) kcalloc(0x1000);
     new_addr_space -= 0xFFFF800000000000;

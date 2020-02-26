@@ -51,30 +51,33 @@ void *vmm_offs_to_virt(pt_off_t offs) {
     return (void *)addr;
 }
 
+uint64_t get_entry(pt_t *cur_table, uint64_t offset) {
+    return cur_table->table[offset];
+}
+
+pt_t *traverse_page_table(pt_t *cur_table, uint64_t offset) {
+    return (pt_t *) ((cur_table->table[offset] & ~(0xfff)) + NORMAL_VMA_OFFSET);
+}
+
 void *virt_to_phys(void *virt, pt_t *p4) {
     pt_off_t offs = vmm_virt_to_offs(virt);
 
-    p4 = (pt_t *)((uint64_t)p4 + NORMAL_VMA_OFFSET);
+    p4 = (pt_t *) ((uint64_t)p4 + NORMAL_VMA_OFFSET);
 
-    if (!(p4->table[offs.p4_off] & VMM_PRESENT)) {
-        return (void *) 0xFFFFFFFFFFFFFFFF;
-    }
-    pt_t *p3 = (pt_t *) ((p4->table[offs.p4_off] & ~(0xfff)) + NORMAL_VMA_OFFSET);
+    pt_t *p3 = traverse_page_table(p4, offs.p4_off);
+    if ((uint64_t) p3 > NORMAL_VMA_OFFSET) {
+        pt_t *p2 = traverse_page_table(p3, offs.p3_off);
 
-    if (!(p3->table[offs.p4_off] & VMM_PRESENT)) {
-        return (void *) 0xFFFFFFFFFFFFFFFF;
-    }
-    pt_t *p2 = (pt_t *) ((p4->table[offs.p3_off] & ~(0xfff)) + NORMAL_VMA_OFFSET);
+        if ((uint64_t) p2 > NORMAL_VMA_OFFSET) {
+            pt_t *p1 = traverse_page_table(p2, offs.p2_off);
 
-    if (!(p2->table[offs.p4_off] & VMM_PRESENT)) {
-        return (void *) 0xFFFFFFFFFFFFFFFF;
+            if ((uint64_t) p1 > NORMAL_VMA_OFFSET) {
+                return (void *) (p1->table[offs.p1_off] & ~(0xfff));
+            }
+        }
     }
-    pt_t *p1 = (pt_t *) ((p2->table[offs.p2_off] & ~(0xfff)) + NORMAL_VMA_OFFSET);
-    
-    if (!(p1->table[offs.p4_off] & VMM_PRESENT)) {
-        return (void *) 0xFFFFFFFFFFFFFFFF;
-    }
-    return (void *) (p1->table[offs.p1_off] & ~(0xfff));
+
+    return (void *) 0xFFFFFFFFFFFFFFFF;
 }
 
 pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4, uint16_t perms) {
@@ -187,7 +190,6 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
     }
 
     unlock(&vmm_spinlock);
-    //kprintf("\nMapping done");
     return ret;
 }
 
@@ -196,7 +198,7 @@ int vmm_unmap_pages(void *virt, void *p4, uint64_t count) {
 
     int ret = 0;
 
-    uint8_t *cur_virt = (uint8_t *) virt;
+    uint64_t cur_virt = (uint64_t) virt;
 
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
@@ -205,16 +207,47 @@ int vmm_unmap_pages(void *virt, void *p4, uint64_t count) {
         /* Set the addresses */
         if ((ptrs.p1->table[offs.p1_off] & VMM_PRESENT)) {
             ptrs.p1->table[offs.p1_off] = 0;
-            cur_virt += 0x1000;
         } else {
             ret = 1;
-            cur_virt += 0x1000;
-            continue;
         }
+        cur_virt += 0x1000;
     }
 
     unlock(&vmm_spinlock);
     return ret;
+}
+
+void vmm_set_pat_pages(void *virt, void *p4, uint64_t count, uint8_t pat_entry) {
+    lock(&vmm_spinlock);
+
+    uint64_t cur_virt = (uint64_t) virt;
+
+    pt_t *p4_offset = (pt_t *) ((uint64_t) p4 + NORMAL_VMA_OFFSET);
+
+    for (uint64_t page = 0; page < count; page++) {
+        pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
+        
+        if ((uint64_t) virt_to_phys(virt, p4) != 0xFFFFFFFFFFFFFFFF) {
+            pt_t *p3 = traverse_page_table(p4_offset, offs.p4_off);
+            if (p3) {
+                pt_t *p2 = traverse_page_table(p3, offs.p3_off);
+                if (p2) {
+                    pt_t *p1 = traverse_page_table(p2, offs.p2_off);
+                    uint64_t cur_data = get_entry(p1, offs.p1_off);
+                    uint8_t bit1 = (pat_entry & (1<<0)) == (1<<0);
+                    uint8_t bit2 = (pat_entry & (1<<1)) == (1<<1);
+                    uint8_t bit3 = (pat_entry & (1<<2)) == (1<<2);
+
+                    cur_data |= (bit1 << 3) | (bit2 << 4) | (bit3 << 7);
+                    p1->table[offs.p1_off] = cur_data;
+                }
+            }
+        }
+        vmm_invlpg(cur_virt);
+        cur_virt += 0x1000;
+    }
+
+    unlock(&vmm_spinlock);
 }
 
 int vmm_map(void *phys, void *virt, uint64_t count, uint16_t perms) {
@@ -227,4 +260,8 @@ int vmm_remap(void *phys, void *virt, uint64_t count, uint16_t perms) {
 
 int vmm_unmap(void *virt, uint64_t count) {
     return vmm_unmap_pages(virt, (void *) vmm_get_pml4t(), count);
+}
+
+void vmm_set_pat(void *virt, uint64_t count, uint8_t pat_entry) {
+    vmm_set_pat_pages(virt, (void *) vmm_get_pml4t(), count, pat_entry);
 }
