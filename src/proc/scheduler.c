@@ -7,11 +7,16 @@
 #include "io/msr.h"
 #include "mm/vmm.h"
 
+#include "drivers/pit.h"
+
 task_t *running_task;
 dynarray_t tasks;
 dynarray_t processes;
 uint8_t scheduler_started = 0;
+uint8_t scheduler_enabled = 0;
 lock_t scheduler_lock = 0;
+
+int64_t idle_task_tid = 0;
 
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
 
@@ -23,9 +28,9 @@ void _idle() {
 
 void main_task() {
     sprintf("\nLoaded multitasking uwu");
-    uint64_t count = 0;
+    //uint64_t count = 0;
     while (1) {
-        kprintf("\nCounter 1: %lu", count++);
+        kprintf_at(0, 0, "\nCounter 1: %lu", global_ticks);
     }
 }
 
@@ -44,12 +49,13 @@ void scheduler_init_bsp() {
     processes.base = 0;
 
     new_process(main_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Main task");
-    new_process(second_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Second task");
+    //new_process(second_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Second task");
 
     /* Setup the idle task */
-    new_task(_idle, (void *) vmm_get_pml4t() + VM_OFFSET, "_idle");
-    task_t *idle_task = dynarray_getelem(&tasks, 2);
+    task_t *idle_no_array = new_task(_idle, (void *) vmm_get_pml4t() + VM_OFFSET, "_idle");
+    task_t *idle_task = dynarray_getelem(&tasks, idle_no_array->tid);
     idle_task->state = BLOCKED; // Block the idle task, so it doesnt run
+    idle_task_tid = idle_task->tid;
     dynarray_unref(&tasks, 2);
 
     for (int64_t p = 0; p < processes.array_size; p++) {
@@ -111,7 +117,7 @@ task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name) {
 
     /* Initialize the other fields */
     task->state = READY;
-    int tid = dynarray_add(&tasks, (void *) task, sizeof(task_t));
+    int tid = dynarray_add(&tasks, task, sizeof(task_t));
     task_t *task_arr = dynarray_getelem(&tasks, tid);
     task_arr->tid = tid;
     task->tid = tid;
@@ -122,6 +128,23 @@ task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name) {
 
     unlock(&scheduler_lock);
     return task;
+}
+
+int64_t new_child_task(void (*main)(), void *parent_addr_space_cr3, char *name, int64_t parent_pid) {
+    task_t *created_task = new_task(main, parent_addr_space_cr3, name);
+    
+    task_t *array_task = dynarray_getelem(&tasks, created_task->tid);
+    process_t *array_parent = dynarray_getelem(&processes, parent_pid);
+    /* Set the parent PIDs */
+    created_task->parent_pid = parent_pid;
+    array_task->parent_pid = parent_pid;
+
+    dynarray_add(&array_parent->threads, created_task, sizeof(task_t));
+
+    dynarray_unref(&tasks, parent_pid);
+    dynarray_unref(&tasks, created_task->tid);
+
+    return created_task->tid;
 }
 
 int new_process(void (*main)(), void *parent_addr_space_cr3, char *name) {
@@ -235,7 +258,7 @@ void schedule(int_reg_t *r) {
     dynarray_unref(&tasks, running_task->tid);
     if (tid_run == -1) {
         /* Idle */
-        running_task = dynarray_getelem(&tasks, 2);
+        running_task = dynarray_getelem(&tasks, idle_task_tid);
     } else {
         running_task = dynarray_getelem(&tasks, tid_run);
     }

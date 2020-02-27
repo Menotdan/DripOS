@@ -4,6 +4,7 @@
 #include "mm/vmm.h"
 #include "proc/scheduler.h"
 #include "klibc/lock.h"
+#include "drivers/pit.h"
 
 void *kmalloc(uint64_t size) {
     uint64_t size_data = (uint64_t) pmm_alloc(size + 0x1000) + NORMAL_VMA_OFFSET;
@@ -42,4 +43,10 @@ void yield() {
     if (scheduler_started && check_interrupts()) {
         asm volatile("int $254");
     }
+}
+
+/* Inefficient, taskless sleep */
+void sleep_no_task(uint64_t milliseconds) {
+    uint64_t start = global_ticks;
+    while (global_ticks < start + milliseconds) { continue; }
 }

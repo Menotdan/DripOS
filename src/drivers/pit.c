@@ -5,11 +5,11 @@
 #include "klibc/stdlib.h"
 #include "proc/scheduler.h"
 
-volatile uint64_t global_ticks = 0;
+uint64_t global_ticks = 0;
 
 void timer_handler(int_reg_t *r) {
     global_ticks++;
-    if (global_ticks % 2 == 0) {
+    if (global_ticks % 8 == 0 && scheduler_enabled) {
         //sprintf("\nscheduler");
         schedule(r);
     }

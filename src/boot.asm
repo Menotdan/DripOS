@@ -62,12 +62,19 @@ GDT64:                           ; Global Descriptor Table (64-bit).
     db 10010010b                 ; Access (read/write).
     db 00000000b                 ; Granularity.
     db 0                         ; Base (high).
-    .Pointer:                    ; The GDT-pointer.
-    dw $ - GDT64 - 1             ; Limit.
-    dq GDT64                     ; Base.
-    .Pointer32:                    ; The GDT-pointer for 32 bit mode.
+    .Code32: equ $ - GDT64       ; The code descriptor.
+    dq 0x00CF9A000000FFFF
+
+global GDT_PTR_32
+global GDT_PTR_64
+
+GDT_PTR_32:
     dw $ - GDT64 - 1             ; Limit.
     dd GDT64 - KERNEL_VMA        ; Base.
+
+GDT_PTR_64:
+    dw GDT_PTR_32 - GDT64 - 1    ; Limit.
+    dq GDT64                     ; Base.
 
 section .bss
 align 16
@@ -135,7 +142,6 @@ _start:
 
     mov eax, cr4                 ; Set the A-register to control register 4.
     or eax, 1 << 5               ; Set the PAE-bit, which is the 6th bit (bit 5).
-    ;or eax, 1 << 4               ; Set the PSE-bit, which is the 5th bit (bit 4).
     mov cr4, eax                 ; Set control register 4 to the A-register.
 
     ; Switch to long mode
@@ -147,23 +153,16 @@ _start:
     or eax, 1 << 31              ; Set the PG-bit, which is the 32nd bit (bit 31).
     mov cr0, eax                 ; Set control register 0 to the A-register.
 
-    mov eax, 1234
-
-    ;cli
-    ;hlt
-
     ; Set up GDT
-    lgdt [GDT64.Pointer32 - KERNEL_VMA]
+    lgdt [GDT_PTR_32 - KERNEL_VMA]
     jmp GDT64.Code:loaded - KERNEL_VMA
 
 [bits 64]
 loaded:
-    lgdt [GDT64.Pointer]        ; Load the 64-bit global descriptor table.
+    lgdt [GDT_PTR_64]           ; Load the 64-bit global descriptor table.
     mov ax, GDT64.Data          ; Set the A-register to the data descriptor.
     mov ds, ax                  ; Set the data segment to the A-register.
     mov es, ax                  ; Set the extra segment to the A-register.
-    mov fs, ax                  ; Set the F-segment to the A-register.
-    mov gs, ax                  ; Set the G-segment to the A-register.
     mov ss, ax                  ; Set the stack segment to the A-register.
     mov rsp, stack_top ; Set the stack up
     ; Perform an absolute jump

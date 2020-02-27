@@ -36,7 +36,6 @@ void init_vesa(multiboot_info_t *mb) {
     vmm_map(phys_double_buffer, phys_double_buffer, 
         (vesa_display_info.framebuffer_size + 0x1000 - 1) / 0x1000, 
         VMM_PRESENT | VMM_WRITE | VMM_USER);
-    vmm_set_pat((void *) phys_double_buffer, (vesa_display_info.framebuffer_size + 0x1000 - 1) / 0x1000, 1);
 
     vesa_display_info.framebuffer = (uint32_t *) phys_double_buffer;
 

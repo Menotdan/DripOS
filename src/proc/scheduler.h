@@ -62,5 +62,6 @@ int new_process(void (*main)(), void *parent_addr_space_cr3, char *name);
 
 
 extern uint8_t scheduler_started;
+extern uint8_t scheduler_enabled;
 
 #endif

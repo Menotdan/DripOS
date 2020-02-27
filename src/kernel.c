@@ -14,6 +14,7 @@
 #include "io/msr.h"
 
 #include "klibc/string.h"
+#include "sys/smp.h"
 
 // Kernel main function, execution starts here :D
 void kmain(multiboot_info_t *mboot_dat) {
@@ -40,6 +41,10 @@ void kmain(multiboot_info_t *mboot_dat) {
     configure_idt();
     sprintf("\n[DripOS] Setting timer speed to 1000 hz");
     set_pit_freq();
+
+    launch_cpus();
+
+    scheduler_enabled = 1;
 
     while (1) {
         asm volatile("hlt");

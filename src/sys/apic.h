@@ -2,6 +2,7 @@
 #define APIC_H
 #include <stdint.h>
 #include "sys/acpi/rsdt.h"
+#include "klibc/vector.h"
 
 #define APIC_BASE_MSR 0x1B
 #define APIC_BASE_MSR_ENABLE 0x800
@@ -46,6 +47,11 @@ typedef struct {
     uint32_t apic_flags;
     uint8_t entries[];
 } __attribute__ ((packed)) madt_t;
+
+extern vector_t cpu_vector;
+extern vector_t iso_vector;
+extern vector_t ioapic_vector;
+extern vector_t nmi_vector;
 
 void parse_madt();
 void configure_apic();
