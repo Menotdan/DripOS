@@ -35,7 +35,7 @@ void kmain(multiboot_info_t *mboot_dat) {
     configure_apic();
 
     scheduler_init_bsp();
-    tty_clear(&base_tty);
+    //tty_clear(&base_tty);
 
     sprintf("\n[DripOS] Registering interrupts and setting interrupt flag");
     configure_idt();

@@ -4,11 +4,13 @@
 #include "klibc/stdlib.h"
 #include "klibc/string.h"
 #include "drivers/serial.h"
+#include "drivers/tty/tty.h"
 
 extern char smp_trampoline[];
 extern char smp_trampoline_end[];
 extern char GDT_PTR_32[];
 extern char GDT_PTR_64[];
+extern char GDT64[];
 extern char long_smp_loaded[];
 
 uint8_t cores_booted = 1;
@@ -46,7 +48,7 @@ void launch_cpus() {
     memset((uint8_t *) (0x500 + 0xFFFF800000000000), 0, 0xB00);
 
     vmm_map((void *) 0, (void *) 0, 1 + ((code_size + 0x1000 - 1) / 0x1000), VMM_WRITE | VMM_PRESENT);
-    vmm_map((void *) 0x10d000, (void *) 0x10d000, 1, VMM_WRITE | VMM_PRESENT);
+    vmm_map((void *) (GDT64 - 0xFFFFFFFF80000000), (void *) (GDT64 - 0xFFFFFFFF80000000), 1, VMM_WRITE | VMM_PRESENT);
 
     sprintf("\nDone copying");
     /* Setup all the CPUs */
@@ -90,8 +92,15 @@ void launch_cpus() {
             sprintf("\nFound BSP");
         }
     }
+    vmm_unmap((void *) 0, 1 + ((code_size + 0x1000 - 1) / 0x1000));
+    vmm_unmap((void *) (GDT64 - 0xFFFFFFFF80000000), 1);
 }
 
 uint8_t get_cpu_count() {
     return cores_booted;
+}
+
+void smp_entry_point() {
+    kprintf("\nHello from SMP");
+    while (1) { asm volatile("hlt"); }
 }

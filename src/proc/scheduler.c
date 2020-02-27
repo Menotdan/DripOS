@@ -48,7 +48,7 @@ void scheduler_init_bsp() {
     processes.array_size = 0;
     processes.base = 0;
 
-    new_process(main_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Main task");
+    //new_process(main_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Main task");
     //new_process(second_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Second task");
 
     /* Setup the idle task */

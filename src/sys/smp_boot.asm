@@ -54,7 +54,10 @@ loaded_compatability_mode:
     jmp rax
 
 global long_smp_loaded
+extern smp_entry_point
 long_smp_loaded:
-    hlt
+    cld
+    xor rax, rax
+    call smp_entry_point
 
 smp_trampoline_end:
