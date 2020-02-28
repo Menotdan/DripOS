@@ -12,7 +12,7 @@ LINKER = x86_64-elf-ld
 
 incPath = ~/DripOS/src
 GDB = gdb
-MEM = 2G # Memory for qemu
+MEM = 5M # Memory for qemu
 CORES = 4
 O_LEVEL = 0 # Optimization level
 # Options for GCC
@@ -41,7 +41,7 @@ kernel.elf: ${NASM_SOURCES:.real=.bin} ${OBJ}
 	${CC} -Wl,-z,max-page-size=0x1000 -nostdlib -o $@ -T linker.ld ${OBJ}
 
 run: myos.iso
-	- qemu-system-x86_64 -d guest_errors,cpu_reset -smp 2 -machine q35 -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+	- qemu-system-x86_64 -d guest_errors,cpu_reset,int -smp ${CORES} -machine q35 -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
 	make clean
 
 run-kvm: myos.iso
@@ -58,7 +58,7 @@ debug: myos.iso
 # To make an object, always compile from its .c
 
 %.o: %.c
-	${CC} ${CFLAGS} -D AMD64 -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -fno-omit-frame-pointer -MD -c $< -o $@ -std=gnu11 -ffreestanding
+	${CC} ${CFLAGS} -D AMD64 -D DEBUG -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -fno-omit-frame-pointer -MD -c $< -o $@ -std=gnu11 -ffreestanding
 
 %.bin: %.real
 	nasm -f bin -o $@ $<

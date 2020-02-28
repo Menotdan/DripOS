@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include "multiboot.h"
 
+#define SIZE_OFFSET 8
+#define PTR_AND_ADDR_SIZE 16
+
 typedef void *symbol[];
 
 extern symbol __kernel_end;

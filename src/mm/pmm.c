@@ -20,49 +20,51 @@ lock_t pmm_spinlock = 0; // The spinlock for the PMM
 /* Get a bit in the bitmap */
 uint8_t pmm_get_bit(uint8_t *bitmap_change, uint8_t bit, uint64_t byte) {
     uint8_t ret = 0;
-    //lock(&pmm_spinlock);
-    ret = ((*(bitmap_change + byte + 8) >> bit) & 1);
-    //unlock(&pmm_spinlock);
+
+    ret = ((*(bitmap_change + byte + SIZE_OFFSET) >> bit) & 1);
     return ret;
 }
 
 /* Set a bit in the bitmap */
 void pmm_set_bit(uint8_t *bitmap_change, uint8_t bit, uint64_t byte, uint8_t state) {
-    //lock(&pmm_spinlock); // Lock the PMM
     if (state == 0) {
-        *(bitmap_change + byte + 8) &= ~(1 << bit);
+        *(bitmap_change + byte + SIZE_OFFSET) &= ~(1 << bit);
     } else if (state == 1) {
-        *(bitmap_change + byte + 8) = (*(bitmap_change + byte + 8) | (1 << bit));
+        *(bitmap_change + byte + SIZE_OFFSET) = (*(bitmap_change + byte + SIZE_OFFSET) | (1 << bit));
     }
-    //unlock(&pmm_spinlock); // Unlock the PMM
 }
 
 /* Get the size of the bitmap from it's pointer */
 uint64_t pmm_get_bitmap_size(uint8_t *bitmap_start) {
-    return *(uint64_t *)bitmap_start; // Get the size data
+    return *(uint64_t *) bitmap_start; // Get the size data
 }
 
 /* Get the address that a bitmap represents */
 uint64_t pmm_get_represented_addr(uint8_t *bitmap_start) {
     if (!bitmap_start) {
-        return (uint64_t)0; // Return null
+        return (uint64_t) 0; // Return null
     }
     uint64_t bitmap_size = pmm_get_bitmap_size(bitmap_start);
-    return *(uint64_t *)(bitmap_size + bitmap_start + 8);
+    return *(uint64_t *) (bitmap_size + bitmap_start + SIZE_OFFSET);
 }
 
 /* Get next bitmap in a chain of bitmaps */
 uint8_t *pmm_get_next_bitmap(uint8_t *bitmap_start) {
     if (!bitmap_start) {
-        return (uint8_t *)0; // Return null
+        return (uint8_t *) 0; // Return null
     }
 
     uint64_t bitmap_size = pmm_get_bitmap_size(bitmap_start);
     uint8_t *bitmap_cur = bitmap_start;
     bitmap_cur += bitmap_size; // Go to the end of the bitmap
 
-    uint64_t next_bitmap_pointer = *(uint64_t *)bitmap_cur;
-    return (uint8_t *) next_bitmap_pointer;
+    uint64_t next_bitmap_pointer = *(uint64_t *) bitmap_cur;
+
+    if ((next_bitmap_pointer & NORMAL_VMA_OFFSET) == NORMAL_VMA_OFFSET) {
+        return (uint8_t *) next_bitmap_pointer;
+    } else {
+        return (uint8_t *) 0;
+    }
 }
 
 /* Get the last bitmap in a chain of bitmaps */
@@ -89,8 +91,10 @@ void pmm_set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of
     uint64_t pages_to_map = (size_of_mem + 0x1000 - 1) / 0x1000; // Get the size of the bitmap in bits
     uint64_t extra_bits = pages_to_map % 8; // Extra bits that we dont use
 
-    bitmap_bytes += 8; // To account for the bitmap size data stored in the bitmap itself
-    memset(real_bitmap_pos, 0, bitmap_bytes + 16); // Clear the whole bitmap, including the size data and other data
+    bitmap_bytes += SIZE_OFFSET; // To account for the bitmap size data stored in the bitmap itself
+
+    // Clear the whole bitmap, including the size data and other data
+    memset(real_bitmap_pos, 0, bitmap_bytes + PTR_AND_ADDR_SIZE);
 
     /* Set size data for the bitmap */
     *size_data_writing = bitmap_bytes;
@@ -103,10 +107,10 @@ void pmm_set_bitmap(uint8_t *bitmap_start, uint8_t *old_bitmap, uint64_t size_of
     }
 
     /* Set the represented address by the bitmap */
-    *(uint64_t *) (real_bitmap_pos + bitmap_bytes + 8) = (uint64_t) bitmap_start;
+    *(uint64_t *) (real_bitmap_pos + bitmap_bytes + SIZE_OFFSET) = (uint64_t) bitmap_start;
 
     /* Finally, mark the bitmap + the offset as used on the bitmap */
-    uint64_t bitmap_size = bitmap_bytes + 16 + offset;
+    uint64_t bitmap_size = bitmap_bytes + PTR_AND_ADDR_SIZE + offset;
     uint64_t bitmap_pages = (bitmap_size + 0x1000 - 1) / 0x1000; // Calculate the bitmap size in pages, rounded up
 
     uint64_t bitmap_byte = 0;
@@ -141,7 +145,8 @@ bitmap_index pmm_get_bitmap(void *addr) {
 
     while (cur_map) {
         uint64_t represented = pmm_get_represented_addr(cur_map); // begining of the represented addresses by the map
-        uint64_t represented_end = represented + ((pmm_get_bitmap_size(cur_map) - 8) * 0x1000 * 8); // end of the bitmap
+        // end of the bitmap
+        uint64_t represented_end = represented + ((pmm_get_bitmap_size(cur_map) - SIZE_OFFSET) * 0x1000 * 8);
 
         if (new_addr >= represented && new_addr <= represented_end) {
             uint64_t offset = new_addr - represented;
@@ -150,7 +155,6 @@ bitmap_index pmm_get_bitmap(void *addr) {
             ret.bit = offset_pages % 8;
             return ret;
         }
-
         cur_map = pmm_get_next_bitmap(cur_map);
     }
 
@@ -212,7 +216,7 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
     remaining = mboot_dat->mmap_length;
     // Iterate over the map for the first time
     for (; remaining > 0; remaining -= sizeof(multiboot_memory_map_t)) {
-        multiboot_memory_map_t *mmap = (multiboot_memory_map_t *)(current);
+        multiboot_memory_map_t *mmap = (multiboot_memory_map_t *) (current);
         /* Bitmap setup for use with the initial page table setup */
         if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
             // Is this the kernel block?
@@ -222,7 +226,13 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
             uint64_t block_end = (mmap->len + mmap->addr) & ~(0xfff); // Round down the block end to a page
             uint64_t block_len = block_end - block_start; // Calculate the rounded block length
             uint64_t bitmap_len = (block_len + (0x1000 * 8) - 1) / (0x1000 * 8);
-            bitmap_len += 16; // to account for size data and such
+            bitmap_len += PTR_AND_ADDR_SIZE; // to account for size data and such
+
+            if (mmap->addr != 0) {
+                // We cannot use the lower 640K of memory
+                usable_mem += block_len - bitmap_len;
+            }
+
             if (kernel_start >= block_start && kernel_end <= block_end) {
                 // This is indeed the kernel block, remap it
                 vmm_remap((void *) block_start, (void *) (block_start + NORMAL_VMA_OFFSET), (block_len / 0x1000), 
@@ -238,16 +248,16 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
                     /* Set a bitmap for that block */
                     pmm_set_bitmap((uint8_t *) block_start + NORMAL_VMA_OFFSET, base_bitmap, block_len, 0);
                     /* Map the rest of the memory */
-                    vmm_map((void *) (block_start + (pages_mapped * 0x1000)), 
-                        (void *) (block_start + (pages_mapped * 0x1000) + NORMAL_VMA_OFFSET),
-                        (block_len / 0x1000) - pages_mapped, 
+                    void *non_bitmap_block = (void *) (block_start + (pages_mapped * 0x1000));
+                    void *non_bitmap_block_offset = (void *) (block_start + (pages_mapped * 0x1000) + NORMAL_VMA_OFFSET);
+                    uint64_t block_pages = (block_len / 0x1000) - pages_mapped;
+                    vmm_map(non_bitmap_block, non_bitmap_block_offset, block_pages, 
                         VMM_PRESENT | VMM_WRITE);
                 } else {
                     vmm_map((void *) block_start, (void *) (block_start + NORMAL_VMA_OFFSET), (block_len / 0x1000), 
                         VMM_PRESENT | VMM_WRITE);
                 }
             }
-            usable_mem += block_len - bitmap_len;
         } else {
             uint64_t block_start = mmap->addr & ~(0xfff); // Round down the block start to a page
             uint64_t block_end = (mmap->len + mmap->addr) & ~(0xfff); // Round down the block end to a pag
@@ -259,13 +269,16 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
         current += sizeof(multiboot_memory_map_t);
     }
     vmm_unmap((void *) 0, 1);
-    // sprintf("\nUnmapping %lx - %lx", (vmm_get_pml4t() + KERNEL_VMA_OFFSET), (vmm_get_pml4t() + KERNEL_VMA_OFFSET + 4 * 0x1000));
-    // vmm_unmap((void *) (vmm_get_pml4t() + KERNEL_VMA_OFFSET), 4);
+
     /* Remap kernel as nonwriteable */
     uint64_t kernel_code_phys = (uint64_t) __kernel_code_start - KERNEL_VMA_OFFSET;
     uint64_t kernel_code_end_phys = (uint64_t) __kernel_code_end - KERNEL_VMA_OFFSET;
     vmm_remap((void *) kernel_code_phys, (void *) __kernel_code_start, 
         (kernel_code_end_phys - kernel_code_phys) / 0x1000, VMM_PRESENT);
+    
+    /* Remove the kernel from usable memory */
+    uint64_t kernel_size = (__kernel_end - __kernel_start);
+    usable_mem -= kernel_size;
 }
 
 bitmap_index pmm_find_free(uint64_t pages) {
@@ -332,9 +345,10 @@ void *pmm_alloc(uint64_t size) {
         unlock(&pmm_spinlock);
         return ret;
     } else {
-        sprintf("\n[PMM] Warning: couldn't find free space for size %lx", size);
         unlock(&pmm_spinlock);
-        return (void *) 0;
+        sprintf("\n[PMM] ERROR: couldn't find free space for a size of %lu bytes\nSpace left: %lu bytes", size, pmm_get_free_mem());
+        /* TODO: implement PANIC function */
+        while (1) { asm volatile("hlt"); }
     }
 }
 

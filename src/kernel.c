@@ -42,7 +42,8 @@ void kmain(multiboot_info_t *mboot_dat) {
 
     launch_cpus();
 
-    scheduler_enabled = 1;
+    //scheduler_enabled = 1;
+    kprintf("\nAllocated: %lu Free: %lu", pmm_get_used_mem(), pmm_get_free_mem());
 
     while (1) {
         asm volatile("hlt");

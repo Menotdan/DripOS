@@ -81,6 +81,9 @@ void launch_cpus() {
                 memcpy((uint8_t *) GDT_PTR_64, (uint8_t *) (0x530 + NORMAL_VMA_OFFSET), 10); // Copy the 64 bit GDT pointer
                 write_cpu_data64(0x40, (uint64_t) kmalloc(0x4000));
                 write_cpu_data64(0x50, (uint64_t) long_smp_loaded);
+
+                *(uint8_t *) (0x560 + NORMAL_VMA_OFFSET) = i;
+
                 sprintf("\nAddr: %lx", *(uint64_t *) (0x500 + NORMAL_VMA_OFFSET + 0x50));
 
                 send_ipi(cpu->apic_id, 0x500);
@@ -119,6 +122,13 @@ uint8_t get_cpu_count() {
 
 void smp_entry_point() {
     kprintf("\nHello from SMP");
+
+    new_cpu_locals(); // Setup CPU locals for this CPU
+    cpu_locals_t *cpu_locals = get_cpu_locals();
+    cpu_locals->apic_id = get_lapic_id();
+    cpu_locals->cpu_index = *(uint8_t *) (0x560 + NORMAL_VMA_OFFSET);
+
+    kprintf("\nOur index is %u", (uint32_t) cpu_locals->cpu_index);
 
     /* After init, let the BSP know that we are done */
     *(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) = 2;
