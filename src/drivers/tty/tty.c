@@ -68,6 +68,14 @@ void tty_clear(tty_t *tty) {
     unlock(&tty->tty_lock);
 }
 
+void kprint_locked(char *s) {
+    lock(&base_tty.tty_lock);
+    while (*s != '\0') {
+        tty_out(*s++, &base_tty);
+    }
+    unlock(&base_tty.tty_lock);
+}
+
 void kprint(char *s) {
     while (*s != '\0') {
         tty_out(*s++, &base_tty);
