@@ -41,7 +41,7 @@ kernel.elf: ${NASM_SOURCES:.real=.bin} ${OBJ}
 	${CC} -Wl,-z,max-page-size=0x1000 -nostdlib -o $@ -T linker.ld ${OBJ}
 
 run: myos.iso
-	- qemu-system-x86_64 -d guest_errors,cpu_reset,int -smp ${CORES} -machine q35 -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+	- qemu-system-x86_64 -d guest_errors,cpu_reset -smp ${CORES} -machine q35 -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
 	make clean
 
 run-kvm: myos.iso
@@ -50,7 +50,7 @@ run-kvm: myos.iso
 
 # Open the connection to qemu and load our kernel-object file with symbols
 debug: myos.iso
-	qemu-system-x86_64 -smp 2 -vga std -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom DripOS.iso -hda dripdisk.img &
+	qemu-system-x86_64 -smp ${CORES} -vga std -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom DripOS.iso -hda dripdisk.img &
 	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf"
 	make clean
  

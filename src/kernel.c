@@ -34,7 +34,6 @@ void kmain(multiboot_info_t *mboot_dat) {
 
     new_cpu_locals(); // Setup CPU locals for our CPU
     scheduler_init_bsp();
-    //tty_clear(&base_tty);
 
     sprintf("\n[DripOS] Registering interrupts and setting interrupt flag");
     configure_idt();
@@ -42,6 +41,7 @@ void kmain(multiboot_info_t *mboot_dat) {
     set_pit_freq();
 
     launch_cpus();
+    tty_clear(&base_tty);
 
     scheduler_enabled = 1;
 

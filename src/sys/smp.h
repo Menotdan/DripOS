@@ -23,6 +23,8 @@ typedef struct {
     uint64_t idle_start_tsc;
     uint64_t idle_end_tsc;
 
+    uint64_t total_tsc;
+
     idt_gate_t idt[IDT_ENTRIES];
 } __attribute__((packed)) cpu_locals_t;
 

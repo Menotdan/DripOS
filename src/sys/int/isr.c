@@ -16,11 +16,22 @@ void register_int_handler(uint8_t n, int_handler_t handler) {
     handlers[n] = handler;
 }
 
+void send_panic_ipis() {
+    madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
+    for (uint64_t i = 0; i < cpu_vector.items_count; i++) {
+        if ((cpus[i]->cpu_flags & 1 || cpus[i]->cpu_flags & 2) && cpus[i]->apic_id != get_lapic_id()) {
+            send_ipi(cpus[i]->apic_id, (1 << 14) | 252); // Send interrupt 252
+        }
+    }
+}
+
 void isr_handler(int_reg_t *r) {
     /* If the int number is in range */
     if (r->int_num < IDT_ENTRIES) {
         if (r->int_num < 32) {
             /* Exception */
+            send_panic_ipis(); // Halt all other CPUs
+
             uint64_t cr2;
             asm volatile("movq %%cr2, %0;" : "=r"(cr2));
             /* Ensure the display is not locked when we crash */
@@ -28,8 +39,9 @@ void isr_handler(int_reg_t *r) {
             unlock(&vesa_lock);
             //tty_clear(&base_tty);
             //tty_seek(0, 0, &base_tty);
-            kprintf("\nException on core %u with apic id %u! (cur task %s)", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name);
+            kprintf("\nException on core %u with apic id %u! (cur task %s with TID %ld)", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid);
             kprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2);
+
             while (1) { asm volatile("hlt"); }
         }
         /* If the entry is present */
@@ -45,10 +57,12 @@ void isr_handler(int_reg_t *r) {
         while (1) { asm volatile("hlt"); }
     }
 
-    //sprintf("\nInterrupt dump:\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip);
-
     // If we make it here, send an EOI to our LAPIC
     write_lapic(0xB0, 0);
+}
+
+void isr_panic_idle() {
+    while (1) { asm volatile("hlt"); }
 }
 
 void configure_idt() {
@@ -314,5 +328,6 @@ void configure_idt() {
     register_int_handler(33, keyboard_handler);
     register_int_handler(254, schedule);
     register_int_handler(253, schedule_ap);
+    register_int_handler(252, isr_panic_idle);
     asm volatile("sti"); // Enable interrupts and hope we dont die lmao
 }

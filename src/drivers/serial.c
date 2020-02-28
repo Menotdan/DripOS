@@ -2,6 +2,9 @@
 #include <stdarg.h>
 #include "io/ports.h"
 #include "klibc/string.h"
+#include "klibc/lock.h"
+
+lock_t serial_print_lock = 0;
 
 void init_serial(uint16_t com_port) {
     port_outb(com_port + 1, 0); // Disable interrupts for this COM port
@@ -42,6 +45,8 @@ void sprint(char *s) {
 }
 
 void sprintf(char *message, ...) {
+#ifdef DEBUG
+    lock(&serial_print_lock);
     va_list format_list;
     uint64_t index = 0;
     uint8_t big = 0;
@@ -112,4 +117,8 @@ void sprintf(char *message, ...) {
     }
 
     va_end(format_list);
+    unlock(&serial_print_lock);
+#else
+    (void) message;
+#endif
 }

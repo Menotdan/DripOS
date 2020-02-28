@@ -99,13 +99,11 @@ void htoa(uint64_t in, char str[]) {
 }
 
 void memcpy(uint8_t *src, uint8_t *dst, uint64_t count) {
-    sprintf("\nSrc: %lx Dst: %lx", src, dst);
     for (uint64_t i = 0; i<count; i++)
         *dst++ = *src++;
 }
 
 void memcpy32(uint32_t *src, uint32_t *dst, uint64_t count) {
-    sprintf("\nDst: %lx, Src: %lx", dst, src);
     for (uint64_t i = 0; i<count; i++)
         *dst++ = *src++;
 }

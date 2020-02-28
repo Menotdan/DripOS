@@ -47,7 +47,7 @@ void main_task() {
     sprintf("\nLoaded multitasking uwu");
     //uint64_t count = 0;
     while (1) {
-        kprintf_at(0, 0, "\nCounter 1: %lu", global_ticks);
+        kprintf_at(0, 0, "\nCounter 1: %lu on core %u", global_ticks, (uint32_t) get_lapic_id());
     }
 }
 
@@ -55,7 +55,7 @@ void second_task() {
     sprintf("\nSecond task scheduler_started");
     uint64_t count = 0;
     while (1) {
-        kprintf("\nCounter 2: %lu", count++);
+        kprintf_at(0, 1, "\nCounter 2: %lu on core %u", count++, (uint32_t) get_lapic_id());
     }
 }
 
@@ -75,6 +75,8 @@ void scheduler_init_bsp() {
     idle_task->state = BLOCKED;
     get_cpu_locals()->idle_tid = idle_task->tid;
     dynarray_unref(&tasks, get_cpu_locals()->idle_tid);
+
+    sprintf("\nIdle task: %ld", get_cpu_locals()->idle_tid);
 
     for (int64_t p = 0; p < processes.array_size; p++) {
         process_t *proc = dynarray_getelem(&processes, p);
@@ -102,6 +104,7 @@ void scheduler_init_ap() {
     idle_task->state = BLOCKED;
     get_cpu_locals()->idle_tid = idle_task->tid;
     dynarray_unref(&tasks, get_cpu_locals()->idle_tid);
+    sprintf("\nIdle task: %ld", get_cpu_locals()->idle_tid);
 }
 
 task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name) {
@@ -153,6 +156,7 @@ task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name) {
 }
 
 int64_t new_child_task(void (*main)(), void *parent_addr_space_cr3, char *name, int64_t parent_pid) {
+    lock(&scheduler_lock);
     task_t *created_task = new_task(main, parent_addr_space_cr3, name);
     
     task_t *array_task = dynarray_getelem(&tasks, created_task->tid);
@@ -163,10 +167,13 @@ int64_t new_child_task(void (*main)(), void *parent_addr_space_cr3, char *name, 
 
     dynarray_add(&array_parent->threads, created_task, sizeof(task_t));
 
+    int64_t ret = created_task->tid;
     dynarray_unref(&tasks, parent_pid);
     dynarray_unref(&tasks, created_task->tid);
 
-    return created_task->tid;
+    unlock(&scheduler_lock);
+
+    return ret;
 }
 
 int new_process(void (*main)(), void *parent_addr_space_cr3, char *name) {
@@ -211,7 +218,7 @@ int64_t pick_task() {
     int64_t tid_ret = -1;
 
     if (!(get_cpu_locals()->current_thread)) {
-        return -1;
+        return tid_ret;
     }
 
     /* Prioritze tasks right after the current task */
@@ -250,7 +257,6 @@ void schedule_bsp(int_reg_t *r) {
 }
 
 void schedule_ap(int_reg_t *r) {
-    sprintf("\nScheduling in the AP");
     schedule(r);
 }
 
@@ -290,7 +296,7 @@ void schedule(int_reg_t *r) {
         running_task->regs.cr3 = vmm_get_pml4t();
 
         /* If we were previously running the task, then it is ready again since we are switching */
-        if (running_task->state == RUNNING) {
+        if (running_task->state == RUNNING && running_task->tid != get_cpu_locals()->idle_tid) {
             running_task->state = READY;
         }
 
@@ -299,6 +305,8 @@ void schedule(int_reg_t *r) {
     }
 
     int64_t tid_run = pick_task();
+    sprintf("\nNew tid %ld on core %u", tid_run, (uint32_t) get_cpu_locals()->cpu_index);
+
     if (tid_run == -1) {
         /* Idle */
         get_cpu_locals()->current_thread = dynarray_getelem(&tasks, get_cpu_locals()->idle_tid);
@@ -340,6 +348,9 @@ void schedule(int_reg_t *r) {
     if (tid_run == -1) {
         start_idle();
     }
+    get_cpu_locals()->total_tsc = read_tsc();
+
+    //sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CS: %lx SS: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, r->cs, r->ss);
 
     unlock(&scheduler_lock);
 }
