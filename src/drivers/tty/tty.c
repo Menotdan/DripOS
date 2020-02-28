@@ -29,9 +29,7 @@ void tty_out(char c, tty_t *tty) {
         tty->c_pos_y += 1;
         tty->c_pos_x = 0;
     } else {
-        render_font((uint8_t (*) [8]) tty->font, c, tty->c_pos_x * 8, tty->c_pos_y * 8, tty->fg, tty->bg);
-        //char *buffer = (char *) 0xb8000;
-        //buffer[((tty->c_pos_y * tty->cols) + tty->c_pos_x) * 2] = c;
+        render_font((uint8_t (*)[8]) tty->font, c, tty->c_pos_x * 8, tty->c_pos_y * 8, tty->fg, tty->bg);
         tty->c_pos_x++;
         if (tty->c_pos_x == tty->cols) {
             tty->c_pos_y += 1;
