@@ -20,8 +20,6 @@
 void kmain(multiboot_info_t *mboot_dat) {
     init_serial(COM1);
 
-    sprintf("\nPAT MSR: %lx", read_msr(0x277));
-
     if (mboot_dat) {
         sprintf("[DripOS]: Setting up memory bitmaps");
         pmm_memory_setup(mboot_dat);

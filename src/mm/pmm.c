@@ -247,6 +247,7 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
                         VMM_PRESENT | VMM_WRITE);
                 }
             }
+            usable_mem += block_len - bitmap_len;
         } else {
             uint64_t block_start = mmap->addr & ~(0xfff); // Round down the block start to a page
             uint64_t block_end = (mmap->len + mmap->addr) & ~(0xfff); // Round down the block end to a pag
@@ -325,6 +326,9 @@ void *pmm_alloc(uint64_t size) {
         }
         uint64_t free_space_offset = ((free_space.byte * 0x1000 * 8) + (free_space.bit * 0x1000));
         void *ret = (void *) (pmm_get_represented_addr(cur_map) + free_space_offset - NORMAL_VMA_OFFSET);
+
+        used_mem += pages_needed * 0x1000;
+        usable_mem -= pages_needed * 0x1000;
         unlock(&pmm_spinlock);
         return ret;
     } else {
@@ -356,5 +360,8 @@ void pmm_unalloc(void *addr, uint64_t size) {
     } else {
         sprintf("\n[PMM] Warning: couldn't find bitmap for address %lx", addr);
     }
+
+    used_mem -= pages_needed * 0x1000;
+    usable_mem += pages_needed * 0x1000;
     unlock(&pmm_spinlock);
 }

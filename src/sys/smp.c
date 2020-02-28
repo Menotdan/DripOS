@@ -1,5 +1,6 @@
 #include "smp.h"
 #include "mm/vmm.h"
+#include "io/msr.h"
 #include "sys/apic.h"
 #include "klibc/stdlib.h"
 #include "klibc/string.h"
@@ -15,6 +16,18 @@ extern char long_smp_loaded[];
 
 uint8_t cores_booted = 1;
 
+void new_cpu_locals() {
+    cpu_locals_t *new_locals = kcalloc(sizeof(cpu_locals_t));
+    new_locals->meta_pointer = (uint64_t) new_locals;
+    write_msr(0xC0000101, (uint64_t) new_locals);
+}
+
+cpu_locals_t *get_cpu_locals() {
+    cpu_locals_t *ret;
+    asm volatile("movq %%gs:(0), %0;" : "=r"(ret));
+    return ret;
+}
+
 uint8_t get_lapic_id() {
     return (read_lapic(0x20) >> 24) & 0xFF;
 }
@@ -25,30 +38,30 @@ void send_ipi(uint8_t ap, uint32_t ipi_number) {
 }
 
 void write_cpu_data8(uint16_t offset, uint8_t data) {
-    *(uint8_t *) (0x500 + 0xFFFF800000000000 + offset) = data;
+    *(uint8_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
 }
 
 void write_cpu_data16(uint16_t offset, uint16_t data) {
-    *(uint16_t *) (0x500 + 0xFFFF800000000000 + offset) = data;
+    *(uint16_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
 }
 
 void write_cpu_data32(uint16_t offset, uint32_t data) {
-    *(uint32_t *) (0x500 + 0xFFFF800000000000 + offset) = data;
+    *(uint32_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
 }
 
 void write_cpu_data64(uint16_t offset, uint64_t data) {
-    *(uint64_t *) (0x500 + 0xFFFF800000000000 + offset) = data;
+    *(uint64_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
 }
 
 void launch_cpus() {
     /* Copy trampoline code */
     sprintf("\nCopying trampoline code");
     uint64_t code_size = smp_trampoline_end - smp_trampoline;
-    memcpy((uint8_t *) smp_trampoline, (uint8_t *) (0x1000 + 0xFFFF800000000000), code_size);
-    memset((uint8_t *) (0x500 + 0xFFFF800000000000), 0, 0xB00);
+    memcpy((uint8_t *) smp_trampoline, (uint8_t *) (0x1000 + NORMAL_VMA_OFFSET), code_size);
+    memset((uint8_t *) (0x500 + NORMAL_VMA_OFFSET), 0, 0xB00);
 
     vmm_map((void *) 0, (void *) 0, 1 + ((code_size + 0x1000 - 1) / 0x1000), VMM_WRITE | VMM_PRESENT);
-    vmm_map((void *) (GDT64 - 0xFFFFFFFF80000000), (void *) (GDT64 - 0xFFFFFFFF80000000), 1, VMM_WRITE | VMM_PRESENT);
+    vmm_map((void *) (GDT64 - KERNEL_VMA_OFFSET), (void *) (GDT64 - KERNEL_VMA_OFFSET), 1, VMM_WRITE | VMM_PRESENT);
 
     sprintf("\nDone copying");
     /* Setup all the CPUs */
@@ -61,30 +74,34 @@ void launch_cpus() {
                 sprintf("\nFound bootable AP");
 
                 /* Clear flags */
-                memset((uint8_t *) (0x500 + 0xFFFF800000000000), 0, 0xB00);
+                memset((uint8_t *) (0x500 + NORMAL_VMA_OFFSET), 0, 0xB00);
 
                 write_cpu_data32(0x10, (uint32_t) vmm_get_pml4t()); // Set the cr3
-                memcpy((uint8_t *) GDT_PTR_32, (uint8_t *) (0x520 + 0xFFFF800000000000), 6); // Copy the GDT pointer
-                memcpy((uint8_t *) GDT_PTR_64, (uint8_t *) (0x530 + 0xFFFF800000000000), 10); // Copy the 64 bit GDT pointer
+                memcpy((uint8_t *) GDT_PTR_32, (uint8_t *) (0x520 + NORMAL_VMA_OFFSET), 6); // Copy the GDT pointer
+                memcpy((uint8_t *) GDT_PTR_64, (uint8_t *) (0x530 + NORMAL_VMA_OFFSET), 10); // Copy the 64 bit GDT pointer
                 write_cpu_data64(0x40, (uint64_t) kmalloc(0x4000));
                 write_cpu_data64(0x50, (uint64_t) long_smp_loaded);
-                sprintf("\nAddr: %lx", *(uint64_t *) (0x500 + 0xFFFF800000000000 + 0x50));
+                sprintf("\nAddr: %lx", *(uint64_t *) (0x500 + NORMAL_VMA_OFFSET + 0x50));
 
                 send_ipi(cpu->apic_id, 0x500);
                 sleep_no_task(10);
                 send_ipi(cpu->apic_id, 0x600 | 1);
                 sleep_no_task(10);
-                if (*(uint16_t *) (0x500 + 0xFFFF800000000000) == 1) {
-                    sprintf("\nCpu %lu booted", (uint64_t) ++cores_booted);
+                if (*(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) == 1 
+                    || *(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) == 2) {
+                    kprintf("\nCpu %lu booted", (uint64_t) ++cores_booted);
+                    while (*(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) != 2) {}
                 } else {
                     send_ipi(cpu->apic_id, 0x500);
                     sleep_no_task(10);
                     send_ipi(cpu->apic_id, 0x600 | 1);
                     sleep_no_task(1000);
-                    if (*(uint16_t *) (0x500 + 0xFFFF800000000000) == 1) {
-                        sprintf("\nCpu %lu booted", (uint64_t) ++cores_booted);
+                    if (*(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) == 1 
+                        || *(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) == 2) {
+                        kprintf("\nCpu %lu booted", (uint64_t) ++cores_booted);
+                        while (*(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) != 2) {}
                     } else {
-                        sprintf("\nNo boot :(");
+                        kprintf("\nFailed CPU boot :(");
                     }
                 }
             }
@@ -93,7 +110,7 @@ void launch_cpus() {
         }
     }
     vmm_unmap((void *) 0, 1 + ((code_size + 0x1000 - 1) / 0x1000));
-    vmm_unmap((void *) (GDT64 - 0xFFFFFFFF80000000), 1);
+    vmm_unmap((void *) (GDT64 - KERNEL_VMA_OFFSET), 1);
 }
 
 uint8_t get_cpu_count() {
@@ -102,5 +119,8 @@ uint8_t get_cpu_count() {
 
 void smp_entry_point() {
     kprintf("\nHello from SMP");
+
+    /* After init, let the BSP know that we are done */
+    *(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) = 2;
     while (1) { asm volatile("hlt"); }
 }

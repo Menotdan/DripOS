@@ -11,6 +11,9 @@
 #define VMM_DIRTY (1<<6)
 #define VMM_HUGE (1<<7)
 
+#define NORMAL_VMA_OFFSET 0xFFFF800000000000
+#define KERNEL_VMA_OFFSET 0xFFFFFFFF80000000
+
 typedef struct {
     uint64_t p4_off;
     uint64_t p3_off;
