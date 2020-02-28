@@ -55,6 +55,7 @@ extern vector_t nmi_vector;
 
 void parse_madt();
 void configure_apic();
+void configure_apic_ap();
 void write_lapic(uint16_t offset, uint32_t data);
 uint32_t read_lapic(uint16_t offset);
 

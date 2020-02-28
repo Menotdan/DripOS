@@ -6,19 +6,36 @@
 #include "drivers/serial.h"
 #include "io/msr.h"
 #include "mm/vmm.h"
+#include "sys/smp.h"
+#include "sys/apic.h"
 
 #include "drivers/pit.h"
 
-task_t *running_task;
 dynarray_t tasks;
 dynarray_t processes;
-uint8_t scheduler_started = 0;
 uint8_t scheduler_enabled = 0;
 lock_t scheduler_lock = 0;
 
-int64_t idle_task_tid = 0;
-
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
+
+void send_scheduler_ipis() {
+    madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
+    for (uint64_t i = 0; i < cpu_vector.items_count; i++) {
+        if ((cpus[i]->cpu_flags & 1 || cpus[i]->cpu_flags & 2) && cpus[i]->apic_id != get_lapic_id()) {
+            send_ipi(cpus[i]->apic_id, (1 << 14) | 253); // Send interrupt 253
+        }
+    }
+}
+
+void start_idle() {
+    get_cpu_locals()->idle_start_tsc = read_tsc();
+}
+
+void end_idle() {
+    cpu_locals_t *cpu_locals = get_cpu_locals();
+    cpu_locals->idle_end_tsc = read_tsc();
+    cpu_locals->idle_tsc_count += (cpu_locals->idle_end_tsc - cpu_locals->idle_start_tsc);
+}
 
 void _idle() {
     while (1) {
@@ -48,15 +65,16 @@ void scheduler_init_bsp() {
     processes.array_size = 0;
     processes.base = 0;
 
-    //new_process(main_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Main task");
-    //new_process(second_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Second task");
+    new_process(main_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Main task");
+    new_process(second_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Second task");
 
     /* Setup the idle task */
+
     task_t *idle_no_array = new_task(_idle, (void *) vmm_get_pml4t() + VM_OFFSET, "_idle");
     task_t *idle_task = dynarray_getelem(&tasks, idle_no_array->tid);
-    idle_task->state = BLOCKED; // Block the idle task, so it doesnt run
-    idle_task_tid = idle_task->tid;
-    dynarray_unref(&tasks, 2);
+    idle_task->state = BLOCKED;
+    get_cpu_locals()->idle_tid = idle_task->tid;
+    dynarray_unref(&tasks, get_cpu_locals()->idle_tid);
 
     for (int64_t p = 0; p < processes.array_size; p++) {
         process_t *proc = dynarray_getelem(&processes, p);
@@ -76,10 +94,14 @@ void scheduler_init_bsp() {
         }
         dynarray_unref(&processes, p);
     }
+}
 
-    
-
-    running_task = (task_t *) dynarray_getelem(&tasks, 0);
+void scheduler_init_ap() {
+    task_t *idle_no_array = new_task(_idle, (void *) vmm_get_pml4t() + VM_OFFSET, "_idle");
+    task_t *idle_task = dynarray_getelem(&tasks, idle_no_array->tid);
+    idle_task->state = BLOCKED;
+    get_cpu_locals()->idle_tid = idle_task->tid;
+    dynarray_unref(&tasks, get_cpu_locals()->idle_tid);
 }
 
 task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name) {
@@ -93,14 +115,14 @@ task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name) {
 
     /* Create new address space */
     uint64_t new_addr_space = (uint64_t) kcalloc(0x1000);
-    new_addr_space -= 0xFFFF800000000000;
+    new_addr_space -= NORMAL_VMA_OFFSET;
     task->regs.cr3 = new_addr_space;
     if (parent_addr_space_cr3) {
         /* Copy old address space */
-        memcpy((uint8_t *) parent_addr_space_cr3, (uint8_t *) new_addr_space + 0xFFFF800000000000, 0x1000);
+        memcpy((uint8_t *) parent_addr_space_cr3, (uint8_t *) new_addr_space + NORMAL_VMA_OFFSET, 0x1000);
     } else {
         /* Copy the higher half mappings */
-        memcpy((uint8_t *) vmm_get_pml4t() + 0x800 + 0xFFFF800000000000, (uint8_t *) task->regs.cr3 + 0x800 + 0xFFFF800000000000,
+        memcpy((uint8_t *) vmm_get_pml4t() + 0x800 + NORMAL_VMA_OFFSET, (uint8_t *) task->regs.cr3 + 0x800 + NORMAL_VMA_OFFSET,
             0x800);
     }
 
@@ -110,7 +132,7 @@ task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name) {
     task->regs.fs = (uint64_t) info;
     
     /* Create new task stack */
-    task->regs.rsp = (uint64_t) kcalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE;
+    task->regs.rsp = (uint64_t) kcalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE; // Go to the end of the stack
 
     /* Set the name */
     strcpy(name, task->name);
@@ -187,8 +209,13 @@ int new_process(void (*main)(), void *parent_addr_space_cr3, char *name) {
 
 int64_t pick_task() {
     int64_t tid_ret = -1;
+
+    if (!(get_cpu_locals()->current_thread)) {
+        return -1;
+    }
+
     /* Prioritze tasks right after the current task */
-    for (int64_t t = running_task->tid + 1; t < tasks.array_size; t++) {
+    for (int64_t t = get_cpu_locals()->current_thread->tid + 1; t < tasks.array_size; t++) {
         task_t *task = dynarray_getelem(&tasks, t);
         if (task) {
             if (task->state == READY) {
@@ -201,7 +228,7 @@ int64_t pick_task() {
     }
 
     /* Then look at the rest of the tasks */
-    for (int64_t t = 0; t < running_task->tid + 1; t++) {
+    for (int64_t t = 0; t < get_cpu_locals()->current_thread->tid + 1; t++) {
         task_t *task = dynarray_getelem(&tasks, t);
         if (task) {
             if (task->state == READY) {
@@ -216,10 +243,27 @@ int64_t pick_task() {
     return tid_ret; // Return -1 by default for idle
 }
 
+void schedule_bsp(int_reg_t *r) {
+    //sprintf("\nBSP scheduling");
+    send_scheduler_ipis();
+    schedule(r);
+}
+
+void schedule_ap(int_reg_t *r) {
+    sprintf("\nScheduling in the AP");
+    schedule(r);
+}
+
 void schedule(int_reg_t *r) {
     lock(&scheduler_lock);
 
-    if (scheduler_started) {
+    task_t *running_task = get_cpu_locals()->current_thread;
+
+    if (running_task) {
+        if (running_task->tid == get_cpu_locals()->idle_tid) {
+            end_idle(); // End idling for this CPU
+        }
+
         running_task->regs.rax = r->rax;
         running_task->regs.rbx = r->rbx;
         running_task->regs.rcx = r->rcx;
@@ -244,23 +288,24 @@ void schedule(int_reg_t *r) {
         running_task->regs.ss = r->ss;
 
         running_task->regs.cr3 = vmm_get_pml4t();
+
+        /* If we were previously running the task, then it is ready again since we are switching */
+        if (running_task->state == RUNNING) {
+            running_task->state = READY;
+        }
+
+        /* Unref the running task, so we can swap it out */
+        dynarray_unref(&tasks, running_task->tid);
     }
-    scheduler_started = 1;
 
     int64_t tid_run = pick_task();
-
-    /* If we were previously running the task, then it is ready again since we are switching */
-    if (running_task->state == RUNNING) {
-        running_task->state = READY;
-    }
-
-    /* Unref the running task, so we can swap it ou */
-    dynarray_unref(&tasks, running_task->tid);
     if (tid_run == -1) {
         /* Idle */
-        running_task = dynarray_getelem(&tasks, idle_task_tid);
+        get_cpu_locals()->current_thread = dynarray_getelem(&tasks, get_cpu_locals()->idle_tid);
+        running_task = get_cpu_locals()->current_thread;
     } else {
-        running_task = dynarray_getelem(&tasks, tid_run);
+        get_cpu_locals()->current_thread = dynarray_getelem(&tasks, tid_run);
+        running_task = get_cpu_locals()->current_thread;
     }
 
     running_task->state = RUNNING;
@@ -288,10 +333,12 @@ void schedule(int_reg_t *r) {
     r->cs = running_task->regs.cs;
     r->ss = running_task->regs.ss;
 
-    //sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CS: %lx SS: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, r->cs, r->ss);
-
     if (vmm_get_pml4t() != running_task->regs.cr3) {
         vmm_set_pml4t(running_task->regs.cr3);
+    }
+
+    if (tid_run == -1) {
+        start_idle();
     }
 
     unlock(&scheduler_lock);

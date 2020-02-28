@@ -253,9 +253,10 @@ void configure_apic() {
             redirect_gsi(i, (uint32_t) i, 0, 0);
         }
     }
-    
-    madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
-    for (uint64_t i = 0; i < cpu_vector.items_count; i++) {
-        kprintf("\n[APIC] Vector APIC id: %lu Flags: %u", (uint32_t) cpus[i]->apic_id, (uint32_t) cpus[i]->cpu_flags);
-    }
+}
+
+void configure_apic_ap() {
+    /* Now to configure the local APIC */
+    write_msr(APIC_BASE_MSR, (read_msr(APIC_BASE_MSR) | APIC_BASE_MSR_ENABLE) & ~(1<<10)); // Set the LAPIC enable bit
+    write_lapic(0xF0, read_lapic(0xF0) | 0x1FF); // Enable spurious interrupts
 }

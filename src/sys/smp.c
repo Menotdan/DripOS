@@ -129,6 +129,9 @@ void smp_entry_point() {
     cpu_locals->cpu_index = *(uint8_t *) (0x560 + NORMAL_VMA_OFFSET);
 
     kprintf("\nOur index is %u", (uint32_t) cpu_locals->cpu_index);
+    configure_apic_ap();
+    scheduler_init_ap();
+    configure_idt();
 
     /* After init, let the BSP know that we are done */
     *(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) = 2;

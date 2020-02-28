@@ -14,19 +14,19 @@ void unlock(lock_t *lock) {
 }
 
 void interrupt_lock() {
-    if (scheduler_started) {
+    if (scheduler_enabled) {
         asm volatile("cli");
     }
 }
 
 void interrupt_unlock() {
-    if (scheduler_started) {
+    if (scheduler_enabled) {
         asm volatile("sti");
     }
 }
 
 uint8_t check_interrupts() {
-    if (!scheduler_started) {
+    if (!scheduler_enabled) {
         return 0; // Pretend that interrupts are off so we don't yield
     }
     uint64_t rflags;

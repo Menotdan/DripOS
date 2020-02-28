@@ -11,7 +11,7 @@ void timer_handler(int_reg_t *r) {
     global_ticks++;
     if (global_ticks % 8 == 0 && scheduler_enabled) {
         //sprintf("\nscheduler");
-        schedule(r);
+        schedule_bsp(r);
     }
     UNUSED(r);
 }

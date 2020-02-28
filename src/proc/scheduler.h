@@ -9,6 +9,8 @@
 #define BLOCKED 2
 #define IRQ_WAIT 3
 #define SLEEP 4
+#define RUNNING_IDLE 5
+#define READY_IDLE 6
 
 #define TASK_STACK_SIZE 0x4000
 #define VM_OFFSET 0xFFFF800000000000
@@ -55,7 +57,10 @@ typedef struct {
 
 
 void schedule(int_reg_t *r);
+void schedule_ap(int_reg_t *r);
+void schedule_bsp(int_reg_t *r);
 void scheduler_init_bsp();
+void scheduler_init_ap();
 
 task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name);
 int new_process(void (*main)(), void *parent_addr_space_cr3, char *name);

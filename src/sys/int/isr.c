@@ -8,6 +8,8 @@
 #include "sys/apic.h"
 #include "io/ports.h"
 
+#include "sys/smp.h"
+
 int_handler_t handlers[IDT_ENTRIES];
 
 void register_int_handler(uint8_t n, int_handler_t handler) {
@@ -26,7 +28,7 @@ void isr_handler(int_reg_t *r) {
             unlock(&vesa_lock);
             //tty_clear(&base_tty);
             //tty_seek(0, 0, &base_tty);
-            kprintf("\nException!");
+            kprintf("\nException on core %u with apic id %u! (cur task %s)", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name);
             kprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2);
             while (1) { asm volatile("hlt"); }
         }
@@ -311,5 +313,6 @@ void configure_idt() {
     register_int_handler(32, timer_handler);
     register_int_handler(33, keyboard_handler);
     register_int_handler(254, schedule);
+    register_int_handler(253, schedule_ap);
     asm volatile("sti"); // Enable interrupts and hope we dont die lmao
 }

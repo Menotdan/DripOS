@@ -32,6 +32,7 @@ void kmain(multiboot_info_t *mboot_dat) {
     sprintf("\n[DripOS] Configuring LAPICs and IOAPIC routing");
     configure_apic();
 
+    new_cpu_locals(); // Setup CPU locals for our CPU
     scheduler_init_bsp();
     //tty_clear(&base_tty);
 
@@ -42,8 +43,7 @@ void kmain(multiboot_info_t *mboot_dat) {
 
     launch_cpus();
 
-    //scheduler_enabled = 1;
-    kprintf("\nAllocated: %lu Free: %lu", pmm_get_used_mem(), pmm_get_free_mem());
+    scheduler_enabled = 1;
 
     while (1) {
         asm volatile("hlt");
