@@ -91,7 +91,7 @@ void launch_cpus() {
                 if (*(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) == 1 
                     || *(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) == 2) {
                     kprintf("\nCpu %lu booted", (uint64_t) ++cores_booted);
-                    while (*(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) != 2) {}
+                    while (*(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) != 2) { asm volatile("nop"); }
                 } else {
                     send_ipi(cpu->apic_id, 0x500);
                     sleep_no_task(10);
@@ -100,7 +100,7 @@ void launch_cpus() {
                     if (*(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) == 1 
                         || *(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) == 2) {
                         kprintf("\nCpu %lu booted", (uint64_t) ++cores_booted);
-                        while (*(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) != 2) {}
+                        while (*(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) != 2) { asm volatile("nop"); }
                     } else {
                         kprintf("\nFailed CPU boot :(");
                     }

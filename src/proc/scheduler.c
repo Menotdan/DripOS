@@ -321,7 +321,9 @@ void schedule(int_reg_t *r) {
         running_task = get_cpu_locals()->current_thread;
     }
 
-    running_task->state = RUNNING;
+    if (tid_run != -1) {
+        running_task->state = RUNNING;
+    }
 
     r->rax = running_task->regs.rax;
     r->rbx = running_task->regs.rbx;
@@ -351,7 +353,10 @@ void schedule(int_reg_t *r) {
     }
 
     if (tid_run == -1) {
+        //sprintf("\nIdling on core %u", (uint32_t) get_lapic_id());
         start_idle();
+    } else {
+        //sprintf("\nTask %ld on core %u", tid_run, (uint32_t) get_lapic_id());
     }
     get_cpu_locals()->total_tsc = read_tsc();
 
