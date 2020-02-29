@@ -56,6 +56,13 @@ loaded_compatability_mode:
 global long_smp_loaded
 extern smp_entry_point
 long_smp_loaded:
+    mov rcx, 0x277
+    rdmsr
+    ; Clear the PAT entry for PAT1 and set it to WC
+    and eax, 0xffff00ff
+    or eax, 0x00000100
+    wrmsr
+
     cld
     xor rax, rax
     call smp_entry_point

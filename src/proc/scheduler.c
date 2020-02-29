@@ -54,7 +54,7 @@ void main_task() {
 void second_task() {
     uint64_t count = 0;
     while (1) {
-        kprintf_at(0, 1, "Counter 2: %lu on core %u", count++, (uint32_t) get_lapic_id());
+        kprintf_at(0, 1, "Counter 2: %lu on core %u", count++, (uint32_t) get_cpu_locals()->cpu_index);
     }
 }
 
