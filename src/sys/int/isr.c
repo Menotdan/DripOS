@@ -323,6 +323,49 @@ void configure_idt() {
     set_idt_gate(253, (uint64_t) isr253);
     set_idt_gate(254, (uint64_t) isr254);
     set_idt_gate(255, (uint64_t) isr255);
+
+    /* Set ists */
+
+    /* Panic stacks (IST index 2) */
+    set_ist(0, 2);
+    set_ist(1, 2);
+    set_ist(2, 2);
+    set_ist(3, 2);
+    set_ist(4, 2);
+    set_ist(5, 2);
+    set_ist(6, 2);
+    set_ist(7, 2);
+    set_ist(8, 2);
+    set_ist(9, 2);
+    set_ist(10, 2);
+    set_ist(11, 2);
+    set_ist(12, 2);
+    set_ist(13, 2);
+    set_ist(14, 2);
+    set_ist(15, 2);
+    set_ist(16, 2);
+    set_ist(17, 2);
+    set_ist(18, 2);
+    set_ist(19, 2);
+    set_ist(20, 2);
+    set_ist(21, 2);
+    set_ist(22, 2);
+    set_ist(23, 2);
+    set_ist(24, 2);
+    set_ist(25, 2);
+    set_ist(26, 2);
+    set_ist(27, 2);
+    set_ist(28, 2);
+    set_ist(29, 2);
+    set_ist(30, 2);
+    set_ist(31, 2);
+    set_ist(252, 2);
+    /* IRQ Stacks (IST index 1) */
+    set_ist(32, 1);
+    set_ist(33, 1);
+    set_ist(254, 1);
+    set_ist(253, 1);
+
     load_idt(); // Point to the IDT
     register_int_handler(32, timer_handler);
     register_int_handler(33, keyboard_handler);

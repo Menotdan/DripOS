@@ -45,6 +45,10 @@ typedef struct {
 
     dynarray_t threads; // The threads this process has
     int64_t pid; // Process ID
+
+    int64_t uid; // User id of the user runnning this process
+    int64_t gid; // Group id of the user running this process
+    uint64_t permissions; // Misc permission flags
 } process_t;
 
 typedef struct {

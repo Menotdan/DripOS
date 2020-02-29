@@ -127,6 +127,8 @@ void smp_entry_point() {
     cpu_locals->cpu_index = *(uint8_t *) (0x560 + NORMAL_VMA_OFFSET);
 
     load_tss();
+    set_panic_stack((uint64_t) kmalloc(0x1000) + 0x1000);
+    set_kernel_stack((uint64_t) kmalloc(0x1000) + 0x1000);
     kprintf("\nOur index is %u", (uint32_t) cpu_locals->cpu_index);
     configure_apic_ap();
     scheduler_init_ap();

@@ -148,7 +148,7 @@ task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name) {
 
     /* Initialize the other fields */
     task->state = READY;
-    int tid = dynarray_add(&tasks, task, sizeof(task_t));
+    int64_t tid = dynarray_add(&tasks, task, sizeof(task_t));
     task_t *task_arr = dynarray_getelem(&tasks, tid);
     task_arr->tid = tid;
     task->tid = tid;
@@ -193,7 +193,7 @@ int new_process(void (*main)(), void *parent_addr_space_cr3, char *name) {
     lock(&scheduler_lock);
 
     /* Set name and PID */
-    int pid = dynarray_add(&processes, process, sizeof(process_t));
+    int64_t pid = dynarray_add(&processes, process, sizeof(process_t));
     process_t *elem = dynarray_getelem(&processes, pid);
     elem->pid = pid;
     strcpy(name, elem->name);

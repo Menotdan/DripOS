@@ -21,3 +21,12 @@ void load_tss() {
     
     asm volatile("ltr %%ax" :: "a"(TSS_GDT_OFFSET));
 }
+
+void set_kernel_stack(uint64_t new_stack_addr) {
+    get_cpu_locals()->tss.ist_stack1 = new_stack_addr;
+    get_cpu_locals()->tss.rsp0 = new_stack_addr;
+}
+
+void set_panic_stack(uint64_t panic_stack_addr) {
+    get_cpu_locals()->tss.ist_stack2 = panic_stack_addr;
+}

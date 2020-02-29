@@ -3,6 +3,7 @@
 #include "mm/pmm.h"
 #include "sys/apic.h"
 #include "sys/int/isr.h"
+#include "klibc/stdlib.h"
 #include "drivers/pit.h"
 #include "drivers/serial.h"
 #include "drivers/vesa.h"
@@ -34,6 +35,8 @@ void kmain(multiboot_info_t *mboot_dat) {
 
     new_cpu_locals(); // Setup CPU locals for our CPU
     load_tss();
+    set_panic_stack((uint64_t) kmalloc(0x1000) + 0x1000);
+    set_kernel_stack((uint64_t) kmalloc(0x1000) + 0x1000);
     scheduler_init_bsp();
 
     sprintf("\n[DripOS] Registering interrupts and setting interrupt flag");

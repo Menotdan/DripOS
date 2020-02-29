@@ -46,8 +46,8 @@ void *dynarray_getelem(dynarray_t *dynarray, int64_t element) {
     return ptr;
 }
 
-int dynarray_add(dynarray_t *dynarray, void *element, uint64_t size_of_elem) {
-    int ret = -1;
+int64_t dynarray_add(dynarray_t *dynarray, void *element, uint64_t size_of_elem) {
+    int64_t ret = -1;
     lock(&dynarray->lock);
 
     int64_t i;

@@ -47,5 +47,7 @@ typedef struct {
 } __attribute__((packed)) tss_64_descriptor_t;
 
 void load_tss();
+void set_kernel_stack(uint64_t new_stack_addr);
+void set_panic_stack(uint64_t panic_stack_addr);
 
 #endif
