@@ -66,6 +66,9 @@ GDT64:                           ; Global Descriptor Table (64-bit).
     db 0                         ; Base (high).
     .Code32: equ $ - GDT64       ; The code descriptor.
     dq 0x00CF9A000000FFFF
+    .TSS_LOAD_SEG: equ $ - GDT64
+    dq 0x0 ; The TSS descriptor is 16 bytes long ;-;
+    dq 0x0
 
 global GDT_PTR_32
 global GDT_PTR_64

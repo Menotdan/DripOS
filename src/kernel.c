@@ -33,6 +33,7 @@ void kmain(multiboot_info_t *mboot_dat) {
     configure_apic();
 
     new_cpu_locals(); // Setup CPU locals for our CPU
+    load_tss();
     scheduler_init_bsp();
 
     sprintf("\n[DripOS] Registering interrupts and setting interrupt flag");

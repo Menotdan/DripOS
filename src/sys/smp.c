@@ -126,6 +126,7 @@ void smp_entry_point() {
     cpu_locals->apic_id = get_lapic_id();
     cpu_locals->cpu_index = *(uint8_t *) (0x560 + NORMAL_VMA_OFFSET);
 
+    load_tss();
     kprintf("\nOur index is %u", (uint32_t) cpu_locals->cpu_index);
     configure_apic_ap();
     scheduler_init_ap();
