@@ -3,10 +3,7 @@
 #include <stdint.h>
 #include "proc/scheduler.h"
 #include "sys/int/idt.h"
-
-typedef struct {
-
-} ipi_flags_t;
+#include "sys/tss.h"
 
 typedef struct {
     /* Needed. Do NOT remove */
@@ -26,6 +23,7 @@ typedef struct {
     uint64_t total_tsc;
 
     idt_gate_t idt[IDT_ENTRIES];
+    tss_64_t tss;
 } __attribute__((packed)) cpu_locals_t;
 
 void launch_cpus();

@@ -38,19 +38,19 @@ void send_ipi(uint8_t ap, uint32_t ipi_number) {
 }
 
 void write_cpu_data8(uint16_t offset, uint8_t data) {
-    *(uint8_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
+    *(volatile uint8_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
 }
 
 void write_cpu_data16(uint16_t offset, uint16_t data) {
-    *(uint16_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
+    *(volatile uint16_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
 }
 
 void write_cpu_data32(uint16_t offset, uint32_t data) {
-    *(uint32_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
+    *(volatile uint32_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
 }
 
 void write_cpu_data64(uint16_t offset, uint64_t data) {
-    *(uint64_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
+    *(volatile uint64_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
 }
 
 void launch_cpus() {
@@ -82,9 +82,7 @@ void launch_cpus() {
                 write_cpu_data64(0x40, (uint64_t) kmalloc(0x4000));
                 write_cpu_data64(0x50, (uint64_t) long_smp_loaded);
 
-                *(uint8_t *) (0x560 + NORMAL_VMA_OFFSET) = i;
-
-                sprintf("\nAddr: %lx", *(uint64_t *) (0x500 + NORMAL_VMA_OFFSET + 0x50));
+                *(volatile uint8_t *) (0x560 + NORMAL_VMA_OFFSET) = i;
 
                 send_ipi(cpu->apic_id, 0x500);
                 sleep_no_task(10);

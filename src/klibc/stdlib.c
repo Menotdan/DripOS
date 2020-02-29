@@ -6,6 +6,8 @@
 #include "klibc/lock.h"
 #include "drivers/pit.h"
 
+#include "drivers/serial.h"
+
 void *kmalloc(uint64_t size) {
     uint64_t size_data = (uint64_t) pmm_alloc(size + 0x1000) + NORMAL_VMA_OFFSET;
     *(uint64_t *) size_data = size + 0x1000;
@@ -40,13 +42,13 @@ void *krealloc(void *addr, uint64_t new_size) {
 }
 
 void yield() {
-    // if (scheduler_enabled && check_interrupts()) {
-    //     asm volatile("int $254");
-    // }
+    if (scheduler_enabled && check_interrupts()) {
+        asm volatile("int $254");
+    }
 }
 
 /* Inefficient, taskless sleep */
 void sleep_no_task(uint64_t milliseconds) {
-    uint64_t start = global_ticks;
-    while (global_ticks < start + milliseconds) { continue; }
+    volatile uint64_t start = global_ticks;
+    while (global_ticks < start + milliseconds) { asm volatile("nop"); }
 }

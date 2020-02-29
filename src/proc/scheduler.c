@@ -21,8 +21,10 @@ task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,
 void send_scheduler_ipis() {
     madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
     for (uint64_t i = 0; i < cpu_vector.items_count; i++) {
-        if ((cpus[i]->cpu_flags & 1 || cpus[i]->cpu_flags & 2) && cpus[i]->apic_id != get_lapic_id()) {
-            send_ipi(cpus[i]->apic_id, (1 << 14) | 253); // Send interrupt 253
+        if (i < cpu_vector.items_count) {
+            if ((cpus[i]->cpu_flags & 1 || cpus[i]->cpu_flags & 2) && cpus[i]->apic_id != get_lapic_id()) {
+                send_ipi(cpus[i]->apic_id, (1 << 14) | 253); // Send interrupt 253
+            }
         }
     }
 }
@@ -44,18 +46,21 @@ void _idle() {
 }
 
 void main_task() {
-    sprintf("\nLoaded multitasking uwu");
-    //uint64_t count = 0;
     while (1) {
-        kprintf_at(0, 0, "\nCounter 1: %lu on core %u", global_ticks, (uint32_t) get_lapic_id());
+        kprintf_at(0, 0, "TSC Idle: %lu TSC Running: %lu On CPU %u", get_cpu_locals()->idle_tsc_count, (get_cpu_locals()->total_tsc - get_cpu_locals()->idle_tsc_count), (uint32_t) get_cpu_locals()->cpu_index);
     }
 }
 
 void second_task() {
-    sprintf("\nSecond task scheduler_started");
     uint64_t count = 0;
     while (1) {
-        kprintf_at(0, 1, "\nCounter 2: %lu on core %u", count++, (uint32_t) get_lapic_id());
+        kprintf_at(0, 1, "Counter 2: %lu on core %u", count++, (uint32_t) get_lapic_id());
+    }
+}
+
+void third_task() {
+    while (1) {
+        kprintf_at(0, 2, "TSC Idle: %lu TSC Running: %lu On CPU %u", get_cpu_locals()->idle_tsc_count, (get_cpu_locals()->total_tsc - get_cpu_locals()->idle_tsc_count), (uint32_t) get_cpu_locals()->cpu_index);
     }
 }
 
@@ -67,6 +72,7 @@ void scheduler_init_bsp() {
 
     new_process(main_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Main task");
     new_process(second_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Second task");
+    new_process(third_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Third task");
 
     /* Setup the idle task */
 
@@ -305,7 +311,6 @@ void schedule(int_reg_t *r) {
     }
 
     int64_t tid_run = pick_task();
-    sprintf("\nNew tid %ld on core %u", tid_run, (uint32_t) get_cpu_locals()->cpu_index);
 
     if (tid_run == -1) {
         /* Idle */
@@ -349,8 +354,6 @@ void schedule(int_reg_t *r) {
         start_idle();
     }
     get_cpu_locals()->total_tsc = read_tsc();
-
-    //sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CS: %lx SS: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, r->cs, r->ss);
 
     unlock(&scheduler_lock);
 }
