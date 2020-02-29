@@ -178,6 +178,8 @@ uint64_t pmm_get_used_mem() {
 }
 
 void pmm_memory_setup(multiboot_info_t *mboot_dat) {
+    /* Set kernel's base CR3 */
+    base_kernel_cr3 = vmm_get_pml4t();
     // Current mmap address
     uint64_t current = ((uint64_t)mboot_dat->mmap_addr) & 0xffffffff;
     // Remaining mmap data

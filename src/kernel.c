@@ -37,6 +37,7 @@ void kmain(multiboot_info_t *mboot_dat) {
     load_tss();
     set_panic_stack((uint64_t) kmalloc(0x1000) + 0x1000);
     set_kernel_stack((uint64_t) kmalloc(0x1000) + 0x1000);
+    sprintf("\n[DripOS] Set kernel stacks");
     scheduler_init_bsp();
 
     sprintf("\n[DripOS] Registering interrupts and setting interrupt flag");

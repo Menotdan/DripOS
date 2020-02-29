@@ -15,7 +15,7 @@ smp_trampoline:
     mov cr0, eax
     ; Set up GDT
     lgdt [0x520] ; Load the 32 bit GDT pointer passed by the SMP data
-    jmp 0x18:(0x1000 + smp_trampoline_32 - smp_trampoline)
+    jmp 0x28:(0x1000 + smp_trampoline_32 - smp_trampoline)
 
 [bits 32]
 smp_trampoline_32:

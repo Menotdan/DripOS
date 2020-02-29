@@ -17,6 +17,7 @@ uint8_t scheduler_enabled = 0;
 lock_t scheduler_lock = 0;
 
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
+task_regs_t default_user_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x23,0x1B,0,0x202,0};
 
 void send_scheduler_ipis() {
     madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
@@ -45,6 +46,12 @@ void _idle() {
     }
 }
 
+void user_task() {
+    while (1) {
+        asm volatile("nop");
+    }
+}
+
 void main_task() {
     while (1) {
         kprintf_at(0, 0, "TSC Idle: %lu TSC Running: %lu On CPU %u", get_cpu_locals()->idle_tsc_count, (get_cpu_locals()->total_tsc - get_cpu_locals()->idle_tsc_count), (uint32_t) get_cpu_locals()->cpu_index);
@@ -70,13 +77,16 @@ void scheduler_init_bsp() {
     processes.array_size = 0;
     processes.base = 0;
 
-    new_process(main_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Main task");
-    new_process(second_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Second task");
-    new_process(third_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Third task");
+    sprintf("\n[Scheduler] Starting kernel tasks");
+    new_kernel_process(main_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Main task");
+    new_kernel_process(second_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Second task");
+    new_kernel_process(third_task, (void *) vmm_get_pml4t() + VM_OFFSET, "Third task");
+    sprintf("\n[Scheduler] Done");
+    new_process(user_task, "User task", 10);
 
     /* Setup the idle task */
 
-    task_t *idle_no_array = new_task(_idle, (void *) vmm_get_pml4t() + VM_OFFSET, "_idle");
+    task_t *idle_no_array = new_task(_idle, (void *) vmm_get_pml4t() + VM_OFFSET, "_idle", 0);
     task_t *idle_task = dynarray_getelem(&tasks, idle_no_array->tid);
     idle_task->state = BLOCKED;
     get_cpu_locals()->idle_tid = idle_task->tid;
@@ -90,8 +100,9 @@ void scheduler_init_bsp() {
             sprintf("\nProc name: %s", proc->name);
             sprintf("\nPID: %ld", proc->pid);
             for (int64_t t = 0; t < proc->threads.array_size; t++) {
-                task_t *task = dynarray_getelem(&proc->threads, t);
-                if (task) {
+                int64_t *tid = dynarray_getelem(&proc->threads, t);
+                if (tid) {
+                    task_t *task = dynarray_getelem(&tasks, *tid);
                     sprintf("\n  Task for %ld", proc->pid);
                     sprintf("\n    Task name: %s", task->name);
                     sprintf("\n    TID: %ld", task->tid);
@@ -105,7 +116,7 @@ void scheduler_init_bsp() {
 }
 
 void scheduler_init_ap() {
-    task_t *idle_no_array = new_task(_idle, (void *) vmm_get_pml4t() + VM_OFFSET, "_idle");
+    task_t *idle_no_array = new_task(_idle, (void *) vmm_get_pml4t() + VM_OFFSET, "_idle", 0);
     task_t *idle_task = dynarray_getelem(&tasks, idle_no_array->tid);
     idle_task->state = BLOCKED;
     get_cpu_locals()->idle_tid = idle_task->tid;
@@ -113,14 +124,21 @@ void scheduler_init_ap() {
     sprintf("\nIdle task: %ld", get_cpu_locals()->idle_tid);
 }
 
-task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name) {
+task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name, uint8_t ring) {
     lock(&scheduler_lock);
 
     task_t *task = kcalloc(sizeof(task_t));
 
     /* Setup new task */
-    task->regs = default_kernel_regs;
+    if (ring == 0) {
+        task->regs = default_kernel_regs;
+    } else if (ring == 3) {
+        task->regs = default_user_regs;
+    } else { 
+        task->regs = default_kernel_regs;
+    }
     task->regs.rip = (uint64_t) main;
+    task->ring = ring;
 
     /* Create new address space */
     uint64_t new_addr_space = (uint64_t) kcalloc(0x1000);
@@ -147,7 +165,7 @@ task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name) {
     strcpy(name, task->name);
 
     /* Initialize the other fields */
-    task->state = READY;
+    task->state = BLOCKED;
     int64_t tid = dynarray_add(&tasks, task, sizeof(task_t));
     task_t *task_arr = dynarray_getelem(&tasks, tid);
     task_arr->tid = tid;
@@ -161,9 +179,18 @@ task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name) {
     return task;
 }
 
-int64_t new_child_task(void (*main)(), void *parent_addr_space_cr3, char *name, int64_t parent_pid) {
+void start_task(int64_t tid) {
     lock(&scheduler_lock);
-    task_t *created_task = new_task(main, parent_addr_space_cr3, name);
+    task_t *task = dynarray_getelem(&tasks, tid);
+    if (task) {
+        task->state = READY;
+    }
+    unlock(&scheduler_lock);
+}
+
+int64_t new_child_task(void (*main)(), void *parent_addr_space_cr3, char *name, int64_t parent_pid, uint8_t ring) {
+    lock(&scheduler_lock);
+    task_t *created_task = new_task(main, parent_addr_space_cr3, name, ring);
     
     task_t *array_task = dynarray_getelem(&tasks, created_task->tid);
     process_t *array_parent = dynarray_getelem(&processes, parent_pid);
@@ -171,7 +198,7 @@ int64_t new_child_task(void (*main)(), void *parent_addr_space_cr3, char *name, 
     created_task->parent_pid = parent_pid;
     array_task->parent_pid = parent_pid;
 
-    dynarray_add(&array_parent->threads, created_task, sizeof(task_t));
+    dynarray_add(&array_parent->threads, &created_task->tid, sizeof(int64_t));
 
     int64_t ret = created_task->tid;
     dynarray_unref(&tasks, parent_pid);
@@ -182,12 +209,29 @@ int64_t new_child_task(void (*main)(), void *parent_addr_space_cr3, char *name, 
     return ret;
 }
 
-int new_process(void (*main)(), void *parent_addr_space_cr3, char *name) {
+int new_process(void (*main)(), char *name, uint64_t code_pages) {
     process_t *process = kcalloc(sizeof(process_t));
     process->threads.base = 0;
     process->threads.array_size = 0;
 
-    task_t *base_task = new_task(main, parent_addr_space_cr3, name);
+    task_t *base_task = new_task(main, 0, name, 3); // Ring 3
+    task_t *task_arr = (task_t *) dynarray_getelem(&tasks, base_task->tid);
+
+    task_arr->regs.rip = (uint64_t) virt_to_phys((void *) main, (void *) vmm_get_pml4t());
+
+    vmm_map_pages(virt_to_phys((void *) main, (void *) vmm_get_pml4t()), 
+        virt_to_phys((void *) main, (void *) vmm_get_pml4t()), 
+        (void *) base_task->regs.cr3, code_pages, VMM_PRESENT | VMM_USER);
+
+    void *task_rsp = (void *) (base_task->regs.rsp - TASK_STACK_SIZE);
+    void *task_rsp_phys = virt_to_phys(task_rsp, (void *) vmm_get_pml4t());
+
+    vmm_map_pages(task_rsp_phys, (void *) (0x7FFFFFFFFFFF - TASK_STACK_SIZE), 
+        (void *) (base_task->regs.cr3), TASK_STACK_SIZE / 0x1000, 
+        VMM_PRESENT | VMM_WRITE | VMM_USER);
+    
+    task_arr->regs.rsp = 0x7FFFFFFFFFFF;
+    dynarray_unref(&tasks, base_task->tid);
     
     /* Lock the scheduler here so that new_task doesnt try to lock when we have the lock */
     lock(&scheduler_lock);
@@ -202,7 +246,7 @@ int new_process(void (*main)(), void *parent_addr_space_cr3, char *name) {
     base_task->parent_pid = pid;
 
     /* Add the task and process to the threads dynarray for the process */
-    dynarray_add(&elem->threads, base_task, sizeof(task_t));
+    dynarray_add(&elem->threads, &base_task->tid, sizeof(int64_t));
 
     /* Set the parent PID in the global threads list */
     task_t *task_arr_elem = dynarray_getelem(&tasks, base_task->tid);
@@ -212,11 +256,57 @@ int new_process(void (*main)(), void *parent_addr_space_cr3, char *name) {
 
     dynarray_unref(&processes, pid);
 
+    int64_t tid = base_task->tid;
+
     /* Cleanup, since items are in the dynarray */
     kfree(base_task);
     kfree(process);
 
     unlock(&scheduler_lock);
+    /* Set the task as ready */
+    start_task(tid);
+    return pid;
+}
+
+int new_kernel_process(void (*main)(), void *parent_addr_space_cr3, char *name) {
+    process_t *process = kcalloc(sizeof(process_t));
+    process->threads.base = 0;
+    process->threads.array_size = 0;
+
+    task_t *base_task = new_task(main, parent_addr_space_cr3, name, 0); // Ring 0
+    
+    /* Lock the scheduler here so that new_task doesnt try to lock when we have the lock */
+    lock(&scheduler_lock);
+
+    /* Set name and PID */
+    int64_t pid = dynarray_add(&processes, process, sizeof(process_t));
+    process_t *elem = dynarray_getelem(&processes, pid);
+    elem->pid = pid;
+    strcpy(name, elem->name);
+
+    /* Set the base_task parent pid to our new pid */
+    base_task->parent_pid = pid;
+
+    /* Add the task and process to the threads dynarray for the process */
+    dynarray_add(&elem->threads, &base_task->tid, sizeof(int64_t));
+
+    /* Set the parent PID in the global threads list */
+    task_t *task_arr_elem = dynarray_getelem(&tasks, base_task->tid);
+    task_arr_elem->parent_pid = pid;
+
+    dynarray_unref(&tasks, base_task->tid);
+
+    dynarray_unref(&processes, pid);
+
+    int64_t tid = base_task->tid;
+
+    /* Cleanup, since items are in the dynarray */
+    kfree(base_task);
+    kfree(process);
+
+    unlock(&scheduler_lock);
+
+    start_task(tid);
     return pid;
 }
 

@@ -7,10 +7,9 @@
 #define READY 0
 #define RUNNING 1
 #define BLOCKED 2
-#define IRQ_WAIT 3
-#define SLEEP 4
-#define RUNNING_IDLE 5
-#define READY_IDLE 6
+#define SLEEP 3
+#define RUNNING_IDLE 4
+#define READY_IDLE 5
 
 #define TASK_STACK_SIZE 0x4000
 #define VM_OFFSET 0xFFFF800000000000
@@ -34,10 +33,10 @@ typedef struct {
 
     uint8_t state; // State of the task
     uint8_t cpu; // CPU the task is running on
-    uint8_t waiting_irq; // The IRQ this task is waiting for
 
     int64_t tid; // Task ID
     int64_t parent_pid; // The pid of the parent process
+    uint8_t ring;
 } task_t;
 
 typedef struct {
@@ -66,8 +65,11 @@ void schedule_bsp(int_reg_t *r);
 void scheduler_init_bsp();
 void scheduler_init_ap();
 
-task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name);
-int new_process(void (*main)(), void *parent_addr_space_cr3, char *name);
+task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name, uint8_t ring);
+void start_task(int64_t tid);
+int64_t new_child_task(void (*main)(), void *parent_addr_space_cr3, char *name, int64_t parent_pid, uint8_t ring);
+int new_process(void (*main)(), char *name, uint64_t code_pages);
+int new_kernel_process(void (*main)(), void *parent_addr_space_cr3, char *name);
 
 
 extern uint8_t scheduler_started;

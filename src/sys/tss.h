@@ -2,7 +2,7 @@
 #define TSS_H
 #include <stdint.h>
 
-#define TSS_GDT_OFFSET 0x20
+#define TSS_GDT_OFFSET 0x30
 
 typedef struct {
     uint32_t reserved;
