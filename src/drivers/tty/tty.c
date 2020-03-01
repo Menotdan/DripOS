@@ -12,6 +12,21 @@ color_t default_fg = {248, 248, 248};
 color_t default_bg = {56, 56, 56};
 tty_t base_tty;
 
+int tty_dev_write(vfs_node_t *node, void *buf, uint64_t count) {
+    (void) node;
+    char *char_buf = kcalloc(count + 1);
+    char *input = buf;
+    for (uint64_t i = 0; i < count; i++) {
+        char_buf[i] = input[i];
+    }
+    // Last char was clear by kcalloc, so we don't need to
+
+    sprintf(char_buf);
+    kprintf(char_buf); // Output the data
+
+    return 0;
+}
+
 void tty_init(tty_t *tty, uint64_t font_width, uint64_t font_height) {
     tty->fg = default_fg;
     tty->bg = default_bg;
@@ -21,7 +36,26 @@ void tty_init(tty_t *tty, uint64_t font_width, uint64_t font_height) {
     tty->cols = vesa_display_info.width / font_width;
     tty->font = (uint8_t *) font8x8_basic;
     tty->tty_lock = 0;
+    tty->kb_in_buffer = kcalloc(4096);
+    tty->kb_in_buffer_index = 4095;
     tty_clear(tty);
+}
+
+void tty_in(char *str, tty_t *tty) {
+    /* Calculate length and new index */
+    uint64_t length = strlen(str);
+    uint64_t new_index = tty->kb_in_buffer_index - length;
+    tty->kb_in_buffer_index = new_index;
+
+    /* Copy the string */
+    for (uint64_t i = new_index; i <  new_index + length; i++) {
+        tty->kb_in_buffer[i] = str[i];
+    }
+}
+
+void tty_get_char(char *output, tty_t *tty) {
+    output[0] = tty->kb_in_buffer[tty->kb_in_buffer_index++];
+    output[1] = '\0';
 }
 
 void tty_out(char c, tty_t *tty) {

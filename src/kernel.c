@@ -27,10 +27,13 @@ void kernel_task() {
     vfs_ops_t ops = dummy_ops;
     ops.open = devfs_open;
     ops.close = devfs_close;
-    register_device("test", ops);
+    ops.write = tty_dev_write;
+    register_device("tty1", ops);
 
-    int test_dev = fd_open("/dev/test", 0);
-    fd_read(test_dev, (void *) 0xFFFF800000000000, 123);
+    int test_dev = fd_open("/dev/tty1", 0);
+    char *write = "\nHello from vfs!";
+    get_thread_locals()->errno = 0;
+    fd_write(test_dev, write, strlen(write));
     sprintf("\nErrno: %d", get_thread_locals()->errno);
     fd_close(test_dev);
 

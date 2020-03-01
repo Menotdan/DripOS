@@ -60,20 +60,20 @@ void user_task() {
 
 void main_task() {
     while (1) {
-        kprintf_at(0, 0, "TSC Idle: %lu TSC Running: %lu On CPU %u", get_cpu_locals()->idle_tsc_count, (get_cpu_locals()->total_tsc - get_cpu_locals()->idle_tsc_count), (uint32_t) get_cpu_locals()->cpu_index);
+        //kprintf_at(0, 0, "TSC Idle: %lu TSC Running: %lu On CPU %u", get_cpu_locals()->idle_tsc_count, (get_cpu_locals()->total_tsc - get_cpu_locals()->idle_tsc_count), (uint32_t) get_cpu_locals()->cpu_index);
     }
 }
 
 void second_task() {
-    uint64_t count = 0;
+    //uint64_t count = 0;
     while (1) {
-        kprintf_at(0, 1, "Counter 2: %lu on core %u", count++, (uint32_t) get_cpu_locals()->cpu_index);
+        //kprintf_at(0, 1, "Counter 2: %lu on core %u", count++, (uint32_t) get_cpu_locals()->cpu_index);
     }
 }
 
 void third_task() {
     while (1) {
-        kprintf_at(0, 2, "TSC Idle: %lu TSC Running: %lu On CPU %u", get_cpu_locals()->idle_tsc_count, (get_cpu_locals()->total_tsc - get_cpu_locals()->idle_tsc_count), (uint32_t) get_cpu_locals()->cpu_index);
+        //kprintf_at(0, 2, "TSC Idle: %lu TSC Running: %lu On CPU %u", get_cpu_locals()->idle_tsc_count, (get_cpu_locals()->total_tsc - get_cpu_locals()->idle_tsc_count), (uint32_t) get_cpu_locals()->cpu_index);
     }
 }
 

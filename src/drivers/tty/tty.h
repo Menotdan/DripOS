@@ -1,6 +1,7 @@
 #ifndef TTY_H
 #define TTY_H
 #include <stdint.h>
+#include "fs/vfs/vfs.h"
 #include "drivers/vesa.h"
 #include "klibc/lock.h"
 
@@ -13,15 +14,21 @@ typedef struct {
     color_t fg;
     color_t bg;
     lock_t tty_lock;
+
+    char *kb_in_buffer;
+    uint64_t kb_in_buffer_index;
 } tty_t;
 
 extern tty_t base_tty;
+
+int tty_dev_write(vfs_node_t *node, void *buf, uint64_t count);
 
 void tty_out(char c, tty_t *tty);
 void tty_seek(uint64_t x, uint64_t y, tty_t *tty);
 void tty_clear(tty_t *tty);
 void tty_init(tty_t *tty, uint64_t font_width, uint64_t font_height);
 void kprint(char *s);
+void kprint_locked(char *s);
 void kprintf(char *message, ...);
 void kprintf_at(uint64_t x, uint64_t y, char *msg, ...);
 
