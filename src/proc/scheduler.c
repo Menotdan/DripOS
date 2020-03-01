@@ -133,12 +133,13 @@ void scheduler_init_ap() {
 }
 
 int64_t new_thread(char *name, void (*main)(), void *new_cr3, uint64_t rsp, int64_t pid, uint8_t ring) {
-    lock(&scheduler_lock);
+    task_t *new_task = create_thread(name, main, new_cr3, rsp, ring);
+    int64_t new_tid = add_new_child_thread(new_task, pid);
+    kfree(new_task);
+    return new_tid;
+}
 
-    /* Find the parent process */
-    process_t *new_parent = dynarray_getelem(&processes, pid);
-    if (!new_parent) { return -1; }
-
+task_t *create_thread(char *name, void (*main)(), void *new_cr3, uint64_t rsp, uint8_t ring) {
     /* Allocate new task and it's kernel stack */
     task_t *new_task = kcalloc(sizeof(task_t));
     new_task->kernel_stack = (uint64_t) kcalloc(0x1000) + 0x1000;
@@ -156,19 +157,44 @@ int64_t new_thread(char *name, void (*main)(), void *new_cr3, uint64_t rsp, int6
     new_task->regs.cr3 = (uint64_t) new_cr3;
     strcpy(name, new_task->name);
 
-    /* Store the new task and save its TID */
-    int64_t new_tid = dynarray_add(&tasks, new_task, sizeof(task_t));
+    return new_task;
+}
+
+/* Add a new thread to the dynarray */
+int64_t add_new_thread(task_t *task) {
+    lock(&scheduler_lock);
+
+    int64_t new_tid = dynarray_add(&tasks, task, sizeof(task_t));
     task_t *task_item = dynarray_getelem(&tasks, new_tid);
     task_item->tid = new_tid;
+    task->tid = new_tid;
     dynarray_unref(&tasks, new_tid);
+
+    unlock(&scheduler_lock);
+    return new_tid;
+}
+
+/* Add a new thread to the dynarray and as a child of a process */
+int64_t add_new_child_thread(task_t *task, int64_t pid) {
+    lock(&scheduler_lock);
+
+    /* Find the parent process */
+    process_t *new_parent = dynarray_getelem(&processes, pid);
+    if (!new_parent) { sprintf("\n[Scheduler] Couldn't find parent"); return -1; }
+
+    /* Store the new task and save its TID */
+    int64_t new_tid = dynarray_add(&tasks, task, sizeof(task_t));
+    task_t *task_item = dynarray_getelem(&tasks, new_tid);
+    task_item->tid = new_tid;
+    task_item->parent_pid = pid;
+    dynarray_unref(&tasks, new_tid);
+    task->tid = new_tid;
+    task->parent_pid = pid;
 
     /* Add the TID to it's parent's threads list */
     dynarray_add(&new_parent->threads, &new_tid, sizeof(int64_t));
 
     unlock(&scheduler_lock);
-    /* Free old data since it's in the dynarray */
-    kfree(new_task);
-
     return new_tid;
 }
 

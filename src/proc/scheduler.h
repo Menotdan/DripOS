@@ -54,7 +54,12 @@ typedef struct {
 } process_t;
 
 typedef struct {
+    /* Do NOT remove these */
     uint64_t meta_pointer;
+    /* These are fine to move around and change types of */
+
+    int errno;
+
     int64_t tid;
     uint64_t tsc_started; // The last time this task was started
     uint64_t tsc_stopped; // The last time this task was stopped
@@ -68,6 +73,9 @@ void schedule_bsp(int_reg_t *r);
 void scheduler_init_bsp();
 void scheduler_init_ap();
 
+int64_t add_new_thread(task_t *task);
+int64_t add_new_child_thread(task_t *task, int64_t pid);
+task_t *create_thread(char *name, void (*main)(), void *new_cr3, uint64_t rsp, uint8_t ring);
 int64_t new_thread(char *name, void (*main)(), void *new_cr3, uint64_t rsp, int64_t pid, uint8_t ring);
 int64_t new_process(char *name);
 void new_kernel_process(char *name, void (*main)());

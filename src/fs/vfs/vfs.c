@@ -39,6 +39,8 @@ int dummy_write(vfs_node_t *node, void *buf, uint64_t bytes) {
 
 vfs_ops_t dummy_ops = {dummy_open, dummy_close, dummy_read, dummy_write};
 
+
+
 /* Setting up the root node */
 void vfs_init() {
     root_node = kcalloc(sizeof(vfs_node_t));
@@ -140,12 +142,16 @@ fnd:
 }
 
 void vfs_test() {
-    vfs_node_t *node1 = new_node("test", dummy_ops);
+    vfs_node_t *node1 = new_node("dev", dummy_ops);
     vfs_add_child(root_node, node1);
     vfs_node_t *node2 = new_node("test1", dummy_ops);
     vfs_add_child(node1, node2);
 
-    vfs_node_t *node2_from_array = get_node_from_path("/test/test1");
-    sprintf("\nNode: %lx", node2_from_array);
-    sprintf("\nNode name: %s", node2_from_array->name);
+    vfs_node_t *node2_from_array = get_node_from_path("/dev/test1");
+    if (node2_from_array) {
+        sprintf("\nNode: %lx", node2_from_array);
+        sprintf("\nNode name: %s", node2_from_array->name);
+    } else {
+        sprintf("\nCouldn't find node");
+    }
 }
