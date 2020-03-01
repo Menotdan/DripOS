@@ -98,14 +98,15 @@ vfs_node_t *get_node_from_path(char *path) {
 
     while (*path != '\0') {
         if (*path == '/') {
-            sprintf("\nBuffer: %s", buffer);
             for (uint64_t i = 0; i < cur_node->children_array_size; i++) {
-                if (strcmp(buffer, cur_node->children[i]->name) == 0) {
-                    // Found the next node
-                    cur_node = cur_node->children[i]; // Move to the next node
-                    buffer_index = 0; // Reset buffer index
-                    memset((uint8_t *) buffer, 0, buffer_size); // Clear the buffer
-                    goto fnd;
+                if (cur_node->children[i]) {
+                    if (strcmp(buffer, cur_node->children[i]->name) == 0) {
+                        // Found the next node
+                        cur_node = cur_node->children[i]; // Move to the next node
+                        buffer_index = 0; // Reset buffer index
+                        memset((uint8_t *) buffer, 0, buffer_size); // Clear the buffer
+                        goto fnd;
+                    }
                 }
             }
             unlock(&vfs_lock);
@@ -114,14 +115,27 @@ vfs_node_t *get_node_from_path(char *path) {
             buffer[buffer_index++] = *path; // Store the data
             if (buffer_index == buffer_size) { // If the buffer is out of bounds, resize it
                 buffer_size += 10;
-                krealloc(buffer, buffer_size);
+                buffer = krealloc(buffer, buffer_size);
             }
         }
 fnd:
         path++;
     }
 
+    if (strlen(buffer) != 0) { // If the buffer hasn't been flushed with a '/'
+        for (uint64_t i = 0; i < cur_node->children_array_size; i++) {
+            if (cur_node->children[i]) {
+                if (strcmp(buffer, cur_node->children[i]->name) == 0) {
+                    // Found the next node
+                    cur_node = cur_node->children[i]; // Move to the next node
+                    goto fnd;
+                }
+            }
+        }
+    }
+
     unlock(&vfs_lock);
+    kfree(buffer);
     return cur_node;
 }
 
@@ -131,7 +145,7 @@ void vfs_test() {
     vfs_node_t *node2 = new_node("test1", dummy_ops);
     vfs_add_child(node1, node2);
 
-    vfs_node_t *node2_from_array = get_node_from_path("/test/test1/");
+    vfs_node_t *node2_from_array = get_node_from_path("/test/test1");
     sprintf("\nNode: %lx", node2_from_array);
     sprintf("\nNode name: %s", node2_from_array->name);
 }
