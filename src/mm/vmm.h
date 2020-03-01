@@ -46,4 +46,6 @@ void vmm_set_pml4t(uint64_t new);
 void *virt_to_phys(void *virt, pt_t *p4);
 uint64_t vmm_get_pml4t();
 
+uint64_t get_entry(pt_t *cur_table, uint64_t offset);
+
 #endif
