@@ -14,6 +14,15 @@ void strcpy(char *src, char *dst) {
         *dst++ = *src++;
 }
 
+int strcmp(char *s1, char *s2) {
+    while (*s1 != '\0' && *s2 != '\0') {
+        if (*s1 != *s2) { return 1; }
+        s1++;
+        s2++;
+    }
+    return 0;
+}
+
 void reverse(char str[]) {
     uint64_t start_index = 0;
     uint64_t end_index = 0;

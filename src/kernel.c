@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "mm/pmm.h"
+#include "fs/vfs/vfs.h"
 #include "sys/apic.h"
 #include "sys/int/isr.h"
 #include "klibc/stdlib.h"
@@ -16,6 +17,16 @@
 
 #include "klibc/string.h"
 #include "sys/smp.h"
+
+void kernel_task() {
+    kprintf("\n[DripOS] Loading VFS");
+    vfs_init(); // Setup VFS
+    kprintf("\n[DripOS] VFS test");
+    vfs_test();
+
+    while (1) { asm volatile("hlt"); }
+    
+}
 
 // Kernel main function, execution starts here :D
 void kmain(multiboot_info_t *mboot_dat) {
@@ -44,6 +55,8 @@ void kmain(multiboot_info_t *mboot_dat) {
     configure_idt();
     sprintf("\n[DripOS] Setting timer speed to 1000 hz");
     set_pit_freq();
+
+    new_kernel_process("Kernel process", kernel_task);
 
     launch_cpus();
     tty_clear(&base_tty);

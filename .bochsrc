@@ -28,10 +28,6 @@ clock: sync=none, time0=local, rtc_sync=0
 # no loader
 log: -
 logprefix: %t%e%d
-panic: action=ask
-error: action=report
-info: action=report
-debug: action=report
 keyboard: type=mf, serial_delay=250, paste_delay=100000, keymap=
 mouse: enabled=0, type=ps2, toggle=ctrl+mbutton
 parport1: enabled=1, file=""
