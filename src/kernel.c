@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include "mm/pmm.h"
 #include "fs/vfs/vfs.h"
+#include "fs/devfs/devfs.h"
 #include "sys/apic.h"
 #include "sys/int/isr.h"
 #include "klibc/stdlib.h"
@@ -21,8 +22,12 @@
 void kernel_task() {
     kprintf("\n[DripOS] Loading VFS");
     vfs_init(); // Setup VFS
-    kprintf("\n[DripOS] VFS test");
-    vfs_test();
+    devfs_init();
+    vfs_ops_t ops = dummy_ops;
+    ops.open = devfs_open;
+    register_device("test", ops);
+
+    vfs_open("/dev/test", 0);
 
     while (1) { asm volatile("hlt"); }
     

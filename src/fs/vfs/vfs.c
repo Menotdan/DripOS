@@ -90,7 +90,7 @@ void vfs_init() {
 }
 
 /* Creating a new VFS node */
-vfs_node_t *new_node(char *name, vfs_ops_t ops) {
+vfs_node_t *vfs_new_node(char *name, vfs_ops_t ops) {
     /* Allocate the space for the new array */
     vfs_node_t *node = kcalloc(sizeof(vfs_node_t));
     node->children_array_size = 10;
@@ -180,19 +180,4 @@ fnd:
     unlock(&vfs_lock);
     kfree(buffer);
     return cur_node;
-}
-
-void vfs_test() {
-    vfs_node_t *node1 = new_node("dev", dummy_ops);
-    vfs_add_child(root_node, node1);
-    vfs_node_t *node2 = new_node("test1", dummy_ops);
-    vfs_add_child(node1, node2);
-
-    vfs_node_t *node2_from_array = get_node_from_path("/dev/test1");
-    if (node2_from_array) {
-        sprintf("\nNode: %lx", node2_from_array);
-        sprintf("\nNode name: %s", node2_from_array->name);
-    } else {
-        sprintf("\nCouldn't find node");
-    }
 }

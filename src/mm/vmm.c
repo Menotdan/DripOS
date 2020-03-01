@@ -84,9 +84,9 @@ void *virt_to_phys(void *virt, pt_t *p4) {
 }
 
 uint8_t is_mapped(void *data) {
-    uint64_t data = (uint64_t) virt_to_phys(data, (void *) vmm_get_pml4t());
+    uint64_t phys_addr = (uint64_t) virt_to_phys(data, (void *) vmm_get_pml4t());
 
-    if (data == 0xFFFFFFFFFFFFFFFF) {
+    if (phys_addr == 0xFFFFFFFFFFFFFFFF) {
         return 0;
     } else {
         return 1;
