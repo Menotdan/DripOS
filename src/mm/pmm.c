@@ -293,7 +293,7 @@ bitmap_index pmm_find_free(uint64_t pages) {
         uint64_t found_index_byte = 0;
         uint8_t found_index_bit = 0;
 
-        bitmap_size = pmm_get_bitmap_size(cur_map) - 8; // Minus 8 to remove the start data
+        bitmap_size = pmm_get_bitmap_size(cur_map) - SIZE_OFFSET; // Minus 8 to remove the start data
         for (uint64_t byte = 0; byte < bitmap_size; byte++) {
             for (uint8_t bit = 0; bit < 8; bit++) {
                 if (!pmm_get_bit(cur_map, bit, byte)) {
@@ -308,6 +308,8 @@ bitmap_index pmm_find_free(uint64_t pages) {
                         ret.byte = found_index_byte;
                         return ret;
                     }
+                } else {
+                    found = 0;
                 }
             }
         }
@@ -322,7 +324,6 @@ bitmap_index pmm_find_free(uint64_t pages) {
 
 void *pmm_alloc(uint64_t size) {
     lock(&pmm_spinlock);
-    //sprintf("\nAllocating %lu", size);
     uint64_t pages_needed = (size + 0x1000 - 1) / 0x1000;
     bitmap_index free_space = pmm_find_free(pages_needed);
 

@@ -57,7 +57,7 @@ uint64_t get_entry(pt_t *cur_table, uint64_t offset) {
 }
 
 pt_t *traverse_page_table(pt_t *cur_table, uint64_t offset) {
-    sprintf("\nCur table: %lx", cur_table);
+    //sprintf("\nCur table: %lx", cur_table);
     return (pt_t *) ((cur_table->table[offset] & ~(0xfff)) + NORMAL_VMA_OFFSET);
 }
 

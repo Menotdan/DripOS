@@ -26,7 +26,10 @@ typedef struct {
     char name[50]; // The name of the task
 
     task_regs_t regs; // The task's registers
-    
+
+    uint64_t kernel_stack;
+    uint64_t user_stack;
+
     uint64_t tsc_started; // The last time this task was started
     uint64_t tsc_stopped; // The last time this task was stopped
     uint64_t tsc_total; // The total time this task has been running for
@@ -65,12 +68,9 @@ void schedule_bsp(int_reg_t *r);
 void scheduler_init_bsp();
 void scheduler_init_ap();
 
-task_t *new_task(void (*main)(), void *parent_addr_space_cr3, char *name, uint8_t ring);
-void start_task(int64_t tid);
-int64_t new_child_task(void (*main)(), void *parent_addr_space_cr3, char *name, int64_t parent_pid, uint8_t ring);
-int new_process(void (*main)(), char *name, uint64_t code_pages);
-int new_kernel_process(void (*main)(), void *parent_addr_space_cr3, char *name);
-
+int64_t new_thread(char *name, void (*main)(), void *new_cr3, uint64_t rsp, int64_t pid, uint8_t ring);
+int64_t new_process(char *name);
+void new_kernel_process(char *name, void (*main)());
 
 extern uint8_t scheduler_started;
 extern uint8_t scheduler_enabled;
