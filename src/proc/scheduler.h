@@ -73,6 +73,7 @@ void schedule_bsp(int_reg_t *r);
 void scheduler_init_bsp();
 void scheduler_init_ap();
 
+thread_info_block_t *get_thread_locals();
 int64_t add_new_thread(task_t *task);
 int64_t add_new_child_thread(task_t *task, int64_t pid);
 task_t *create_thread(char *name, void (*main)(), void *new_cr3, uint64_t rsp, uint8_t ring);

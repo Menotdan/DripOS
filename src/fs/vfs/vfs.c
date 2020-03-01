@@ -1,4 +1,5 @@
 #include "vfs.h"
+#include "proc/scheduler.h"
 #include "klibc/stdlib.h"
 #include "klibc/string.h"
 #include "klibc/dynarray.h"
@@ -15,26 +16,30 @@ lock_t vfs_lock;
 int dummy_open(char *name, int mode) {
     (void) name;
     (void) mode;
-    return -ENOSYS;
+    get_thread_locals()->errno = -ENOSYS;
+    return -1;
 }
 
 int dummy_close(vfs_node_t *node) {
     (void) node;
-    return -ENOSYS;
+    get_thread_locals()->errno = -ENOSYS;
+    return -1;
 }
 
 int dummy_read(vfs_node_t *node, void *buf, uint64_t bytes) {
     (void) node;
     (void) buf;
     (void) bytes;
-    return -ENOSYS;
+    get_thread_locals()->errno = -ENOSYS;
+    return -1;
 }
 
 int dummy_write(vfs_node_t *node, void *buf, uint64_t bytes) {
     (void) node;
     (void) buf;
     (void) bytes;
-    return -ENOSYS;
+    get_thread_locals()->errno = -ENOSYS;
+    return -1;
 }
 
 vfs_ops_t dummy_ops = {dummy_open, dummy_close, dummy_read, dummy_write};

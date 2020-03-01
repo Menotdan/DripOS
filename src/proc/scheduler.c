@@ -19,6 +19,12 @@ lock_t scheduler_lock = 0;
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
 task_regs_t default_user_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x23,0x1B,0,0x202,0};
 
+thread_info_block_t *get_thread_locals() {
+    thread_info_block_t *ret;
+    asm volatile("movq %%fs:(0), %0;" : "=r"(ret));
+    return ret;
+}
+
 void send_scheduler_ipis() {
     madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
     for (uint64_t i = 0; i < cpu_vector.items_count; i++) {
@@ -155,6 +161,8 @@ task_t *create_thread(char *name, void (*main)(), void *new_cr3, uint64_t rsp, u
     new_task->regs.rsp = rsp;
     new_task->ring = ring;
     new_task->regs.cr3 = (uint64_t) new_cr3;
+    new_task->regs.fs = (uint64_t) kcalloc(sizeof(thread_info_block_t));
+    ((thread_info_block_t *) new_task->regs.fs)->meta_pointer = new_task->regs.fs;
     strcpy(name, new_task->name);
 
     return new_task;
@@ -355,6 +363,7 @@ void schedule(int_reg_t *r) {
 
     r->cs = running_task->regs.cs;
     r->ss = running_task->regs.ss;
+    write_msr(0xC0000100, running_task->regs.fs); // Set FS.base
 
     get_cpu_locals()->thread_kernel_stack = running_task->kernel_stack;
     get_cpu_locals()->thread_user_stack = running_task->user_stack;
