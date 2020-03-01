@@ -3,6 +3,7 @@
 #include "mm/pmm.h"
 #include "fs/vfs/vfs.h"
 #include "fs/devfs/devfs.h"
+#include "fs/fd.h"
 #include "sys/apic.h"
 #include "sys/int/isr.h"
 #include "klibc/stdlib.h"
@@ -25,9 +26,13 @@ void kernel_task() {
     devfs_init();
     vfs_ops_t ops = dummy_ops;
     ops.open = devfs_open;
+    ops.close = devfs_close;
     register_device("test", ops);
 
-    vfs_open("/dev/test", 0);
+    int test_dev = fd_open("/dev/test", 0);
+    fd_read(test_dev, (void *) 0xFFFF800000000000, 123);
+    sprintf("\nErrno: %d", get_thread_locals()->errno);
+    fd_close(test_dev);
 
     while (1) { asm volatile("hlt"); }
     

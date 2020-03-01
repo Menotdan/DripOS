@@ -11,7 +11,7 @@
 
 vfs_node_t *root_node;
 
-lock_t vfs_lock;
+lock_t vfs_lock = 0;
 
 /* Dummy VFS ops */
 int dummy_open(char *name, int mode) {

@@ -8,6 +8,11 @@ int devfs_open(char *name, int mode) {
     return 0;
 }
 
+int devfs_close(vfs_node_t *node) {
+    sprintf("\n[DevFS] Closing %s", node->name);
+    return 0;
+}
+
 void devfs_init() {
     /* Setup the devfs root */
     devfs_root = vfs_new_node("dev", dummy_ops);
