@@ -14,15 +14,26 @@ tty_t base_tty;
 
 int tty_dev_write(vfs_node_t *node, void *buf, uint64_t count) {
     (void) node;
-    char *char_buf = kcalloc(count + 1);
-    char *input = buf;
-    for (uint64_t i = 0; i < count; i++) {
-        char_buf[i] = input[i];
-    }
-    // Last char was clear by kcalloc, so we don't need to
+    lock(&base_tty.tty_lock);
 
-    sprintf(char_buf);
-    kprintf(char_buf); // Output the data
+    char *char_buf = buf;
+    for (uint64_t i = 0; i < count; i++) {
+        tty_out(char_buf[i], &base_tty);
+    }
+
+    flip_buffers();
+
+    unlock(&base_tty.tty_lock);
+    return 0;
+}
+
+int tty_dev_read(vfs_node_t *node, void *buf, uint64_t count) {
+    (void) node;
+
+    char *char_buf = buf;
+    for (uint64_t i = 0; i < count; i++) {
+        char_buf[i] = tty_get_char(&base_tty);
+    }
 
     return 0;
 }
@@ -37,25 +48,29 @@ void tty_init(tty_t *tty, uint64_t font_width, uint64_t font_height) {
     tty->font = (uint8_t *) font8x8_basic;
     tty->tty_lock = 0;
     tty->kb_in_buffer = kcalloc(4096);
-    tty->kb_in_buffer_index = 4095;
+    tty->kb_in_buffer_index = 0;
     tty_clear(tty);
 }
 
-void tty_in(char *str, tty_t *tty) {
-    /* Calculate length and new index */
-    uint64_t length = strlen(str);
-    uint64_t new_index = tty->kb_in_buffer_index - length;
-    tty->kb_in_buffer_index = new_index;
-
-    /* Copy the string */
-    for (uint64_t i = new_index; i <  new_index + length; i++) {
-        tty->kb_in_buffer[i] = str[i];
-    }
+void tty_in(char c, tty_t *tty) {
+    lock(&tty->tty_lock);
+    tty->kb_in_buffer[tty->kb_in_buffer_index++] = c;
+    unlock(&tty->tty_lock);
 }
 
-void tty_get_char(char *output, tty_t *tty) {
-    output[0] = tty->kb_in_buffer[tty->kb_in_buffer_index++];
-    output[1] = '\0';
+char tty_get_char(tty_t *tty) {
+    lock(&tty->tty_lock);
+    if (tty->kb_in_buffer_index == 0) {
+        unlock(&tty->tty_lock);
+        return 0; // No code
+    }
+
+    /* Grab the code and return it */
+    char ret = tty->kb_in_buffer[tty->kb_in_buffer_index - 1];
+    tty->kb_in_buffer_index--;
+
+    unlock(&tty->tty_lock);
+    return ret;
 }
 
 void tty_out(char c, tty_t *tty) {

@@ -28,12 +28,20 @@ void kernel_task() {
     ops.open = devfs_open;
     ops.close = devfs_close;
     ops.write = tty_dev_write;
+    ops.read = tty_dev_read;
     register_device("tty1", ops);
 
     int test_dev = fd_open("/dev/tty1", 0);
     char *write = "\nHello from vfs!";
+    char *read = kcalloc(10);
+    tty_in('a', &base_tty);
+    tty_in('b', &base_tty);
+    tty_in('c', &base_tty);
+    tty_in('d', &base_tty);
     get_thread_locals()->errno = 0;
     fd_write(test_dev, write, strlen(write));
+    fd_read(test_dev, read, 4);
+    kprintf("\nData read: %s", read);
     sprintf("\nErrno: %d", get_thread_locals()->errno);
     fd_close(test_dev);
 
