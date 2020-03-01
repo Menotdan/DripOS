@@ -22,5 +22,12 @@ typedef struct vfs_node {
 
 void vfs_init();
 void vfs_test();
+vfs_node_t *get_node_from_path(char *path);
+
+/* VFS ops */
+vfs_node_t *vfs_open(char *name, int mode);
+void vfs_close(vfs_node_t *node);
+void vfs_read(vfs_node_t *node, void *buf, uint64_t count);
+void vfs_write(vfs_node_t *node, void *buf, uint64_t count);
 
 #endif

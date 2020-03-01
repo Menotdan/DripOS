@@ -44,6 +44,7 @@ int vmm_unmap_pages(void *virt, void *p4, uint64_t count);
 void vmm_set_pat_pages(void *virt, void *p4, uint64_t count, uint8_t pat_entry);
 void vmm_set_pml4t(uint64_t new);
 void *virt_to_phys(void *virt, pt_t *p4);
+uint8_t is_mapped(void *data);
 uint64_t vmm_get_pml4t();
 
 uint64_t get_entry(pt_t *cur_table, uint64_t offset);

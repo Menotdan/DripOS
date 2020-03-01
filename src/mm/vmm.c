@@ -83,6 +83,16 @@ void *virt_to_phys(void *virt, pt_t *p4) {
     return (void *) 0xFFFFFFFFFFFFFFFF;
 }
 
+uint8_t is_mapped(void *data) {
+    uint64_t data = (uint64_t) virt_to_phys(data, (void *) vmm_get_pml4t());
+
+    if (data == 0xFFFFFFFFFFFFFFFF) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
 pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4) {
     pt_ptr_t ret;
     p4 = (pt_t *)((uint64_t)p4 + NORMAL_VMA_OFFSET);

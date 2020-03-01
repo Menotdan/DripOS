@@ -7,6 +7,7 @@
 #include "klibc/errno.h"
 #include "drivers/tty/tty.h"
 #include "drivers/serial.h"
+#include "mm/vmm.h"
 
 vfs_node_t *root_node;
 
@@ -44,7 +45,42 @@ int dummy_write(vfs_node_t *node, void *buf, uint64_t bytes) {
 
 vfs_ops_t dummy_ops = {dummy_open, dummy_close, dummy_read, dummy_write};
 
+/* VFS ops things */
+vfs_node_t *vfs_open(char *name, int mode) {
+    vfs_node_t *node = get_node_from_path(name);
+    if (node) {
+        /* Call the actual open ops */
+        node->ops.open(name, mode);
+    } else {
+        get_thread_locals()->errno = -ENOENT;
+    }
 
+    return node;
+}
+
+void vfs_close(vfs_node_t *node) {
+    /* If no mappings exist */
+    if (!is_mapped(node)) {
+        return;
+    }
+    node->ops.close(node);
+}
+
+void vfs_read(vfs_node_t *node, void *buf, uint64_t count) {
+    /* If no mappings exist */
+    if (!is_mapped(node) || !is_mapped(buf)) {
+        return;
+    }
+    node->ops.read(node, buf, count);
+}
+
+void vfs_write(vfs_node_t *node, void *buf, uint64_t count) {
+    /* If no mappings exist */
+    if (!is_mapped(node) || !is_mapped(buf)) {
+        return;
+    }
+    node->ops.write(node, buf, count);
+}
 
 /* Setting up the root node */
 void vfs_init() {
