@@ -55,9 +55,15 @@ void _idle() {
 }
 
 void user_task() {
-    while (1) {
-        asm volatile("nop");
-    }
+    uint64_t rax, rdi, rsi;
+    rax = 2; // Open syscall
+    char *tty1 = "/dev/tty1";
+    rdi = (uint64_t) tty1;
+    rsi = 0;
+    int64_t ret;
+    asm volatile("syscall" : "=a"(ret) : "a"(rax), "D"(rdi), "S"(rsi));
+
+    while (1) {}
 }
 
 void main_task() {
@@ -89,6 +95,7 @@ void scheduler_init_bsp() {
     write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x18 << 48));
     write_msr(0xC0000082, (uint64_t) syscall_stub); // Start execution at the syscall stub when a syscall occurs
     write_msr(0xC0000084, 0);
+    write_msr(0xC0000080, read_msr(0xC0000080) | 1); // Set the syscall enable bit
 
     new_process("Idle tasks"); // Always PID 0
     sprintf("\nCreated idle process");
@@ -137,6 +144,7 @@ void scheduler_init_ap() {
     write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x18 << 48));
     write_msr(0xC0000082, (uint64_t) syscall_stub); // Start execution at the syscall stub when a syscall occurs
     write_msr(0xC0000084, 0);
+    write_msr(0xC0000080, read_msr(0xC0000080) | 1); // Set the syscall enable bit
 
     uint64_t idle_rsp = (uint64_t) kcalloc(0x1000) + 0x1000;
     int64_t idle_tid = new_thread("idle", _idle, (void *) vmm_get_pml4t(), idle_rsp, 0, 0);

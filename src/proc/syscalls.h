@@ -7,5 +7,7 @@ typedef struct {
 } __attribute__((packed)) syscall_reg_t;
 
 void syscall_read(syscall_reg_t *r);
+void syscall_write(syscall_reg_t *r);
+void syscall_open(syscall_reg_t *r);
 
 #endif

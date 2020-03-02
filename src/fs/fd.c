@@ -9,26 +9,38 @@ lock_t fd_lock = 0;
 
 int fd_open(char *name, int mode) {
     vfs_node_t *node = vfs_open(name, mode);
+    if (!node) {
+        return -1;
+    }
     return fd_new(node);
 }
 
 int fd_close(int fd) {
     vfs_node_t *node = fd_lookup(fd);
+    if (!node) {
+        return -1;
+    }
     vfs_close(node);
     fd_remove(fd);
-    return 0;
+    return get_thread_locals()->errno;
 }
 
 int fd_read(int fd, void *buf, uint64_t count) {
     vfs_node_t *node = fd_lookup(fd);
+    if (!node) {
+        return -1;
+    }
     vfs_read(node, buf, count);
-    return 0;
+    return get_thread_locals()->errno;
 }
 
 int fd_write(int fd, void *buf, uint64_t count) {
     vfs_node_t *node = fd_lookup(fd);
+    if (!node) {
+        return -1;
+    }
     vfs_write(node, buf, count);
-    return 0;
+    return get_thread_locals()->errno;
 }
 
 int fd_new(vfs_node_t *node) {
