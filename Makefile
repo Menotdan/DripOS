@@ -69,7 +69,7 @@ debug: myos.iso
 	${CC} -Werror -Wall -Wextra -Wpedantic -O${O_LEVEL} -g -MD -c $< -o $@
 
 %.o: %.asm
-	nasm -f elf64 -o $@ $<
+	nasm -f elf64 -F dwarf -g -o $@ $<
 
 clean:
 	rm -rf *.bin *.dis *.o os-image.bin *.elf *.iso

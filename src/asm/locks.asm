@@ -16,6 +16,7 @@ spinlock_lock:
     jc spin
     ret
 spin:
+    pause
     test dword [rdi], 1 ; This will set the ZF if the bitwise and results in 0
     jnz spin ; If the lock is locked, keep spinning
     jmp spinlock_lock ; If the lock is unlocked, try to acquire it again

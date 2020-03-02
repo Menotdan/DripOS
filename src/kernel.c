@@ -46,7 +46,7 @@ void kernel_task() {
     fd_close(test_dev);
 
     while (1) { asm volatile("hlt"); }
-    
+        
 }
 
 // Kernel main function, execution starts here :D

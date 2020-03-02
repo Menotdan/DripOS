@@ -11,6 +11,8 @@
 
 #include "drivers/pit.h"
 
+extern char syscall_stub[];
+
 dynarray_t tasks;
 dynarray_t processes;
 uint8_t scheduler_enabled = 0;
@@ -83,6 +85,11 @@ void scheduler_init_bsp() {
     processes.array_size = 0;
     processes.base = 0;
 
+    write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x8 << 32));
+    write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x18 << 48));
+    write_msr(0xC0000082, (uint64_t) syscall_stub); // Start execution at the syscall stub when a syscall occurs
+    write_msr(0xC0000084, 0);
+
     new_process("Idle tasks"); // Always PID 0
     sprintf("\nCreated idle process");
 
@@ -126,6 +133,11 @@ void scheduler_init_bsp() {
 }
 
 void scheduler_init_ap() {
+    write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x8 << 32));
+    write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x18 << 48));
+    write_msr(0xC0000082, (uint64_t) syscall_stub); // Start execution at the syscall stub when a syscall occurs
+    write_msr(0xC0000084, 0);
+
     uint64_t idle_rsp = (uint64_t) kcalloc(0x1000) + 0x1000;
     int64_t idle_tid = new_thread("idle", _idle, (void *) vmm_get_pml4t(), idle_rsp, 0, 0);
     task_t *idle_task = dynarray_getelem(&tasks, idle_tid);
