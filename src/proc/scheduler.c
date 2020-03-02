@@ -97,7 +97,7 @@ void scheduler_init_bsp() {
     write_msr(0xC0000084, 0);
     write_msr(0xC0000080, read_msr(0xC0000080) | 1); // Set the syscall enable bit
 
-    new_process("Idle tasks"); // Always PID 0
+    new_process("Idle tasks", (void *) base_kernel_cr3); // Always PID 0
     sprintf("\nCreated idle process");
 
     new_kernel_process("First task", main_task);
@@ -107,7 +107,7 @@ void scheduler_init_bsp() {
     /* Setup the idle task */
 
     uint64_t idle_rsp = (uint64_t) kcalloc(0x1000) + 0x1000;
-    int64_t idle_tid = new_thread("idle", _idle, (void *) vmm_get_pml4t(), idle_rsp, 0, 0);
+    int64_t idle_tid = new_thread("idle", _idle, idle_rsp, 0, 0);
     task_t *idle_task = dynarray_getelem(&tasks, idle_tid);
 
     idle_task->state = BLOCKED;
@@ -147,7 +147,7 @@ void scheduler_init_ap() {
     write_msr(0xC0000080, read_msr(0xC0000080) | 1); // Set the syscall enable bit
 
     uint64_t idle_rsp = (uint64_t) kcalloc(0x1000) + 0x1000;
-    int64_t idle_tid = new_thread("idle", _idle, (void *) vmm_get_pml4t(), idle_rsp, 0, 0);
+    int64_t idle_tid = new_thread("idle", _idle, idle_rsp, 0, 0);
     task_t *idle_task = dynarray_getelem(&tasks, idle_tid);
 
     idle_task->state = BLOCKED;
@@ -158,14 +158,14 @@ void scheduler_init_ap() {
     sprintf("\nIdle task: %ld", get_cpu_locals()->idle_tid);
 }
 
-int64_t new_thread(char *name, void (*main)(), void *new_cr3, uint64_t rsp, int64_t pid, uint8_t ring) {
-    task_t *new_task = create_thread(name, main, new_cr3, rsp, ring);
+int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_t ring) {
+    task_t *new_task = create_thread(name, main, rsp, ring);
     int64_t new_tid = add_new_child_thread(new_task, pid);
     kfree(new_task);
     return new_tid;
 }
 
-task_t *create_thread(char *name, void (*main)(), void *new_cr3, uint64_t rsp, uint8_t ring) {
+task_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) {
     /* Allocate new task and it's kernel stack */
     task_t *new_task = kcalloc(sizeof(task_t));
     new_task->kernel_stack = (uint64_t) kcalloc(0x1000) + 0x1000;
@@ -180,7 +180,7 @@ task_t *create_thread(char *name, void (*main)(), void *new_cr3, uint64_t rsp, u
     new_task->regs.rip = (uint64_t) main;
     new_task->regs.rsp = rsp;
     new_task->ring = ring;
-    new_task->regs.cr3 = (uint64_t) new_cr3;
+    new_task->regs.cr3 = base_kernel_cr3;
     new_task->regs.fs = (uint64_t) kcalloc(sizeof(thread_info_block_t));
     ((thread_info_block_t *) new_task->regs.fs)->meta_pointer = new_task->regs.fs;
     strcpy(name, new_task->name);
@@ -214,6 +214,7 @@ int64_t add_new_child_thread(task_t *task, int64_t pid) {
     int64_t new_tid = dynarray_add(&tasks, task, sizeof(task_t));
     task_t *task_item = dynarray_getelem(&tasks, new_tid);
     task_item->tid = new_tid;
+    task_item->regs.cr3 = new_parent->cr3; // Inherit parent's cr3
     task_item->parent_pid = pid;
     dynarray_unref(&tasks, new_tid);
     task->tid = new_tid;
@@ -226,11 +227,13 @@ int64_t add_new_child_thread(task_t *task, int64_t pid) {
     return new_tid;
 }
 
-int64_t new_process(char *name) {
+int64_t new_process(char *name, void *new_cr3) {
     lock(&scheduler_lock);
 
     /* Allocate new process */
     process_t *new_process = kcalloc(sizeof(process_t));
+    /* New cr3 */
+    new_process->cr3 = (uint64_t) new_cr3;
     /* Default UID and GID */
     new_process->uid = 0;
     new_process->gid = 0;
@@ -249,9 +252,9 @@ int64_t new_process(char *name) {
 }
 
 void new_kernel_process(char *name, void (*main)()) {
-    int64_t task_parent_pid = new_process(name);
+    int64_t task_parent_pid = new_process(name, (void *) base_kernel_cr3);
     uint64_t new_rsp = (uint64_t) kcalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE;
-    new_thread(name, main, (void *) vmm_get_pml4t(), new_rsp, task_parent_pid, 0);
+    new_thread(name, main, new_rsp, task_parent_pid, 0);
 }
 
 int64_t pick_task() {

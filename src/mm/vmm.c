@@ -263,6 +263,37 @@ void vmm_set_pat_pages(void *virt, void *p4, uint64_t count, uint8_t pat_entry) 
     unlock(&vmm_spinlock);
 }
 
+void *vmm_fork_higher_half(void *old) {
+    pt_t *old_p4 = (pt_t *) old;
+    pt_t *new_p4 = (pt_t *) ((uint64_t) pmm_alloc(0x1000) + NORMAL_VMA_OFFSET);
+
+    for (uint16_t i = 256; i < 512; i++) {
+        new_p4->table[i] = old_p4->table[i];
+    }
+
+    return (void *) new_p4;
+}
+
+void *vmm_fork_lower_half(void *old) {
+    pt_t *old_p4 = (pt_t *) old;
+    pt_t *new_p4 = (pt_t *) ((uint64_t) pmm_alloc(0x1000) + NORMAL_VMA_OFFSET);
+
+    for (uint16_t i = 0; i < 256; i++) {
+        new_p4->table[i] = old_p4->table[i];
+    }
+    return (void *) new_p4;
+}
+
+void *vmm_fork(void *old) {
+    pt_t *old_p4 = (pt_t *) old;
+    pt_t *new_p4 = (pt_t *) ((uint64_t) pmm_alloc(0x1000) + NORMAL_VMA_OFFSET);
+
+    for (uint16_t i = 0; i < 512; i++) {
+        new_p4->table[i] = old_p4->table[i];
+    }
+    return (void *) new_p4;
+}
+
 int vmm_map(void *phys, void *virt, uint64_t count, uint16_t perms) {
     return vmm_map_pages(phys, virt, (void *) vmm_get_pml4t(), count, perms);
 }
