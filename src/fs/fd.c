@@ -3,6 +3,8 @@
 #include "klibc/stdlib.h"
 #include "proc/scheduler.h"
 
+#include "drivers/serial.h"
+
 vfs_node_t **fd_table;
 int fd_table_size = 0;
 lock_t fd_lock = 0;
@@ -39,7 +41,9 @@ int fd_write(int fd, void *buf, uint64_t count) {
     if (!node) {
         return -1;
     }
+    sprintf("\nPerforming a write");
     vfs_write(node, buf, count);
+    sprintf("\nDone");
     return get_thread_locals()->errno;
 }
 

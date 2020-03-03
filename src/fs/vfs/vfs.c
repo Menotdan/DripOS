@@ -79,6 +79,7 @@ void vfs_write(vfs_node_t *node, void *buf, uint64_t count) {
     if (!is_mapped(node) || !is_mapped(buf)) {
         return;
     }
+    sprintf("\nRunning node ops");
     node->ops.write(node, buf, count);
 }
 

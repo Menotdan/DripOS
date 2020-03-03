@@ -55,34 +55,43 @@ void _idle() {
 }
 
 void user_task() {
-    uint64_t rax, rdi, rsi;
-    rax = 2; // Open syscall
-    char *tty1 = "/dev/tty1";
-    rdi = (uint64_t) tty1;
-    rsi = 0;
-    int64_t ret;
-    asm volatile("syscall" : "=a"(ret) : "a"(rax), "D"(rdi), "S"(rsi));
-
-    while (1) {}
+    //asm volatile("syscall");
+    while (1) { sprintf("\nTask worked!"); }
 }
 
 void main_task() {
     while (1) {
-        //kprintf_at(0, 0, "TSC Idle: %lu TSC Running: %lu On CPU %u", get_cpu_locals()->idle_tsc_count, (get_cpu_locals()->total_tsc - get_cpu_locals()->idle_tsc_count), (uint32_t) get_cpu_locals()->cpu_index);
+        //sprintf("\nTSC Idle: %lu TSC Running: %lu On CPU %u", get_cpu_locals()->idle_tsc_count, (get_cpu_locals()->total_tsc - get_cpu_locals()->idle_tsc_count), (uint32_t) get_cpu_locals()->cpu_index);
     }
 }
 
 void second_task() {
     //uint64_t count = 0;
     while (1) {
-        //kprintf_at(0, 1, "Counter 2: %lu on core %u", count++, (uint32_t) get_cpu_locals()->cpu_index);
+        //sprintf("\nCounter 2: %lu on core %u", count++, (uint32_t) get_cpu_locals()->cpu_index);
     }
 }
 
 void third_task() {
     while (1) {
-        //kprintf_at(0, 2, "TSC Idle: %lu TSC Running: %lu On CPU %u", get_cpu_locals()->idle_tsc_count, (get_cpu_locals()->total_tsc - get_cpu_locals()->idle_tsc_count), (uint32_t) get_cpu_locals()->cpu_index);
+        //sprintf("\nTSC Idle: %lu TSC Running: %lu On CPU %u", get_cpu_locals()->idle_tsc_count, (get_cpu_locals()->total_tsc - get_cpu_locals()->idle_tsc_count), (uint32_t) get_cpu_locals()->cpu_index);
     }
+}
+
+void start_test_user_task() {
+    void *new_cr3 = vmm_fork_higher_half((void *) (vmm_get_pml4t() + NORMAL_VMA_OFFSET));
+    int64_t pid = new_process("User process", new_cr3);
+    void *phys = virt_to_phys(user_task, (pt_t *) vmm_get_pml4t());
+    /* Map code and stack */
+    void *stack_bot = kcalloc(TASK_STACK_SIZE);
+    void *stack_virt = (void *) (0x7FFFFFFFF000 - TASK_STACK_SIZE);
+    void *stack_phys = virt_to_phys(stack_bot, (pt_t *) vmm_get_pml4t());
+
+    vmm_map_pages(phys, phys, new_cr3, 30, VMM_PRESENT | VMM_WRITE | VMM_USER);
+    vmm_map_pages(stack_phys, stack_virt, new_cr3, TASK_STACK_PAGES, VMM_PRESENT | VMM_WRITE | VMM_USER);
+    task_t *new_task = create_thread("User thread", phys, 0x7FFFFFFFF000, 3);
+    new_task->state = READY;
+    sprintf("\nNew task TID %ld", add_new_child_thread(new_task, pid));
 }
 
 void scheduler_init_bsp() {
@@ -91,6 +100,7 @@ void scheduler_init_bsp() {
     processes.array_size = 0;
     processes.base = 0;
 
+    /* Setup syscall MSRs for this CPU */
     write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x8 << 32));
     write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x18 << 48));
     write_msr(0xC0000082, (uint64_t) syscall_stub); // Start execution at the syscall stub when a syscall occurs
@@ -103,6 +113,8 @@ void scheduler_init_bsp() {
     new_kernel_process("First task", main_task);
     new_kernel_process("Second task", second_task);
     new_kernel_process("Third task", third_task);
+
+    prin_vmm = 1;
 
     /* Setup the idle task */
 
@@ -140,12 +152,14 @@ void scheduler_init_bsp() {
 }
 
 void scheduler_init_ap() {
+    /* Setup syscall MSRs for this CPU */
     write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x8 << 32));
     write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x18 << 48));
     write_msr(0xC0000082, (uint64_t) syscall_stub); // Start execution at the syscall stub when a syscall occurs
     write_msr(0xC0000084, 0);
     write_msr(0xC0000080, read_msr(0xC0000080) | 1); // Set the syscall enable bit
 
+    /* Create idle task */
     uint64_t idle_rsp = (uint64_t) kcalloc(0x1000) + 0x1000;
     int64_t idle_tid = new_thread("idle", _idle, idle_rsp, 0, 0);
     task_t *idle_task = dynarray_getelem(&tasks, idle_tid);
@@ -158,6 +172,7 @@ void scheduler_init_ap() {
     sprintf("\nIdle task: %ld", get_cpu_locals()->idle_tid);
 }
 
+/* Create a new thread *and* add it to the dynarray */
 int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_t ring) {
     task_t *new_task = create_thread(name, main, rsp, ring);
     int64_t new_tid = add_new_child_thread(new_task, pid);
@@ -165,6 +180,7 @@ int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_
     return new_tid;
 }
 
+/* Allocate data for a new thread data block and return it */
 task_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) {
     /* Allocate new task and it's kernel stack */
     task_t *new_task = kcalloc(sizeof(task_t));
@@ -183,6 +199,7 @@ task_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) {
     new_task->regs.cr3 = base_kernel_cr3;
     new_task->regs.fs = (uint64_t) kcalloc(sizeof(thread_info_block_t));
     ((thread_info_block_t *) new_task->regs.fs)->meta_pointer = new_task->regs.fs;
+    new_task->state = READY;
     strcpy(name, new_task->name);
 
     return new_task;
@@ -227,6 +244,7 @@ int64_t add_new_child_thread(task_t *task, int64_t pid) {
     return new_tid;
 }
 
+/* Allocate new data for a process, then return the new PID */
 int64_t new_process(char *name, void *new_cr3) {
     lock(&scheduler_lock);
 
@@ -249,6 +267,36 @@ int64_t new_process(char *name, void *new_cr3) {
     /* Free the old data since it's in the dynarray */
     kfree(new_process);
     return pid;
+}
+
+void new_user_process(char *name, void (*virt_main)(), void (*phys_main)(), uint64_t code_size) {
+    /* Fork the kernel's address space */
+    sprintf("\nForked cr3");
+    void *new_cr3 = vmm_fork_higher_half((void *) (base_kernel_cr3 + NORMAL_VMA_OFFSET));
+
+    /* Allocate stack */
+    void *stack_virt_bot = (void *) (0x7FFFFFFFF000 - TASK_STACK_SIZE);
+    void *stack_alloc_bot = kmalloc(TASK_STACK_SIZE);
+    void *stack_phys_bot = virt_to_phys(stack_alloc_bot, (void *) vmm_get_pml4t());
+
+    sprintf("\nMapping stack");
+    /* Map the stack */
+    vmm_map_pages(stack_phys_bot, stack_virt_bot, new_cr3, TASK_STACK_PAGES, 
+        VMM_PRESENT | VMM_WRITE | VMM_USER);
+
+    sprintf("\nMapping code\nCR3: %lx\nPhys main: %lx\nVirt main: %lx", new_cr3, phys_main, virt_main);
+    /* Map the code */
+    prin_vmm = 1;
+    vmm_map_pages(phys_main, virt_main, new_cr3, (code_size + 0x1000 - 1) / 0x1000, 
+        VMM_PRESENT | VMM_WRITE | VMM_USER);
+
+    sprintf("\nAdding new task stuff");
+    /* Create new task and new process, and add the task to the process's children */
+    int64_t new_pid = new_process(name, new_cr3);
+    task_t *new_thread_for_process = create_thread(name, virt_main, 0x7FFFFFFFF000, 3);
+    add_new_child_thread(new_thread_for_process, new_pid);
+    /* Free the old thread data since it's in the dynarray */
+    kfree(new_thread_for_process);
 }
 
 void new_kernel_process(char *name, void (*main)()) {
@@ -350,6 +398,7 @@ void schedule(int_reg_t *r) {
     }
 
     int64_t tid_run = pick_task();
+    sprintf("\nTID: %ld", tid_run);
 
     if (tid_run == -1) {
         /* Idle */

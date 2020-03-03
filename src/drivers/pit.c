@@ -12,7 +12,7 @@ void timer_handler(int_reg_t *r) {
     if (global_ticks % 8 == 0 && scheduler_enabled) {
         schedule_bsp(r);
     }
-    UNUSED(r);
+    sprintf("\nDone");
 }
 
 void set_pit_freq() {

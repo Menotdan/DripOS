@@ -24,6 +24,7 @@ void kernel_task() {
     kprintf("\n[DripOS] Loading VFS");
     vfs_init(); // Setup VFS
     devfs_init();
+    kprintf("\n[DripOS] Loaded VFS");
     vfs_ops_t ops = dummy_ops;
     ops.open = devfs_open;
     ops.close = devfs_close;
@@ -39,11 +40,14 @@ void kernel_task() {
     tty_in('c', &base_tty);
     tty_in('d', &base_tty);
     get_thread_locals()->errno = 0;
+    kprintf("\nDoing write");
     fd_write(test_dev, write, strlen(write));
     fd_read(test_dev, read, 4);
     kprintf("\nData read: %s", read);
     sprintf("\nErrno: %d", get_thread_locals()->errno);
     fd_close(test_dev);
+
+    start_test_user_task();
 
     while (1) { asm volatile("hlt"); }
         
@@ -76,6 +80,7 @@ void kmain(multiboot_info_t *mboot_dat) {
     configure_idt();
     sprintf("\n[DripOS] Setting timer speed to 1000 hz");
     set_pit_freq();
+
 
     new_kernel_process("Kernel process", kernel_task);
 

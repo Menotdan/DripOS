@@ -22,22 +22,14 @@ void init_vesa(multiboot_info_t *mb) {
     vesa_display_info.blue_shift = mb->framebuffer_blue_field_position;
     /* Framebuffer address */
     vesa_display_info.framebuffer = (uint32_t *) kcalloc(vesa_display_info.framebuffer_size);
-    vesa_display_info.actual_framebuffer = (uint32_t *) mb->framebuffer_addr;
+    vesa_display_info.actual_framebuffer = (uint32_t *) (mb->framebuffer_addr + NORMAL_VMA_OFFSET);
 
     /* Map the real framebuffer and as write combining */
-    vmm_map((void *) mb->framebuffer_addr, (void *) mb->framebuffer_addr, 
+    vmm_map((void *) mb->framebuffer_addr, (void *) (mb->framebuffer_addr + NORMAL_VMA_OFFSET), 
         (vesa_display_info.framebuffer_size + 0x1000 - 1) / 0x1000, 
         VMM_PRESENT | VMM_WRITE);
-    vmm_set_pat((void *) mb->framebuffer_addr, (vesa_display_info.framebuffer_size + 0x1000 - 1) / 0x1000, 1);
-    
-    /* Map the double buffer and as write combining */
-    void *phys_double_buffer = virt_to_phys(vesa_display_info.framebuffer, (pt_t *) vmm_get_pml4t());
-
-    vmm_map(phys_double_buffer, phys_double_buffer, 
-        (vesa_display_info.framebuffer_size + 0x1000 - 1) / 0x1000, 
-        VMM_PRESENT | VMM_WRITE | VMM_USER);
-
-    vesa_display_info.framebuffer = (uint32_t *) phys_double_buffer;
+    vmm_set_pat((void *) (mb->framebuffer_addr + NORMAL_VMA_OFFSET), 
+        (vesa_display_info.framebuffer_size + 0x1000 - 1) / 0x1000, 1);
 
     sprintf("\n[VESA] Loaded a %lu x %lu display", vesa_display_info.width, vesa_display_info.height);
 }

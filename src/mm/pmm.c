@@ -270,7 +270,11 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
         }
         current += sizeof(multiboot_memory_map_t);
     }
-    vmm_unmap((void *) 0, 1);
+    pt_t *p4_cur = (pt_t *) (vmm_get_pml4t() + NORMAL_VMA_OFFSET);
+    for (uint64_t i = 0; i < 256; i++) {
+        p4_cur->table[i] = 0; // Clear lower half mappings
+    }
+    vmm_set_pml4t(vmm_get_pml4t());
 
     /* Remap kernel as nonwriteable */
     uint64_t kernel_code_phys = (uint64_t) __kernel_code_start - KERNEL_VMA_OFFSET;

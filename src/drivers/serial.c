@@ -3,6 +3,7 @@
 #include "io/ports.h"
 #include "klibc/string.h"
 #include "klibc/lock.h"
+#include "klibc/stdlib.h"
 
 lock_t serial_print_lock = 0;
 
@@ -46,7 +47,7 @@ void sprint(char *s) {
 
 void sprintf(char *message, ...) {
 #ifdef DEBUG
-    lock(&serial_print_lock);
+    //lock(&serial_print_lock);
     va_list format_list;
     uint64_t index = 0;
     uint8_t big = 0;
@@ -117,7 +118,8 @@ void sprintf(char *message, ...) {
     }
 
     va_end(format_list);
-    unlock(&serial_print_lock);
+    //unlock(&serial_print_lock);
+    //yield();
 #else
     (void) message;
 #endif

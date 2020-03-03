@@ -1,12 +1,15 @@
 #include "syscalls.h"
 #include "fs/fd.h"
 
+#include "drivers/serial.h"
+
 #define HANDLER_COUNT 1
 typedef void (*syscall_handler_t)(syscall_reg_t *r);
 
 syscall_handler_t syscall_handlers[] = {syscall_read, syscall_write, syscall_open};
 
 void syscall_handler(syscall_reg_t *r) {
+    sprintf("\nGot syscall with rax = %lx", r->rax);
     if (r->rax < HANDLER_COUNT) {
         syscall_handlers[r->rax](r);
     }

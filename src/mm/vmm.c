@@ -57,7 +57,6 @@ uint64_t get_entry(pt_t *cur_table, uint64_t offset) {
 }
 
 pt_t *traverse_page_table(pt_t *cur_table, uint64_t offset) {
-    //sprintf("\nCur table: %lx", cur_table);
     return (pt_t *) ((cur_table->table[offset] & ~(0xfff)) + NORMAL_VMA_OFFSET);
 }
 
@@ -83,68 +82,73 @@ void *virt_to_phys(void *virt, pt_t *p4) {
     return (void *) 0xFFFFFFFFFFFFFFFF;
 }
 
+int prin_vmm = 0;
+
+void vmm_ensure_table(pt_t *table, uint16_t offset) {
+    if (!(table->table[offset] & VMM_PRESENT)) {
+        uint64_t new_table = (uint64_t) pmm_alloc(0x1000);
+        memset((uint8_t *) (new_table + NORMAL_VMA_OFFSET), 0, 0x1000);
+        table->table[offset] = new_table | VMM_PRESENT | VMM_WRITE | VMM_USER;
+    }
+}
+
+void vmm_remap_to_4k(pt_t *p2, uint16_t offset) {
+    uint64_t new_pml1 = (uint64_t) pmm_alloc(0x1000);
+    uint64_t *new_pml1_virt = (void *) (new_pml1 + NORMAL_VMA_OFFSET);
+
+    uint64_t represented_range = p2->table[offset] & ~(0x1FFFFF);
+    uint64_t perms = p2->table[offset] & 0xfff;
+    memset((uint8_t *) new_pml1_virt, 0, 0x1000); // Touch the address there in case our data is living there
+
+    uint64_t cur_pos = represented_range;
+    for (uint64_t i = 0; i < 512; i++) {
+        new_pml1_virt[i] = cur_pos | perms;
+        cur_pos += 0x1000;
+    }
+
+    p2->table[offset] = new_pml1 | VMM_PRESENT | VMM_WRITE | VMM_USER;
+    vmm_invlpg(represented_range); // Invalidate any previous mappings
+}
+
 uint8_t is_mapped(void *data) {
+    lock(&vmm_spinlock);
     uint64_t phys_addr = (uint64_t) virt_to_phys(data, (void *) vmm_get_pml4t());
 
     if (phys_addr == 0xFFFFFFFFFFFFFFFF) {
+        unlock(&vmm_spinlock);
         return 0;
     } else {
+        unlock(&vmm_spinlock);
         return 1;
     }
 }
 
+/* TODO: Sync page tables for any CPUs running with the same CR3 */
 pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4) {
     pt_ptr_t ret;
-    p4 = (pt_t *)((uint64_t)p4 + NORMAL_VMA_OFFSET);
-    // Is the p3 present?
-    if (p4->table[offs->p4_off] & VMM_PRESENT) {
-        ret.p3 = (pt_t *)((p4->table[offs->p4_off] & ~(0xfff)) + NORMAL_VMA_OFFSET);
-    } else {
-        size_t pmm_ret = (size_t)pmm_alloc(0x1000);
-        ret.p3 = (pt_t *) ((pmm_ret + NORMAL_VMA_OFFSET));
-        p4->table[offs->p4_off] = ((uint64_t)ret.p3 - NORMAL_VMA_OFFSET) | VMM_WRITE | VMM_PRESENT | VMM_USER;
-        // Store the new entry in the table, as W/S/P (Writeable, supervisor, present)
-        memset((uint8_t *)ret.p3, 0, 0x1000); // Clear the table
-        vmm_invlpg((uint64_t)vmm_offs_to_virt(*offs));
+    p4 = (pt_t *) ((uint64_t) p4 + NORMAL_VMA_OFFSET);
+
+    vmm_ensure_table(p4, offs->p4_off);
+    pt_t *p3 = traverse_page_table(p4, offs->p4_off);
+    ret.p3 = p3;
+
+    vmm_ensure_table(p3, offs->p3_off);
+    pt_t *p2 = traverse_page_table(p3, offs->p3_off);
+    ret.p2 = p2;
+    
+    uint64_t p2_entry = get_entry(p2, offs->p2_off);
+    if (!(p2_entry & VMM_HUGE) && p2_entry & VMM_PRESENT) {
+        ret.p1 = traverse_page_table(p2, offs->p2_off);
+        return ret;
     }
 
-    // Is the p2 present?
-    if (ret.p3->table[offs->p3_off] & VMM_PRESENT) {
-        ret.p2 = (pt_t *)((ret.p3->table[offs->p3_off] & ~(0xfff)) + NORMAL_VMA_OFFSET);
-    } else {
-        ret.p2 = (pt_t *)(((size_t)pmm_alloc(0x1000)) + NORMAL_VMA_OFFSET);
-        ret.p3->table[offs->p3_off] = ((uint64_t)ret.p2 - NORMAL_VMA_OFFSET) | VMM_WRITE | VMM_PRESENT | VMM_USER;
-        // Store the new entry in the table, as W/S/P (Writeable, supervisor, present)
-        memset((uint8_t *)ret.p2, 0, 0x1000); // Clear the table
-        vmm_invlpg((uint64_t)vmm_offs_to_virt(*offs));
+    if (p2_entry & VMM_HUGE && p2_entry & VMM_PRESENT) {
+        /* Remap to 4 Kib pages */
+        vmm_remap_to_4k(p2, offs->p2_off);
     }
 
-    // Is the p1 present and not huge?
-    if ((ret.p2->table[offs->p2_off] & VMM_PRESENT) && !((ret.p2->table[offs->p2_off] & VMM_HUGE))) {
-        ret.p1 = (pt_t *)((ret.p2->table[offs->p2_off] & ~(0xfff)) + NORMAL_VMA_OFFSET);
-    } else {
-        uint64_t old_p2 = ret.p2->table[offs->p2_off] & ~(0xfff);
-        old_p2 &= ~(VMM_HUGE); // Remove the huge flag
-        uint8_t is_huge = 0;
-
-        if ((ret.p2->table[offs->p2_off] & VMM_HUGE)) {
-            is_huge = 1;
-        }
-
-        ret.p1 = (pt_t *)(((size_t)pmm_alloc(0x1000)) + NORMAL_VMA_OFFSET);
-        memset((uint8_t *)ret.p1, 0, 0x1000); // Clear the table
-        // Map the old mappings but in 4 KiB if the table is huge, and invalidate the old
-        // table.
-        if (is_huge) {
-            for (uint16_t i = 0; i < 512; i++) {
-                ret.p1->table[i] = (old_p2 + (i * 0x1000)) |
-                    (ret.p2->table[offs->p2_off] & 0xfff & ~(VMM_HUGE));
-                vmm_invlpg(((uint64_t)vmm_offs_to_virt(*offs)) + (i * 0x1000));
-            }
-        }
-        // Store the new entry in the table
-        ret.p2->table[offs->p2_off] = ((uint64_t)ret.p1 - NORMAL_VMA_OFFSET) | VMM_WRITE | VMM_PRESENT | VMM_USER;
-    }
+    vmm_ensure_table(p2, offs->p2_off); // If the table didn't get remapped, ensure there is a table
+    ret.p1 = traverse_page_table(p2, offs->p2_off);
 
     return ret;
 }
@@ -156,8 +160,6 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
 
     uint8_t *cur_virt = (uint8_t *) (((uint64_t) virt) & ~(0xfff));
     uint64_t cur_phys = ((uint64_t) phys) & ~(0xfff);
-
-    //kprintf("\nNew mapping: Virt: %lx Phys: %lx\nPage count: %lu Perms: %x", cur_virt, cur_phys, count, (uint32_t) perms);
 
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
@@ -176,7 +178,6 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
         }
         vmm_invlpg((uint64_t) cur_virt - 0x1000);
     }
-    //kprintf("\nMapping done");
     unlock(&vmm_spinlock);
     return ret;
 }
@@ -265,33 +266,42 @@ void vmm_set_pat_pages(void *virt, void *p4, uint64_t count, uint8_t pat_entry) 
 
 void *vmm_fork_higher_half(void *old) {
     pt_t *old_p4 = (pt_t *) old;
-    pt_t *new_p4 = (pt_t *) ((uint64_t) pmm_alloc(0x1000) + NORMAL_VMA_OFFSET);
+    void *ret = pmm_alloc(0x1000);
+    pt_t *new_p4 = (pt_t *) ((uint64_t) ret + NORMAL_VMA_OFFSET);
+    
+    memset((uint8_t *) new_p4, 0, 0x1000);
 
     for (uint16_t i = 256; i < 512; i++) {
         new_p4->table[i] = old_p4->table[i];
     }
 
-    return (void *) new_p4;
+    return ret;
 }
 
 void *vmm_fork_lower_half(void *old) {
     pt_t *old_p4 = (pt_t *) old;
-    pt_t *new_p4 = (pt_t *) ((uint64_t) pmm_alloc(0x1000) + NORMAL_VMA_OFFSET);
+    void *ret = pmm_alloc(0x1000);
+    pt_t *new_p4 = (pt_t *) ((uint64_t) ret + NORMAL_VMA_OFFSET);
+
+    memset((uint8_t *) new_p4, 0, 0x1000);
 
     for (uint16_t i = 0; i < 256; i++) {
         new_p4->table[i] = old_p4->table[i];
     }
-    return (void *) new_p4;
+    return ret;
 }
 
 void *vmm_fork(void *old) {
     pt_t *old_p4 = (pt_t *) old;
-    pt_t *new_p4 = (pt_t *) ((uint64_t) pmm_alloc(0x1000) + NORMAL_VMA_OFFSET);
+    void *ret = pmm_alloc(0x1000);
+    pt_t *new_p4 = (pt_t *) ((uint64_t) ret + NORMAL_VMA_OFFSET);
+
+    memset((uint8_t *) new_p4, 0, 0x1000);
 
     for (uint16_t i = 0; i < 512; i++) {
         new_p4->table[i] = old_p4->table[i];
     }
-    return (void *) new_p4;
+    return ret;
 }
 
 int vmm_map(void *phys, void *virt, uint64_t count, uint16_t perms) {
