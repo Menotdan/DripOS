@@ -30,7 +30,6 @@ void isr_handler(int_reg_t *r) {
     /* If the int number is in range */
     if (r->int_num < IDT_ENTRIES) {
         if (r->int_num < 32) {
-            //uint64_t previous_cr3 = vmm_get_pml4t() + NORMAL_VMA_OFFSET;
             vmm_set_pml4t(base_kernel_cr3); // Use base kernel CR3 in case the alternate CR3 is corrupted
             /* Exception */
             send_panic_ipis(); // Halt all other CPUs
@@ -42,17 +41,17 @@ void isr_handler(int_reg_t *r) {
             unlock(&vesa_lock);
 
             if (scheduler_enabled) {
-                kprintf("\nException on core %u with apic id %u! (cur task %s with TID %ld)", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid);
+                sprintf("\nException on core %u with apic id %u! (cur task %s with TID %ld)", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid);
             } else {
-                kprintf("\nException on core %u with apic id %u!", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id);
+                sprintf("\nException on core %u with apic id %u!", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id);
             }
-            kprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2);
+            sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx CS: %lx\nSS: %lx RFLAGS: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2, r->cs, r->ss, r->rflags);
             if (r->int_num == 14) {
-                kprintf("\nERR Code: ");
-                if (r->int_err & (1<<0)) { kprintf("P "); } else { kprintf("NP "); }
-                if (r->int_err & (1<<1)) { kprintf("W "); } else { kprintf("R "); }
-                if (r->int_err & (1<<2)) { kprintf("U "); } else { kprintf("S "); }
-                if (r->int_err & (1<<3)) { kprintf("RES "); }
+                sprintf("\nERR Code: ");
+                if (r->int_err & (1<<0)) { sprintf("P "); } else { sprintf("NP "); }
+                if (r->int_err & (1<<1)) { sprintf("W "); } else { sprintf("R "); }
+                if (r->int_err & (1<<2)) { sprintf("U "); } else { sprintf("S "); }
+                if (r->int_err & (1<<3)) { sprintf("RES "); }
             }
 
             while (1) { asm volatile("hlt"); }
@@ -72,6 +71,7 @@ void isr_handler(int_reg_t *r) {
 
     // If we make it here, send an EOI to our LAPIC
     write_lapic(0xB0, 0);
+    //sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CS: %lx SS: %lx\nRFLAGS: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, r->cs, r->ss, r->rflags);
 }
 
 void isr_panic_idle() {

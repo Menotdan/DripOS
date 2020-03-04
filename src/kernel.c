@@ -49,6 +49,8 @@ void kernel_task() {
 
     start_test_user_task();
 
+    sprintf("\ndone kernel work");
+
     while (1) { asm volatile("hlt"); }
         
 }

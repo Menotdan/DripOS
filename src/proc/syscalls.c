@@ -3,7 +3,7 @@
 
 #include "drivers/serial.h"
 
-#define HANDLER_COUNT 1
+#define HANDLER_COUNT 3
 typedef void (*syscall_handler_t)(syscall_reg_t *r);
 
 syscall_handler_t syscall_handlers[] = {syscall_read, syscall_write, syscall_open};

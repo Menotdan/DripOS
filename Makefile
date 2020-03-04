@@ -50,7 +50,7 @@ run-kvm: myos.iso
 
 # Open the connection to qemu and load our kernel-object file with symbols
 debug: myos.iso
-	qemu-system-x86_64 -smp ${CORES} -vga std -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom DripOS.iso -hda dripdisk.img &
+	sudo qemu-system-x86_64 -enable-kvm -smp ${CORES} -vga std -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom DripOS.iso -hda dripdisk.img &
 	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf"
 	make clean
  

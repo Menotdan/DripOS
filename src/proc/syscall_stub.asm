@@ -48,7 +48,11 @@ syscall_stub:
     mov rdi, rsp
     call syscall_handler
     popaq
-    ; Restore the user stack
-    mov rsp, qword [gs:16]
-    ; Syscall return
-    sysret
+    ; Return from the syscall
+    push 0x23 ; SS
+    push qword [gs:16] ; RSP
+    push r11 ; RFLAGS
+    push 0x1B ; CS
+    push rcx ; RIP
+
+    iretq

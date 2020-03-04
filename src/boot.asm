@@ -65,33 +65,19 @@ GDT64:                           ; Global Descriptor Table (64-bit).
     db 11001111b                 ; Granularity.
     db 0                         ; Base (high).
     .UserCode: equ $ - GDT64     ; The user code descriptor.
-    dw 0                         ; Limit (low).
+    dw 0xFFFF                    ; Limit (low).
     dw 0                         ; Base (low).
     db 0                         ; Base (middle)
-    db 11111010b                 ; Access (exec/read).
-    db 00100000b                 ; Granularity, 64 bits flag, limit19:16.
+    db 11111101b                 ; Access (exec/read).
+    db 10101111b                 ; Granularity, 64 bits flag, limit19:16.
     db 0                         ; Base (high).
     .UserData: equ $ - GDT64     ; The user data descriptor.
-    dw 0                         ; Limit (low).
+    dw 0xFFFF                    ; Limit (low).
     dw 0                         ; Base (low).
     db 0                         ; Base (middle)
-    db 11110010b                 ; Access (read/write).
-    db 00000000b                 ; Granularity.
+    db 11110011b                 ; Access (read/write).
+    db 11001111b                 ; Granularity.
     db 0                         ; Base (high).
-;    .UserCode: equ $ - GDT64     ; The user code descriptor.
-;    dw 0xFFFF                    ; Limit (low).
-;    dw 0                         ; Base (low).
-;    db 0                         ; Base (middle)
-;    db 11111101b                 ; Access (exec/read).
-;    db 10101111b                 ; Granularity, 64 bits flag, limit19:16.
-;    db 0                         ; Base (high).
-;    .UserData: equ $ - GDT64     ; The user data descriptor.
-;    dw 0xFFFF                    ; Limit (low).
-;    dw 0                         ; Base (low).
-;    db 0                         ; Base (middle)
-;    db 11110011b                 ; Access (read/write).
-;    db 11001111b                 ; Granularity.
-;    db 0                         ; Base (high).
     .Code32: equ $ - GDT64       ; The 32 bit code descriptor for SMP core booting.
     dq 0x00CF9A000000FFFF
     .TSS_LOAD_SEG: equ $ - GDT64
@@ -193,10 +179,13 @@ _start:
 [bits 64]
 loaded:
     lgdt [GDT_PTR_64]           ; Load the 64-bit global descriptor table.
-    mov ax, GDT64.Data          ; Set the A-register to the data descriptor.
-    mov ds, ax                  ; Set the data segment to the A-register.
-    mov es, ax                  ; Set the extra segment to the A-register.
-    mov ss, ax                  ; Set the stack segment to the A-register.
+    mov ax, GDT64.Data
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    mov ax, 0x20
+    mov gs, ax
+    mov fs, ax
     mov rsp, stack_top ; Set the stack up
     ; Perform an absolute jump
     mov rax, long_mode_on

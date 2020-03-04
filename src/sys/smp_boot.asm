@@ -46,6 +46,9 @@ loaded_compatability_mode:
     mov ds, ax
     mov es, ax
     mov ss, ax
+    mov ax, 0x20
+    mov gs, ax
+    mov fs, ax
 
     ; Setup stack
     mov rsp, qword [0x540]

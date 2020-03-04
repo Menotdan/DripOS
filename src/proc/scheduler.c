@@ -55,8 +55,18 @@ void _idle() {
 }
 
 void user_task() {
-    //asm volatile("syscall");
-    while (1) { sprintf("\nTask worked!"); }
+    uint64_t rax = 2;
+    char *filename = "/dev/tty1";
+    uint64_t rdi = (uint64_t) filename;
+    uint64_t rsi = 0;
+    uint64_t output;
+    asm volatile("syscall" : "=a"(output) : "a"(rax), "D"(rdi), "S"(rsi));
+    rax = 1;
+    char *data = "\nHello from userspace";
+    rsi = (uint64_t) data;
+    uint64_t rdx = 21;
+    asm volatile("syscall" : "=a"(output) : "a"(rax), "D"(output), "S"(rsi), "d"(rdx)); // Write
+    while (1) { asm volatile("nop"); }
 }
 
 void main_task() {

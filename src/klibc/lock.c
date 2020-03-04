@@ -5,12 +5,13 @@
 #include "drivers/serial.h"
 
 void lock(lock_t *lock) {
-    spinlock_lock(lock);
-
+    //spinlock_lock(lock);
+    (void) lock;
 }
 
 void unlock(lock_t *lock) {
-    spinlock_unlock(lock);
+    //spinlock_unlock(lock);
+    (void) lock;
 }
 
 void interrupt_lock() {
