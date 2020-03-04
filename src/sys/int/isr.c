@@ -71,7 +71,6 @@ void isr_handler(int_reg_t *r) {
 
     // If we make it here, send an EOI to our LAPIC
     write_lapic(0xB0, 0);
-    //sprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CS: %lx SS: %lx\nRFLAGS: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, r->cs, r->ss, r->rflags);
 }
 
 void isr_panic_idle() {

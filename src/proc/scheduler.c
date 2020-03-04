@@ -60,13 +60,17 @@ void user_task() {
     uint64_t rdi = (uint64_t) filename;
     uint64_t rsi = 0;
     uint64_t output;
-    asm volatile("syscall" : "=a"(output) : "a"(rax), "D"(rdi), "S"(rsi));
+    asm volatile("syscall" : "=a"(output) : "a"(rax), "D"(rdi), "S"(rsi)
+        : "rcx", "r11", "memory"); // Write
     rax = 1;
     char *data = "\nHello from userspace";
     rsi = (uint64_t) data;
     uint64_t rdx = 21;
-    asm volatile("syscall" : "=a"(output) : "a"(rax), "D"(output), "S"(rsi), "d"(rdx)); // Write
-    while (1) { asm volatile("nop"); }
+    asm volatile("syscall" : "=a"(output) : "a"(rax), "D"(output), "S"(rsi), "d"(rdx) 
+        : "rcx", "r11", "memory"); // Write
+    volatile int e = 0;
+    volatile int x = 1/e;
+    (void) x; // Division by 0 fault
 }
 
 void main_task() {
@@ -408,7 +412,7 @@ void schedule(int_reg_t *r) {
     }
 
     int64_t tid_run = pick_task();
-    sprintf("\nTID: %ld", tid_run);
+    //sprintf("\nTID: %ld", tid_run);
 
     if (tid_run == -1) {
         /* Idle */
