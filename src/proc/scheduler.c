@@ -221,6 +221,7 @@ task_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) {
 
 /* Add a new thread to the dynarray */
 int64_t add_new_thread(task_t *task) {
+    interrupt_lock();
     lock(&scheduler_lock);
 
     int64_t new_tid = dynarray_add(&tasks, task, sizeof(task_t));
@@ -230,11 +231,13 @@ int64_t add_new_thread(task_t *task) {
     dynarray_unref(&tasks, new_tid);
 
     unlock(&scheduler_lock);
+    interrupt_unlock();
     return new_tid;
 }
 
 /* Add a new thread to the dynarray and as a child of a process */
 int64_t add_new_child_thread(task_t *task, int64_t pid) {
+    interrupt_lock();
     lock(&scheduler_lock);
 
     /* Find the parent process */
@@ -255,11 +258,13 @@ int64_t add_new_child_thread(task_t *task, int64_t pid) {
     dynarray_add(&new_parent->threads, &new_tid, sizeof(int64_t));
 
     unlock(&scheduler_lock);
+    interrupt_unlock();
     return new_tid;
 }
 
 /* Allocate new data for a process, then return the new PID */
 int64_t new_process(char *name, void *new_cr3) {
+    interrupt_lock();
     lock(&scheduler_lock);
 
     /* Allocate new process */
@@ -278,6 +283,7 @@ int64_t new_process(char *name, void *new_cr3) {
     dynarray_unref(&processes, pid);
 
     unlock(&scheduler_lock);
+    interrupt_unlock();
     /* Free the old data since it's in the dynarray */
     kfree(new_process);
     return pid;

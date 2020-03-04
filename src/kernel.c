@@ -47,6 +47,7 @@ void kernel_task() {
     sprintf("\nErrno: %d", get_thread_locals()->errno);
     fd_close(test_dev);
 
+    sprintf("\nStarting user task");
     start_test_user_task();
 
     sprintf("\ndone kernel work");
