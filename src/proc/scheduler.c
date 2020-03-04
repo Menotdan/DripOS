@@ -474,6 +474,7 @@ void schedule(int_reg_t *r) {
 
 int kill_task(int64_t tid) {
     int ret = 0;
+    interrupt_lock();
     lock(&scheduler_lock);
     task_t *task = dynarray_getelem(&tasks, tid);
     if (task) {
@@ -487,6 +488,7 @@ int kill_task(int64_t tid) {
         ret = 1;
     }
     unlock(&scheduler_lock);
+    interrupt_unlock();
     return ret;
 }
 
