@@ -85,6 +85,9 @@ int64_t new_process(char *name, void *new_cr3);
 void new_kernel_process(char *name, void (*main)());
 void new_user_process(char *name, void (*virt_main)(), void (*phys_main)(), uint64_t code_size);
 
+int kill_process(int64_t pid);
+int kill_task(int64_t tid);
+
 void start_test_user_task();
 
 extern uint8_t scheduler_started;

@@ -412,7 +412,6 @@ void schedule(int_reg_t *r) {
     }
 
     int64_t tid_run = pick_task();
-    //sprintf("\nTID: %ld", tid_run);
 
     if (tid_run == -1) {
         /* Idle */
@@ -465,4 +464,39 @@ void schedule(int_reg_t *r) {
     get_cpu_locals()->total_tsc = read_tsc();
 
     unlock(&scheduler_lock);
+}
+
+int kill_task(int64_t tid) {
+    int ret = 0;
+    lock(&scheduler_lock);
+    task_t *task = dynarray_getelem(&tasks, tid);
+    if (task) {
+        // If we are running this thread, unref it a first time because it is refed from running
+        if (task->tid == get_cpu_locals()->current_thread->tid) {
+            dynarray_unref(&tasks, tid);
+        }
+        dynarray_remove(&tasks, tid);
+        dynarray_unref(&tasks, tid);
+    } else {
+        ret = 1;
+    }
+    unlock(&scheduler_lock);
+    return ret;
+}
+
+int kill_process(int64_t pid) {
+    process_t *proc = dynarray_getelem(&processes, pid);
+    if (proc) {
+        sprintf("\nProc name: %s", proc->name);
+        sprintf("\nPID: %ld", proc->pid);
+        for (int64_t t = 0; t < proc->threads.array_size; t++) {
+            int64_t *tid = dynarray_getelem(&proc->threads, t);
+            if (tid) {
+                kill_task(*tid);
+            }
+        }
+    }
+    dynarray_remove(&processes, pid);
+    dynarray_unref(&processes, pid);
+    return 0;
 }
