@@ -242,10 +242,15 @@ void add_pci_device(pci_device_t new_device) {
 }
 
 void scan_bus(uint8_t bus) {
+    kprintf("\nChecking bus %u", (uint32_t) bus);
     for (uint8_t dev = 0; dev < 32; dev++) { // Loop all devices
         if (check_function(bus, dev, 0)) { // If this is even a valid device
-            pci_device_t new_pci_device = {bus, dev, 0};
-            add_pci_device(new_pci_device);
+            if (is_pci_bridge(bus, dev, 0)) { // Is this a PCI bridge
+                scan_bus(get_secondary_bus(bus, dev, 0)); // Scan the new bridge
+            } else {
+                pci_device_t new_pci_device = {bus, dev, 0};
+                add_pci_device(new_pci_device);
+            }
     
             if (is_multifunction(bus, dev)) { // If this is a multifunction device
                 for (uint8_t func = 1; func < 8; func++) { // Loop all remaining functions
