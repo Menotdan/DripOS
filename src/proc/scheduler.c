@@ -124,9 +124,9 @@ void scheduler_init_bsp() {
     new_process("Idle tasks", (void *) base_kernel_cr3); // Always PID 0
     sprintf("\nCreated idle process");
 
-    new_kernel_process("First task", main_task);
-    new_kernel_process("Second task", second_task);
-    new_kernel_process("Third task", third_task);
+    //new_kernel_process("First task", main_task);
+    //new_kernel_process("Second task", second_task);
+    //new_kernel_process("Third task", third_task);
 
     prin_vmm = 1;
 
