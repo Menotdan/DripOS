@@ -3,8 +3,8 @@ plugin_ctrl: unmapped=1, biosdev=1, speaker=1, extfpuirq=1, parallel=1, serial=1
 config_interface: textconfig
 display_library: x
 memory: host=1024, guest=1024
-romimage: file="/home/aforsyth/Documents/bochs-src-lol/bochs-2.6.11/bochs-executables/share/bochs/BIOS-bochs-latest"
-vgaromimage: file="/home/aforsyth/Documents/bochs-src-lol/bochs-2.6.11/bochs-executables/share/bochs/VGABIOS-lgpl-latest"
+romimage: file="~/Documents/bochs-src-lol/bochs-2.6.11/bochs-executables/share/bochs/BIOS-bochs-latest"
+vgaromimage: file="~/Documents/bochs-src-lol/bochs-2.6.11/bochs-executables/share/bochs/VGABIOS-lgpl-latest"
 magic_break: enabled=1
 boot: cdrom
 floppy_bootsig_check: disabled=0

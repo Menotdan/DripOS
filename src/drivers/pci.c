@@ -133,13 +133,13 @@ uint8_t get_secondary_bus(uint8_t bus, uint8_t device, uint8_t function) {
 }
 
 /* Get a BAR from a device */
-uint32_t pci_get_bar(pci_device_t device, uint8_t bar) {
+uint32_t pci_get_mmio_bar(pci_device_t device, uint8_t bar) {
     return pci_read_dword(device.bus, device.device, device.function, 0x10 + (bar * 4));
 }
 
 /* Get the bar size of a PCI bar */
-uint32_t pci_get_bar_size(pci_device_t device, uint8_t bar) {
-    uint32_t bar_saved = pci_get_bar(device, bar);
+uint32_t pci_get_mmio_bar_size(pci_device_t device, uint8_t bar) {
+    uint32_t bar_saved = pci_get_mmio_bar(device, bar);
     pci_write_dword(device.bus, device.device, device.function, 0x10 + (bar * 4), 0xFFFFFFFF);
     uint32_t ret = pci_read_dword(device.bus, device.device, device.function, 0x10 + (bar * 4));
     ret &= ~(0xF);
