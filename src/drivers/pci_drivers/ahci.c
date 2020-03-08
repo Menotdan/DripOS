@@ -49,27 +49,30 @@ int ahci_get_controller_ownership(ahci_controller_t controller) {
     return 0; // success i guess
 }
 
-void ahci_stop_cmd(ahci_port_t *port) {
+int ahci_stop_cmd(ahci_port_t *port) {
     port->command &= ~(1<<0); // Clear the ST bit
-
-    // Wait for command engine to be not busy
-    while (port->command & (1<<15)) { asm volatile("nop"); }
-
     port->command &= ~(1<<4); // Clear the FRE bit
 
-    // Wait for FIS engine to stop
-    while (port->command & (1<<14)) { asm volatile("nop"); }
+    for (uint64_t i = 0; i < 100000; i++)
+        asm volatile("pause");
+
+    // Check that the bits are not set
+    if ((port->command & (1<<15)) || (port->command & (1<<14)))
+        return 1;
+
+    return 0;
 }
 
 int ahci_start_cmd(ahci_port_t *port) {
-    // Wait for command engine to be not busy
-    while (port->command & (1<<15)) { asm volatile("nop"); }
+    port->command |= (1<<0); // Set the ST bit
+    port->command |= (1<<4); // Set the FRE bit
 
-    port->command |= (1<<0) | (1<<4); // Set the ST and FRE bits
+    for (uint64_t i = 0; i < 100000; i++)
+        asm volatile("pause");
 
-    if (!(port->command & (1<<15)) || !(port->command & (1<<14))) {
+    if (!(port->command & (1<<15)) || !(port->command & (1<<14)))
         return 1;
-    }
+
     return 0;
 }
 
