@@ -21,8 +21,10 @@ typedef enum
 } FIS_TYPE;
 
 typedef volatile struct {
-    uint64_t command_list_base;
-    uint64_t fis_base;
+    uint32_t command_list_base;
+    uint32_t command_list_base_upper;
+    uint32_t fis_base;
+    uint32_t fis_base_upper;
     uint32_t interrupt_status;
     uint32_t interrupt_enable;
     uint32_t command;

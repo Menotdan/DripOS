@@ -1,5 +1,6 @@
 #include "ahci.h"
 #include "mm/vmm.h"
+#include "mm/pmm.h"
 #include "klibc/dynarray.h"
 
 #include "drivers/serial.h"
@@ -46,6 +47,30 @@ int ahci_get_controller_ownership(ahci_controller_t controller) {
         }
     }
     return 0; // success i guess
+}
+
+void ahci_stop_cmd(ahci_port_t *port) {
+    port->command &= ~(1<<0); // Clear the ST bit
+
+    // Wait for command engine to be not busy
+    while (port->command & (1<<15)) { asm volatile("nop"); }
+
+    port->command &= ~(1<<4); // Clear the FRE bit
+
+    // Wait for FIS engine to stop
+    while (port->command & (1<<14)) { asm volatile("nop"); }
+}
+
+int ahci_start_cmd(ahci_port_t *port) {
+    // Wait for command engine to be not busy
+    while (port->command & (1<<15)) { asm volatile("nop"); }
+
+    port->command |= (1<<0) | (1<<4); // Set the ST and FRE bits
+
+    if (!(port->command & (1<<15)) || !(port->command & (1<<14))) {
+        return 1;
+    }
+    return 0;
 }
 
 void ahci_enable_present_devs(ahci_controller_t controller) {
@@ -97,6 +122,41 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
                     kprintf("[AHCI] Unknown signature %x\n", port->signature);
                     break;
             }
+
+            ahci_stop_cmd(port);
+            sprintf("\n[AHCI] Stopped command engine");
+            uint64_t ahci_data_base = (uint64_t) pmm_alloc((32 * 32) + 256);
+            uint64_t ahci_fis_base = ahci_data_base + (32 * 32);
+
+            if (controller.ahci_bar->cap & (1<<31)) {
+                // Command list base
+                port->command_list_base = ahci_data_base & 0xFFFFFFFF;
+                port->command_list_base_upper = (ahci_data_base >> 32) & 0xFFFFFFFF;
+                // Received FIS base
+                port->fis_base = ahci_fis_base & 0xFFFFFFFF;
+                port->fis_base_upper = (ahci_fis_base >> 32) & 0xFFFFFFFF;
+            } else {
+                if ((ahci_fis_base + 256) > 0xFFFFFFFF) {
+                    kprintf("[AHCI] ERROR: Allocation for 32 bit ahci device has been put past 4GiB!\n");
+                    continue;
+                }
+                // Command list base
+                port->command_list_base = ahci_data_base & 0xFFFFFFFF;
+                port->command_list_base_upper = 0;
+                // FIS base
+                port->fis_base = ahci_fis_base & 0xFFFFFFFF;
+                port->fis_base_upper = 0;
+            }
+            sprintf("\n[AHCI] Setup the port");
+
+            if (ahci_start_cmd(port) != 0) {
+                kprintf("[AHCI] Command engine failed!\n");
+                continue;
+            }
+
+            sprintf("\n[AHCI] Port ready");
+
+            port->interrupt_status = 0xFFFFFFFF;
         }
     }
 }
@@ -106,7 +166,7 @@ void ahci_init_controller(pci_device_t device) {
     if (ids.class != 0x1 || ids.subclass != 0x6 || ids.prog_if != 0x1) {
         return; // Not an AHCI controller
     }
-    /* Actual driver code */
+    /* Actual driver code (lol) */
     kprintf("[AHCI] Device %u:%u.%u is an AHCI controller\n", device.bus, device.device, device.function);
     uint32_t bar5 = pci_get_mmio_bar(device, 5) & ~(0xFFF);
     uint32_t bar_size = pci_get_mmio_bar_size(device, 5);
