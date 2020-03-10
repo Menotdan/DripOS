@@ -14,6 +14,9 @@
 #define NORMAL_VMA_OFFSET 0xFFFF800000000000
 #define KERNEL_VMA_OFFSET 0xFFFFFFFF80000000
 
+#define GET_HIGHER_HALF(type, lower_half) (type) ((uint64_t) lower_half + NORMAL_VMA_OFFSET)
+#define GET_LOWER_HALF(type, higher_half) (type) ((uint64_t) higher_half - NORMAL_VMA_OFFSET)
+
 typedef struct {
     uint64_t p4_off;
     uint64_t p3_off;

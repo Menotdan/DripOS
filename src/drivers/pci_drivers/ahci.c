@@ -2,6 +2,7 @@
 #include "mm/vmm.h"
 #include "mm/pmm.h"
 #include "klibc/dynarray.h"
+#include "klibc/string.h"
 
 #include "drivers/serial.h"
 #include "drivers/tty/tty.h"
@@ -76,6 +77,85 @@ int ahci_start_cmd(ahci_port_t *port) {
     return 0;
 }
 
+int ahci_find_command_slot(ahci_port_data_t port) {
+    for (int i = 0; i < port.command_slot_count; i++) {
+        if (!(port.port->command_issued & (1<<i)))
+            return i; // If that command is not issued
+    }
+    return -1;
+}
+
+ahci_command_slot_t ahci_allocate_command_slot(ahci_port_data_t port, uint64_t fis_size) {
+    ahci_command_slot_t ret = {-1, (ahci_command_entry_t *) 0};
+
+    int index = ahci_find_command_slot(port);
+    if (index == -1) {
+        return ret;
+    }
+
+    ahci_command_entry_t *command_entry = pmm_alloc(fis_size);
+    if (!command_entry) {
+        return ret;
+    }
+    memset(GET_HIGHER_HALF(uint8_t *, command_entry), 0, fis_size);
+
+    ret.index = index;
+    ret.data = command_entry;
+
+    uint64_t header_address = (port.port->command_list_base | 
+        ((uint64_t) port.port->command_list_base_upper << 32));
+    ahci_command_header_t *headers = GET_HIGHER_HALF(ahci_command_header_t *, header_address);
+
+    headers[index].command_entry_ptr = (uint32_t) ((uint64_t) command_entry);
+    if (port.addresses_64) {
+        headers[index].command_entry_ptr_upper = (uint32_t) ((uint64_t) command_entry >> 32); 
+    } else {
+        if ((uint64_t) command_entry > 0xFFFFFFFF) {
+            kprintf("[AHCI] Error! Allocated data past 32 bit range for a non-64 bit addressing controller!\n");
+            while (1) { asm volatile("pause"); }
+        }
+        headers[index].command_entry_ptr_upper = 0;
+    }
+
+    return ret;
+}
+
+ahci_command_header_t *ahci_get_cmd_header(ahci_port_data_t port, uint8_t slot) {
+    uint64_t header_address = (uint64_t) (port.port->command_list_base | 
+        ((uint64_t) port.port->command_list_base_upper << 32));
+    ahci_command_header_t *headers = GET_HIGHER_HALF(ahci_command_header_t *, header_address);
+
+    return headers + slot;
+}
+
+void ahci_fill_prdt(ahci_port_data_t port, void *phys, ahci_prdt_entry_t *prdt) {
+    prdt->data_base = (uint64_t) phys & 0xFFFFFFFF;
+
+    if (port.addresses_64) {
+        prdt->data_base_upper = (uint32_t) ((uint64_t) phys >> 32);
+    } else {
+        if ((uint64_t) phys >= 0xFFFFFFFF) {
+            kprintf("[AHCI] Allocation error with 32 bit overflow!\n");
+        } else {
+            prdt->data_base_upper = 0;
+        }
+    }
+}
+
+void ahci_issue_command(ahci_port_data_t port, int command_slot) {
+    port.port->command_issued |= (1<<command_slot);
+}
+ 
+void ahci_wait_ready(ahci_port_data_t port) {
+    while (port.port->task_file & (1<<3) && port.port->task_file & (1<<7))
+        asm volatile("pause");
+}
+
+void ahci_wait_command(ahci_port_data_t port, int command_slot) {
+    while (port.port->command_issued & (1<<command_slot))
+        asm volatile("pause");
+}
+
 void ahci_enable_present_devs(ahci_controller_t controller) {
     // Find devices
     for (uint8_t p = 0; p < 32; p++) {
@@ -130,6 +210,7 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
             sprintf("\n[AHCI] Stopped command engine");
             uint64_t ahci_data_base = (uint64_t) pmm_alloc((32 * 32) + 256);
             uint64_t ahci_fis_base = ahci_data_base + (32 * 32);
+            memset(GET_HIGHER_HALF(uint8_t *, ahci_data_base), 0, (32 * 32) + 256);
 
             if (controller.ahci_bar->cap & (1<<31)) {
                 // Command list base
@@ -160,6 +241,66 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
             sprintf("\n[AHCI] Port ready");
 
             port->interrupt_status = 0xFFFFFFFF;
+
+            uint8_t address64 = (uint8_t) ((controller.ahci_bar->cap & (1<<31)) >> 31);
+            ahci_port_data_t port_data = {port, address64, (controller.ahci_bar->cap & 0b1111) + 1};
+
+            // testing AHCI lol
+            ahci_command_slot_t command_slot = ahci_allocate_command_slot(port_data, AHCI_GET_FIS_SIZE(1));
+            ahci_command_header_t *header = ahci_get_cmd_header(port_data, command_slot.index);
+            
+            if (command_slot.index == -1) {
+                kprintf("[AHCI] No command slot!\n");
+                continue;
+            }
+
+            // Set command header
+            header->flags.prdt_count = 1;
+            header->flags.write = 0;
+            header->flags.command_fis_len = 5;
+
+            // Set fis data
+            ahci_h2d_fis_t *fis_area = GET_HIGHER_HALF(ahci_h2d_fis_t *, command_slot.data->command_fis_data);
+            fis_area->type = FIS_TYPE_REG_H2D;
+            fis_area->flags.c = 1;
+            fis_area->command = ATA_COMMAND_IDENTIFY;
+            // For legacy things
+            fis_area->dev_head = 0xA0;
+            fis_area->control = 0x08;
+
+            // Area for identify
+            void *identify_region = pmm_alloc(512);
+            ahci_prdt_entry_t *higher_half_prdt = GET_HIGHER_HALF(ahci_prdt_entry_t *, &(command_slot.data->prdts[0]));
+            ahci_fill_prdt(port_data, identify_region, higher_half_prdt);
+            higher_half_prdt->byte_count = AHCI_GET_PRDT_BYTES(512);
+
+            // Actually send command
+            kprintf("[AHCI] Waiting for ready\n");
+            ahci_wait_ready(port_data);
+            kprintf("[AHCI] Issued command\n");
+            ahci_issue_command(port_data, command_slot.index);
+            kprintf("[AHCI] Waiting for command to finish\n");
+            ahci_wait_command(port_data, command_slot.index);
+
+            // Error handling
+            if (port_data.port->interrupt_status & (1<<30)) {
+                // Task file error
+                if (port_data.port->task_file & (1<<0)) {
+                    // Error with transfer
+                    uint8_t error = (uint8_t) (port_data.port->task_file >> 8);
+                    kprintf("[AHCI] Transfer error: %u\n", (uint32_t) error);
+                    pmm_unalloc(identify_region, 512);
+
+                    continue; // Next device
+                }
+            }
+            uint64_t *data = GET_HIGHER_HALF(uint64_t *, identify_region);
+            kprintf("[AHCI] Identify data: ");
+            for (uint64_t i = 0; i < 64; i++) {
+                kprintf("%lx ", data[i]);
+            }
+            kprintf("\n");
+            pmm_unalloc(identify_region, 512);
         }
     }
 }
@@ -169,6 +310,7 @@ void ahci_init_controller(pci_device_t device) {
     if (ids.class != 0x1 || ids.subclass != 0x6 || ids.prog_if != 0x1) {
         return; // Not an AHCI controller
     }
+
     /* Actual driver code (lol) */
     kprintf("[AHCI] Device %u:%u.%u is an AHCI controller\n", device.bus, device.device, device.function);
     uint32_t bar5 = pci_get_mmio_bar(device, 5) & ~(0xFFF);
