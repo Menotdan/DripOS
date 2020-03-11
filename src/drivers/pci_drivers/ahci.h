@@ -156,5 +156,6 @@ typedef struct {
 #define AHCI_GET_PRDT_BYTES(count) ((((count + 1) & ~1) - 1) & 0x3FFFFF)
 
 void ahci_init_controller(pci_device_t device);
+void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface);
 
 #endif

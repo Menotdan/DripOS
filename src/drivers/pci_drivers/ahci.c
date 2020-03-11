@@ -286,76 +286,75 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
             uint8_t address64 = (uint8_t) ((controller.ahci_bar->cap & (1<<31)) >> 31);
             ahci_port_data_t port_data = {port, address64, (controller.ahci_bar->cap & 0b1111) + 1};
 
-            // testing AHCI lol
-            ahci_command_slot_t command_slot = ahci_allocate_command_slot(&port_data, AHCI_GET_FIS_SIZE(1));
-            ahci_command_header_t *header = ahci_get_cmd_header(&port_data, command_slot.index);
-            
-            if (command_slot.index == -1) {
-                kprintf("[AHCI] No command slot!\n");
-                continue;
-            }
-
-            // Set command header
-            header->flags.prdt_count = 1;
-            header->flags.write = 0;
-            header->flags.command_fis_len = 5;
-
-            // Set fis data
-            ahci_h2d_fis_t *fis_area = GET_HIGHER_HALF(ahci_h2d_fis_t *, command_slot.data->command_fis_data);
-            fis_area->type = FIS_TYPE_REG_H2D;
-            fis_area->flags.c = 1;
-            fis_area->command = ATA_COMMAND_IDENTIFY;
-            // For legacy things
-            fis_area->dev_head = 0xA0;
-            fis_area->control = 0x08;
-
-            // Area for identify
-            void *identify_region = pmm_alloc(512);
-            ahci_prdt_entry_t *higher_half_prdt = GET_HIGHER_HALF(ahci_prdt_entry_t *, &(command_slot.data->prdts[0]));
-            ahci_fill_prdt(&port_data, identify_region, higher_half_prdt);
-            higher_half_prdt->byte_count = AHCI_GET_PRDT_BYTES(512);
-
-            // Actually send command
-            kprintf("[AHCI] Waiting for ready\n");
-            ahci_wait_ready(&port_data);
-            kprintf("[AHCI] Issued command\n");
-            ahci_issue_command(&port_data, command_slot.index);
-            kprintf("[AHCI] Waiting for command to finish\n");
-            int err = ahci_wait_command(&port_data, command_slot.index);
-
-            if (err) {
-                kprintf("[AHCI] Command failed with an error and didn't clear CI bit!\n");
-                
-                // Print the error
-                uint8_t error = (uint8_t) (port_data.port->task_file >> 8);
-                kprintf("[AHCI] Transfer error: %u\n", (uint32_t) error);
-                ahci_reset_command_engine(&port_data);
-
-                continue;
-            }
-
-            // Error handling
-            if (port_data.port->interrupt_status & (1<<30)) {
-                // Task file error
-                if (port_data.port->task_file & (1<<0)) {
-                    // Error with transfer
-                    uint8_t error = (uint8_t) (port_data.port->task_file >> 8);
-                    kprintf("[AHCI] Transfer error: %u\n", (uint32_t) error);
-                    ahci_reset_command_engine(&port_data);
-                    pmm_unalloc(identify_region, 512);
-
-                    continue; // Next device
-                }
-            }
-            uint64_t *data = GET_HIGHER_HALF(uint64_t *, identify_region);
-            kprintf("[AHCI] Identify data: ");
-            for (uint64_t i = 0; i < 64; i++) {
-                kprintf("%lx ", data[i]);
-            }
-            kprintf("\n");
-            pmm_unalloc(identify_region, 512);
+            ahci_identify_sata(&port_data, 1);
+            ahci_identify_sata(&port_data, 0);
         }
     }
+}
+
+void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface) {
+    ahci_command_slot_t command_slot = ahci_allocate_command_slot(port, AHCI_GET_FIS_SIZE(1));
+    ahci_command_header_t *header = ahci_get_cmd_header(port, command_slot.index);
+    
+    if (command_slot.index == -1) {
+        kprintf("[AHCI] No command slot!\n");
+        return;
+    }
+
+    // Set command header
+    header->flags.prdt_count = 1;
+    header->flags.write = 0;
+    header->flags.command_fis_len = 5;
+
+    // Set fis data
+    ahci_h2d_fis_t *fis_area = GET_HIGHER_HALF(ahci_h2d_fis_t *, command_slot.data->command_fis_data);
+    fis_area->type = FIS_TYPE_REG_H2D;
+    fis_area->flags.c = 1;
+    fis_area->command = packet_interface == 0 ? ATA_COMMAND_IDENTIFY : ATAPI_COMMAND_IDENTIFY;
+    // For legacy things
+    fis_area->dev_head = 0xA0;
+    fis_area->control = 0x08;
+
+    // Area for identify
+    void *identify_region = pmm_alloc(512);
+    ahci_prdt_entry_t *higher_half_prdt = GET_HIGHER_HALF(ahci_prdt_entry_t *, &(command_slot.data->prdts[0]));
+    ahci_fill_prdt(port, identify_region, higher_half_prdt);
+    higher_half_prdt->byte_count = AHCI_GET_PRDT_BYTES(512);
+
+    // Actually send command
+    ahci_wait_ready(port);
+    ahci_issue_command(port, command_slot.index);
+    int err = ahci_wait_command(port, command_slot.index);
+
+    if (err) {
+        // Print the error
+        uint8_t error = (uint8_t) (port->port->task_file >> 8);
+        kprintf("[AHCI] Transfer error (CI set): %u\n", (uint32_t) error);
+        ahci_reset_command_engine(port);
+
+        return;
+    }
+
+    // Error handling
+    if (port->port->interrupt_status & (1<<30)) {
+        // Task file error
+        if (port->port->task_file & (1<<0)) {
+            // Error with transfer
+            uint8_t error = (uint8_t) (port->port->task_file >> 8);
+            kprintf("[AHCI] Transfer error: %u\n", (uint32_t) error);
+            ahci_reset_command_engine(port);
+            pmm_unalloc(identify_region, 512);
+
+            return; // Next device
+        }
+    }
+    uint64_t *data = GET_HIGHER_HALF(uint64_t *, identify_region);
+    kprintf("[AHCI] Identify data: ");
+    for (uint64_t i = 0; i < 64; i++) {
+        kprintf("%lx ", data[i]);
+    }
+    kprintf("\n");
+    pmm_unalloc(identify_region, 512);
 }
 
 void ahci_init_controller(pci_device_t device) {
