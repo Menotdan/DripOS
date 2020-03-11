@@ -9,6 +9,5 @@ void kfree(void *addr);
 void *krealloc(void *addr, uint64_t new_size);
 void *kcalloc(uint64_t size);
 void yield();
-void sleep_no_task(uint64_t milliseconds);
 
 #endif

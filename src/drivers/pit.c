@@ -27,3 +27,8 @@ void set_pit_freq() {
     port_outb(0x40, low); /* Low byte of the frequency */
     port_outb(0x40, high); /* High byte of the frequency */
 }
+
+void sleep_no_task(uint64_t ticks) {
+    volatile uint64_t start_ticks = global_ticks;
+    while (global_ticks < ticks + start_ticks) asm volatile("pause");
+}

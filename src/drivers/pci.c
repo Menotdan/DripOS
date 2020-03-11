@@ -365,7 +365,8 @@ void pci_init() {
         pci_device_t dev = pci_devices[device];
         kprintf("\n[PCI] Vendor: %x on %u:%u.%u", (uint32_t) pci_get_vendor(dev.bus, dev.device, dev.function), (uint32_t) dev.bus, (uint32_t) dev.device, (uint32_t) dev.function);
         pci_id_t ids = get_pci_ids(dev.bus, dev.device, dev.function);
-        kprintf("\n[PCI] Device type: %s\n", device_code_to_string(ids.class, ids.subclass, ids.prog_if));
+        kprintf("\n[PCI] Device type: %s", device_code_to_string(ids.class, ids.subclass, ids.prog_if));
+        kprintf("\n[PCI] Device ID: %x\n", (uint32_t) ids.device_id);
         for (uint64_t d = 0; d < driver_count; d++) {
             drivers[d](dev); // The driver can handle checking if the device is correct
         }

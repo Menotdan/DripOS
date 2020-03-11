@@ -82,8 +82,6 @@ void *virt_to_phys(void *virt, pt_t *p4) {
     return (void *) 0xFFFFFFFFFFFFFFFF;
 }
 
-int prin_vmm = 0;
-
 void vmm_ensure_table(pt_t *table, uint16_t offset) {
     if (!(table->table[offset] & VMM_PRESENT)) {
         uint64_t new_table = (uint64_t) pmm_alloc(0x1000);
@@ -110,6 +108,7 @@ void vmm_remap_to_4k(pt_t *p2, uint16_t offset) {
     vmm_invlpg(represented_range); // Invalidate any previous mappings
 }
 
+/* Check if an address is mapped */
 uint8_t is_mapped(void *data) {
     lock(&vmm_spinlock);
     uint64_t phys_addr = (uint64_t) virt_to_phys(data, (void *) vmm_get_pml4t());
@@ -124,6 +123,8 @@ uint8_t is_mapped(void *data) {
 }
 
 /* TODO: Sync page tables for any CPUs running with the same CR3 */
+
+/* Get a table for a set of offsets into the table */
 pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4) {
     pt_ptr_t ret;
     p4 = (pt_t *) ((uint64_t) p4 + NORMAL_VMA_OFFSET);
@@ -189,8 +190,6 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
 
     uint8_t *cur_virt = (uint8_t *) (((uint64_t) virt) & ~(0xfff));
     uint64_t cur_phys = ((uint64_t) phys) & ~(0xfff);
-
-    //kprintf("\nRemap: Virt: %lx Phys: %lx\nPage count: %lu Perms: %x", cur_virt, cur_phys, count, (uint32_t) perms);
 
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);

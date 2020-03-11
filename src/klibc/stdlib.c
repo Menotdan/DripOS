@@ -4,7 +4,6 @@
 #include "mm/vmm.h"
 #include "proc/scheduler.h"
 #include "klibc/lock.h"
-#include "drivers/pit.h"
 
 #include "drivers/serial.h"
 
@@ -45,10 +44,4 @@ void yield() {
     if (scheduler_enabled && check_interrupts()) {
         asm volatile("int $254");
     }
-}
-
-/* Inefficient, taskless sleep */
-void sleep_no_task(uint64_t milliseconds) {
-    volatile uint64_t start = global_ticks;
-    while (global_ticks < start + milliseconds) { asm volatile("nop"); }
 }

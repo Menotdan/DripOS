@@ -4,6 +4,7 @@
 #include "sys/apic.h"
 #include "klibc/stdlib.h"
 #include "klibc/string.h"
+#include "drivers/pit.h"
 #include "drivers/serial.h"
 #include "drivers/tty/tty.h"
 

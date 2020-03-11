@@ -128,8 +128,6 @@ void scheduler_init_bsp() {
     //new_kernel_process("Second task", second_task);
     //new_kernel_process("Third task", third_task);
 
-    prin_vmm = 1;
-
     /* Setup the idle task */
 
     uint64_t idle_rsp = (uint64_t) kcalloc(0x1000) + 0x1000;
@@ -291,7 +289,6 @@ int64_t new_process(char *name, void *new_cr3) {
 
 void new_user_process(char *name, void (*virt_main)(), void (*phys_main)(), uint64_t code_size) {
     /* Fork the kernel's address space */
-    sprintf("\nForked cr3");
     void *new_cr3 = vmm_fork_higher_half((void *) (base_kernel_cr3 + NORMAL_VMA_OFFSET));
 
     /* Allocate stack */
@@ -299,18 +296,14 @@ void new_user_process(char *name, void (*virt_main)(), void (*phys_main)(), uint
     void *stack_alloc_bot = kmalloc(TASK_STACK_SIZE);
     void *stack_phys_bot = virt_to_phys(stack_alloc_bot, (void *) vmm_get_pml4t());
 
-    sprintf("\nMapping stack");
     /* Map the stack */
     vmm_map_pages(stack_phys_bot, stack_virt_bot, new_cr3, TASK_STACK_PAGES, 
         VMM_PRESENT | VMM_WRITE | VMM_USER);
 
-    sprintf("\nMapping code\nCR3: %lx\nPhys main: %lx\nVirt main: %lx", new_cr3, phys_main, virt_main);
     /* Map the code */
-    prin_vmm = 1;
     vmm_map_pages(phys_main, virt_main, new_cr3, (code_size + 0x1000 - 1) / 0x1000, 
         VMM_PRESENT | VMM_WRITE | VMM_USER);
 
-    sprintf("\nAdding new task stuff");
     /* Create new task and new process, and add the task to the process's children */
     int64_t new_pid = new_process(name, new_cr3);
     task_t *new_thread_for_process = create_thread(name, virt_main, 0x7FFFFFFFF000, 3);
@@ -495,8 +488,6 @@ int kill_task(int64_t tid) {
 int kill_process(int64_t pid) {
     process_t *proc = dynarray_getelem(&processes, pid);
     if (proc) {
-        sprintf("\nProc name: %s", proc->name);
-        sprintf("\nPID: %ld", proc->pid);
         for (int64_t t = 0; t < proc->threads.array_size; t++) {
             int64_t *tid = dynarray_getelem(&proc->threads, t);
             if (tid) {

@@ -20,8 +20,12 @@ typedef enum {
 } FIS_TYPE;
 
 typedef enum {
-    ATA_COMMAND_IDENTIFY = 0xEC
+    ATA_COMMAND_IDENTIFY   = 0xEC,
 } ATA_COMMAND;
+
+typedef enum {
+    ATAPI_COMMAND_IDENTIFY = 0xA1,
+} ATAPI_COMMAND;
 
 /* Different FISes */
 typedef struct {

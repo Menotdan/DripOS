@@ -36,7 +36,6 @@ typedef struct {
 } pt_ptr_t;
 
 extern uint64_t base_kernel_cr3;
-extern int prin_vmm;
 
 int vmm_map(void *phys, void *virt, uint64_t count, uint16_t perms);
 int vmm_remap(void *phys, void *virt, uint64_t count, uint16_t perms);
