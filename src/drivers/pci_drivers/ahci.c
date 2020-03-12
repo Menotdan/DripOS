@@ -172,7 +172,7 @@ void ahci_reset_command_engine(ahci_port_data_t *port) {
         ahci_comreset_port(port);
     }
 
-    port->port->interrupt_status &= ~(1<<30);
+    port->port->interrupt_status |= (1<<30);
 
     port->port->command |= (1<<0);
     while (!(port->port->command & (1<<15))) 
@@ -286,8 +286,8 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
             uint8_t address64 = (uint8_t) ((controller.ahci_bar->cap & (1<<31)) >> 31);
             ahci_port_data_t port_data = {port, address64, (controller.ahci_bar->cap & 0b1111) + 1};
 
-            ahci_identify_sata(&port_data, 1);
             ahci_identify_sata(&port_data, 0);
+            ahci_identify_sata(&port_data, 1);
         }
     }
 }

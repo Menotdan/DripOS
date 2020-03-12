@@ -57,11 +57,17 @@ void isr_handler(int_reg_t *r) {
 
                 while (1) { asm volatile("hlt"); }
             } else {
+                uint64_t cr2;
+                asm volatile("movq %%cr2, %0;" : "=r"(cr2));
+
                 // Userspace exception
                 sprintf("\nGot userspace exception %lu with error %lu", r->int_num, r->int_err);
+                sprintf("\nCR2: %lx RIP %lx", cr2, r->rip);
                 if (get_cpu_locals()->current_thread->parent_pid) {
+                    sprintf("\nKilled process %ld", get_cpu_locals()->current_thread->parent_pid);
                     kill_process(get_cpu_locals()->current_thread->parent_pid);
                 } else {
+                    sprintf("\nKilled task %ld", get_cpu_locals()->current_thread->tid);
                     kill_task(get_cpu_locals()->current_thread->tid);
                 }
                 get_cpu_locals()->current_thread = (task_t *) 0;

@@ -69,6 +69,9 @@ void *virt_to_phys(void *virt, pt_t *p4) {
     pt_t *p3 = traverse_page_table(p4, offs.p4_off);
     if ((uint64_t) p3 > NORMAL_VMA_OFFSET) {
         pt_t *p2 = traverse_page_table(p3, offs.p3_off);
+        if (get_entry(p2, offs.p2_off) & VMM_HUGE) {
+            return (void *) ((p2->table[offs.p2_off] & ~(0x1fffff)) + (((uint64_t) virt) & 0x1fffff));
+        }
 
         if ((uint64_t) p2 > NORMAL_VMA_OFFSET) {
             pt_t *p1 = traverse_page_table(p2, offs.p2_off);
