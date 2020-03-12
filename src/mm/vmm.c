@@ -16,7 +16,7 @@ uint64_t vmm_get_pml4t() {
 }
 
 void vmm_set_pml4t(uint64_t new) {
-    //sprintf("\nNew pml4_t: %lx", new);
+    sprintf("\nNew: %lx", new);
     asm volatile("movq %0, %%cr3;" ::"r"(new) : "memory");
 }
 
