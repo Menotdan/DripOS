@@ -20,10 +20,11 @@ typedef enum {
 } FIS_TYPE;
 
 typedef enum {
-    ATA_COMMAND_IDENTIFY     = 0xEC,
-    ATA_COMMAND_DMA_READ     = 0xC8,
-    ATA_COMMAND_DMA_EXT_READ = 0x25,
-    ATA_COMMAND_DMA_WRITE    = 0xCA,
+    ATA_COMMAND_IDENTIFY      = 0xEC,
+    ATA_COMMAND_DMA_READ      = 0xC8,
+    ATA_COMMAND_DMA_EXT_READ  = 0x25,
+    ATA_COMMAND_DMA_WRITE     = 0xCA,
+    ATA_COMMAND_DMA_EXT_WRITE = 0x35,
 } ATA_COMMAND;
 
 typedef enum {

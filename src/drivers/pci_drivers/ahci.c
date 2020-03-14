@@ -399,7 +399,8 @@ int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint64_t count, uint
     ahci_h2d_fis_t *fis_area = GET_HIGHER_HALF(ahci_h2d_fis_t *, command_slot.data->command_fis_data);
     fis_area->type = FIS_TYPE_REG_H2D;
     fis_area->flags.c = 1;
-    fis_area->command = write == 1 ? ATA_COMMAND_DMA_WRITE : ATA_COMMAND_DMA_READ;
+    fis_area->command = write == 1 ? (port->lba48 == 1 ? ATA_COMMAND_DMA_EXT_WRITE : ATA_COMMAND_DMA_WRITE) 
+        : (port->lba48 == 1 ? ATA_COMMAND_DMA_EXT_READ : ATA_COMMAND_DMA_READ);
     // For legacy things
     fis_area->dev_head = 0xA0 | (1 << 6); // Add LBA mode
     fis_area->control = 0x08;
@@ -455,6 +456,7 @@ int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint64_t count, uint
             // Error with transfer
             uint8_t error = (uint8_t) (port->port->task_file >> 8);
             kprintf("[AHCI] Transfer error: %u\n", (uint32_t) error);
+            while (1) { asm volatile("hlt"); }
             ahci_reset_command_engine(port);
 
             return 3;
