@@ -95,19 +95,17 @@ void third_task() {
 void start_test_user_task() {
     void *new_cr3 = vmm_fork_higher_half((void *) (vmm_get_pml4t() + NORMAL_VMA_OFFSET));
     int64_t pid = new_process("User process", new_cr3);
-    sprintf("\nCode virt: %lx", (void *) user_task);
     void *phys = virt_to_phys((void *) user_task, (pt_t *) vmm_get_pml4t());
     /* Map code and stack */
     void *stack_bot = kcalloc(TASK_STACK_SIZE);
     void *stack_virt = (void *) (0x7FFFFFFFF000 - TASK_STACK_SIZE);
     void *stack_phys = virt_to_phys(stack_bot, (pt_t *) vmm_get_pml4t());
-    sprintf("\nStack phys: %lx Code phys: %lx", stack_phys, phys);
 
     vmm_map_pages(phys, phys, new_cr3, 30, VMM_PRESENT | VMM_WRITE | VMM_USER);
     vmm_map_pages(stack_phys, stack_virt, new_cr3, TASK_STACK_PAGES, VMM_PRESENT | VMM_WRITE | VMM_USER);
     task_t *new_task = create_thread("User thread", phys, 0x7FFFFFFFF000, 3);
     new_task->state = READY;
-    sprintf("\nNew task TID %ld", add_new_child_thread(new_task, pid));
+    add_new_child_thread(new_task, pid);
 }
 
 void scheduler_init_bsp() {

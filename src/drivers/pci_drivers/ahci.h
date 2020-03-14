@@ -105,6 +105,9 @@ typedef struct {
     ahci_port_t *port;
     uint8_t addresses_64;
     uint8_t command_slot_count;
+    uint64_t sector_size;
+    uint64_t sector_count;
+    uint8_t lba48;
 } ahci_port_data_t;
 
 typedef struct {
