@@ -20,7 +20,10 @@ typedef enum {
 } FIS_TYPE;
 
 typedef enum {
-    ATA_COMMAND_IDENTIFY   = 0xEC,
+    ATA_COMMAND_IDENTIFY     = 0xEC,
+    ATA_COMMAND_DMA_READ     = 0xC8,
+    ATA_COMMAND_DMA_EXT_READ = 0x25,
+    ATA_COMMAND_DMA_WRITE    = 0xCA,
 } ATA_COMMAND;
 
 typedef enum {
@@ -160,5 +163,6 @@ typedef struct {
 
 void ahci_init_controller(pci_device_t device);
 void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface);
+int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint64_t count, uint64_t offset, uint8_t write);
 
 #endif

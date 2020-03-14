@@ -288,6 +288,9 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
 
             if (port->signature == SATA_SIG_ATA) {
                 ahci_identify_sata(&port_data, 0); // Only do an identify if its a SATA drive
+                
+                uint8_t *data_to_write = pmm_alloc(1 * port_data.sector_size);
+                ahci_io_sata_sectors(&port_data, data_to_write, 1, 0, 0); // Read, so we only overwrite some data
             }
         }
     }
@@ -346,12 +349,22 @@ void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface) {
             ahci_reset_command_engine(port);
             pmm_unalloc(identify_region, 512);
 
-            return; // Next device
+            return;
         }
     }
     uint8_t *data = GET_HIGHER_HALF(uint8_t *, identify_region);
 
-    port->sector_size = 512; // :/
+    uint16_t data_valid = *(uint16_t *) (&data[212]);
+    if (!(data_valid & (1<<15)) && (data_valid & (1<<14)) && (data_valid & (1<<12))) {
+        // Data is valid, including the logical sector data
+        uint32_t logical_sector_size = *(uint32_t *) (&data[234]);
+        port->sector_size = logical_sector_size;
+    } else {
+        // Data invalid
+        port->sector_size = 512;
+    }
+    kprintf("[AHCI] Sector size = %lu bytes\n", port->sector_size);
+
     port->sector_count = 0;
     // Get the sector count
     port->sector_count = *(uint64_t *) (&data[200]);
@@ -360,43 +373,66 @@ void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface) {
     }
 
     port->lba48 = (data[167] & (1 << 2)) && (data[173] & (1 << 2));
-    sprintf("\n[AHCI] Drive sector count: %lu, LBA48: %u", port->sector_count, (uint32_t) port->lba48);
+    kprintf("[AHCI] Drive sector count: %lu, LBA48: %u\n", port->sector_count, (uint32_t) port->lba48);
 
     pmm_unalloc(identify_region, 512);
 }
 
-void ahci_read_sata(ahci_port_data_t *port, void *buffer, uint64_t count, uint64_t offset) {
-    uint64_t prdt_count = (count + 0x400000 - 1) / 0x400000;
-    (void) prdt_count;
-    (void) buffer;
-    (void) offset;
-    ahci_command_slot_t command_slot = ahci_allocate_command_slot(port, AHCI_GET_FIS_SIZE(1));
+int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint64_t count, uint64_t offset, uint8_t write) {
+    uint64_t prdt_count = ((count * port->sector_size) + 0x400000 - 1) / 0x400000;
+    ahci_command_slot_t command_slot = ahci_allocate_command_slot(port, AHCI_GET_FIS_SIZE(prdt_count + 1));
     ahci_command_header_t *header = ahci_get_cmd_header(port, command_slot.index);
     
+    (void) offset;
+
     if (command_slot.index == -1) {
         kprintf("[AHCI] No command slot!\n");
-        return;
+        return 1;
     }
 
     // Set command header
     header->flags.prdt_count = 1;
-    header->flags.write = 0;
+    header->flags.write = write;
     header->flags.command_fis_len = 5;
 
     // Set fis data
     ahci_h2d_fis_t *fis_area = GET_HIGHER_HALF(ahci_h2d_fis_t *, command_slot.data->command_fis_data);
     fis_area->type = FIS_TYPE_REG_H2D;
     fis_area->flags.c = 1;
-    fis_area->command = 0;
+    fis_area->command = write == 1 ? ATA_COMMAND_DMA_WRITE : ATA_COMMAND_DMA_READ;
     // For legacy things
-    fis_area->dev_head = 0xA0;
+    fis_area->dev_head = 0xA0 | (1 << 6); // Add LBA mode
     fis_area->control = 0x08;
 
-    // Area for identify
-    void *identify_region = pmm_alloc(512);
-    ahci_prdt_entry_t *higher_half_prdt = GET_HIGHER_HALF(ahci_prdt_entry_t *, &(command_slot.data->prdts[0]));
-    ahci_fill_prdt(port, identify_region, higher_half_prdt);
-    higher_half_prdt->byte_count = AHCI_GET_PRDT_BYTES(512);
+    // LBA data
+    fis_area->lba_0 = (offset >> 0) && 0xFF;
+    fis_area->lba_1 = (offset >> 8) && 0xFF;
+    fis_area->lba_2 = (offset >> 16) && 0xFF;
+
+    if (port->lba48 == 1) {
+        fis_area->lba_3 = (offset >> 24) && 0xFF;
+        fis_area->lba_4 = (offset >> 32) && 0xFF;
+        fis_area->lba_5 = (offset >> 40) && 0xFF;
+    }
+
+    char *local_buf = buf;
+
+    uint64_t bytes_left = count * port->sector_size;
+    for (uint64_t i = 0; i < prdt_count; i++) {
+        ahci_prdt_entry_t *higher_half_prdt = GET_HIGHER_HALF(ahci_prdt_entry_t *, &(command_slot.data->prdts[i]));
+        ahci_fill_prdt(port, local_buf + (i * 0x400000), higher_half_prdt);
+
+        sprintf("\n[AHCI] Bytes left: %lu", bytes_left);
+
+        if (bytes_left >= 0x400000) {
+            higher_half_prdt->byte_count = AHCI_GET_PRDT_BYTES(0x400000);
+            bytes_left -= 0x400000;
+        } else {
+            higher_half_prdt->byte_count = AHCI_GET_PRDT_BYTES(bytes_left);
+            sprintf("\n[AHCI] Byte count: %x", higher_half_prdt->byte_count);
+            bytes_left = 0;
+        }
+    }
 
     // Actually send command
     ahci_wait_ready(port);
@@ -409,7 +445,7 @@ void ahci_read_sata(ahci_port_data_t *port, void *buffer, uint64_t count, uint64
         kprintf("[AHCI] Transfer error (CI set): %u\n", (uint32_t) error);
         ahci_reset_command_engine(port);
 
-        return;
+        return 2;
     }
 
     // Error handling
@@ -420,14 +456,12 @@ void ahci_read_sata(ahci_port_data_t *port, void *buffer, uint64_t count, uint64
             uint8_t error = (uint8_t) (port->port->task_file >> 8);
             kprintf("[AHCI] Transfer error: %u\n", (uint32_t) error);
             ahci_reset_command_engine(port);
-            pmm_unalloc(identify_region, 512);
 
-            return; // Next device
+            return 3;
         }
     }
-    //uint64_t *data = GET_HIGHER_HALF(uint64_t *, identify_region);
 
-    pmm_unalloc(identify_region, 512);
+    return 0; // Return success
 }
 
 void ahci_init_controller(pci_device_t device) {
