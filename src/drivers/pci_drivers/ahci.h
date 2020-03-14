@@ -164,6 +164,6 @@ typedef struct {
 
 void ahci_init_controller(pci_device_t device);
 void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface);
-int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint64_t count, uint64_t offset, uint8_t write);
+int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint16_t count, uint64_t offset, uint8_t write);
 
 #endif

@@ -378,7 +378,7 @@ void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface) {
     pmm_unalloc(identify_region, 512);
 }
 
-int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint64_t count, uint64_t offset, uint8_t write) {
+int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint16_t count, uint64_t offset, uint8_t write) {
     uint64_t prdt_count = ((count * port->sector_size) + 0x400000 - 1) / 0x400000;
     ahci_command_slot_t command_slot = ahci_allocate_command_slot(port, AHCI_GET_FIS_SIZE(prdt_count + 1));
     ahci_command_header_t *header = ahci_get_cmd_header(port, command_slot.index);
@@ -391,7 +391,7 @@ int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint64_t count, uint
     }
 
     // Set command header
-    header->flags.prdt_count = 1;
+    header->flags.prdt_count = prdt_count;
     header->flags.write = write;
     header->flags.command_fis_len = 5;
 
@@ -415,6 +415,9 @@ int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint64_t count, uint
         fis_area->lba_4 = (offset >> 32) && 0xFF;
         fis_area->lba_5 = (offset >> 40) && 0xFF;
     }
+
+    fis_area->sector_count_low = (count >> 0) & 0xFF;
+    fis_area->sector_count_high = (count >> 8) & 0xFF;
 
     char *local_buf = buf;
 
@@ -456,7 +459,6 @@ int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint64_t count, uint
             // Error with transfer
             uint8_t error = (uint8_t) (port->port->task_file >> 8);
             kprintf("[AHCI] Transfer error: %u\n", (uint32_t) error);
-            while (1) { asm volatile("hlt"); }
             ahci_reset_command_engine(port);
 
             return 3;
