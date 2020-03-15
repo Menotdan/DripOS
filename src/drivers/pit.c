@@ -5,7 +5,7 @@
 #include "klibc/stdlib.h"
 #include "proc/scheduler.h"
 
-uint64_t global_ticks = 0;
+volatile uint64_t global_ticks = 0;
 
 void timer_handler(int_reg_t *r) {
     global_ticks++;

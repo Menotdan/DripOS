@@ -390,6 +390,8 @@ int ahci_read_sata_bytes(ahci_port_data_t *port, void *buf, uint64_t count, uint
 
     if (sector_count > 0xffff) {
         return 5; // To many bytes
+    } else if (sector_count == 0) {
+        return 6; // Not enough bytes
     }
 
     uint8_t *data_buf = pmm_alloc(sector_count * port->sector_size);
@@ -413,7 +415,9 @@ int ahci_write_sata_bytes(ahci_port_data_t *port, void *buf, uint64_t count, uin
     uint64_t sector_count = sector_end - sector_start;
 
     if (sector_count > 0xffff) {
-        return 5; // Too much data
+        return 5; // To many bytes
+    } else if (sector_count == 0) {
+        return 6; // Not enough bytes
     }
 
     uint8_t *data_buf_temp = pmm_alloc(sector_count * port->sector_size);
@@ -469,8 +473,13 @@ int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint16_t count, uint
         fis_area->lba_5 = (offset >> 40) && 0xFF;
     }
 
-    fis_area->sector_count_low = (count >> 0) & 0xFF;
-    fis_area->sector_count_high = (count >> 8) & 0xFF;
+    if (count != 0xffff) {
+        fis_area->sector_count_low = (count >> 0) & 0xFF;
+        fis_area->sector_count_high = (count >> 8) & 0xFF;
+    } else {
+        fis_area->sector_count_low = 0;
+        fis_area->sector_count_high = 0;
+    }
 
     char *local_buf = buf;
 
