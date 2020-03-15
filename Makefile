@@ -58,7 +58,7 @@ debug: myos.iso
 # To make an object, always compile from its .c
 
 %.o: %.c
-	${CC} ${CFLAGS} -D AMD64 -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -fno-omit-frame-pointer -MD -c $< -o $@ -std=gnu11 -ffreestanding
+	${CC} ${CFLAGS} -D AMD64 -D DEBUG -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -fno-omit-frame-pointer -MD -c $< -o $@ -std=gnu11 -ffreestanding
 
 %.bin: %.real
 	nasm -f bin -o $@ $<

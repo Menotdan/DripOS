@@ -289,8 +289,15 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
             if (port->signature == SATA_SIG_ATA) {
                 ahci_identify_sata(&port_data, 0); // Only do an identify if its a SATA drive
                 
-                uint8_t *data_to_write = pmm_alloc(1 * port_data.sector_size);
-                ahci_io_sata_sectors(&port_data, data_to_write, 1, 0, 0); // Read, so we only overwrite some data
+                char *data_buf = pmm_alloc(30);
+                memset((uint8_t *) data_buf, 0, 30);
+                int err = ahci_read_sata_bytes(&port_data, data_buf, 2, 1);
+                if (!err) {
+                    sprintf("\nHex data:\n");
+                    for (uint64_t i = 0; i < 30; i++) {
+                        sprintf("%x ", (uint32_t) data_buf[i]);
+                    }
+                }
             }
         }
     }
@@ -376,6 +383,55 @@ void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface) {
     kprintf("[AHCI] Drive sector count: %lu, LBA48: %u\n", port->sector_count, (uint32_t) port->lba48);
 
     pmm_unalloc(identify_region, 512);
+}
+
+int ahci_read_sata_bytes(ahci_port_data_t *port, void *buf, uint64_t count, uint64_t seek) {
+    uint64_t sector_offset = seek % port->sector_size;
+    uint64_t sector_start = seek / port->sector_size;
+    uint64_t sector_end = ((seek + count) + port->sector_size - 1) / port->sector_size;
+    uint64_t sector_count = sector_end - sector_start;
+
+    if (sector_count > 0xffff) {
+        return 5; // To many bytes
+    }
+
+    uint8_t *data_buf = pmm_alloc(sector_count * port->sector_size);
+    int err = ahci_io_sata_sectors(port, data_buf, sector_count, sector_start, 0);
+    if (err) {
+        return err;
+    }
+
+    data_buf += sector_offset;
+    memcpy(GET_HIGHER_HALF(uint8_t *, data_buf), buf, count);
+    data_buf -= sector_offset;
+
+    pmm_unalloc(data_buf, sector_count * port->sector_size);
+    return 0;
+}
+
+int ahci_write_sata_bytes(ahci_port_data_t *port, void *buf, uint64_t count, uint64_t seek) {
+    uint64_t sector_start_offset = seek % port->sector_size;
+    uint64_t sector_end_offset = (seek + count) % port->sector_size;
+    uint64_t sector_start = seek / port->sector_size;
+    uint64_t sector_end = ((seek + count) + port->sector_size - 1) / port->sector_size;
+    uint64_t sector_count = sector_end - sector_start;
+
+    if (sector_count > 0xffff) {
+        return 5; // Too much data
+    }
+
+    uint8_t *data_buf_temp = pmm_alloc(sector_count * port->sector_size);
+    uint8_t *data_buf_end_area = data_buf_temp + ((sector_count - 1) * port->sector_size);
+    int err = ahci_io_sata_sectors(port, data_buf_temp, 1, sector_start, 0);
+    if (err) { return err; }
+    err = ahci_io_sata_sectors(port, data_buf_end_area, 1, sector_end - 1, 0);
+    if (err) { return err; }
+
+    memcpy(buf + sector_start_offset, GET_HIGHER_HALF(uint8_t *, data_buf_temp), count);
+    err = ahci_io_sata_sectors(port, data_buf_temp, sector_count, sector_start, 1);
+    if (err) { return err; }
+
+    return 0;
 }
 
 int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint16_t count, uint64_t offset, uint8_t write) {
