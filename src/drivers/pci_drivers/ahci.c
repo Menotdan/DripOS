@@ -291,12 +291,9 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
                 
                 char *data_buf = pmm_alloc(30);
                 memset((uint8_t *) data_buf, 0, 30);
-                int err = ahci_read_sata_bytes(&port_data, data_buf, 2, 1);
+                int err = ahci_write_sata_bytes(&port_data, data_buf, 4, 511);
                 if (!err) {
-                    sprintf("\nHex data:\n");
-                    for (uint64_t i = 0; i < 30; i++) {
-                        sprintf("%x ", (uint32_t) data_buf[i]);
-                    }
+                    sprintf("\nWrote data");
                 }
             }
         }
@@ -411,7 +408,6 @@ int ahci_read_sata_bytes(ahci_port_data_t *port, void *buf, uint64_t count, uint
 
 int ahci_write_sata_bytes(ahci_port_data_t *port, void *buf, uint64_t count, uint64_t seek) {
     uint64_t sector_start_offset = seek % port->sector_size;
-    uint64_t sector_end_offset = (seek + count) % port->sector_size;
     uint64_t sector_start = seek / port->sector_size;
     uint64_t sector_end = ((seek + count) + port->sector_size - 1) / port->sector_size;
     uint64_t sector_count = sector_end - sector_start;
@@ -423,14 +419,15 @@ int ahci_write_sata_bytes(ahci_port_data_t *port, void *buf, uint64_t count, uin
     uint8_t *data_buf_temp = pmm_alloc(sector_count * port->sector_size);
     uint8_t *data_buf_end_area = data_buf_temp + ((sector_count - 1) * port->sector_size);
     int err = ahci_io_sata_sectors(port, data_buf_temp, 1, sector_start, 0);
-    if (err) { return err; }
+    if (err) { pmm_unalloc(data_buf_temp, sector_count * port->sector_size); return err; }
     err = ahci_io_sata_sectors(port, data_buf_end_area, 1, sector_end - 1, 0);
-    if (err) { return err; }
+    if (err) { pmm_unalloc(data_buf_temp, sector_count * port->sector_size); return err; }
 
-    memcpy(buf + sector_start_offset, GET_HIGHER_HALF(uint8_t *, data_buf_temp), count);
+    memcpy(buf + sector_start_offset, GET_HIGHER_HALF(uint8_t *, data_buf_temp + sector_start_offset), count);
     err = ahci_io_sata_sectors(port, data_buf_temp, sector_count, sector_start, 1);
-    if (err) { return err; }
+    if (err) { pmm_unalloc(data_buf_temp, sector_count * port->sector_size); return err; }
 
+    pmm_unalloc(data_buf_temp, sector_count * port->sector_size);
     return 0;
 }
 
