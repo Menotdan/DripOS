@@ -1,16 +1,20 @@
 [bits 32]
 
 extern __kernel_start
+
+; Higher half VMA for kernel data, since boot starts in lower half and we need to subtract labels
 %define KERNEL_VMA 0xFFFFFFFF80000000
 
 ; Flag constants
 ALIGN_MULTIBOOT  equ 1<<0
 MEMINFO          equ 1<<1
 VIDEO_MODE       equ 1<<2
+
 ; Magic, flags, and checksum
 FLAGS            equ ALIGN_MULTIBOOT | MEMINFO | VIDEO_MODE
 MAGIC            equ 0x1BADB002
 CHECKSUM         equ -(MAGIC + FLAGS)
+
 ; Video mode data
 VIDMODE          equ 0
 WIDTH            equ 1280
@@ -19,16 +23,19 @@ DEPTH            equ 32
 
 section .multiboot
 align 4
+
 ; Magic, flags, and checksum
 dd MAGIC
 dd FLAGS
 dd CHECKSUM
+
 ; Unused data
 dd 0
 dd 0
 dd 0
 dd 0
 dd 0
+
 ; Video mode data
 dd VIDMODE
 dd WIDTH
