@@ -32,10 +32,10 @@ pt_off_t vmm_virt_to_offs(void *virt) {
     uintptr_t addr = (uintptr_t)virt;
 
     pt_off_t off = {
-        .p4_off = (addr & ((size_t)0x1ff << 39)) >> 39,
-        .p3_off = (addr & ((size_t)0x1ff << 30)) >> 30,
-        .p2_off = (addr & ((size_t)0x1ff << 21)) >> 21,
-        .p1_off = (addr & ((size_t)0x1ff << 12)) >> 12,
+        .p4_off = (addr & ((size_t) 0x1ff << 39)) >> 39,
+        .p3_off = (addr & ((size_t) 0x1ff << 30)) >> 30,
+        .p2_off = (addr & ((size_t) 0x1ff << 21)) >> 21,
+        .p1_off = (addr & ((size_t) 0x1ff << 12)) >> 12,
     };
 
     return off;
