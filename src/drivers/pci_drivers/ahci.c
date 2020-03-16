@@ -347,14 +347,6 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
                 ops.read = ahci_read;
                 ops.write = ahci_write;
                 register_device(device_name, ops, port_data_heap);
-                
-                
-                char *data_buf = pmm_alloc(30);
-                memset((uint8_t *) data_buf, 0, 30);
-                int err = ahci_write_sata_bytes(&port_data, data_buf, 4, 511);
-                if (!err) {
-                    sprintf("\nWrote data");
-                }
             }
         }
     }

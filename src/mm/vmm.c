@@ -61,7 +61,8 @@ pt_t *traverse_page_table(pt_t *cur_table, uint64_t offset) {
 }
 
 void *virt_to_phys(void *virt, pt_t *p4) {
-    uint64_t page_offset = ((uint64_t) virt) & 0xfff;
+    uint64_t page4k_offset = ((uint64_t) virt) & 0xfff;
+    uint64_t page2m_offset = ((uint64_t) virt) & 0x1fffff;
     pt_off_t offs = vmm_virt_to_offs(virt);
 
     p4 = (pt_t *) ((uint64_t) p4 + NORMAL_VMA_OFFSET);
@@ -70,14 +71,15 @@ void *virt_to_phys(void *virt, pt_t *p4) {
     if ((uint64_t) p3 > NORMAL_VMA_OFFSET) {
         pt_t *p2 = traverse_page_table(p3, offs.p3_off);
         if (get_entry(p2, offs.p2_off) & VMM_HUGE) {
-            return (void *) ((p2->table[offs.p2_off] & ~(0x1fffff)) + (((uint64_t) virt) & 0x1fffff));
+            
+            return (void *) (p2->table[offs.p2_off] & ~(0x1fffff)) + page2m_offset;
         }
 
         if ((uint64_t) p2 > NORMAL_VMA_OFFSET) {
             pt_t *p1 = traverse_page_table(p2, offs.p2_off);
 
             if ((uint64_t) p1 > NORMAL_VMA_OFFSET) {
-                return (void *) ((p1->table[offs.p1_off] & ~(0xfff)) + page_offset);
+                return (void *) (p1->table[offs.p1_off] & ~(0xfff)) + page4k_offset;
             }
         }
     }

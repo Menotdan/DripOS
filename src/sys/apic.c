@@ -122,8 +122,6 @@ uint8_t apic_get_gsi_max(void *ioapic_base) {
     return ret & ~(1<<7);
 }
 
-/* TODO: make a mask function */
-
 uint8_t apic_write_redirection_table(uint32_t gsi, uint64_t data) {
     madt_ent1_t *valid_ioapic = (madt_ent1_t *) 0;
     uint32_t gsi_base = 0;

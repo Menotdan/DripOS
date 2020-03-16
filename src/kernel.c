@@ -21,6 +21,9 @@
 #include "klibc/string.h"
 #include "sys/smp.h"
 
+#define TODO_LIST_SIZE 6
+char *todo_list[TODO_LIST_SIZE] = {"Better syscall error handling", "Filesystem driver", "ELF Loading", "userspace libc", "minor: Sync TLB across CPUs", "minor: Add MMIO PCI"};
+
 void kernel_task() {
     kprintf("\n[DripOS] Loading VFS");
     vfs_init(); // Setup VFS
@@ -44,13 +47,17 @@ void kernel_task() {
 
     pci_init();
 
+    kprintf("\n[DripOS Kernel] Bultin todo list:");
+    for (uint64_t i = 0; i < TODO_LIST_SIZE; i++) {
+        kprintf("\n  %s", todo_list[i]);
+    }
+
     sprintf("\nStarting user task");
     start_test_user_task();
 
     sprintf("\ndone kernel work");
 
     while (1) { asm volatile("hlt"); }
-        
 }
 
 // Kernel main function, execution starts here :D
