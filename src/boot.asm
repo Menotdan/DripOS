@@ -1,27 +1,35 @@
 [bits 32]
+
 extern __kernel_start
 %define KERNEL_VMA 0xFFFFFFFF80000000
-ALIGN_MULTIBOOT equ 1<<0
-MEMINFO equ 1<<1
-VIDEO_MODE equ 0x00000004
-FLAGS equ ALIGN_MULTIBOOT | MEMINFO | VIDEO_MODE
-MAGIC equ 0x1BADB002
-CHECKSUM equ -(MAGIC + FLAGS)
-VIDMODE equ 0
-WIDTH equ 1280
-HEIGHT equ 720
-DEPTH equ 32
+
+; Flag constants
+ALIGN_MULTIBOOT  equ 1<<0
+MEMINFO          equ 1<<1
+VIDEO_MODE       equ 1<<2
+; Magic, flags, and checksum
+FLAGS            equ ALIGN_MULTIBOOT | MEMINFO | VIDEO_MODE
+MAGIC            equ 0x1BADB002
+CHECKSUM         equ -(MAGIC + FLAGS)
+; Video mode data
+VIDMODE          equ 0
+WIDTH            equ 1280
+HEIGHT           equ 720
+DEPTH            equ 32
 
 section .multiboot
 align 4
+; Magic, flags, and checksum
 dd MAGIC
 dd FLAGS
 dd CHECKSUM
+; Unused data
 dd 0
 dd 0
 dd 0
 dd 0
 dd 0
+; Video mode data
 dd VIDMODE
 dd WIDTH
 dd HEIGHT
