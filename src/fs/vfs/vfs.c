@@ -50,7 +50,7 @@ vfs_ops_t dummy_ops = {dummy_open, dummy_close, dummy_read, dummy_write};
 vfs_node_t *vfs_open(char *name, int mode) {
     if (!range_mapped(name, 0x1000)) { // boi if ur name isnt mapped
         get_thread_locals()->errno = -EFAULT;
-        return;
+        return (vfs_node_t *) 0;
     }
 
     vfs_node_t *node = get_node_from_path(name);
