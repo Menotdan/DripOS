@@ -1,5 +1,6 @@
 #include "syscalls.h"
 #include "fs/fd.h"
+#include "proc/scheduler.h"
 
 #include "drivers/serial.h"
 
@@ -11,6 +12,7 @@ syscall_handler_t syscall_handlers[] = {syscall_read, syscall_write, syscall_ope
 void syscall_handler(syscall_reg_t *r) {
     sprintf("\nGot syscall with rax = %lx", r->rax);
     if (r->rax < HANDLER_COUNT) {
+        get_thread_locals()->errno = 0; // Clear errno
         syscall_handlers[r->rax](r);
     }
 }

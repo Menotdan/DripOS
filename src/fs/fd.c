@@ -13,7 +13,7 @@ lock_t fd_lock = 0;
 int fd_open(char *name, int mode) {
     vfs_node_t *node = vfs_open(name, mode);
     if (!node) {
-        return -1;
+        return get_thread_locals()->errno;
     }
     return fd_new(node);
 }
@@ -22,7 +22,7 @@ int fd_close(int fd) {
     vfs_node_t *node = fd_lookup(fd);
     if (!node) {
         get_thread_locals()->errno = -EBADF;
-        return -1;
+        return get_thread_locals()->errno;
     }
     vfs_close(node);
     fd_remove(fd);
@@ -33,7 +33,7 @@ int fd_read(int fd, void *buf, uint64_t count) {
     vfs_node_t *node = fd_lookup(fd);
     if (!node) {
         get_thread_locals()->errno = -EBADF;
-        return -1;
+        return get_thread_locals()->errno;
     }
     vfs_read(node, buf, count);
     return get_thread_locals()->errno;
@@ -43,7 +43,7 @@ int fd_write(int fd, void *buf, uint64_t count) {
     vfs_node_t *node = fd_lookup(fd);
     if (!node) {
         get_thread_locals()->errno = -EBADF;
-        return -1;
+        return get_thread_locals()->errno;
     }
     sprintf("\nPerforming a write");
     vfs_write(node, buf, count);
