@@ -1,14 +1,62 @@
 #include "ahci.h"
 #include "mm/vmm.h"
 #include "mm/pmm.h"
+#include "fs/devfs/devfs.h"
 #include "klibc/dynarray.h"
 #include "klibc/string.h"
+#include "klibc/stdlib.h"
 #include "drivers/pit.h"
+#include "proc/scheduler.h"
+#include "klibc/errno.h"
 
 #include "drivers/serial.h"
 #include "drivers/tty/tty.h"
 
 dynarray_t ahci_controllers = {0, 0, 0};
+
+uint8_t sata_device_count = 0;
+
+int ahci_read(vfs_node_t *node, void *buf, uint64_t count) {
+    if (!is_mapped(buf)) {
+        get_thread_locals()->errno = -EFAULT;
+        return 0;
+    }
+
+    ahci_port_data_t *port_data_for_device = get_device_data(node);
+    if (port_data_for_device) {
+        int err = ahci_read_sata_bytes(port_data_for_device, buf, count, 0);
+
+        if (err) {
+            get_thread_locals()->errno = -EIO;
+        } else {
+            get_thread_locals()->errno = 0;
+        }
+        return 0;
+    }
+
+    return 0;
+}
+
+int ahci_write(vfs_node_t *node, void *buf, uint64_t count) {
+    if (!is_mapped(buf)) {
+        get_thread_locals()->errno = -EFAULT;
+        return 0;
+    }
+
+    ahci_port_data_t *port_data_for_device = get_device_data(node);
+    if (port_data_for_device) {
+        int err = ahci_write_sata_bytes(port_data_for_device, buf, count, 0);
+
+        if (err) {
+            get_thread_locals()->errno = -EIO;
+        } else {
+            get_thread_locals()->errno = 0;
+        }
+        return 0;
+    }
+
+    return 0;
+}
 
 uint8_t port_present(ahci_controller_t controller, uint8_t port) {
     if (controller.ahci_bar->port_implemented & (1<<port)) {
@@ -288,6 +336,18 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
 
             if (port->signature == SATA_SIG_ATA) {
                 ahci_identify_sata(&port_data, 0); // Only do an identify if its a SATA drive
+
+                ahci_port_data_t *port_data_heap = kcalloc(sizeof(ahci_port_data_t));
+                memcpy((uint8_t *) &port_data, (uint8_t *) port_data_heap, sizeof(ahci_port_data_t));
+                char *device_name = "satadev ";
+                device_name[strlen(device_name) - 1] = 'a' + sata_device_count;
+                sata_device_count++;
+
+                vfs_ops_t ops = dummy_ops;
+                ops.read = ahci_read;
+                ops.write = ahci_write;
+                register_device(device_name, ops, port_data_heap);
+                
                 
                 char *data_buf = pmm_alloc(30);
                 memset((uint8_t *) data_buf, 0, 30);
@@ -298,6 +358,8 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
             }
         }
     }
+
+    devfs_sprint_devices();
 }
 
 void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface) {

@@ -24,6 +24,8 @@ typedef struct vfs_node {
     struct vfs_node *parent; // Parent
     struct vfs_node **children; // An array of children
     uint64_t children_array_size;
+
+    uint64_t unid; // Unique node id
 } vfs_node_t;
 
 void vfs_init();

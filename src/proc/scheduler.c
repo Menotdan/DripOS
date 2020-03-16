@@ -56,7 +56,7 @@ void _idle() {
 
 void user_task() {
     uint64_t rax = 2;
-    char *filename = "/dev/tty1";
+    char *filename = "/dev/satadeva";
     uint64_t rdi = (uint64_t) filename;
     uint64_t rsi = 0;
     uint64_t output;

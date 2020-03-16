@@ -31,7 +31,7 @@ void kernel_task() {
     ops.close = devfs_close;
     ops.write = tty_dev_write;
     ops.read = tty_dev_read;
-    register_device("tty1", ops);
+    register_device("tty1", ops, (void *) 0);
 
     int test_dev = fd_open("/dev/tty1", 0);
     char *write = "\nHello from vfs!";

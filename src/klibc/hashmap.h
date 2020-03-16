@@ -20,4 +20,8 @@ typedef struct {
     lock_t hashmap_lock;
 } hashmap_t;
 
+void *hashmap_get_elem(hashmap_t *hashmap, uint64_t hash);
+void hashmap_set_elem(hashmap_t *hashmap, uint64_t key, void *data);
+void hashmap_remove_elem(hashmap_t *hashmap, uint64_t key);
+
 #endif

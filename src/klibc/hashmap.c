@@ -7,10 +7,12 @@ void *hashmap_get_elem(hashmap_t *hashmap, uint64_t hash) {
     uint64_t bucket_item = hash % HASHMAP_BUCKET_SIZE;
 
     if (bucket > hashmap->bucket_highest) {
+        unlock(&hashmap->hashmap_lock);
         return (void *) 0;
     }
 
     if (hashmap->buckets[bucket].elements == (void *) 0) {
+        unlock(&hashmap->hashmap_lock);
         return (void *) 0;
     }
 
@@ -46,10 +48,12 @@ void hashmap_remove_elem(hashmap_t *hashmap, uint64_t key) {
     uint64_t bucket_item = key % HASHMAP_BUCKET_SIZE;
 
     if (bucket > hashmap->bucket_highest) {
+        unlock(&hashmap->hashmap_lock);
         return;
     }
 
     if (hashmap->buckets[bucket].elements == (void *) 0) {
+        unlock(&hashmap->hashmap_lock);
         return;
     }
 

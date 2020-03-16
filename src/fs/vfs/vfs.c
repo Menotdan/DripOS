@@ -12,6 +12,7 @@
 vfs_node_t *root_node;
 
 lock_t vfs_lock = 0;
+uint64_t current_unid = 0; // Current unique node ID
 
 /* Dummy VFS ops */
 int dummy_open(char *name, int mode) {
@@ -96,6 +97,10 @@ vfs_node_t *vfs_new_node(char *name, vfs_ops_t ops) {
     vfs_node_t *node = kcalloc(sizeof(vfs_node_t));
     node->children_array_size = 10;
     node->children = kcalloc(10 * sizeof(vfs_node_t *));
+
+    /* Set unique node id */
+    node->unid = current_unid;
+    current_unid++;
 
     /* Set name and ops */
     node->ops = ops;
