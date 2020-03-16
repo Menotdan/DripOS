@@ -15,6 +15,7 @@
 dynarray_t ahci_controllers = {0, 0, 0};
 
 uint8_t sata_device_count = 0;
+lock_t ahci_lock = 0;
 
 int ahci_read(vfs_node_t *node, void *buf, uint64_t count) {
     ahci_port_data_t *port_data_for_device = get_device_data(node);
@@ -351,11 +352,14 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
 }
 
 void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface) {
+    lock(&ahci_lock);
     ahci_command_slot_t command_slot = ahci_allocate_command_slot(port, AHCI_GET_FIS_SIZE(1));
     ahci_command_header_t *header = ahci_get_cmd_header(port, command_slot.index);
     
     if (command_slot.index == -1) {
         kprintf("[AHCI] No command slot!\n");
+
+        unlock(&ahci_lock);
         return;
     }
 
@@ -390,6 +394,7 @@ void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface) {
         kprintf("[AHCI] Transfer error (CI set): %u\n", (uint32_t) error);
         ahci_reset_command_engine(port);
 
+        unlock(&ahci_lock);
         return;
     }
 
@@ -403,6 +408,7 @@ void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface) {
             ahci_reset_command_engine(port);
             pmm_unalloc(identify_region, 512);
 
+            unlock(&ahci_lock);
             return;
         }
     }
@@ -429,6 +435,7 @@ void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface) {
     port->lba48 = (data[167] & (1 << 2)) && (data[173] & (1 << 2));
     kprintf("[AHCI] Drive sector count: %lu, LBA48: %u\n", port->sector_count, (uint32_t) port->lba48);
 
+    unlock(&ahci_lock);
     pmm_unalloc(identify_region, 512);
 }
 

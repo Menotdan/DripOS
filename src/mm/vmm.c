@@ -90,7 +90,7 @@ void *virt_to_phys(void *virt, pt_t *p4) {
 void vmm_ensure_table(pt_t *table, uint16_t offset) {
     if (!(table->table[offset] & VMM_PRESENT)) {
         uint64_t new_table = (uint64_t) pmm_alloc(0x1000);
-        memset((uint8_t *) (new_table + NORMAL_VMA_OFFSET), 0, 0x1000);
+        memset(GET_HIGHER_HALF(uint8_t *, new_table), 0, 0x1000);
         table->table[offset] = new_table | VMM_PRESENT | VMM_WRITE | VMM_USER;
     }
 }
