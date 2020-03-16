@@ -57,7 +57,7 @@ uint64_t get_entry(pt_t *cur_table, uint64_t offset) {
 }
 
 pt_t *traverse_page_table(pt_t *cur_table, uint64_t offset) {
-    return (pt_t *) ((cur_table->table[offset] & ~(0xfff)) + NORMAL_VMA_OFFSET);
+    return (pt_t *) ((cur_table->table[offset] & VMM_4K_PERM_MASK) + NORMAL_VMA_OFFSET);
 }
 
 void *virt_to_phys(void *virt, pt_t *p4) {
@@ -72,14 +72,14 @@ void *virt_to_phys(void *virt, pt_t *p4) {
         pt_t *p2 = traverse_page_table(p3, offs.p3_off);
         if (get_entry(p2, offs.p2_off) & VMM_HUGE) {
             
-            return (void *) (p2->table[offs.p2_off] & ~(0x1fffff)) + page2m_offset;
+            return (void *) (p2->table[offs.p2_off] & VMM_4K_PERM_MASK) + page2m_offset;
         }
 
         if ((uint64_t) p2 > NORMAL_VMA_OFFSET) {
             pt_t *p1 = traverse_page_table(p2, offs.p2_off);
 
             if ((uint64_t) p1 > NORMAL_VMA_OFFSET) {
-                return (void *) (p1->table[offs.p1_off] & ~(0xfff)) + page4k_offset;
+                return (void *) (p1->table[offs.p1_off] & VMM_4K_PERM_MASK) + page4k_offset;
             }
         }
     }
@@ -99,7 +99,7 @@ void vmm_remap_to_4k(pt_t *p2, uint16_t offset) {
     uint64_t new_pml1 = (uint64_t) pmm_alloc(0x1000);
     uint64_t *new_pml1_virt = (void *) (new_pml1 + NORMAL_VMA_OFFSET);
 
-    uint64_t represented_range = p2->table[offset] & ~(0x1FFFFF);
+    uint64_t represented_range = p2->table[offset] & VMM_4K_PERM_MASK;
     uint64_t perms = p2->table[offset] & 0xfff;
     memset((uint8_t *) new_pml1_virt, 0, 0x1000); // Touch the address there in case our data is living there
 
@@ -164,8 +164,8 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
 
     int ret = 0;
 
-    uint8_t *cur_virt = (uint8_t *) (((uint64_t) virt) & ~(0xfff));
-    uint64_t cur_phys = ((uint64_t) phys) & ~(0xfff);
+    uint8_t *cur_virt = (uint8_t *) (((uint64_t) virt) & VMM_4K_PERM_MASK);
+    uint64_t cur_phys = ((uint64_t) phys) & VMM_4K_PERM_MASK;
 
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
@@ -193,8 +193,8 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
 
     int ret = 0;
 
-    uint8_t *cur_virt = (uint8_t *) (((uint64_t) virt) & ~(0xfff));
-    uint64_t cur_phys = ((uint64_t) phys) & ~(0xfff);
+    uint8_t *cur_virt = (uint8_t *) (((uint64_t) virt) & VMM_4K_PERM_MASK);
+    uint64_t cur_phys = ((uint64_t) phys) & VMM_4K_PERM_MASK;
 
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);

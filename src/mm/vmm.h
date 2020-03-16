@@ -2,6 +2,9 @@
 #define VMM_H
 #include <stdint.h>
 
+#define VMM_4K_PERM_MASK ~(0xfff)
+#define VMM_2M_PERM_MASK ~(0x1fffff)
+
 #define VMM_PRESENT (1<<0)
 #define VMM_WRITE (1<<1)
 #define VMM_USER (1<<2)
