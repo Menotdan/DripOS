@@ -26,3 +26,7 @@ void syscall_write(syscall_reg_t *r) {
 void syscall_open(syscall_reg_t *r) {
     r->rax = fd_open((char *) r->rdi, (int) r->rsi);
 }
+
+void syscall_close(syscall_reg_t *r) {
+    r->rax = fd_close((int) r->rdi);
+}

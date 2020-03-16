@@ -21,8 +21,8 @@
 #include "klibc/string.h"
 #include "sys/smp.h"
 
-#define TODO_LIST_SIZE 6
-char *todo_list[TODO_LIST_SIZE] = {"Better syscall error handling", "Filesystem driver", "ELF Loading", "userspace libc", "minor: Sync TLB across CPUs", "minor: Add MMIO PCI"};
+#define TODO_LIST_SIZE 7
+char *todo_list[TODO_LIST_SIZE] = {"Better syscall error handling", "Filesystem driver", "ELF Loading", "userspace libc", "minor: Sync TLB across CPUs", "minor: Add MMIO PCI", "minor: Retry AHCI commands"};
 
 void kernel_task() {
     kprintf("\n[DripOS] Loading VFS");

@@ -48,12 +48,17 @@ vfs_ops_t dummy_ops = {dummy_open, dummy_close, dummy_read, dummy_write};
 
 /* VFS ops things */
 vfs_node_t *vfs_open(char *name, int mode) {
+    if (!range_mapped(name, 0x1000)) { // boi if ur name isnt mapped
+        get_thread_locals()->errno = -EFAULT;
+        return;
+    }
+
     vfs_node_t *node = get_node_from_path(name);
     if (node) {
         /* Call the actual open ops */
         node->ops.open(name, mode);
     } else {
-        get_thread_locals()->errno = -ENOENT;
+        get_thread_locals()->errno = -ENOENT; // Set errno and we will then return null
     }
 
     return node;
@@ -61,26 +66,30 @@ vfs_node_t *vfs_open(char *name, int mode) {
 
 void vfs_close(vfs_node_t *node) {
     /* If no mappings exist */
-    if (!is_mapped(node)) {
+    if (!range_mapped(node, sizeof(vfs_node_t))) {
+        get_thread_locals()->errno = -EFAULT;
         return;
     }
+
     node->ops.close(node);
 }
 
 void vfs_read(vfs_node_t *node, void *buf, uint64_t count) {
     /* If no mappings exist */
-    if (!is_mapped(node) || !is_mapped(buf)) {
+    if (!range_mapped(node, sizeof(vfs_node_t)) || !range_mapped(buf, count)) {
+        get_thread_locals()->errno = -EFAULT;
         return;
     }
+
     node->ops.read(node, buf, count);
 }
 
 void vfs_write(vfs_node_t *node, void *buf, uint64_t count) {
     /* If no mappings exist */
-    if (!is_mapped(node) || !is_mapped(buf)) {
+    if (!range_mapped(node, sizeof(vfs_node_t)) || !range_mapped(buf, count)) {
         return;
     }
-    sprintf("\nRunning node ops");
+
     node->ops.write(node, buf, count);
 }
 

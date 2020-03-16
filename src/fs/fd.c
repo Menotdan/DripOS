@@ -1,6 +1,7 @@
 #include "fd.h"
 #include "klibc/lock.h"
 #include "klibc/stdlib.h"
+#include "klibc/errno.h"
 #include "proc/scheduler.h"
 
 #include "drivers/serial.h"
@@ -20,6 +21,7 @@ int fd_open(char *name, int mode) {
 int fd_close(int fd) {
     vfs_node_t *node = fd_lookup(fd);
     if (!node) {
+        get_thread_locals()->errno = -EBADF;
         return -1;
     }
     vfs_close(node);
@@ -30,6 +32,7 @@ int fd_close(int fd) {
 int fd_read(int fd, void *buf, uint64_t count) {
     vfs_node_t *node = fd_lookup(fd);
     if (!node) {
+        get_thread_locals()->errno = -EBADF;
         return -1;
     }
     vfs_read(node, buf, count);
@@ -39,6 +42,7 @@ int fd_read(int fd, void *buf, uint64_t count) {
 int fd_write(int fd, void *buf, uint64_t count) {
     vfs_node_t *node = fd_lookup(fd);
     if (!node) {
+        get_thread_locals()->errno = -EBADF;
         return -1;
     }
     sprintf("\nPerforming a write");

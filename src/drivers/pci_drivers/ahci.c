@@ -17,11 +17,6 @@ dynarray_t ahci_controllers = {0, 0, 0};
 uint8_t sata_device_count = 0;
 
 int ahci_read(vfs_node_t *node, void *buf, uint64_t count) {
-    if (!is_mapped(buf)) {
-        get_thread_locals()->errno = -EFAULT;
-        return 0;
-    }
-
     ahci_port_data_t *port_data_for_device = get_device_data(node);
     if (port_data_for_device) {
         int err = ahci_read_sata_bytes(port_data_for_device, buf, count, 0);
@@ -32,17 +27,15 @@ int ahci_read(vfs_node_t *node, void *buf, uint64_t count) {
             get_thread_locals()->errno = 0;
         }
         return 0;
+    } else {
+        get_thread_locals()->errno = -EIO;
+        return 0;
     }
 
     return 0;
 }
 
 int ahci_write(vfs_node_t *node, void *buf, uint64_t count) {
-    if (!is_mapped(buf)) {
-        get_thread_locals()->errno = -EFAULT;
-        return 0;
-    }
-
     ahci_port_data_t *port_data_for_device = get_device_data(node);
     if (port_data_for_device) {
         int err = ahci_write_sata_bytes(port_data_for_device, buf, count, 0);
@@ -52,6 +45,9 @@ int ahci_write(vfs_node_t *node, void *buf, uint64_t count) {
         } else {
             get_thread_locals()->errno = 0;
         }
+        return 0;
+    } else {
+        get_thread_locals()->errno = -EIO;
         return 0;
     }
 
