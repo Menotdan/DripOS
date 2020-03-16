@@ -50,6 +50,7 @@ vfs_ops_t dummy_ops = {dummy_open, dummy_close, dummy_read, dummy_write};
 vfs_node_t *vfs_open(char *name, int mode) {
     if (!range_mapped(name, 0x1000)) { // boi if ur name isnt mapped
         get_thread_locals()->errno = -EFAULT;
+        sprintf("\nName not mapped in vfs_open");
         return (vfs_node_t *) 0;
     }
 
@@ -67,6 +68,7 @@ vfs_node_t *vfs_open(char *name, int mode) {
 void vfs_close(vfs_node_t *node) {
     /* If no mappings exist */
     if (!range_mapped(node, sizeof(vfs_node_t))) {
+        sprintf("\nNode not mapped in vfs_close");
         get_thread_locals()->errno = -EFAULT;
         return;
     }
@@ -77,6 +79,7 @@ void vfs_close(vfs_node_t *node) {
 void vfs_read(vfs_node_t *node, void *buf, uint64_t count) {
     /* If no mappings exist */
     if (!range_mapped(node, sizeof(vfs_node_t)) || !range_mapped(buf, count)) {
+        sprintf("\nNode/buffer not mapped in vfs_read");
         get_thread_locals()->errno = -EFAULT;
         return;
     }
@@ -87,6 +90,8 @@ void vfs_read(vfs_node_t *node, void *buf, uint64_t count) {
 void vfs_write(vfs_node_t *node, void *buf, uint64_t count) {
     /* If no mappings exist */
     if (!range_mapped(node, sizeof(vfs_node_t)) || !range_mapped(buf, count)) {
+        sprintf("\nNode/buffer not mapped in vfs_write");
+        get_thread_locals()->errno = -EFAULT;
         return;
     }
 
@@ -167,8 +172,11 @@ vfs_node_t *get_node_from_path(char *path) {
                     }
                 }
             }
+            
+            // No nodes found, return nothing
             unlock(&vfs_lock);
-            return (vfs_node_t *) 0; // Found nothing
+            kfree(buffer);
+            return (vfs_node_t *) 0;
         } else {
             buffer[buffer_index++] = *path; // Store the data
             if (buffer_index == buffer_size) { // If the buffer is out of bounds, resize it
@@ -185,13 +193,19 @@ fnd:
             if (cur_node->children[i]) {
                 if (strcmp(buffer, cur_node->children[i]->name) == 0) {
                     // Found the next node
-                    cur_node = cur_node->children[i]; // Move to the next node
-                    goto fnd;
+                    cur_node = cur_node->children[i]; // Move to the last node
+                    goto done;
                 }
             }
         }
+
+        // No nodes found, return nothing
+        unlock(&vfs_lock);
+        kfree(buffer);
+        return (vfs_node_t *) 0;
     }
 
+done:
     unlock(&vfs_lock);
     kfree(buffer);
     return cur_node;

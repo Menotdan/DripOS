@@ -55,19 +55,41 @@ void _idle() {
 }
 
 void user_task() {
+    /* Syscall 1, open */
     uint64_t rax = 2;
     char *filename = "/dev/satadeva";
     uint64_t rdi = (uint64_t) filename;
     uint64_t rsi = 0;
-    uint64_t output;
-    asm volatile("syscall" : "=a"(output) : "a"(rax), "D"(rdi), "S"(rsi)
-        : "rcx", "r11", "memory"); // Write
-    rax = 1;
-    char *data = "\nHello from userspace";
+    uint64_t fd;
+    asm volatile("syscall" : "=a"(fd) : "a"(rax), "D"(rdi), "S"(rsi)
+        : "rcx", "r11", "memory"); // Open
+    
+    /* Syscall 2, read */
+    rax = 0;
+    char *data[22];
     rsi = (uint64_t) data;
     uint64_t rdx = 21;
-    asm volatile("syscall" : "=a"(output) : "a"(rax), "D"(output), "S"(rsi), "d"(rdx) 
+    uint64_t output2;
+    asm volatile("syscall" : "=a"(output2) : "a"(rax), "D"(fd), "S"(rsi), "d"(rdx) 
         : "rcx", "r11", "memory"); // Write
+    
+    /* Open the tty */
+    char *filename2 = "/dev/tty1";
+    rax = 2;
+    rdi = (uint64_t) filename2;
+    rsi = 0;
+    uint64_t fd_tty;
+    asm volatile("syscall" : "=a"(fd_tty) : "a"(rax), "D"(rdi), "S"(rsi)
+        : "rcx", "r11", "memory"); // Open
+    /* Write to the tty */
+    rsi = (uint64_t) data;
+    uint64_t output3;
+    rax = 1;
+    rdx = 21;
+    asm volatile("syscall" : "=a"(output3) : "a"(rax), "D"(fd_tty), "S"(rsi), "d"(rdx) 
+        : "rcx", "r11", "memory"); // Write
+
+    /* cause a crash */
     volatile int e = 0;
     volatile int x = 1/e;
     (void) x; // Division by 0 fault

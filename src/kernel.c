@@ -36,16 +36,14 @@ void kernel_task() {
     ops.read = tty_dev_read;
     register_device("tty1", ops, (void *) 0);
 
-    int test_dev = fd_open("/dev/tty1", 0);
+    pci_init(); // Setup PCI devices and their drivers
+
+    int test_dev = fd_open("/dev/satadeva", 0);
     char *write = "\nHello from vfs!";
     get_thread_locals()->errno = 0;
 
-    kprintf("\nDoing write");
-
     fd_write(test_dev, write, strlen(write));
     fd_close(test_dev);
-
-    pci_init();
 
     kprintf("\n[DripOS Kernel] Bultin todo list:");
     for (uint64_t i = 0; i < TODO_LIST_SIZE; i++) {

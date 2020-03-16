@@ -82,9 +82,10 @@ void fd_remove(int fd) {
 vfs_node_t *fd_lookup(int fd) {
     vfs_node_t *ret;
     lock(&fd_lock);
-    if (fd < fd_table_size - 1) {
+    if (fd < fd_table_size - 1 && fd >= 0) {
         ret = fd_table[fd];
     } else {
+        sprintf("\nBad fd: %d", fd);
         ret = (vfs_node_t *) 0;
     }
     unlock(&fd_lock);

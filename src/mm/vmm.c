@@ -131,8 +131,8 @@ uint8_t range_mapped(void *data, uint64_t size) {
     uint64_t cur_addr = (uint64_t) data & ~(0xfff);
     uint64_t addr_not_rounded = (uint64_t) data;
     uint64_t end_addr = (addr_not_rounded + size) & ~(0xfff);
-    uint64_t rounded_size = cur_addr - end_addr;
-    uint64_t pages = (rounded_size + 0x1000 - 1) / 0x1000;
+    uint64_t rounded_size = end_addr - cur_addr;
+    uint64_t pages = ((rounded_size + 0x1000 - 1) / 0x1000) + 1;
 
     for (uint64_t i = 0; i < pages; i++) {
         if (!is_mapped((void *) cur_addr)) {

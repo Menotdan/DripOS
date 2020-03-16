@@ -20,6 +20,7 @@ lock_t ahci_lock = 0;
 int ahci_read(vfs_node_t *node, void *buf, uint64_t count) {
     ahci_port_data_t *port_data_for_device = get_device_data(node);
     if (port_data_for_device) {
+        sprintf("\nReading from sata bytes");
         int err = ahci_read_sata_bytes(port_data_for_device, buf, count, 0);
 
         if (err) {
