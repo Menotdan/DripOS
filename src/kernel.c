@@ -21,6 +21,8 @@
 #include "klibc/string.h"
 #include "sys/smp.h"
 
+#include "fs/filesystems/echfs.h"
+
 #define TODO_LIST_SIZE 7
 char *todo_list[TODO_LIST_SIZE] = {"Better syscall error handling", "Filesystem driver", "ELF Loading", "userspace libc", "minor: Sync TLB across CPUs", "minor: Add MMIO PCI", "minor: Retry AHCI commands"};
 
@@ -42,6 +44,8 @@ void kernel_task() {
     for (uint64_t i = 0; i < TODO_LIST_SIZE; i++) {
         kprintf("\n  %s", todo_list[i]);
     }
+
+    echfs_test("/dev/satadeva");
 
     sprintf("\ndone kernel work");
 
