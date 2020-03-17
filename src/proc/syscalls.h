@@ -9,5 +9,8 @@ typedef struct {
 void syscall_read(syscall_reg_t *r);
 void syscall_write(syscall_reg_t *r);
 void syscall_open(syscall_reg_t *r);
+void syscall_close(syscall_reg_t *r);
+void syscall_seek(syscall_reg_t *r);
+void syscall_empty(syscall_reg_t *r);
 
 #endif

@@ -15,5 +15,6 @@ int fd_open(char *name, int mode);
 int fd_close(int fd);
 int fd_read(int fd, void *buf, uint64_t count);
 int fd_write(int fd, void *buf, uint64_t count);
+int fd_seek(int fd, uint64_t offset, int whence);
 
 #endif

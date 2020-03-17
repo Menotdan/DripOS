@@ -63,12 +63,19 @@ void user_task() {
     uint64_t fd;
     asm volatile("syscall" : "=a"(fd) : "a"(rax), "D"(rdi), "S"(rsi)
         : "rcx", "r11", "memory"); // Open
+    uint64_t rdx = 0;
+    rax = 8;
+    rdi = fd;
+    rsi = 4;
+    uint64_t output_seek;
+    asm volatile("syscall" : "=a"(output_seek) : "a"(rax), "D"(rdi), "S"(rsi), "d"(rdx) 
+        : "rcx", "r11", "memory"); // Seek
     
     /* Syscall 2, read */
     rax = 0;
     char *data[22];
     rsi = (uint64_t) data;
-    uint64_t rdx = 21;
+    rdx = 21;
     uint64_t output2;
     asm volatile("syscall" : "=a"(output2) : "a"(rax), "D"(fd), "S"(rsi), "d"(rdx) 
         : "rcx", "r11", "memory"); // Write
