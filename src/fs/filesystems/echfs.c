@@ -4,6 +4,7 @@
 #include "klibc/string.h"
 
 #include "drivers/serial.h"
+#include "proc/scheduler.h"
 
 int read_block0(char *device, echfs_filesystem_t *output) {
     echfs_block0_t *block0 = kcalloc(sizeof(echfs_block0_t));
@@ -16,21 +17,28 @@ int read_block0(char *device, echfs_filesystem_t *output) {
 
         sprintf("\nFound echFS drive.\nBlock count: %lu, Block size: %lu\nMain dir blocks: %lu", block0->block_count, block0->block_size, block0->main_dir_blocks);
 
-        // Set data for the filesystem structure
+        /* Set data for the filesystem structure */
+
+        /* Name and block count/size */
         output->device_name = kcalloc(strlen(device) + 1);
         strcpy(device, output->device_name); // Name
         output->blocks = block0->block_count; // Block count
         output->block_size = block0->block_size; // Block size
+
+        /* Allocation table addresses */
         output->alloc_table_addr = (block0->block_size) * 16; // Allocation table address in bytes
         output->alloc_table_size = (block0->block_count * sizeof(uint64_t)); // Table size in bytes
+        output->alloc_table_block = 16;
+        output->alloc_table_blocks = BYTES_TO_BLOCKS(output->alloc_table_size, output->block_size);
 
-        // Calculate where the main directory block is
-        output->main_dir_block = BYTES_TO_BLOCKS(output->alloc_table_size, block0->block_size) + 16;
+
+        /* Calculate where the main directory block is */
+        output->main_dir_block = output->alloc_table_blocks + 16;
         output->main_dir_blocks = block0->main_dir_blocks;
 
         fd_close(device_fd);
 
-        // Return
+        /* Return true */
         return 1;
     }
 
@@ -69,9 +77,11 @@ void echfs_test(char *device) {
 
     if (is_echfs) {
         sprintf("\nMain directory block: %lu", filesystem.main_dir_block);
-        uint64_t *alloc_table_block0 = read_block(&filesystem, filesystem.alloc_table_addr / filesystem.block_size);
-        
-        echfs_dir_entry_t *entry0 = read_dir_entry(&filesystem, 2);
+        sprintf("\nAlloc area block: %lu, Block count: %lu", filesystem.alloc_table_block, filesystem.alloc_table_blocks);
+        uint64_t *alloc_table_block0 = read_block(&filesystem, filesystem.alloc_table_block);
+        sprintf("\nFirst entry: %lx", alloc_table_block0[0]);
+
+        echfs_dir_entry_t *entry0 = read_dir_entry(&filesystem, 0);
         sprintf("\nFirst entry name:");
         sprintf(entry0->name);
         sprintf("\ntype: %u", entry0->entry_type);

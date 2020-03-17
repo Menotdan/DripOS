@@ -22,8 +22,9 @@ int ahci_read(fd_entry_t *fd_data, void *buf, uint64_t count) {
 
     ahci_port_data_t *port_data_for_device = get_device_data(node);
     if (port_data_for_device) {
-        sprintf("\nReading from sata bytes");
+        sprintf("\nReading from sata bytes to %lx", buf);
         int err = ahci_read_sata_bytes(port_data_for_device, buf, count, fd_data->seek);
+        sprintf("\nErr: %d", err);
 
         if (err) {
             get_thread_locals()->errno = -EIO;
@@ -46,6 +47,7 @@ int ahci_write(fd_entry_t *fd_data, void *buf, uint64_t count) {
     ahci_port_data_t *port_data_for_device = get_device_data(node);
     if (port_data_for_device) {
         int err = ahci_write_sata_bytes(port_data_for_device, buf, count, fd_data->seek);
+        sprintf("\nErr: %d", err);
 
         if (err) {
             get_thread_locals()->errno = -EIO;
@@ -459,6 +461,9 @@ int ahci_read_sata_bytes(ahci_port_data_t *port, void *buf, uint64_t count, uint
     }
 
     uint8_t *data_buf = pmm_alloc(sector_count * port->sector_size);
+    sprintf("\nUsing %lu sectors", sector_count);
+    sprintf(" at sector %lu", sector_start);
+    sprintf(" until sector %lu", sector_end);
     int err = ahci_io_sata_sectors(port, data_buf, sector_count, sector_start, 0);
     if (err) {
         pmm_unalloc(data_buf, sector_count * port->sector_size);
@@ -466,7 +471,9 @@ int ahci_read_sata_bytes(ahci_port_data_t *port, void *buf, uint64_t count, uint
     }
 
     data_buf += sector_offset;
+    sprintf("\nCopying data from %lx to %lx for %lu bytes", GET_HIGHER_HALF(uint8_t *, data_buf), buf, count);
     memcpy(GET_HIGHER_HALF(uint8_t *, data_buf), buf, count);
+    sprintf("\nData %lx", *GET_HIGHER_HALF(uint64_t *, data_buf));
     data_buf -= sector_offset;
 
     pmm_unalloc(data_buf, sector_count * port->sector_size);
@@ -519,8 +526,6 @@ int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint16_t count, uint
     uint64_t prdt_count = ((count * port->sector_size) + 0x400000 - 1) / 0x400000;
     ahci_command_slot_t command_slot = ahci_allocate_command_slot(port, AHCI_GET_FIS_SIZE(prdt_count + 1));
     ahci_command_header_t *header = ahci_get_cmd_header(port, command_slot.index);
-    
-    (void) offset;
 
     if (command_slot.index == -1) {
         kprintf("[AHCI] No command slot!\n");

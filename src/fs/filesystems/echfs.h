@@ -16,6 +16,8 @@ typedef struct {
 typedef struct {
     uint64_t alloc_table_addr;
     uint64_t alloc_table_size;
+    uint64_t alloc_table_block;
+    uint64_t alloc_table_blocks;
     uint64_t main_dir_block;
     uint64_t main_dir_blocks;
     uint64_t blocks;
