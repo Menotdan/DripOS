@@ -22,13 +22,13 @@ int dummy_open(char *name, int mode) {
     return -1;
 }
 
-int dummy_close(vfs_node_t *node) {
+int dummy_close(fd_entry_t *node) {
     (void) node;
     get_thread_locals()->errno = -ENOSYS;
     return -1;
 }
 
-int dummy_read(vfs_node_t *node, void *buf, uint64_t bytes) {
+int dummy_read(fd_entry_t *node, void *buf, uint64_t bytes) {
     (void) node;
     (void) buf;
     (void) bytes;
@@ -36,7 +36,7 @@ int dummy_read(vfs_node_t *node, void *buf, uint64_t bytes) {
     return -1;
 }
 
-int dummy_write(vfs_node_t *node, void *buf, uint64_t bytes) {
+int dummy_write(fd_entry_t *node, void *buf, uint64_t bytes) {
     (void) node;
     (void) buf;
     (void) bytes;
@@ -65,7 +65,7 @@ vfs_node_t *vfs_open(char *name, int mode) {
     return node;
 }
 
-void vfs_close(vfs_node_t *node) {
+void vfs_close(fd_entry_t *node) {
     /* If no mappings exist */
     if (!range_mapped(node, sizeof(vfs_node_t))) {
         sprintf("\nNode not mapped in vfs_close");
@@ -73,10 +73,10 @@ void vfs_close(vfs_node_t *node) {
         return;
     }
 
-    node->ops.close(node);
+    node->node->ops.close(node);
 }
 
-void vfs_read(vfs_node_t *node, void *buf, uint64_t count) {
+void vfs_read(fd_entry_t *node, void *buf, uint64_t count) {
     /* If no mappings exist */
     if (!range_mapped(node, sizeof(vfs_node_t)) || !range_mapped(buf, count)) {
         sprintf("\nNode/buffer not mapped in vfs_read");
@@ -84,10 +84,10 @@ void vfs_read(vfs_node_t *node, void *buf, uint64_t count) {
         return;
     }
 
-    node->ops.read(node, buf, count);
+    node->node->ops.read(node, buf, count);
 }
 
-void vfs_write(vfs_node_t *node, void *buf, uint64_t count) {
+void vfs_write(fd_entry_t *node, void *buf, uint64_t count) {
     /* If no mappings exist */
     if (!range_mapped(node, sizeof(vfs_node_t)) || !range_mapped(buf, count)) {
         sprintf("\nNode/buffer not mapped in vfs_write");
@@ -95,7 +95,7 @@ void vfs_write(vfs_node_t *node, void *buf, uint64_t count) {
         return;
     }
 
-    node->ops.write(node, buf, count);
+    node->node->ops.write(node, buf, count);
 }
 
 /* Setting up the root node */

@@ -12,8 +12,8 @@ color_t default_fg = {248, 248, 248};
 color_t default_bg = {56, 56, 56};
 tty_t base_tty;
 
-int tty_dev_write(vfs_node_t *node, void *buf, uint64_t count) {
-    (void) node;
+int tty_dev_write(fd_entry_t *fd_data, void *buf, uint64_t count) {
+    (void) fd_data;
     lock(&base_tty.tty_lock);
 
     char *char_buf = buf;
@@ -27,8 +27,8 @@ int tty_dev_write(vfs_node_t *node, void *buf, uint64_t count) {
     return 0;
 }
 
-int tty_dev_read(vfs_node_t *node, void *buf, uint64_t count) {
-    (void) node;
+int tty_dev_read(fd_entry_t *fd_data, void *buf, uint64_t count) {
+    (void) fd_data;
 
     char *char_buf = buf;
     for (uint64_t i = 0; i < count; i++) {

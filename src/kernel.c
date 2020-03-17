@@ -38,13 +38,6 @@ void kernel_task() {
 
     pci_init(); // Setup PCI devices and their drivers
 
-    int test_dev = fd_open("/dev/satadeva", 0);
-    char *write = "\nHello from vfs!";
-    get_thread_locals()->errno = 0;
-
-    fd_write(test_dev, write, strlen(write));
-    fd_close(test_dev);
-
     kprintf("\n[DripOS Kernel] Bultin todo list:");
     for (uint64_t i = 0; i < TODO_LIST_SIZE; i++) {
         kprintf("\n  %s", todo_list[i]);

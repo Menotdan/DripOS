@@ -1,11 +1,14 @@
 #ifndef FS_FD_H
 #define FS_FD_H
 #include <stdint.h>
-#include "fs/vfs/vfs.h"
+#include "vfs/vfs.h"
 
-int fd_new(vfs_node_t *node);
+struct vfs_node;
+typedef struct vfs_node vfs_node_t;
+
+int fd_new(vfs_node_t *node, int mode);
 void fd_remove(int fd);
-vfs_node_t *fd_lookup(int fd);
+fd_entry_t *fd_lookup(int fd);
 
 /* FD ops */
 int fd_open(char *name, int mode);

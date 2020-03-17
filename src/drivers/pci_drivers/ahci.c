@@ -17,7 +17,9 @@ dynarray_t ahci_controllers = {0, 0, 0};
 uint8_t sata_device_count = 0;
 lock_t ahci_lock = 0;
 
-int ahci_read(vfs_node_t *node, void *buf, uint64_t count) {
+int ahci_read(fd_entry_t *fd_data, void *buf, uint64_t count) {
+    vfs_node_t *node = fd_data->node;
+
     ahci_port_data_t *port_data_for_device = get_device_data(node);
     if (port_data_for_device) {
         sprintf("\nReading from sata bytes");
@@ -37,7 +39,9 @@ int ahci_read(vfs_node_t *node, void *buf, uint64_t count) {
     return 0;
 }
 
-int ahci_write(vfs_node_t *node, void *buf, uint64_t count) {
+int ahci_write(fd_entry_t *fd_data, void *buf, uint64_t count) {
+    vfs_node_t *node = fd_data->node;
+
     ahci_port_data_t *port_data_for_device = get_device_data(node);
     if (port_data_for_device) {
         int err = ahci_write_sata_bytes(port_data_for_device, buf, count, 0);

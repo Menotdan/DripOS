@@ -10,7 +10,9 @@ int devfs_open(char *name, int mode) {
     return 0;
 }
 
-int devfs_close(vfs_node_t *node) {
+int devfs_close(fd_entry_t *fd_data) {
+    vfs_node_t *node = fd_data->node;
+
     sprintf("\n[DevFS] Closing %s", node->name);
     return 0;
 }

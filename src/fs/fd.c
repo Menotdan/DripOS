@@ -6,7 +6,7 @@
 
 #include "drivers/serial.h"
 
-vfs_node_t **fd_table;
+fd_entry_t **fd_table;
 int fd_table_size = 0;
 lock_t fd_lock = 0;
 
@@ -15,11 +15,11 @@ int fd_open(char *name, int mode) {
     if (!node) {
         return get_thread_locals()->errno;
     }
-    return fd_new(node);
+    return fd_new(node, mode);
 }
 
 int fd_close(int fd) {
-    vfs_node_t *node = fd_lookup(fd);
+    fd_entry_t *node = fd_lookup(fd);
     if (!node) {
         get_thread_locals()->errno = -EBADF;
         return get_thread_locals()->errno;
@@ -30,7 +30,7 @@ int fd_close(int fd) {
 }
 
 int fd_read(int fd, void *buf, uint64_t count) {
-    vfs_node_t *node = fd_lookup(fd);
+    fd_entry_t *node = fd_lookup(fd);
     if (!node) {
         get_thread_locals()->errno = -EBADF;
         return get_thread_locals()->errno;
@@ -40,7 +40,7 @@ int fd_read(int fd, void *buf, uint64_t count) {
 }
 
 int fd_write(int fd, void *buf, uint64_t count) {
-    vfs_node_t *node = fd_lookup(fd);
+    fd_entry_t *node = fd_lookup(fd);
     if (!node) {
         get_thread_locals()->errno = -EBADF;
         return get_thread_locals()->errno;
@@ -51,8 +51,13 @@ int fd_write(int fd, void *buf, uint64_t count) {
     return get_thread_locals()->errno;
 }
 
-int fd_new(vfs_node_t *node) {
+int fd_new(vfs_node_t *node, int mode) {
     lock(&fd_lock);
+    fd_entry_t *new_entry = kcalloc(sizeof(fd_entry_t));
+    new_entry->node = node;
+    new_entry->mode = mode;
+    new_entry->seek = 0;
+
     int i = 0;
     for (; i < fd_table_size; i++) {
         if (!fd_table[i]) {
@@ -62,9 +67,9 @@ int fd_new(vfs_node_t *node) {
     }
     i = fd_table_size; // Get the old table size
     fd_table_size += 10;
-    fd_table = krealloc(fd_table, fd_table_size * sizeof(vfs_node_t *));
+    fd_table = krealloc(fd_table, fd_table_size * sizeof(fd_entry_t *));
 fnd:
-    fd_table[i] = node;
+    fd_table[i] = new_entry;
     unlock(&fd_lock);
     return i;
 }
@@ -73,20 +78,21 @@ void fd_remove(int fd) {
     lock(&fd_lock);
     
     if (fd < fd_table_size - 1) {
-        fd_table[fd] = (vfs_node_t *) 0;
+        kfree(fd_table[fd]);
+        fd_table[fd] = (fd_entry_t *) 0;
     }
 
     unlock(&fd_lock);
 }
 
-vfs_node_t *fd_lookup(int fd) {
-    vfs_node_t *ret;
+fd_entry_t *fd_lookup(int fd) {
+    fd_entry_t *ret;
     lock(&fd_lock);
     if (fd < fd_table_size - 1 && fd >= 0) {
         ret = fd_table[fd];
     } else {
         sprintf("\nBad fd: %d", fd);
-        ret = (vfs_node_t *) 0;
+        ret = (fd_entry_t *) 0;
     }
     unlock(&fd_lock);
     return ret;
