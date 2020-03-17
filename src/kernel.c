@@ -43,9 +43,6 @@ void kernel_task() {
         kprintf("\n  %s", todo_list[i]);
     }
 
-    sprintf("\nStarting user task");
-    start_test_user_task();
-
     sprintf("\ndone kernel work");
 
     while (1) { asm volatile("hlt"); }
