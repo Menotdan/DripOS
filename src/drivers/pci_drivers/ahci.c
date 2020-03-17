@@ -550,14 +550,14 @@ int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint16_t count, uint
     fis_area->control = 0x08;
 
     // LBA data
-    fis_area->lba_0 = (offset >> 0) && 0xFF;
-    fis_area->lba_1 = (offset >> 8) && 0xFF;
-    fis_area->lba_2 = (offset >> 16) && 0xFF;
+    fis_area->lba_0 = (offset >> 0) & 0xFF;
+    fis_area->lba_1 = (offset >> 8) & 0xFF;
+    fis_area->lba_2 = (offset >> 16) & 0xFF;
 
     if (port->lba48 == 1) {
-        fis_area->lba_3 = (offset >> 24) && 0xFF;
-        fis_area->lba_4 = (offset >> 32) && 0xFF;
-        fis_area->lba_5 = (offset >> 40) && 0xFF;
+        fis_area->lba_3 = (offset >> 24) & 0xFF;
+        fis_area->lba_4 = (offset >> 32) & 0xFF;
+        fis_area->lba_5 = (offset >> 40) & 0xFF;
     }
 
     if (count != 0xffff) {
