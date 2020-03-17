@@ -16,12 +16,14 @@ typedef int (*vfs_open_t)(char *, int);
 typedef int (*vfs_close_t)(fd_entry_t *);;
 typedef int (*vfs_read_t)(fd_entry_t *, void *, uint64_t);
 typedef int (*vfs_write_t)(fd_entry_t *, void *, uint64_t);
+typedef int (*vfs_seek_t)(fd_entry_t *, uint64_t, int);
 
 typedef struct {
     vfs_open_t open;
     vfs_close_t close;
     vfs_read_t read;
     vfs_write_t write;
+    vfs_seek_t seek;
 } vfs_ops_t;
 
 typedef struct vfs_node {
@@ -44,6 +46,7 @@ vfs_node_t *vfs_open(char *name, int mode);
 void vfs_close(fd_entry_t *node);
 void vfs_read(fd_entry_t *node, void *buf, uint64_t count);
 void vfs_write(fd_entry_t *node, void *buf, uint64_t count);
+void vfs_seek(fd_entry_t *node, uint64_t offset, int whence);
 
 extern vfs_node_t *root_node;
 extern vfs_ops_t dummy_ops;

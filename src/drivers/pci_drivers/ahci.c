@@ -23,12 +23,13 @@ int ahci_read(fd_entry_t *fd_data, void *buf, uint64_t count) {
     ahci_port_data_t *port_data_for_device = get_device_data(node);
     if (port_data_for_device) {
         sprintf("\nReading from sata bytes");
-        int err = ahci_read_sata_bytes(port_data_for_device, buf, count, 0);
+        int err = ahci_read_sata_bytes(port_data_for_device, buf, count, fd_data->seek);
 
         if (err) {
             get_thread_locals()->errno = -EIO;
         } else {
             get_thread_locals()->errno = 0;
+            fd_data->seek += count;
         }
         return 0;
     } else {
@@ -44,12 +45,13 @@ int ahci_write(fd_entry_t *fd_data, void *buf, uint64_t count) {
 
     ahci_port_data_t *port_data_for_device = get_device_data(node);
     if (port_data_for_device) {
-        int err = ahci_write_sata_bytes(port_data_for_device, buf, count, 0);
+        int err = ahci_write_sata_bytes(port_data_for_device, buf, count, fd_data->seek);
 
         if (err) {
             get_thread_locals()->errno = -EIO;
         } else {
             get_thread_locals()->errno = 0;
+            fd_data->seek += count;
         }
         return 0;
     } else {

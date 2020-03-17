@@ -18,7 +18,7 @@ uint64_t current_unid = 0; // Current unique node ID
 int dummy_open(char *name, int mode) {
     (void) name;
     (void) mode;
-    get_thread_locals()->errno = -ENOSYS;
+    get_thread_locals()->errno = 0; // Don't error, we just dont implement this
     return -1;
 }
 
@@ -44,7 +44,15 @@ int dummy_write(fd_entry_t *node, void *buf, uint64_t bytes) {
     return -1;
 }
 
-vfs_ops_t dummy_ops = {dummy_open, dummy_close, dummy_read, dummy_write};
+int dummy_seek(fd_entry_t *node, uint64_t offset, int whence) {
+    (void) node;
+    (void) offset;
+    (void) whence;
+    get_thread_locals()->errno = 0; // Don't error, we just dont implement this
+    return -1;
+}
+
+vfs_ops_t dummy_ops = {dummy_open, dummy_close, dummy_read, dummy_write, dummy_seek};
 
 /* VFS ops things */
 vfs_node_t *vfs_open(char *name, int mode) {
@@ -96,6 +104,17 @@ void vfs_write(fd_entry_t *node, void *buf, uint64_t count) {
     }
 
     node->node->ops.write(node, buf, count);
+}
+
+void vfs_seek(fd_entry_t *node, uint64_t offset, int whence) {
+    /* If no mappings exist */
+    if (!range_mapped(node, sizeof(vfs_node_t))) {
+        sprintf("\nNode not mapped in vfs_close");
+        get_thread_locals()->errno = -EFAULT;
+        return;
+    }
+
+    node->node->ops.seek(node, offset, whence);
 }
 
 /* Setting up the root node */

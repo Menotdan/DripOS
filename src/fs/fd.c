@@ -51,6 +51,26 @@ int fd_write(int fd, void *buf, uint64_t count) {
     return get_thread_locals()->errno;
 }
 
+int fd_seek(int fd, uint64_t offset, int whence) {
+    fd_entry_t *node = fd_lookup(fd);
+    if (!node) {
+        get_thread_locals()->errno = -EBADF;
+        return get_thread_locals()->errno;
+    }
+
+    if (whence == 0) {
+        node->seek  = offset;
+    } else if (whence == 1) {
+        node->seek += offset;
+    } else if (whence == 2) {
+        node->seek -= offset;
+    }
+
+    vfs_seek(node, offset, whence);
+
+    return get_thread_locals()->errno;
+}
+
 int fd_new(vfs_node_t *node, int mode) {
     lock(&fd_lock);
     fd_entry_t *new_entry = kcalloc(sizeof(fd_entry_t));
