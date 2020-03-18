@@ -2,6 +2,7 @@
 #include "proc/scheduler.h"
 #include "klibc/stdlib.h"
 
+#include "drivers/tty/tty.h"
 #include "drivers/serial.h"
 
 void lock(lock_t *lock) {
@@ -32,4 +33,8 @@ uint8_t check_interrupts() {
     asm volatile("pushfq; pop %%rax; movq %%rax, %0;" : "=r"(rflags) :: "rax");
     uint8_t int_flag = (uint8_t) ((rflags & (0x200)) >> 9);
     return int_flag;
+}
+
+void deadlock_possible() {
+    kprintf("\nfound possible deadlock!");
 }
