@@ -120,6 +120,112 @@ void *echfs_read_file(echfs_filesystem_t *filesystem, echfs_dir_entry_t *file) {
     
 }
 
+echfs_dir_entry_t *echfs_get_entry_from_id(echfs_filesystem_t *filesystem, uint64_t id) {
+    uint64_t entry_n = 0;
+
+    while (1) {
+        echfs_dir_entry_t *entry = echfs_read_dir_entry(filesystem, entry_n);
+        if (entry->entry_type == 1 && entry->starting_block == id) {
+            return entry;
+        }
+
+        if (entry->parent_id == 0) {
+            kfree(entry);
+            return (echfs_dir_entry_t *) 0;
+        }
+
+        kfree(entry);
+    }
+}
+
+char *echfs_get_full_path(echfs_filesystem_t *filesystem, char *mountpoint, echfs_dir_entry_t *entry) {
+    echfs_dir_entry_t *cur_entry = entry;
+    linked_strings_t *path = kcalloc(sizeof(linked_strings_t));
+    while (1) {
+        path->string = kcalloc(strlen(cur_entry->name) + 1);
+
+        sprintf("\nNode: ");
+        sprint(cur_entry->name);
+
+        strcpy(cur_entry->name, path->string);
+        path->next = kcalloc(sizeof(linked_strings_t));
+        path->next->prev = path;
+        path = path->next;
+
+        uint64_t id = cur_entry->parent_id;
+        if (cur_entry != entry) {
+            kfree(cur_entry);
+        }
+
+        if (id == ECHFS_ROOT_DIR_ID) break;
+
+        cur_entry = echfs_get_entry_from_id(filesystem, id);
+    }
+
+    /* Create final path */
+    char *final_string = kcalloc(strlen(mountpoint) + 1);
+    strcpy(mountpoint, final_string);
+
+    path = path->prev;
+    kfree(path->next);
+
+    while (path) {
+        final_string = krealloc(final_string, strlen(final_string) + strlen(path->string) + 1);
+        path_join(final_string, path->string);
+
+        linked_strings_t *prev = path->prev;
+        kfree(path);
+        kfree(path->string);
+        path = prev;
+    }
+
+    return final_string;
+}
+
+vfs_node_t *echfs_create_vfs_tree(echfs_filesystem_t *filesystem, char *mountpoint_path) {
+    uint64_t entry_n = 0;
+
+    while (1) {
+        echfs_dir_entry_t *entry = echfs_read_dir_entry(filesystem, entry_n);
+        if (entry->parent_id == 0) {
+            kfree(entry);
+            break;
+        }
+
+        if (entry->parent_id == ECHFS_DELETED_ENTRY) {
+            kfree(entry);
+            continue;
+        }
+
+        sprintf("\nFound entry with name: ");
+        sprint(entry->name);
+        sprintf("\nAnd parent id %lx", entry->parent_id);
+
+        char *full_path = echfs_get_full_path(filesystem, mountpoint_path, entry);
+
+        sprintf("\nFull path name: ");
+        sprint(full_path);
+
+        char *output = kcalloc(201);
+        char *node_name = get_path_elem(full_path, output);
+
+        vfs_node_t *new_node = vfs_new_node(node_name, dummy_ops);
+        add_node_at_path(full_path, new_node);
+
+        sprintf("\nFull path name: ");
+        sprint(full_path);
+        sprintf("\nNode name: ");
+        sprint(node_name);
+
+        entry_n++;
+        kfree(entry);
+        kfree(node_name);
+        kfree(full_path);
+    }
+
+    return (vfs_node_t *) 0;
+}
+
 void echfs_test(char *device) {
     echfs_filesystem_t filesystem;
 
@@ -139,12 +245,13 @@ void echfs_test(char *device) {
 
         sprintf("Size: %lu", strlen(file));
 
-        //sprintf("\nFile:\n");
-        //sprint(file);
-
         sprintf("\nDone. Took %lu ms.", time_elapsed);
 
         kfree(entry0);
         kfree(file);
+
+        echfs_create_vfs_tree(&filesystem, "/");
+        sprint_all_vfs("/");
+        sprint_all_vfs("/hello");
     }
 }

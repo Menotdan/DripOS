@@ -107,6 +107,37 @@ void htoa(uint64_t in, char str[]) {
     str[pos] = '\0'; // nullify 
 }
 
+void strcat(char *dst, char *src) {
+    char *end = dst + strlen(dst);
+
+    while (*src != '\0') *end++ = *src++;
+    *end = '\0';
+}
+
+void path_join(char *dst, char *src) {
+    if (dst[strlen(dst) - 1] != '/' && src[0] != '/') {
+        strcat(dst, "/");
+    }
+
+    strcat(dst, src);
+}
+
+char *get_path_elem(char *path, char *output) {
+    // Temp pointer
+    char *tmp = path + strlen(path) - 1;
+
+    // Find the first "/"
+    while (*tmp != '/') tmp--;
+
+    strcpy(tmp + 1, output);
+
+    // Clear everything after the "/"
+    *(tmp+1) = '\0';
+
+    // Return
+    return output;
+}
+
 void memcpy(uint8_t *src, uint8_t *dst, uint64_t count) {
     for (uint64_t i = 0; i<count; i++)
         *dst++ = *src++;

@@ -6,6 +6,8 @@
 #define BLOCKS_TO_BYTES(blocks, block_size) (blocks * block_size)
 
 #define ECHFS_END_OF_CHAIN 0xFFFFFFFFFFFFFFFF
+#define ECHFS_ROOT_DIR_ID 0xFFFFFFFFFFFFFFFF
+#define ECHFS_DELETED_ENTRY 0xFFFFFFFFFFFFFFFE
 
 typedef struct {
     uint8_t jmp[4]; // Jump instruction

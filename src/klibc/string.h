@@ -2,9 +2,18 @@
 #define KLIBC_STRING_H
 #include <stdint.h>
 
+typedef struct linked_strings {
+    char *string;
+    struct linked_strings *next;
+    struct linked_strings *prev;
+} linked_strings_t;
+
 void reverse(char s[]);
 void strcpy(char *src, char *dst);
 int strcmp(char *s1, char *s2);
+void strcat(char *dst, char *src);
+void path_join(char *dst, char *src);
+char *get_path_elem(char *path, char *output);
 void utoa(uint64_t n, char str[]);
 void itoa(int64_t n, char str[]);
 void htoa(uint64_t in, char str[]);

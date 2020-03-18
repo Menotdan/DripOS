@@ -229,3 +229,25 @@ done:
     kfree(buffer);
     return cur_node;
 }
+
+void add_node_at_path(char *path, vfs_node_t *node) {
+    vfs_node_t *parent = get_node_from_path(path);
+    if (parent) {
+        vfs_add_child(parent, node);
+    }
+}
+
+void sprint_all_vfs(char *path) {
+    vfs_node_t *node = get_node_from_path(path);
+    sprintf("\nNodes at path ");
+    sprint(path);
+    if (node) {
+        for (uint64_t i = 0; i < node->children_array_size; i++) {
+            vfs_node_t *child = node->children[i];
+            if (child) {
+                sprintf("\n  ");
+                sprint(child->name);
+            }
+        }
+    }
+}

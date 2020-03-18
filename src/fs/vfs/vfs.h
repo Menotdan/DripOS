@@ -40,6 +40,8 @@ void vfs_init();
 vfs_node_t *vfs_new_node(char *name, vfs_ops_t ops);
 void vfs_add_child(vfs_node_t *parent, vfs_node_t *child);
 vfs_node_t *get_node_from_path(char *path);
+void add_node_at_path(char *path, vfs_node_t *node);
+void sprint_all_vfs(char *path);
 
 /* VFS ops */
 vfs_node_t *vfs_open(char *name, int mode);
