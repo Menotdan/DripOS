@@ -60,7 +60,6 @@ int fd_seek(int fd, uint64_t offset, int whence) {
 
     if (whence == 0) {
         node->seek  = offset;
-        sprintf("\nSeeked to %lu", node->seek);
     } else if (whence == 1) {
         node->seek += offset;
     } else if (whence == 2) {

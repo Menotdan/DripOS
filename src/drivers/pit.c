@@ -32,3 +32,11 @@ void sleep_no_task(uint64_t ticks) {
     volatile uint64_t start_ticks = global_ticks;
     while (global_ticks < ticks + start_ticks) asm volatile("pause");
 }
+
+uint64_t stopwatch_start() {
+    return global_ticks;
+}
+
+uint64_t stopwatch_stop(uint64_t start) {
+    return (global_ticks - start);
+}

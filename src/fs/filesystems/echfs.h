@@ -5,6 +5,8 @@
 #define BYTES_TO_BLOCKS(bytes, block_size) ((bytes + block_size - 1) / block_size)
 #define BLOCKS_TO_BYTES(blocks, block_size) (blocks * block_size)
 
+#define ECHFS_END_OF_CHAIN 0xFFFFFFFFFFFFFFFF
+
 typedef struct {
     uint8_t jmp[4]; // Jump instruction
     char sig[8]; // Echfs signature
@@ -44,7 +46,7 @@ typedef struct {
     uint64_t file_size_bytes;
 } __attribute__((packed)) echfs_dir_entry_t;
 
-int read_block0(char *device, echfs_filesystem_t *output);
+int echfs_read_block0(char *device, echfs_filesystem_t *output);
 void echfs_test(char *device);
 
 #endif

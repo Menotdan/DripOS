@@ -45,7 +45,10 @@ void kernel_task() {
         kprintf("\n  %s", todo_list[i]);
     }
 
+    uint64_t before = pmm_get_free_mem();
     echfs_test("/dev/satadeva");
+    uint64_t after = pmm_get_free_mem();
+    sprintf("\nMem free went from %lx to %lx", before, after);
 
     sprintf("\ndone kernel work");
 
