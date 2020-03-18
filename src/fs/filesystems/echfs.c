@@ -15,10 +15,8 @@
 int echfs_read_block0(char *device, echfs_filesystem_t *output) {
     echfs_block0_t *block0 = kcalloc(sizeof(echfs_block0_t));
     int device_fd = fd_open(device, 0);
-    uint64_t before = pmm_get_used_mem();
+
     fd_read(device_fd, block0, sizeof(echfs_block0_t));
-    uint64_t after = pmm_get_used_mem();
-    sprintf("\n%lx leaked (%lx to %lx) [fd_read]", after - before, before, after);
     fd_seek(device_fd, 0, 0);
 
     if (block0->sig[0] == '_' && block0->sig[1] == 'E' && block0->sig[2] == 'C' && block0->sig[3] == 'H' &&
@@ -29,6 +27,7 @@ int echfs_read_block0(char *device, echfs_filesystem_t *output) {
         /* Set data for the filesystem structure */
 
         /* Name and block count/size */
+
         output->device_name = kcalloc(strlen(device) + 1);
         strcpy(device, output->device_name); // Name
         output->blocks = block0->block_count; // Block count
@@ -123,34 +122,23 @@ void *echfs_read_file(echfs_filesystem_t *filesystem, echfs_dir_entry_t *file) {
 
 void echfs_test(char *device) {
     echfs_filesystem_t filesystem;
-    uint64_t before, after;
-    
-    before = pmm_get_used_mem();
+
     int is_echfs = echfs_read_block0(device, &filesystem);
-    after = pmm_get_used_mem();
-    sprintf("\n%lx leaked (%lx to %lx)", after - before, before, after);
 
     if (is_echfs) {
         sprintf("\nMain directory block: %lu", filesystem.main_dir_block);
 
-        before = pmm_get_used_mem();
         echfs_dir_entry_t *entry0 = echfs_read_dir_entry(&filesystem, 3);
-        after = pmm_get_used_mem();
-        sprintf("\n%lx leaked (%lx to %lx)", after - before, before, after);
 
         sprintf("\nFile name: ");
         sprintf(entry0->name);
 
         uint64_t start = stopwatch_start();
-        before = pmm_get_used_mem();
         char *file = echfs_read_file(&filesystem, entry0);
-        after = pmm_get_used_mem();
-        uint64_t time_elapsed = stopwatch_stop(start);
-        sprintf("\n%lx leaked (%lx to %lx)", after - before, before, after);
+        uint64_t time_elapsed = stopwatch_stop(start); 
 
         sprintf("Size: %lu", strlen(file));
-        
-        
+
         //sprintf("\nFile:\n");
         //sprint(file);
 
