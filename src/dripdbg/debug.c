@@ -7,6 +7,15 @@
 #include "klibc/stdlib.h"
 #include "klibc/math.h"
 
+void dripdbg_send(char *msg) {
+    char final_msg[strlen(msg) + 5 + 1];
+    final_msg[0] = '\0';
+
+    strcat(final_msg, msg);
+    strcat(final_msg, "#$^&e");
+    serial_write_buf((uint8_t *) final_msg, strlen(msg) + 5);
+}
+
 void debug_worker() {
     while (1) {
         uint64_t buffer_size = 10;
@@ -38,11 +47,15 @@ void debug_worker() {
         // Parse data
         if (got_data) {
             buffer[buffer_index] = '\0';
-            kprintf("\n[DripDBG] Data: '%s'", buffer);
             if (buffer[0] == 'p') {
-                // Print everything after the 'h'
+                // Print everything after the 'p' command
                 char *print_dat = buffer + 1;
                 kprintf("%s", print_dat);
+            } else if (buffer[0] == 'h') {
+                // Send back "hello world"
+                dripdbg_send("hello world");
+            } else {
+                kprintf("\n[DripDBG] Unknown message: '%s'", buffer);
             }
         }
 
