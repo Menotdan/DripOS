@@ -14,4 +14,8 @@ void sprint_com_port(char *s, uint16_t com_port);
 void sprint(char *s);
 void sprintf(char *message, ...);
 
+void serial_write_buf(uint8_t *buffer, uint64_t count);
+uint8_t read_buffer();
+uint8_t is_data();
+
 #endif

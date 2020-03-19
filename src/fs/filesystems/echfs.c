@@ -3,6 +3,7 @@
 #include "klibc/stdlib.h"
 #include "klibc/string.h"
 #include "klibc/math.h"
+#include "klibc/hashmap.h"
 
 #include "mm/pmm.h"
 
@@ -10,6 +11,8 @@
 
 #include "drivers/serial.h"
 #include "proc/scheduler.h"
+
+hashmap_t echfs_mountpoints_map = {0, 0, 0};
 
 /* Parse the first block of information */
 int echfs_read_block0(char *device, echfs_filesystem_t *output) {

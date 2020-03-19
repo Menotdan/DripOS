@@ -122,6 +122,20 @@ void path_join(char *dst, char *src) {
     strcat(dst, src);
 }
 
+void endian_reverse(uint8_t *buffer, uint64_t word_count) {
+    uint8_t *current1 = buffer;
+    uint8_t *current2 = buffer + 1;
+
+    for (uint64_t i = 0; i < word_count; i++) {
+        uint8_t temp = *current1;
+        *current1 = *current2;
+        *current2 = temp;
+
+        current1 += 2;
+        current2 += 2;
+    }
+}
+
 char *get_path_elem(char *path, char *output) {
     // Temp pointer
     char *tmp = path + strlen(path) - 1;

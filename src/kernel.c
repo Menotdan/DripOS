@@ -12,6 +12,7 @@
 #include "drivers/vesa.h"
 #include "drivers/tty/tty.h"
 #include "drivers/pci.h"
+#include "dripdbg/debug.h"
 #include "multiboot.h"
 
 /* Testing includes */
@@ -45,13 +46,13 @@ void kernel_task() {
         kprintf("\n  %s", todo_list[i]);
     }
 
-    uint64_t before = pmm_get_free_mem();
     echfs_test("/dev/satadeva");
-    uint64_t after = pmm_get_free_mem();
-    sprintf("\nMem free went from %lx to %lx", before, after);
 
     sprintf("\ndone kernel work");
 
+#ifdef DBGPROTO
+    setup_drip_dgb();
+#endif
     while (1) { asm volatile("hlt"); }
 }
 

@@ -44,6 +44,10 @@ run: myos.iso
 	- qemu-system-x86_64 -d guest_errors -smp ${CORES} -machine q35 -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
 	make clean
 
+run-dripdbg: myos.iso
+	- qemu-system-x86_64 -d guest_errors -smp ${CORES} -machine q35 -no-shutdown -no-reboot -chardev socket,id=char0,port=12345,host=127.0.0.1 -serial chardev:char0 -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+	make clean
+
 run-kvm: myos.iso
 	- sudo qemu-system-x86_64 -machine q35 -enable-kvm -smp ${CORES} -cpu host -d cpu_reset -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
 	make clean
@@ -58,7 +62,7 @@ debug: myos.iso
 # To make an object, always compile from its .c
 
 %.o: %.c
-	${CC} ${CFLAGS} -D AMD64 -D DEBUG -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -fno-omit-frame-pointer -MD -c $< -o $@ -std=gnu11 -ffreestanding
+	${CC} ${CFLAGS} -D AMD64 -D DBGPROTO -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -fno-omit-frame-pointer -MD -c $< -o $@ -std=gnu11 -ffreestanding
 
 %.bin: %.real
 	nasm -f bin -o $@ $<

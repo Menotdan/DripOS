@@ -17,6 +17,7 @@ char *get_path_elem(char *path, char *output);
 void utoa(uint64_t n, char str[]);
 void itoa(int64_t n, char str[]);
 void htoa(uint64_t in, char str[]);
+void endian_reverse(uint8_t *buffer, uint64_t word_count);
 uint64_t strlen(char str[]);
 void memcpy(uint8_t *src, uint8_t *dst, uint64_t count);
 void memcpy32(uint32_t *src, uint32_t *dst, uint64_t count);

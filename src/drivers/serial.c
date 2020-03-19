@@ -32,6 +32,22 @@ void write_serial(char data, uint16_t com_port) {
 #endif
 }
 
+uint8_t read_buffer() {
+    if (port_inb(COM1 + 5) & 1) return port_inb(COM1);
+    return 0;
+}
+
+uint8_t is_data() {
+    return port_inb(COM1 + 5) & 1;
+}
+
+void serial_write_buf(uint8_t *buffer, uint64_t count) {
+    for (uint64_t i = 0; i < count; i++) {
+        serial_transmit_delay(COM1); // Wait for buffer to be ready
+        port_outb(COM1, buffer[i]); // Send the data to the COM port
+    }
+}
+
 // Print, but you can select a port
 void sprint_com_port(char *s, uint16_t com_port) {
     while (*s != '\0') {
