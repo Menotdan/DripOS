@@ -6,5 +6,6 @@
 
 
 int64_t abs(int64_t in);
+uint64_t pow(uint64_t n, uint64_t e);
 
 #endif

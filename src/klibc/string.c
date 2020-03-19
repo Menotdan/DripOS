@@ -82,6 +82,16 @@ void utoa(uint64_t n, char str[]) {
     reverse(str);
 }
 
+uint64_t atou(char str[]) {
+    uint64_t result = 0;
+    for(; *str; ++str) {
+        result *= 10;
+        result += *str - '0';
+    }
+
+    return result;
+}
+
 void htoa(uint64_t in, char str[]) {
     uint32_t pos = 0;
     uint8_t tmp;

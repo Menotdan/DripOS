@@ -21,6 +21,14 @@ lock_t scheduler_lock = 0;
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
 task_regs_t default_user_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x23,0x1B,0,0x202,0};
 
+uint64_t get_thread_list_size() {
+    return tasks.array_size;
+}
+
+void *get_thread_elem(uint64_t elem) {
+    return tasks.base[elem].data;
+}
+
 thread_info_block_t *get_thread_locals() {
     thread_info_block_t *ret;
     asm volatile("movq %%fs:(0), %0;" : "=r"(ret));
@@ -453,6 +461,7 @@ void schedule(int_reg_t *r) {
     r->ss = running_task->regs.ss;
     write_msr(0xC0000100, running_task->regs.fs); // Set FS.base
 
+    get_thread_locals()->tid = running_task->tid;
     get_cpu_locals()->thread_kernel_stack = running_task->kernel_stack;
     get_cpu_locals()->thread_user_stack = running_task->user_stack;
 

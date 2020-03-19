@@ -90,6 +90,9 @@ int kill_task(int64_t tid);
 
 void start_test_user_task();
 
+void *get_thread_elem(uint64_t elem);
+uint64_t get_thread_list_size();
+
 extern uint8_t scheduler_started;
 extern uint8_t scheduler_enabled;
 

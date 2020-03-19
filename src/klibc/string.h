@@ -15,6 +15,7 @@ void strcat(char *dst, char *src);
 void path_join(char *dst, char *src);
 char *get_path_elem(char *path, char *output);
 void utoa(uint64_t n, char str[]);
+uint64_t atou(char str[]);
 void itoa(int64_t n, char str[]);
 void htoa(uint64_t in, char str[]);
 void endian_reverse(uint8_t *buffer, uint64_t word_count);
