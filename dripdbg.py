@@ -1,5 +1,6 @@
 import time
 import socket
+import matplotlib.pyplot as plt
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind(("0.0.0.0", 12345))
@@ -50,6 +51,20 @@ def dripdbg_get_thread_info(conn, tid):
 
     return ret
 
+def dripdbg_get_cpu_time_info(conn, tid):
+    data = str(tid)
+    conn.send(("c" + data + eom_sig).encode("ASCII"))
+    elements = dripdbg_get_msg(conn).split("+=")[1:]
+    ret = []
+    for e in elements:
+        ret.append(int(e))
+
+    return ret
+
+def dripdbg_kill_thread(conn, tid):
+    data = str(tid)
+    conn.send(("k" + data + eom_sig).encode("ASCII"))
+
 def get_hello_world(conn):
     try:
         conn.send(("h" + eom_sig).encode("ASCII"))
@@ -70,7 +85,7 @@ def dripdbg_parse_cmd(conn, cmd, recursive, last_command):
     elif params_etc[0] == "registers":
         # Sanity check
         if not len(params_etc) == 2:
-            print("Expected 1 param, got ", str(len(params_etc) - 1))
+            print("expected: registers <tid>")
             return cmd
         if not params_etc[1].isnumeric():
             print("expected: registers <tid>")
@@ -103,9 +118,57 @@ def dripdbg_parse_cmd(conn, cmd, recursive, last_command):
 
     elif params_etc[0] == "print":
         if not len(params_etc) == 2:
-            print("Expected 1 param, got ", str(len(params_etc) - 1))
+            print("expected: print <message>")
             return cmd
         remote_print(conn, params_etc[1])
+    elif params_etc[0] == "cputime":
+        # Sanity check
+        if not len(params_etc) == 2:
+            print("expected: cputime <tid>")
+            return cmd
+        if not params_etc[1].isnumeric():
+            print("expected: cputime <tid>")
+            return cmd
+
+        cpu_time_info = dripdbg_get_cpu_time_info(conn, int(params_etc[1]))
+        print("Time started: " + str(cpu_time_info[0]))
+        print("Time stopped: " + str(cpu_time_info[1]))
+        print("Time total: " + str(cpu_time_info[2]))
+    elif params_etc[0] == "watchcputime":
+        # Sanity check
+        if not len(params_etc) == 3:
+            print("expected: watchcputime <tid> <times>")
+            return cmd
+        if not params_etc[1].isnumeric():
+            print("expected: watchcputime <tid> <times>")
+            return cmd
+        if not params_etc[2].isnumeric():
+            print("expected: watchcputime <tid> <times>")
+            return cmd
+
+        data = []
+        base = 0
+        for i in range(int(params_etc[2])):
+            cpu_time_info = dripdbg_get_cpu_time_info(conn, int(params_etc[1]))
+            if len(data) == 0:
+                data.append(0)
+                base = cpu_time_info[2]
+            else:
+                data.append(cpu_time_info[2] - base)
+            print(data)
+            time.sleep(2)
+        plt.plot(data)
+        plt.show()
+    elif params_etc[0] == "killt":
+        # Sanity check
+        if not len(params_etc) == 2:
+            print("expected: killt <tid>")
+            return cmd
+        if not params_etc[1].isnumeric():
+            print("expected: killt <tid>")
+            return cmd
+        
+        dripdbg_kill_thread(conn, int(params_etc[1]))
     elif params_etc[0] == "quit":
         conn.close()
         s.close()

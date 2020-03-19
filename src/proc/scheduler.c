@@ -413,6 +413,9 @@ void schedule(int_reg_t *r) {
 
         running_task->regs.cr3 = vmm_get_pml4t();
 
+        running_task->tsc_stopped = read_tsc();
+        running_task->tsc_total += running_task->tsc_stopped - running_task->tsc_started;
+
         /* If we were previously running the task, then it is ready again since we are switching */
         if (running_task->state == RUNNING && running_task->tid != get_cpu_locals()->idle_tid) {
             running_task->state = READY;
@@ -459,6 +462,7 @@ void schedule(int_reg_t *r) {
 
     r->cs = running_task->regs.cs;
     r->ss = running_task->regs.ss;
+
     write_msr(0xC0000100, running_task->regs.fs); // Set FS.base
 
     get_thread_locals()->tid = running_task->tid;
@@ -468,6 +472,8 @@ void schedule(int_reg_t *r) {
     if (vmm_get_pml4t() != running_task->regs.cr3) {
         vmm_set_pml4t(running_task->regs.cr3);
     }
+
+    running_task->tsc_started = read_tsc();
 
     if (tid_run == -1) {
         start_idle();

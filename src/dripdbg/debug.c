@@ -136,6 +136,23 @@ void debug_worker() {
 
                 dripdbg_send(data);
                 kfree(data);
+            } else if (buffer[0] == 'c') {
+                // Send the cpu time each task used
+                char *data = kcalloc(1);
+                uint64_t cur_buf_size = 1;
+                uint64_t tid = atou(buffer + 1);
+                task_t *task = get_thread_elem(tid);
+
+                data = dripdbg_add_list_int(data, task->tsc_started, &cur_buf_size);
+                data = dripdbg_add_list_int(data, task->tsc_stopped, &cur_buf_size);
+                data = dripdbg_add_list_int(data, task->tsc_total, &cur_buf_size);
+
+                dripdbg_send(data);
+                kfree(data);
+            } else if (buffer[0] == 'k') {
+                // Kill a thread
+                uint64_t tid = atou(buffer + 1);
+                kill_task(tid);
             } else {
                 kprintf("\n[DripDBG] Unknown message: '%s'", buffer);
             }
