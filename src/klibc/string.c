@@ -146,6 +146,17 @@ void endian_reverse(uint8_t *buffer, uint64_t word_count) {
     }
 }
 
+void path_remove_elem(char *path) {
+    // Temp pointer
+    char *tmp = path + strlen(path) - 1;
+
+    // Find the first "/"
+    while (*tmp != '/') tmp--;
+
+    // Clear everything after the "/"
+    *(tmp+1) = '\0';
+}
+
 char *get_path_elem(char *path, char *output) {
     // Temp pointer
     char *tmp = path + strlen(path) - 1;

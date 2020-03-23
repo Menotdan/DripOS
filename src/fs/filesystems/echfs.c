@@ -4,6 +4,7 @@
 #include "klibc/string.h"
 #include "klibc/math.h"
 #include "klibc/hashmap.h"
+#include "fs/filesystems/filesystems.h"
 
 #include "mm/pmm.h"
 
@@ -12,7 +13,6 @@
 #include "drivers/serial.h"
 #include "proc/scheduler.h"
 
-hashmap_t echfs_mountpoints_map = {0, 0, 0};
 
 /* Parse the first block of information */
 int echfs_read_block0(char *device, echfs_filesystem_t *output) {
@@ -229,6 +229,11 @@ vfs_node_t *echfs_create_vfs_tree(echfs_filesystem_t *filesystem, char *mountpoi
     return (vfs_node_t *) 0;
 }
 
+void echfs_node_gen(char *filename) {
+    sprintf("\n[EchFS] Handling node gen for file ");
+    sprint(filename);
+}
+
 void echfs_test(char *device) {
     echfs_filesystem_t filesystem;
 
@@ -242,19 +247,18 @@ void echfs_test(char *device) {
         sprintf("\nFile name: ");
         sprintf(entry0->name);
 
-        uint64_t start = stopwatch_start();
-        char *file = echfs_read_file(&filesystem, entry0);
-        uint64_t time_elapsed = stopwatch_stop(start); 
+        //uint64_t start = stopwatch_start();
+        //char *file = echfs_read_file(&filesystem, entry0);
+        //uint64_t time_elapsed = stopwatch_stop(start); 
 
-        sprintf("Size: %lu", strlen(file));
+        //sprintf("Size: %lu", strlen(file));
 
-        sprintf("\nDone. Took %lu ms.", time_elapsed);
+        //sprintf("\nDone. Took %lu ms.", time_elapsed);
 
         kfree(entry0);
-        kfree(file);
+        //kfree(file);
 
-        echfs_create_vfs_tree(&filesystem, "/");
-        sprint_all_vfs("/");
-        sprint_all_vfs("/hello");
+        register_mountpoint("/", echfs_node_gen);
+        fd_open("/hello.txt", 0);
     }
 }

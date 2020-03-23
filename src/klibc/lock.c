@@ -1,15 +1,26 @@
 #include "lock.h"
 #include "proc/scheduler.h"
 #include "klibc/stdlib.h"
+#include "klibc/kern_state.h"
 
 #include "drivers/tty/tty.h"
 #include "drivers/serial.h"
 
 void lock(lock_t *lock) {
+    // uint8_t lock_print_state;
+
+    // if (load_kernel_state("lock_print_addr", &lock_print_state, 1) && lock_print_state) {
+    //     sprintf("\nLock %lx", lock);
+    // }
     spinlock_lock(lock);
 }
 
 void unlock(lock_t *lock) {
+    // uint8_t lock_print_state;
+
+    // if (load_kernel_state("lock_print_addr", &lock_print_state, 1) && lock_print_state) {
+    //     sprintf("\nUnlock %lx", lock);
+    // }
     spinlock_unlock(lock);
 }
 

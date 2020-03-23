@@ -17,7 +17,6 @@ lock_t pmm_lock = 0;
 void pmm_set_bit(uint64_t page) {
     uint8_t bit = page & 0b111;
     uint64_t byte = page & ~(0b111);
-    //sprintf("\npage: %lu %lu %u", page, byte, (uint32_t) bit);
 
     bitmap[byte] |= (1<<bit);
 }
@@ -42,13 +41,14 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
 
     // Setup the bitmap for the PMM
     multiboot_memory_map_t *mmap = GET_HIGHER_HALF(multiboot_memory_map_t *, mboot_dat->mmap_addr);
+
     // Calculate length of memory
     multiboot_memory_map_t start = mmap[0];
     multiboot_memory_map_t end = mmap[(mboot_dat->mmap_length / sizeof(multiboot_memory_map_t)) - 1];
     uint64_t mem_length = ROUND_UP((end.addr + end.len) - start.addr, 0x1000);
     uint64_t bitmap_bytes = ((mem_length / 0x1000) + 8 - 1) / 8;
 
-    // Set bitmap as 1s
+    // Set bitmap as ones
     memset(bitmap, 0xFF, bitmap_bytes);
 
     for (uint64_t i = 0; i < mboot_dat->mmap_length / sizeof(multiboot_memory_map_t); i++) {

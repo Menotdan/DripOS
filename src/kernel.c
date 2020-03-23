@@ -1,18 +1,26 @@
 #include <stdint.h>
 #include <stddef.h>
+
 #include "mm/pmm.h"
+
 #include "fs/vfs/vfs.h"
 #include "fs/devfs/devfs.h"
 #include "fs/fd.h"
+
 #include "sys/apic.h"
 #include "sys/int/isr.h"
+
 #include "klibc/stdlib.h"
+#include "klibc/kern_state.h"
+
 #include "drivers/pit.h"
 #include "drivers/serial.h"
 #include "drivers/vesa.h"
 #include "drivers/tty/tty.h"
 #include "drivers/pci.h"
+
 #include "dripdbg/debug.h"
+
 #include "multiboot.h"
 
 /* Testing includes */
@@ -28,6 +36,10 @@
 char *todo_list[TODO_LIST_SIZE] = {"Better syscall error handling", "Filesystem driver", "ELF Loading", "userspace libc", "minor: Sync TLB across CPUs", "minor: Add MMIO PCI", "minor: Retry AHCI commands"};
 
 void kernel_task() {
+    setup_kernel_state(); // Load the kernel variable enviroment
+    uint8_t lock_print_dat = 0;
+    add_kernel_state("lock_print_addr", &lock_print_dat, 1); // Load the lock print addr data
+
     kprintf("\n[DripOS] Loading VFS");
     vfs_init(); // Setup VFS
     devfs_init();
@@ -46,6 +58,8 @@ void kernel_task() {
         kprintf("\n  %s", todo_list[i]);
     }
 
+    lock_print_dat = 1;
+    modify_kernel_state("lock_print_addr", &lock_print_dat, 1);
     echfs_test("/dev/satadeva");
 
     sprintf("\ndone kernel work");
@@ -53,6 +67,7 @@ void kernel_task() {
 #ifdef DBGPROTO
     setup_drip_dgb();
 #endif
+    kprintf("\nMemory used: %lu bytes", pmm_get_used_mem());
     while (1) { asm volatile("hlt"); }
 }
 

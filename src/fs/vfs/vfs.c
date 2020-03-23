@@ -1,4 +1,5 @@
 #include "vfs.h"
+#include "fs/filesystems/filesystems.h"
 #include "proc/scheduler.h"
 #include "klibc/stdlib.h"
 #include "klibc/string.h"
@@ -54,6 +55,34 @@ int dummy_seek(fd_entry_t *node, uint64_t offset, int whence) {
 
 vfs_ops_t dummy_ops = {dummy_open, dummy_close, dummy_read, dummy_write, dummy_seek};
 
+/* some nonsense string handling and stuff for getting a mountpoint ig */
+void attempt_mountpoint_handle(char *path) {
+    char *local_path = kcalloc(strlen(path) + 1);
+    char *filesystem_path = kcalloc(strlen(path) + 1);
+    strcpy(path, local_path);
+
+    while (strcmp(local_path, "/") != 0) {
+        if (is_mountpoint(local_path)) {
+            reverse(filesystem_path);
+            sprintf("\n[VFS] Doing mountpoint handle for ");
+            sprint(filesystem_path);
+            gen_node_mountpoint(local_path, filesystem_path);
+
+            return;
+        }
+        char *tmp_get_path = local_path + strlen(local_path) - 1;
+        while (*tmp_get_path != '/')
+            *(filesystem_path + strlen(filesystem_path)) = *tmp_get_path--;
+        // Add the '/'
+        *(filesystem_path + strlen(filesystem_path)) = *tmp_get_path--;
+
+        path_remove_elem(local_path);
+    }
+
+    kfree(local_path);
+    kfree(filesystem_path);
+}
+
 /* VFS ops things */
 vfs_node_t *vfs_open(char *name, int mode) {
     if (!range_mapped(name, 0x1000)) { // boi if ur name isnt mapped
@@ -67,7 +96,13 @@ vfs_node_t *vfs_open(char *name, int mode) {
         /* Call the actual open ops */
         node->ops.open(name, mode);
     } else {
-        get_thread_locals()->errno = -ENOENT; // Set errno and we will then return null
+        attempt_mountpoint_handle(name);
+        node = get_node_from_path(name);
+        if (node) {
+            node->ops.open(name, mode);
+        } else {
+            get_thread_locals()->errno = -ENOENT; // Set errno and we will then return null
+        }
     }
 
     return node;

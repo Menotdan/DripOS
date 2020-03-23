@@ -2,9 +2,9 @@
 #include "sys/smp.h"
 
 void set_idt_gate(uint8_t n, uint64_t handler) {
-    uint16_t low = (uint16_t) (handler & 0xFFFF); // Get the low 16 bits of the function
-    uint16_t mid = (uint16_t) ((handler & (0xFFFF << 16)) >> 16); // Get the middle 16 bits
-    uint32_t high = (uint32_t) ((handler & ((uint64_t) 0xFFFFFFFF << 32)) >> 32); // Get the high 32 bits
+    uint16_t low =  (uint16_t) (handler >> 0); // Get the low 16 bits of the function
+    uint16_t mid =  (uint16_t) (handler >> 16); // Get the middle 16 bits
+    uint32_t high = (uint32_t) (handler >> 32); // Get the high 32 bits
 
     /* Set the entry */
     idt_gate_t *idt_entries = get_cpu_locals()->idt;

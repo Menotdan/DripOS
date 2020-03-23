@@ -3,7 +3,7 @@
 #include "klibc/hashmap.h"
 
 vfs_node_t *devfs_root;
-hashmap_t devfs_hashmap;
+hashmap_t *devfs_hashmap;
 
 int devfs_open(char *name, int mode) {
     sprintf("\n[DevFS] Opening %s with mode %d", name, mode);
@@ -24,9 +24,7 @@ void devfs_init() {
     vfs_add_child(root_node, devfs_root);
 
     /* Setup the devfs hashmap */
-    devfs_hashmap.bucket_highest = 0;
-    devfs_hashmap.buckets = (void *) 0;
-    devfs_hashmap.hashmap_lock = 0;
+    devfs_hashmap = init_hashmap();
 }
 
 void devfs_sprint_devices() {
@@ -43,10 +41,10 @@ void register_device(char *name, vfs_ops_t ops, void *device_data) {
     vfs_node_t *new_device = vfs_new_node(name, ops);
     vfs_add_child(devfs_root, new_device);
     
-    hashmap_set_elem(&devfs_hashmap, new_device->unid, device_data);
+    hashmap_set_elem(devfs_hashmap, new_device->unid, device_data);
 }
 
 void *get_device_data(vfs_node_t *node) {
-    return hashmap_get_elem(&devfs_hashmap, node->unid);
+    return hashmap_get_elem(devfs_hashmap, node->unid);
 }
 
