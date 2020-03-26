@@ -58,6 +58,8 @@ void kernel_task() {
     echfs_test("/dev/satadeva");
     
     #include "proc/exec_formats/raw_binary.h"
+    kprintf("\nMemory used: %lu bytes", pmm_get_used_mem());
+    kprintf("\n[DripOS] Loading binary from disk.\n");
     launch_binary("/echfs_mount/programs/program_1.bin");
 
     sprintf("\ndone kernel work");
@@ -65,7 +67,6 @@ void kernel_task() {
 #ifdef DBGPROTO
     setup_drip_dgb();
 #endif
-    kprintf("\nMemory used: %lu bytes", pmm_get_used_mem());
     while (1) { asm volatile("hlt"); }
 }
 
