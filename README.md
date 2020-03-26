@@ -1,49 +1,26 @@
 # DripOS
 [![][discord_image]][discord_link]
 
-An OS made for fun.
+Yet another hobby x86_64 OS.
 
-NOTE: This is based off of this tutorial: https://github.com/cfenollosa/os-tutorial
+## Build instructions:
+# Requirements:
+x86_64-elf-gcc (cross compiler) >= 9.2.0
 
+xorriso >= 1.4.8
 
-### Discord: [Discord](https://discord.gg/E9ZXZWn "Discord")
+grub-mkrescue >= 2.04
 
-## Usage:
+make
+# Building:
+Go to the directory where you downloaded the source, and then type `make`. This should generate a file called `DripOS.iso`
 
-## Booting on real hardware:
-Note: I am not responsible for any damage to your system, although I don't expect any, as I test DripOS on real hardware quite a bit
-### Step One:
-Write DripOS.iso to a USB drive. On Linux, this is ```sudo dd if=DripOS.iso of=/dev/yourdrivehere```
-Make sure to select the correct drive, otherwise you may overwrite your main boot drive with DripOS code.
-### Step Two:
-Reboot your computer and enter the BIOS, then select the USB drive as the boot device.
-You can enter the BIOS on many systems by pressing DEL a bunch of times during startup.
+# Running:
+You can run this in qemu with the recommended command `sudo qemu-system-x86_64 -machine q35 -enable-kvm -smp 2 -cpu host -m 2G -cdrom DripOS.iso`. You can also change -smp 2 to -smp <number of cores you have> for more cores.
 
-## Linux:
-
-Install qemu for your distro
-
-Run 
-```bash
-qemu-system-i386 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -fda os-image.bin
-```
-
-## Windows:
-
-Download and install qemu (pick 32 or 64 bit version):
-
-https://qemu.weilnetz.de/
-
-Go to **qemu** directory
-
-```batch
-cd "\Program Files\qemu"
-```
-and to run the emulator with **DripOS**:
+## NOTE: I am not responsible for any damage to any system you choose to run this on, but this should be mostly safe
+To run this on real hardware, take a USB drive and write `DripOS.iso` to the drive. (NOT as a file, using some image burning tool like `dd` on linux) Then you can plug it into a computer and boot from it.
 
 
-```batch
-qemu-system-i386.exe -m 256 -soundhw pcspk -device isa-debug-exit,iobase=0xf4,iosize=0x04 -fda /path/to/Downloads/DripOS-master/DripOS/os-image.bin
-```
 [discord_image]:https://img.shields.io/badge/discord-DripOS-738bd7.svg?style=square
 [discord_link]:https://discord.gg/E9ZXZWn

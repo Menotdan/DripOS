@@ -10,13 +10,15 @@ SECTIONS
 {
     . = KRNL_VMA_START + 0x100000;
 
-    __kernel_start = .;
+    __kernel_start = ALIGN(4K);
 
     .multiboot ALIGN(4K):  AT(ADDR(.multiboot) - KRNL_VMA_START)
-       {*(.multiboot)}
+       {KEEP(*(.multiboot))}
 
+    __kernel_code_start = ALIGN(4K);
     .text ALIGN(4K): AT(ADDR(.text) - KRNL_VMA_START)
     {*(.text*)}
+    __kernel_code_end = ALIGN(4K);
     .rodata ALIGN(4K): AT(ADDR(.rodata) - KRNL_VMA_START)
     {*(.rodata*)}
     .data ALIGN(4K): AT(ADDR(.data) - KRNL_VMA_START)
@@ -24,5 +26,5 @@ SECTIONS
     .bss ALIGN(4K): AT(ADDR(.bss) - KRNL_VMA_START)
     {*(.bss*) *(COMMON)}
 
-    __kernel_end = .;
+    __kernel_end = ALIGN(4K);
 }
