@@ -5,7 +5,7 @@
 #include "fs/fd.h"
 #include "drivers/serial.h"
 
-void new_binary_process(char *process_name, void *exec_ptr, void *code, uint64_t program_size) {
+static void new_binary_process(char *process_name, void *exec_ptr, void *code, uint64_t program_size) {
     void *rsp = kcalloc(TASK_STACK_SIZE);
     void *rsp_phys = GET_LOWER_HALF(void *, rsp);
 

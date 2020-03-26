@@ -11,7 +11,6 @@
 #include "sys/int/isr.h"
 
 #include "klibc/stdlib.h"
-#include "klibc/kern_state.h"
 
 #include "drivers/pit.h"
 #include "drivers/serial.h"
@@ -91,14 +90,6 @@ void kmain(multiboot_info_t *mboot_dat) {
     set_panic_stack((uint64_t) kmalloc(0x1000) + 0x1000);
     set_kernel_stack((uint64_t) kmalloc(0x1000) + 0x1000);
 
-    sprintf("\n[DripOS] Setup for the kernel variable engine.");
-    setup_kernel_state(); // Load the kernel variable enviroment
-    sprintf("\n[DripOS] Loaded kernel variable engine.");
-
-    // uint16_t kernel_good = 12345;
-    // add_kernel_state("kernel_good", (uint8_t *) &kernel_good, 2);
-    // load_kernel_state("kernel_good", (uint8_t *) &kernel_good, 2);
-    // sprintf("\nTest: %u", kernel_good);
 
     sprintf("\n[DripOS] Set kernel stacks.");
     scheduler_init_bsp();

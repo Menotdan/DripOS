@@ -13,7 +13,7 @@ SECTIONS
     __kernel_start = ALIGN(4K);
 
     .multiboot ALIGN(4K):  AT(ADDR(.multiboot) - KRNL_VMA_START)
-       {*(.multiboot)}
+       {KEEP(*(.multiboot))}
 
     __kernel_code_start = ALIGN(4K);
     .text ALIGN(4K): AT(ADDR(.text) - KRNL_VMA_START)

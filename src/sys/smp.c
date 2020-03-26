@@ -38,14 +38,6 @@ void send_ipi(uint8_t ap, uint32_t ipi_number) {
     write_lapic(0x300, ipi_number);
 }
 
-void write_cpu_data8(uint16_t offset, uint8_t data) {
-    *(volatile uint8_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
-}
-
-void write_cpu_data16(uint16_t offset, uint16_t data) {
-    *(volatile uint16_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
-}
-
 void write_cpu_data32(uint16_t offset, uint32_t data) {
     *(volatile uint32_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
 }
@@ -115,10 +107,6 @@ void launch_cpus() {
     }
     vmm_unmap((void *) 0, 1 + ((code_size + 0x1000 - 1) / 0x1000));
     vmm_unmap((void *) (GDT64 - KERNEL_VMA_OFFSET), 1);
-}
-
-uint8_t get_cpu_count() {
-    return cores_booted;
 }
 
 void smp_entry_point() {

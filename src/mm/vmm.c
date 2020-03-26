@@ -24,10 +24,6 @@ void vmm_invlpg(uint64_t new) {
     asm volatile("invlpg (%0);" ::"r"(new) : "memory");
 }
 
-void vmm_flush_tlb() {
-    vmm_set_pml4t(vmm_get_pml4t());
-}
-
 pt_off_t vmm_virt_to_offs(void *virt) {
     uintptr_t addr = (uintptr_t)virt;
 
@@ -39,17 +35,6 @@ pt_off_t vmm_virt_to_offs(void *virt) {
     };
 
     return off;
-}
-
-void *vmm_offs_to_virt(pt_off_t offs) {
-    uintptr_t addr = 0;
-
-    addr |= offs.p4_off << 39;
-    addr |= offs.p3_off << 30;
-    addr |= offs.p2_off << 21;
-    addr |= offs.p1_off << 12;
-
-    return (void *)addr;
 }
 
 uint64_t get_entry(pt_t *cur_table, uint64_t offset) {
@@ -296,32 +281,6 @@ void *vmm_fork_higher_half(void *old) {
         new_p4->table[i] = old_p4->table[i];
     }
 
-    return ret;
-}
-
-void *vmm_fork_lower_half(void *old) {
-    pt_t *old_p4 = (pt_t *) old;
-    void *ret = pmm_alloc(0x1000);
-    pt_t *new_p4 = (pt_t *) ((uint64_t) ret + NORMAL_VMA_OFFSET);
-
-    memset((uint8_t *) new_p4, 0, 0x1000);
-
-    for (uint16_t i = 0; i < 256; i++) {
-        new_p4->table[i] = old_p4->table[i];
-    }
-    return ret;
-}
-
-void *vmm_fork(void *old) {
-    pt_t *old_p4 = (pt_t *) old;
-    void *ret = pmm_alloc(0x1000);
-    pt_t *new_p4 = (pt_t *) ((uint64_t) ret + NORMAL_VMA_OFFSET);
-
-    memset((uint8_t *) new_p4, 0, 0x1000);
-
-    for (uint16_t i = 0; i < 512; i++) {
-        new_p4->table[i] = old_p4->table[i];
-    }
     return ret;
 }
 

@@ -5,11 +5,3 @@ int64_t abs(int64_t in) {
     if (in < 0) return -in;
     return in;
 }
-
-uint64_t pow(uint64_t n, uint64_t e) {
-    uint64_t result = n;
-    for (uint64_t i = 0; i < e; i++)
-        result *= n;
-
-    return result;
-}

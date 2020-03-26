@@ -30,7 +30,6 @@ typedef struct {
 
 void launch_cpus();
 void send_ipi(uint8_t ap, uint32_t ipi_number);
-uint8_t get_cpu_count();
 cpu_locals_t *get_cpu_locals();
 void new_cpu_locals();
 uint8_t get_lapic_id();

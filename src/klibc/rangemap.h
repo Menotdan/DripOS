@@ -13,6 +13,5 @@ typedef struct rangemap {
 void rangemap_add_range(rangemap_t *base_entry, uint64_t range_start, uint64_t range_end);
 uint64_t rangemap_find_free_area(rangemap_t *rangemap, uint64_t size);
 void rangemap_mark_free(rangemap_t *rangemap, uint64_t addr);
-void print_ranges(rangemap_t *base);
 
 #endif

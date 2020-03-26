@@ -33,8 +33,4 @@ void memcpy32(uint32_t *src, uint32_t *dst, uint64_t count);
 void memset(uint8_t *dst, uint8_t data, uint64_t count);
 void memset32(uint32_t *dst, uint32_t data, uint64_t count);
 
-/* remove these debug functions */
-void dgbmemcpy32(uint32_t *src, uint32_t *dst, uint64_t count, uint64_t low_limit, uint64_t high_limit);
-void dbgmemset32(uint32_t *dst, uint32_t data, uint64_t count, uint64_t low_limit, uint64_t high_limit);
-
 #endif

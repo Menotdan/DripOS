@@ -69,12 +69,3 @@ void rangemap_mark_free(rangemap_t *rangemap, uint64_t addr) {
         current = current->next;
     }
 }
-
-void print_ranges(rangemap_t *base) {
-    rangemap_t *current = base;
-    sprintf("\nEntries:");
-    while (current) {
-        sprintf("\n  entry %lx - %lx", current->start, current->end);
-        current = current->next;
-    }
-}

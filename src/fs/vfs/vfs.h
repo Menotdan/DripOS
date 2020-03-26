@@ -45,8 +45,6 @@ void vfs_add_child(vfs_node_t *parent, vfs_node_t *child);
 void create_missing_nodes_from_path(char *path, vfs_ops_t ops, vfs_node_t *mountpoint);
 vfs_node_t *get_node_from_path(char *path);
 char *get_full_path(vfs_node_t *node);
-void add_node_at_path(char *path, vfs_node_t *node);
-void sprint_all_vfs(char *path);
 
 /* VFS ops */
 vfs_node_t *vfs_open(char *name, int mode);

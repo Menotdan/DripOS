@@ -128,24 +128,6 @@ void *echfs_read_file(echfs_filesystem_t *filesystem, echfs_dir_entry_t *file, u
     
 }
 
-echfs_dir_entry_t *echfs_get_entry_from_id(echfs_filesystem_t *filesystem, uint64_t id) {
-    uint64_t entry_n = 0;
-
-    while (1) {
-        echfs_dir_entry_t *entry = echfs_read_dir_entry(filesystem, entry_n++);
-        if (entry->entry_type == 1 && entry->starting_block == id) {
-            return entry;
-        }
-
-        if (entry->parent_id == 0) {
-            kfree(entry);
-            return (echfs_dir_entry_t *) 0;
-        }
-
-        kfree(entry);
-    }
-}
-
 uint64_t echfs_find_entry_name_parent(echfs_filesystem_t *filesystem, char *name, uint64_t parent_id) {
     uint64_t entry_n = 0;
 

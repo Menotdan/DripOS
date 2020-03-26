@@ -62,89 +62,6 @@ void _idle() {
     }
 }
 
-void user_task() {
-    /* Syscall 1, open */
-    uint64_t rax = 2;
-    char *filename = "/dev/satadeva";
-    uint64_t rdi = (uint64_t) filename;
-    uint64_t rsi = 0;
-    uint64_t fd;
-    asm volatile("syscall" : "=a"(fd) : "a"(rax), "D"(rdi), "S"(rsi)
-        : "rcx", "r11", "memory"); // Open
-    uint64_t rdx = 0;
-    rax = 8;
-    rdi = fd;
-    rsi = 4;
-    uint64_t output_seek;
-    asm volatile("syscall" : "=a"(output_seek) : "a"(rax), "D"(rdi), "S"(rsi), "d"(rdx) 
-        : "rcx", "r11", "memory"); // Seek
-    
-    /* Syscall 2, read */
-    rax = 0;
-    char *data[22];
-    rsi = (uint64_t) data;
-    rdx = 21;
-    uint64_t output2;
-    asm volatile("syscall" : "=a"(output2) : "a"(rax), "D"(fd), "S"(rsi), "d"(rdx) 
-        : "rcx", "r11", "memory"); // Write
-    
-    /* Open the tty */
-    char *filename2 = "/dev/tty1";
-    rax = 2;
-    rdi = (uint64_t) filename2;
-    rsi = 0;
-    uint64_t fd_tty;
-    asm volatile("syscall" : "=a"(fd_tty) : "a"(rax), "D"(rdi), "S"(rsi)
-        : "rcx", "r11", "memory"); // Open
-    /* Write to the tty */
-    rsi = (uint64_t) data;
-    uint64_t output3;
-    rax = 1;
-    rdx = 21;
-    asm volatile("syscall" : "=a"(output3) : "a"(rax), "D"(fd_tty), "S"(rsi), "d"(rdx) 
-        : "rcx", "r11", "memory"); // Write
-
-    /* cause a crash */
-    volatile int e = 0;
-    volatile int x = 1/e;
-    (void) x; // Division by 0 fault
-}
-
-void main_task() {
-    while (1) {
-        //sprintf("\nTSC Idle: %lu TSC Running: %lu On CPU %u", get_cpu_locals()->idle_tsc_count, (get_cpu_locals()->total_tsc - get_cpu_locals()->idle_tsc_count), (uint32_t) get_cpu_locals()->cpu_index);
-    }
-}
-
-void second_task() {
-    //uint64_t count = 0;
-    while (1) {
-        //sprintf("\nCounter 2: %lu on core %u", count++, (uint32_t) get_cpu_locals()->cpu_index);
-    }
-}
-
-void third_task() {
-    while (1) {
-        //sprintf("\nTSC Idle: %lu TSC Running: %lu On CPU %u", get_cpu_locals()->idle_tsc_count, (get_cpu_locals()->total_tsc - get_cpu_locals()->idle_tsc_count), (uint32_t) get_cpu_locals()->cpu_index);
-    }
-}
-
-void start_test_user_task() {
-    void *new_cr3 = vmm_fork_higher_half((void *) (vmm_get_pml4t() + NORMAL_VMA_OFFSET));
-    int64_t pid = new_process("User process", new_cr3);
-    void *phys = virt_to_phys((void *) user_task, (pt_t *) vmm_get_pml4t());
-    /* Map code and stack */
-    void *stack_bot = kcalloc(TASK_STACK_SIZE);
-    void *stack_virt = (void *) (0x7FFFFFFFF000 - TASK_STACK_SIZE);
-    void *stack_phys = virt_to_phys(stack_bot, (pt_t *) vmm_get_pml4t());
-
-    vmm_map_pages(phys, phys, new_cr3, 30, VMM_PRESENT | VMM_WRITE | VMM_USER);
-    vmm_map_pages(stack_phys, stack_virt, new_cr3, TASK_STACK_PAGES, VMM_PRESENT | VMM_WRITE | VMM_USER);
-    task_t *new_task = create_thread("User thread", phys, 0x7FFFFFFFF000, 3);
-    new_task->state = READY;
-    add_new_child_thread(new_task, pid);
-}
-
 void scheduler_init_bsp() {
     tasks.array_size = 0;
     tasks.base = 0;
@@ -252,22 +169,6 @@ task_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) {
     strcpy(name, new_task->name);
 
     return new_task;
-}
-
-/* Add a new thread to the dynarray */
-int64_t add_new_thread(task_t *task) {
-    interrupt_lock();
-    lock(&scheduler_lock);
-
-    int64_t new_tid = dynarray_add(&tasks, task, sizeof(task_t));
-    task_t *task_item = dynarray_getelem(&tasks, new_tid);
-    task_item->tid = new_tid;
-    task->tid = new_tid;
-    dynarray_unref(&tasks, new_tid);
-
-    unlock(&scheduler_lock);
-    interrupt_unlock();
-    return new_tid;
 }
 
 /* Add a new thread to the dynarray and as a child of a process */
