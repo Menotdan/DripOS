@@ -11,7 +11,7 @@ static void new_binary_process(char *process_name, void *exec_ptr, void *code, u
 
     task_t *new_thread = create_thread(process_name, exec_ptr, USER_STACK, 3);
 
-    void *cr3 = vmm_fork_higher_half(GET_HIGHER_HALF(void *, vmm_get_pml4t()));
+    void *cr3 = vmm_fork_higher_half((void *) vmm_get_pml4t());
     int64_t pid = new_process(process_name, cr3);
 
     void *code_phys = GET_LOWER_HALF(void *, code);

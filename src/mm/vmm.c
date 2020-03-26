@@ -16,7 +16,6 @@ uint64_t vmm_get_pml4t() {
 }
 
 void vmm_set_pml4t(uint64_t new) {
-    sprintf("\nNew: %lx", new);
     asm volatile("movq %0, %%cr3;" ::"r"(new) : "memory");
 }
 
@@ -42,7 +41,7 @@ uint64_t get_entry(pt_t *cur_table, uint64_t offset) {
 }
 
 pt_t *traverse_page_table(pt_t *cur_table, uint64_t offset) {
-    return (pt_t *) ((cur_table->table[offset] & VMM_4K_PERM_MASK) + NORMAL_VMA_OFFSET);
+    return GET_HIGHER_HALF(pt_t *, (cur_table->table[offset] & VMM_4K_PERM_MASK));
 }
 
 void *virt_to_phys(void *virt, pt_t *p4) {
@@ -50,7 +49,7 @@ void *virt_to_phys(void *virt, pt_t *p4) {
     uint64_t page2m_offset = ((uint64_t) virt) & 0x1fffff;
     pt_off_t offs = vmm_virt_to_offs(virt);
 
-    p4 = (pt_t *) ((uint64_t) p4 + NORMAL_VMA_OFFSET);
+    p4 = GET_HIGHER_HALF(pt_t *, p4);
 
     pt_t *p3 = traverse_page_table(p4, offs.p4_off);
     if ((uint64_t) p3 > NORMAL_VMA_OFFSET) {
@@ -134,7 +133,7 @@ uint8_t range_mapped(void *data, uint64_t size) {
 /* Get a table for a set of offsets into the table */
 pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4) {
     pt_ptr_t ret;
-    p4 = (pt_t *) ((uint64_t) p4 + NORMAL_VMA_OFFSET);
+    p4 = GET_HIGHER_HALF(pt_t *, p4);
 
     vmm_ensure_table(p4, offs->p4_off);
     pt_t *p3 = traverse_page_table(p4, offs->p4_off);
@@ -161,6 +160,7 @@ pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4) {
     return ret;
 }
 
+/* Map pages */
 int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t perms) {
     lock(&vmm_spinlock);
 
@@ -190,6 +190,7 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
     return ret;
 }
 
+/* Remap pages */
 int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t perms) {
     lock(&vmm_spinlock);
 
@@ -213,11 +214,11 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
     return ret;
 }
 
+/* Unmap pages */
 int vmm_unmap_pages(void *virt, void *p4, uint64_t count) {
     lock(&vmm_spinlock);
 
     int ret = 0;
-
     uint64_t cur_virt = (uint64_t) virt;
 
     for (uint64_t page = 0; page < count; page++) {
@@ -237,12 +238,13 @@ int vmm_unmap_pages(void *virt, void *p4, uint64_t count) {
     return ret;
 }
 
+/* Set the PAT entries */
 void vmm_set_pat_pages(void *virt, void *p4, uint64_t count, uint8_t pat_entry) {
     lock(&vmm_spinlock);
 
     uint64_t cur_virt = (uint64_t) virt;
 
-    pt_t *p4_offset = (pt_t *) ((uint64_t) p4 + NORMAL_VMA_OFFSET);
+    pt_t *p4_offset = GET_HIGHER_HALF(pt_t *, p4);
 
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
@@ -271,10 +273,10 @@ void vmm_set_pat_pages(void *virt, void *p4, uint64_t count, uint8_t pat_entry) 
 }
 
 void *vmm_fork_higher_half(void *old) {
-    pt_t *old_p4 = (pt_t *) old;
+    pt_t *old_p4 = GET_HIGHER_HALF(pt_t *, old);
     void *ret = pmm_alloc(0x1000);
-    pt_t *new_p4 = (pt_t *) ((uint64_t) ret + NORMAL_VMA_OFFSET);
-    
+    pt_t *new_p4 = GET_HIGHER_HALF(pt_t *, ret);
+
     memset((uint8_t *) new_p4, 0, 0x1000);
 
     for (uint16_t i = 256; i < 512; i++) {
