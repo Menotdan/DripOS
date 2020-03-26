@@ -1,12 +1,14 @@
 #ifndef ECHFS_FILESYSTEM_H
 #define ECHFS_FILESYSTEM_H
 #include <stdint.h>
+#include "fs/vfs/vfs.h"
 
 #define BYTES_TO_BLOCKS(bytes, block_size) ((bytes + block_size - 1) / block_size)
 #define BLOCKS_TO_BYTES(blocks, block_size) (blocks * block_size)
 
 #define ECHFS_END_OF_CHAIN 0xFFFFFFFFFFFFFFFF
 #define ECHFS_ROOT_DIR_ID 0xFFFFFFFFFFFFFFFF
+#define ECHFS_SEARCH_FAIL 0xFFFFFFFFFFFFFFFF
 #define ECHFS_DELETED_ENTRY 0xFFFFFFFFFFFFFFFE
 
 typedef struct {
@@ -27,6 +29,8 @@ typedef struct {
     uint64_t blocks;
     uint64_t block_size;
     char *device_name;
+    char *mountpoint_path;
+    vfs_node_t *mountpoint;
 } echfs_filesystem_t;
 
 typedef struct {

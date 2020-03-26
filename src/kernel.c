@@ -36,9 +36,7 @@
 char *todo_list[TODO_LIST_SIZE] = {"Better syscall error handling", "Filesystem driver", "ELF Loading", "userspace libc", "minor: Sync TLB across CPUs", "minor: Add MMIO PCI", "minor: Retry AHCI commands"};
 
 void kernel_task() {
-    setup_kernel_state(); // Load the kernel variable enviroment
-    uint8_t lock_print_dat = 0;
-    add_kernel_state("lock_print_addr", &lock_print_dat, 1); // Load the lock print addr data
+    sprintf("\n[DripOS] Kernel thread: Scheduler enabled.");
 
     kprintf("\n[DripOS] Loading VFS");
     vfs_init(); // Setup VFS
@@ -58,8 +56,6 @@ void kernel_task() {
         kprintf("\n  %s", todo_list[i]);
     }
 
-    lock_print_dat = 1;
-    modify_kernel_state("lock_print_addr", &lock_print_dat, 1);
     echfs_test("/dev/satadeva");
 
     sprintf("\ndone kernel work");
@@ -76,7 +72,7 @@ void kmain(multiboot_info_t *mboot_dat) {
     init_serial(COM1);
 
     if (mboot_dat) {
-        sprintf("[DripOS]: Setting up memory bitmaps");
+        sprintf("[DripOS] Setting up memory bitmaps.");
         pmm_memory_setup(mboot_dat);
     }
 
@@ -84,27 +80,43 @@ void kmain(multiboot_info_t *mboot_dat) {
     init_vesa(mboot_dat);
     tty_init(&base_tty, 8, 8);
 
-    sprintf("\n[DripOS] Configuring LAPICs and IOAPIC routing");
+    sprintf("\n[DripOS] Configuring LAPICs and IOAPIC routing.");
     configure_apic();
 
     new_cpu_locals(); // Setup CPU locals for our CPU
     load_tss();
     set_panic_stack((uint64_t) kmalloc(0x1000) + 0x1000);
     set_kernel_stack((uint64_t) kmalloc(0x1000) + 0x1000);
-    sprintf("\n[DripOS] Set kernel stacks");
+
+    sprintf("\n[DripOS] Setup for the kernel variable engine.");
+    setup_kernel_state(); // Load the kernel variable enviroment
+    sprintf("\n[DripOS] Loaded kernel variable engine.");
+
+    // uint16_t kernel_good = 12345;
+    // add_kernel_state("kernel_good", (uint8_t *) &kernel_good, 2);
+    // load_kernel_state("kernel_good", (uint8_t *) &kernel_good, 2);
+    // sprintf("\nTest: %u", kernel_good);
+
+    sprintf("\n[DripOS] Set kernel stacks.");
     scheduler_init_bsp();
 
-    sprintf("\n[DripOS] Registering interrupts and setting interrupt flag");
+    sprintf("\n[DripOS] Registering interrupts and setting interrupt flag.");
     configure_idt();
-    sprintf("\n[DripOS] Setting timer speed to 1000 hz");
+    sprintf("\n[DripOS] Setting timer speed to 1000 hz.");
     set_pit_freq();
+    sprintf("\n[DripOS] Timers set.");
 
 
     new_kernel_process("Kernel process", kernel_task);
+    sprintf("\n[DripOS] Launched kernel thread, scheduler disabled...");
 
+    sprintf("\n[DripOS] Launching all SMP cores...");
     launch_cpus();
+    sprintf("\n[DripOS] Finished loading SMP cores.");
+
     tty_clear(&base_tty);
 
+    sprintf("\n[DripOS] Loading scheduler...");
     scheduler_enabled = 1;
 
     while (1) {

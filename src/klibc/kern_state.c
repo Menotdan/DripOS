@@ -2,6 +2,7 @@
 #include "klibc/strhashmap.h"
 #include "klibc/string.h"
 #include "klibc/stdlib.h"
+#include "drivers/serial.h"
 
 strhashmap_t *kernel_variables;
 int kernel_state_ready = 0;
@@ -31,6 +32,7 @@ int modify_kernel_state(char *name, uint8_t *new_data, uint8_t byte_count) {
 
 int load_kernel_state(char *name, uint8_t *buffer, uint8_t byte_count) {
     if (kernel_state_ready) {
+        asm("int $3");
         kern_state_var *loaded = strhashmap_get_elem(kernel_variables, name);
         if (loaded) {
             memcpy(loaded->data, buffer, byte_count);
@@ -55,5 +57,6 @@ void remove_kernel_state(char *name) {
 
 void setup_kernel_state() {
     kernel_variables = init_strhashmap();
+    sprintf("\nKernel variables ptr: %lx", kernel_variables);
     kernel_state_ready = 1;
 }

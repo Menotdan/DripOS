@@ -15,6 +15,7 @@ void strcpy(char *src, char *dst) {
 }
 
 int strcmp(char *s1, char *s2) {
+    if (strlen(s1) != strlen(s2)) { return 1; }
     while (*s1 != '\0' && *s2 != '\0') {
         if (*s1 != *s2) { return 1; }
         s1++;
@@ -154,7 +155,13 @@ void path_remove_elem(char *path) {
     while (*tmp != '/') tmp--;
 
     // Clear everything after the "/"
-    *(tmp+1) = '\0';
+
+    // If we are at the start of the path
+    if (tmp == path) {
+        *(tmp+1) = '\0';
+    } else {
+        *(tmp) = '\0';
+    }
 }
 
 char *get_path_elem(char *path, char *output) {
@@ -167,7 +174,12 @@ char *get_path_elem(char *path, char *output) {
     strcpy(tmp + 1, output);
 
     // Clear everything after the "/"
-    *(tmp+1) = '\0';
+    // If we are at the start of the path
+    if (tmp == path) {
+        *(tmp+1) = '\0';
+    } else {
+        *(tmp) = '\0';
+    }
 
     // Return
     return output;

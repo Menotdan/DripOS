@@ -7,20 +7,15 @@
 #include "drivers/serial.h"
 
 void lock(lock_t *lock) {
-    // uint8_t lock_print_state;
-
-    // if (load_kernel_state("lock_print_addr", &lock_print_state, 1) && lock_print_state) {
-    //     sprintf("\nLock %lx", lock);
-    // }
+    if ((uint64_t) lock == 0x640) {
+        sprintf("\nFound bad lock!");
+        sprintf("\nCaller RIP: %lx", __builtin_return_address(0));
+        while (1)  {}
+    }
     spinlock_lock(lock);
 }
 
 void unlock(lock_t *lock) {
-    // uint8_t lock_print_state;
-
-    // if (load_kernel_state("lock_print_addr", &lock_print_state, 1) && lock_print_state) {
-    //     sprintf("\nUnlock %lx", lock);
-    // }
     spinlock_unlock(lock);
 }
 

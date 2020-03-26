@@ -3,6 +3,8 @@
 #include "klibc/linked_list.h"
 #include "klibc/string.h"
 
+#include "drivers/serial.h"
+
 uint64_t str_get_bucket_from_hash(uint64_t hash) {
     return hash % STRHASHMAP_BUCKET_SIZE;
 }

@@ -1,6 +1,7 @@
 #ifndef VFS_H
 #define VFS_H
 #include <stdint.h>
+#include "fs/filesystems/filesystems.h"
 
 struct vfs_node;
 typedef struct vfs_node vfs_node_t;
@@ -31,6 +32,8 @@ typedef struct vfs_node {
     vfs_ops_t ops;
     struct vfs_node *parent; // Parent
     struct vfs_node **children; // An array of children
+    struct vfs_node *mountpoint; // Mountpoint node
+    
     uint64_t children_array_size;
 
     uint64_t unid; // Unique node id
@@ -39,7 +42,9 @@ typedef struct vfs_node {
 void vfs_init();
 vfs_node_t *vfs_new_node(char *name, vfs_ops_t ops);
 void vfs_add_child(vfs_node_t *parent, vfs_node_t *child);
+void create_missing_nodes_from_path(char *path, vfs_ops_t ops, vfs_node_t *mountpoint);
 vfs_node_t *get_node_from_path(char *path);
+char *get_full_path(vfs_node_t *node);
 void add_node_at_path(char *path, vfs_node_t *node);
 void sprint_all_vfs(char *path);
 
