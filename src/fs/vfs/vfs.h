@@ -50,10 +50,10 @@ void sprint_all_vfs(char *path);
 
 /* VFS ops */
 vfs_node_t *vfs_open(char *name, int mode);
-void vfs_close(fd_entry_t *node);
-void vfs_read(fd_entry_t *node, void *buf, uint64_t count);
-void vfs_write(fd_entry_t *node, void *buf, uint64_t count);
-void vfs_seek(fd_entry_t *node, uint64_t offset, int whence);
+int vfs_close(fd_entry_t *node);
+int vfs_read(fd_entry_t *node, void *buf, uint64_t count);
+int vfs_write(fd_entry_t *node, void *buf, uint64_t count);
+int vfs_seek(fd_entry_t *node, uint64_t offset, int whence);
 
 extern vfs_node_t *root_node;
 extern vfs_ops_t dummy_ops;

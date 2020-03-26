@@ -513,6 +513,7 @@ int kill_process(int64_t pid) {
                 kill_task(*tid);
             }
         }
+
     }
     dynarray_remove(&processes, pid);
     dynarray_unref(&processes, pid);

@@ -14,6 +14,8 @@
 #define TASK_STACK_SIZE 0x4000
 #define TASK_STACK_PAGES (TASK_STACK_SIZE + 0x1000 - 1) / 0x1000
 #define VM_OFFSET 0xFFFF800000000000
+#define USER_STACK 0x7FFFFFFFFFF0 // Alignment
+#define USER_STACK_START (USER_STACK - TASK_STACK_SIZE + 16)
 
 typedef struct {
     uint64_t rax, rbx, rcx, rdx, rbp, rdi, rsi, r8, r9, r10, r11, r12, r13, r14, r15;

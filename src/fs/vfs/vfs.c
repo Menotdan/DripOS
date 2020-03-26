@@ -20,7 +20,7 @@ uint64_t current_unid = 0; // Current unique node ID
 int dummy_open(char *name, int mode) {
     (void) name;
     (void) mode;
-    get_thread_locals()->errno = 0; // Don't error, we just dont implement this
+    get_thread_locals()->errno = -ENOSYS;
     return -1;
 }
 
@@ -50,7 +50,7 @@ int dummy_seek(fd_entry_t *node, uint64_t offset, int whence) {
     (void) node;
     (void) offset;
     (void) whence;
-    get_thread_locals()->errno = 0; // Don't error, we just dont implement this
+    get_thread_locals()->errno = -ENOSYS;
     return -1;
 }
 
@@ -219,48 +219,48 @@ vfs_node_t *vfs_open(char *input, int mode) {
     return node;
 }
 
-void vfs_close(fd_entry_t *node) {
+int vfs_close(fd_entry_t *node) {
     /* If no mappings exist */
     if (!range_mapped(node, sizeof(vfs_node_t))) {
         sprintf("\nNode not mapped in vfs_close");
         get_thread_locals()->errno = -EFAULT;
-        return;
+        return -1;
     }
 
-    node->node->ops.close(node);
+    return node->node->ops.close(node);
 }
 
-void vfs_read(fd_entry_t *node, void *buf, uint64_t count) {
+int vfs_read(fd_entry_t *node, void *buf, uint64_t count) {
     /* If no mappings exist */
     if (!range_mapped(node, sizeof(vfs_node_t)) || !range_mapped(buf, count)) {
         sprintf("\nNode/buffer not mapped in vfs_read");
         get_thread_locals()->errno = -EFAULT;
-        return;
+        return -1;
     }
 
-    node->node->ops.read(node, buf, count);
+    return node->node->ops.read(node, buf, count);
 }
 
-void vfs_write(fd_entry_t *node, void *buf, uint64_t count) {
+int vfs_write(fd_entry_t *node, void *buf, uint64_t count) {
     /* If no mappings exist */
     if (!range_mapped(node, sizeof(vfs_node_t)) || !range_mapped(buf, count)) {
         sprintf("\nNode/buffer not mapped in vfs_write");
         get_thread_locals()->errno = -EFAULT;
-        return;
+        return -1;
     }
 
-    node->node->ops.write(node, buf, count);
+    return node->node->ops.write(node, buf, count);
 }
 
-void vfs_seek(fd_entry_t *node, uint64_t offset, int whence) {
+int vfs_seek(fd_entry_t *node, uint64_t offset, int whence) {
     /* If no mappings exist */
     if (!range_mapped(node, sizeof(vfs_node_t))) {
         sprintf("\nNode not mapped in vfs_close");
         get_thread_locals()->errno = -EFAULT;
-        return;
+        return 0;
     }
 
-    node->node->ops.seek(node, offset, whence);
+    return node->node->ops.seek(node, offset, whence);
 }
 
 /* Setting up the root node */

@@ -24,9 +24,8 @@ int fd_close(int fd) {
         get_thread_locals()->errno = -EBADF;
         return get_thread_locals()->errno;
     }
-    vfs_close(node);
     fd_remove(fd);
-    return get_thread_locals()->errno;
+    return vfs_close(node);
 }
 
 int fd_read(int fd, void *buf, uint64_t count) {
@@ -35,8 +34,7 @@ int fd_read(int fd, void *buf, uint64_t count) {
         get_thread_locals()->errno = -EBADF;
         return get_thread_locals()->errno;
     }
-    vfs_read(node, buf, count);
-    return get_thread_locals()->errno;
+    return vfs_read(node, buf, count);
 }
 
 int fd_write(int fd, void *buf, uint64_t count) {
@@ -66,9 +64,7 @@ int fd_seek(int fd, uint64_t offset, int whence) {
         node->seek -= offset;
     }
 
-    vfs_seek(node, offset, whence);
-
-    return get_thread_locals()->errno;
+    return vfs_seek(node, offset, whence);
 }
 
 int fd_new(vfs_node_t *node, int mode) {

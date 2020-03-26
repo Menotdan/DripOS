@@ -57,6 +57,9 @@ void kernel_task() {
     }
 
     echfs_test("/dev/satadeva");
+    
+    #include "proc/exec_formats/raw_binary.h"
+    launch_binary("/echfs_mount/programs/program_1.bin");
 
     sprintf("\ndone kernel work");
 

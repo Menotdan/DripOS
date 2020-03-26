@@ -17,6 +17,24 @@ dynarray_t ahci_controllers = {0, 0, 0};
 uint8_t sata_device_count = 0;
 lock_t ahci_lock = 0;
 
+int ahci_open(char *path, int mode) {
+    (void) path;
+    (void) mode;
+    return 0;
+}
+
+int ahci_close(fd_entry_t *fd_data) {
+    (void) fd_data;
+    return 0;
+}
+
+int ahci_seek(fd_entry_t *fd_data, uint64_t offset, int whence) {
+    (void) fd_data;
+    (void) offset;
+    (void) whence;
+    return 0;
+}
+
 int ahci_read(fd_entry_t *fd_data, void *buf, uint64_t count) {
     vfs_node_t *node = fd_data->node;
 
@@ -304,9 +322,9 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
 
             ahci_stop_cmd(port);
             sprintf("\n[AHCI] Stopped command engine");
-            uint64_t ahci_data_base = (uint64_t) pmm_alloc((32 * 32) + 256);
-            uint64_t ahci_fis_base = ahci_data_base + (32 * 32);
-            memset(GET_HIGHER_HALF(uint8_t *, ahci_data_base), 0, (32 * 32) + 256);
+            uint64_t ahci_data_base = (uint64_t) pmm_alloc((32 * 32) + 256); // 32 command slots
+            uint64_t ahci_fis_base = ahci_data_base + (32 * 32); // 32 FIS areas
+            memset(GET_HIGHER_HALF(uint8_t *, ahci_data_base), 0, (32 * 32) + 256); // Clear the areas
 
             if (controller.ahci_bar->cap & (1<<31)) {
                 // Command list base
@@ -353,6 +371,9 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
                 vfs_ops_t ops = dummy_ops;
                 ops.read = ahci_read;
                 ops.write = ahci_write;
+                ops.open = ahci_open;
+                ops.close = ahci_close;
+                ops.seek = ahci_seek;
                 register_device(device_name, ops, port_data_heap);
             }
         }
