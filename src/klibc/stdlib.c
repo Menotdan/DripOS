@@ -45,3 +45,7 @@ void yield() {
         asm volatile("int $254");
     }
 }
+
+void panic() {
+    asm volatile("int $251");
+}

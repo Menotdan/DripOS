@@ -91,7 +91,25 @@ void isr_handler(int_reg_t *r) {
     write_lapic(0xB0, 0);
 }
 
-void isr_panic_idle() {
+void panic_handler(int_reg_t *r) {
+    vmm_set_pml4t(base_kernel_cr3); // Use base kernel CR3 in case the alternate CR3 is corrupted
+
+    uint64_t cr2;
+    asm volatile("movq %%cr2, %0;" : "=r"(cr2));
+    if (scheduler_enabled) {
+        kprintf("\nException on core %u with apic id %u! (cur task %s with TID %ld)", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid);
+    } else {
+        kprintf("\nException on core %u with apic id %u!", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id);
+    }
+    kprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx CS: %lx\nSS: %lx RFLAGS: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2, r->cs, r->ss, r->rflags);
+
+    send_panic_ipis();
+    while (1) { asm volatile("hlt"); }
+    
+}
+
+void isr_panic_idle(int_reg_t *r) {
+    (void) r;
     while (1) { asm volatile("hlt"); }
 }
 
@@ -390,6 +408,7 @@ void configure_idt() {
     set_ist(30, 2);
     set_ist(31, 2);
     set_ist(252, 2);
+    set_ist(251, 2);
     /* IRQ Stacks (IST index 1) */
     set_ist(32, 1);
     set_ist(33, 1);
@@ -402,5 +421,6 @@ void configure_idt() {
     register_int_handler(254, schedule);
     register_int_handler(253, schedule_ap);
     register_int_handler(252, isr_panic_idle);
+    register_int_handler(251, panic_handler);
     asm volatile("sti"); // Enable interrupts and hope we dont die lmao
 }
