@@ -35,28 +35,38 @@ uint8_t pmm_get_bit(uint64_t page) {
     return bitmap[byte] & (1<<bit);
 }
 
-void pmm_memory_setup(multiboot_info_t *mboot_dat) {
+void pmm_memory_setup(stivale_info_t *bootloader_info) {
     // Bitmap set to kernel_end rounded up to a page
+    bootloader_info = GET_HIGHER_HALF(stivale_info_t *, bootloader_info);
+    sprintf("\n%lx bootloader info addr", bootloader_info);
     bitmap = (uint8_t *) ((((uint64_t) __kernel_end) + 0x1000 - 1) & ~(0xfff));
 
+    // Dont destroy the bootloader info
+    if ((uint64_t) bootloader_info + sizeof(stivale_info_t) > (uint64_t) bitmap) {
+        bitmap = (uint8_t *) ((uint64_t) bootloader_info + sizeof(stivale_info_t));
+    }
+
     // Setup the bitmap for the PMM
-    multiboot_memory_map_t *mmap = GET_HIGHER_HALF(multiboot_memory_map_t *, mboot_dat->mmap_addr);
+    e820_entry_t *mmap = GET_HIGHER_HALF(e820_entry_t *, bootloader_info->memory_map_addr);
+    sprintf("\ne820 addrs: %lx %lx", bootloader_info->memory_map_addr, mmap);
+    sprintf("\n %u x %u", bootloader_info->framebuffer_width, bootloader_info->framebuffer_height);
 
     // Calculate length of memory
-    multiboot_memory_map_t start = mmap[0];
-    multiboot_memory_map_t end = mmap[(mboot_dat->mmap_length / sizeof(multiboot_memory_map_t)) - 1];
+    e820_entry_t start = mmap[0];
+    e820_entry_t end = mmap[bootloader_info->memory_map_entries - 1];
     uint64_t mem_length = ROUND_UP((end.addr + end.len) - start.addr, 0x1000);
     uint64_t bitmap_bytes = ((mem_length / 0x1000) + 8 - 1) / 8;
 
     // Set bitmap as ones
     memset(bitmap, 0xFF, bitmap_bytes);
 
-    for (uint64_t i = 0; i < mboot_dat->mmap_length / sizeof(multiboot_memory_map_t); i++) {
+    for (uint64_t i = 0; i < bootloader_info->memory_map_entries; i++) {
         uint64_t rounded_block_start = ROUND_UP(mmap[i].addr, 0x1000);
         uint64_t rounded_block_end = ROUND_UP((mmap[i].addr + mmap[i].len), 0x1000);
         uint64_t rounded_block_len = rounded_block_end - rounded_block_start;
 
-        if (mmap[i].type == MULTIBOOT_MEMORY_AVAILABLE && i != 0) { // Ignore low 640K so we dont use it
+        sprintf("\n%lx - %lx", mmap[i].addr, mmap[i].addr + mmap[i].len);
+        if (mmap[i].type == STIVALE_MEMORY_AVAILABLE && mmap[i].addr >= 0x100000) { // Ignore low 640K so we dont use it
             for (uint64_t i = 0; i < rounded_block_len / 0x1000; i++) {
                 pmm_clear_bit(i + (rounded_block_start / 0x1000)); // set the memory as avaiable
             }
@@ -77,7 +87,25 @@ void pmm_memory_setup(multiboot_info_t *mboot_dat) {
     }
     bitmap_max_page = bitmap_bytes * 8;
 
-    vmm_map((void *) 0, GET_HIGHER_HALF(void *, 0), bitmap_max_page, VMM_PRESENT | VMM_WRITE);
+    // Get rid of qloader2's CR3
+    void *new_cr3 = pmm_alloc(0x1000);
+    memset(GET_HIGHER_HALF(uint8_t *, new_cr3), 0, 0x1000);
+
+    for (uint64_t i = 0; i < bootloader_info->memory_map_entries; i++) {
+        uint64_t rounded_block_start = ROUND_UP(mmap[i].addr, 0x1000);
+        uint64_t rounded_block_end = ROUND_UP((mmap[i].addr + mmap[i].len), 0x1000);
+        uint64_t rounded_block_len = rounded_block_end - rounded_block_start;
+
+        vmm_map_pages((void *) rounded_block_start, GET_HIGHER_HALF(void *, rounded_block_start), new_cr3, 
+            (rounded_block_len + 0x1000 - 1) / 0x1000,
+            VMM_PRESENT | VMM_WRITE);
+    }
+
+    pt_t *cr3 = GET_HIGHER_HALF(pt_t *, new_cr3);
+    pt_t *cur = GET_HIGHER_HALF(pt_t *, vmm_get_pml4t());
+    cr3->table[511] = cur->table[511];
+
+    vmm_set_pml4t((uint64_t) new_cr3);
 
     base_kernel_cr3 = vmm_get_pml4t();
 }

@@ -2,29 +2,7 @@
 #include "mm/vmm.h"
 #include "drivers/tty/tty.h"
 
-uint64_t get_ebda() {
-    uint16_t segment = *(uint16_t *) VIRTUAL_EBDA_PTR;
-
-    if (segment == 0) {
-        segment = 0x9FC0; // Default to the common EBDA address
-    }
-
-    uint64_t real_addr = ((uint64_t) segment) << 4; // Bitshift the segment so it is a correct address
-    real_addr += 0xFFFF800000000000; // offset the address by virtual offset
-    
-    //kprintf("\nEBDA: %lx", real_addr);
-    return real_addr;
-}
-
-int check_rsdp_string(rsdp1_t *descriptor) {
-    char valid_sig[] = "RSD PTR ";
-    for (uint8_t i = 0; i < 8; i++) {
-        if (descriptor->signature[i] != valid_sig[i]) {
-            return 1;
-        }
-    }
-    return 0;
-}
+rsdp1_t *rsdp;
 
 uint64_t checksum_calc(uint8_t *data, uint64_t length) {
     uint64_t total = 0;
@@ -36,51 +14,15 @@ uint64_t checksum_calc(uint8_t *data, uint64_t length) {
     return total & 0xff;
 }
 
-rsdp1_t *get_rsdp1(uint64_t ebda) {
-    uint64_t aligned_ebda = ebda & ~(0xf);
-    uint16_t scanned = 0; // A count of the bytes scanned
-
-    while (scanned < 1024) {
-        rsdp1_t *check = (rsdp1_t *) aligned_ebda;
-        if (!check_rsdp_string(check)) {
-            // If the string is correct
-            // check the checksum
-            //kprintf("\nRSDP str: %lx", check);
-            if (!checksum_calc((uint8_t *) check, sizeof(rsdp1_t))) {
-                //kprintf("\nRSDP checksum: %lx", check);
-                return check;
-            }
-        }
-
-        scanned += 16;
-        aligned_ebda += 16;
-    }
-
-    uint64_t bios_range = 0xE0000 + 0xFFFF800000000000;
-    uint64_t max = 0x100000 + 0xFFFF800000000000;
-    uint64_t to_scan = max - bios_range;
-    
-    while (to_scan > 0) {
-        rsdp1_t *check = (rsdp1_t *) bios_range;
-        if (!check_rsdp_string(check)) {
-            // If the string is correct
-            //kprintf("\n[ACPI] RSDP str: %lx", check);
-            if (!checksum_calc((uint8_t *) check, sizeof(rsdp1_t))) {
-                //kprintf("\n[ACPI] RSDP check: %lx", check);
-                return check;
-            }
-        }
-
-        bios_range += 16;
-        to_scan -= 16;
-    }
-
-    return (rsdp1_t *) 0; // We found nothing :(
+rsdp1_t *get_rsdp1(stivale_info_t *bootloader_info) {
+    rsdp1_t *ret = GET_HIGHER_HALF(rsdp1_t *, bootloader_info->rsdp);
+    rsdp1_t *phys = GET_LOWER_HALF(rsdp1_t *, ret);
+    vmm_map(phys, ret, 2, VMM_PRESENT | VMM_WRITE);
+    return ret;
 }
 
 sdt_header_t *get_root_sdt_header() {
     //kprintf("\n[ACPI] Finding rsdt");
-    rsdp1_t *rsdp = get_rsdp1(get_ebda());
     if (rsdp) {
         //kprintf("\n[ACPI] Found rsdp");
         sdt_header_t *header;
@@ -132,8 +74,6 @@ sdt_header_t *search_sdt_header(char *sig) {
 
     if (root) {
         //kprintf("\nFound root sdt");
-        rsdp1_t *rsdp = get_rsdp1(get_ebda());
-
         if (rsdp) {
             if (rsdp->revision == 0) {
                 rsdt_t *rsdt = (rsdt_t *) root;
@@ -217,4 +157,9 @@ sdt_header_t *search_sdt_header(char *sig) {
 
     //kprintf("\n[ACPI] Didn't find %s", sig);
     return (sdt_header_t *) 0;
+}
+
+void acpi_init(stivale_info_t *bootloader_info) {
+    bootloader_info = GET_HIGHER_HALF(stivale_info_t *, bootloader_info);
+    rsdp = get_rsdp1(bootloader_info);
 }

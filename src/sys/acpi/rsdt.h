@@ -1,6 +1,7 @@
 #ifndef RSDT_H
 #define RSDT_H
 #include <stdint.h>
+#include "stivale.h"
 
 #define VIRTUAL_EBDA_PTR 0xFFFF80000000040E
 
@@ -45,8 +46,10 @@ typedef struct {
 
 
 uint64_t get_ebda();
-rsdp1_t *get_rsdp1(uint64_t ebda);
+rsdp1_t *get_rsdp1(stivale_info_t *ebda);
 sdt_header_t *get_root_sdt_header();
 sdt_header_t *search_sdt_header(char *sig);
+
+void acpi_init(stivale_info_t *bootloader_info);
 
 #endif

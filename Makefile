@@ -13,8 +13,8 @@ LINKER = x86_64-elf-ld
 incPath = ~/DripOS/src
 GDB = gdb
 MEM = 2G # Memory for qemu
-CORES = 2
-O_LEVEL = 0 # Optimization level
+CORES = 6
+O_LEVEL = 2 # Optimization level
 # Options for GCC
 CFLAGS = -g -fno-pic               \
     -z max-page-size=0x1000        \
@@ -29,35 +29,49 @@ CFLAGS = -g -fno-pic               \
     -fno-omit-frame-pointer
 
 # First rule is run by default
-myos.iso: kernel.elf
-	grub-file --is-x86-multiboot kernel.elf
-	mkdir -p build_iso/boot/grub
-	cp kernel.elf build_iso/boot/os-image.bin
-	cp grub.cfg build_iso/boot/grub/grub.cfg
-	grub-mkrescue -o DripOS.iso build_iso
-	rm -rf build_iso
+DripOS.img: kernel.elf
+	# Create blank image
+	dd if=/dev/zero of=DripOS.img bs=1M count=50
+
+	# Create partition tables
+	parted -s DripOS.img mklabel msdos
+	parted -s DripOS.img mkpart primary 1 100%
+
+	# Format with echfs and import files
+	echfs-utils -m -p0 DripOS.img format 512
+	echfs-utils -m -p0 DripOS.img import kernel.elf kernel.elf
+	echfs-utils -m -p0 DripOS.img import qloader2.cfg qloader2.cfg
+
+	# Install qloader2
+	cd qloader2 && ./qloader2-install ../DripOS.img
 
 kernel.elf: ${NASM_SOURCES:.real=.bin} ${OBJ}
 	${CC} -Wl,-z,max-page-size=0x1000,--gc-sections -nostdlib -Werror -Wall -Wextra -Wpedantic -Wunused-function -o $@ -T linker.ld ${OBJ}
 
-run: myos.iso
-	- qemu-system-x86_64 -d guest_errors -smp ${CORES} -machine q35 -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+run: DripOS.img
+	- qemu-system-x86_64 -d guest_errors -smp ${CORES} -machine q35 -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -hdb DripOS.img -hda dripdisk.img
 	make clean
 
-run-dripdbg: myos.iso
-	- qemu-system-x86_64 -d guest_errors -smp ${CORES} -machine q35 -no-shutdown -no-reboot -chardev socket,id=char0,port=12345,host=127.0.0.1 -serial chardev:char0 -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+run-dripdbg: DripOS.img
+	- qemu-system-x86_64 -d guest_errors -smp ${CORES} -machine q35 -no-shutdown -no-reboot -chardev socket,id=char0,port=12345,host=127.0.0.1 -serial chardev:char0 -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.img -hda dripdisk.img
 	make clean
 
-run-kvm: myos.iso
-	- sudo qemu-system-x86_64 -machine q35 -enable-kvm -smp ${CORES} -cpu host -d cpu_reset -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.iso -hda dripdisk.img
+run-kvm: DripOS.img
+	- sudo qemu-system-x86_64 -machine q35 -enable-kvm -smp ${CORES} -cpu host -d cpu_reset -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -hdb DripOS.img -hda dripdisk.img
 	make clean
 
 # Open the connection to qemu and load our kernel-object file with symbols
-debug: myos.iso
-	sudo qemu-system-x86_64 -enable-kvm -smp ${CORES} -vga std -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom DripOS.iso -hda dripdisk.img &
+debug: DripOS.img
+	sudo qemu-system-x86_64 -enable-kvm -smp ${CORES} -vga std -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom DripOS.img -hda dripdisk.img &
 	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf"
 	make clean
- 
+
+update_qloader2:
+	rm -rf qloader2
+	mkdir qloader2
+	git clone https://github.com/qword-os/qloader2
+	cd qloader2 && make CC=i686-elf-gcc all
+
 # Generic rules for wildcards
 # To make an object, always compile from its .c
 
@@ -76,6 +90,6 @@ debug: myos.iso
 	nasm -f elf64 -F dwarf -g -o $@ $<
 
 clean:
-	rm -rf *.bin *.dis *.o os-image.bin *.elf *.iso
+	rm -rf *.bin *.dis *.o os-image.bin *.elf DripOS.img
 	rm -rf ${OBJ}
 	rm -rf $(shell find src/ -type f -name '*.d')

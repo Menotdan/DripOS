@@ -20,7 +20,7 @@
 
 #include "dripdbg/debug.h"
 
-#include "multiboot.h"
+#include "stivale.h"
 
 /* Testing includes */
 #include "proc/scheduler.h"
@@ -71,18 +71,19 @@ void kernel_task() {
 }
 
 // Kernel main function, execution starts here :D
-void kmain(multiboot_info_t *mboot_dat) {
+void kmain(stivale_info_t *bootloader_info) {
     init_serial(COM1);
 
-    if (mboot_dat) {
+    if (bootloader_info) {
         sprintf("[DripOS] Setting up memory bitmaps.");
-        pmm_memory_setup(mboot_dat);
+        pmm_memory_setup(bootloader_info);
     }
 
     sprintf("\n[DripOS] Initializing TTY");
-    init_vesa(mboot_dat);
+    init_vesa(bootloader_info);
     tty_init(&base_tty, 8, 8);
 
+    acpi_init(bootloader_info);
     sprintf("\n[DripOS] Configuring LAPICs and IOAPIC routing.");
     configure_apic();
 
@@ -100,7 +101,6 @@ void kmain(multiboot_info_t *mboot_dat) {
     sprintf("\n[DripOS] Setting timer speed to 1000 hz.");
     set_pit_freq();
     sprintf("\n[DripOS] Timers set.");
-
 
     new_kernel_process("Kernel process", kernel_task);
     sprintf("\n[DripOS] Launched kernel thread, scheduler disabled...");

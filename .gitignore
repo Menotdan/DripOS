@@ -23,3 +23,5 @@ isodir
 dripmount
 .clang-format
 emit_format
+qloader2/**
+qloader2

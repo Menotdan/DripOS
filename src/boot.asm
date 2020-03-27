@@ -1,57 +1,19 @@
-[bits 32]
-
-extern __kernel_start
-
-; Higher half VMA for kernel data, since boot starts in lower half and we need to subtract labels
+; Header
 %define KERNEL_VMA 0xFFFFFFFF80000000
 
-; Flag constants
-ALIGN_MULTIBOOT  equ 1<<0
-MEMINFO          equ 1<<1
-VIDEO_MODE       equ 1<<2
+section .stivalehdr
 
-; Magic, flags, and checksum
-FLAGS            equ ALIGN_MULTIBOOT | MEMINFO | VIDEO_MODE
-MAGIC            equ 0x1BADB002
-CHECKSUM         equ -(MAGIC + FLAGS)
+stivale_header:
+    dq stack.top    ; rsp
+    db 1            ; video mode
+    dw 0            ; fb_width
+    dw 0            ; fb_height
 
-; Video mode data
-VIDMODE          equ 0
-WIDTH            equ 1280
-HEIGHT           equ 720
-DEPTH            equ 32
+section .bss
 
-section .multiboot
-align 4
-
-; Magic, flags, and checksum
-dd MAGIC
-dd FLAGS
-dd CHECKSUM
-
-; Unused data
-dd 0
-dd 0
-dd 0
-dd 0
-dd 0
-
-; Video mode data
-dd VIDMODE
-dd WIDTH
-dd HEIGHT
-dd DEPTH
-
-%macro gen_pd_2mb 3
-    %assign i %1
-    %rep %2
-        dq (i | 0x83)
-        %assign i i+0x200000
-    %endrep
-    %rep %3
-        dq 0
-    %endrep
-%endmacro
+stack:
+    resb 4096
+  .top:
 
 section .data
 
@@ -110,90 +72,21 @@ GDT_PTR_64:
     dw GDT_PTR_32 - GDT64 - 1    ; Limit.
     dq GDT64                     ; Base.
 
-section .bss
-align 16
-stack_bottom:
-resb 65536
-stack_top:
-
-section .data
-align 4096
-paging_directory1:
-    gen_pd_2mb 0, 12, 500
-
-align 4096
-paging_directory2:
-    gen_pd_2mb 0, 512, 0
-
-align 4096
-paging_directory3:
-    gen_pd_2mb 0x0, 512, 0
-
-align 4096
-paging_directory4:
-    gen_pd_2mb 0x40000000, 512, 0
-
-align 4096
-pml4t:
-    dq (pdpt - KERNEL_VMA + 0x3)
-    times 255 dq 0
-    dq (pdpt2 - KERNEL_VMA + 0x3)
-    times 254 dq 0
-    dq (pdpt3 - KERNEL_VMA + 0x3)
-
-align 4096
-pdpt:
-    dq (paging_directory1 - KERNEL_VMA + 0x3)
-    times 511 dq 0
-
-align 4096
-pdpt2:
-    dq (paging_directory2 - KERNEL_VMA + 0x3)
-    times 511 dq 0
-
-align 4096
-pdpt3:
-    times 510 dq 0
-    dq (paging_directory3 - KERNEL_VMA + 0x3)
-    dq (paging_directory4 - KERNEL_VMA + 0x3)
-
-section .bss
-global multiboot_header_pointer
-multiboot_header_pointer:
-resb 4
-
 section .text
-extern long_mode_on
-extern __kernel_end
-extern paging_setup
-global _start
-_start:
-    mov edi, multiboot_header_pointer - KERNEL_VMA
-    mov DWORD [edi], ebx
-    mov eax, pml4t - KERNEL_VMA
-    mov cr3, eax
-    ; Paging
 
-    mov eax, cr4                 ; Set the A-register to control register 4.
-    or eax, 1 << 5               ; Set the PAE-bit, which is the 6th bit (bit 5).
-    mov cr4, eax                 ; Set control register 4 to the A-register.
 
-    ; Switch to long mode
-    mov ecx, 0xC0000080          ; Set the C-register to 0xC0000080, which is the EFER MSR.
-    rdmsr                        ; Read from the model-specific register.
-    or eax, 1 << 8               ; Set the LM-bit which is the 9th bit (bit 8).
-    wrmsr                        ; Write to the model-specific register.
-    mov eax, cr0                 ; Set the A-register to control register 0.
-    or eax, 1 << 31              ; Set the PG-bit, which is the 32nd bit (bit 31).
-    mov cr0, eax                 ; Set control register 0 to the A-register.
+; Load the new GDT for the kernel
+extern kmain
+global exec_start
+exec_start:
+    lgdt [GDT_PTR_64]
+    jmp far qword [jmp_ptr]
 
-    ; Set up GDT
-    lgdt [GDT_PTR_32 - KERNEL_VMA]
-    jmp GDT64.Code:loaded - KERNEL_VMA
+jmp_ptr:
+    dq loaded_cs
+    dw 0x8
 
-[bits 64]
-loaded:
-    lgdt [GDT_PTR_64]           ; Load the 64-bit global descriptor table.
+loaded_cs:
     mov ax, GDT64.Data
     mov ds, ax
     mov es, ax
@@ -201,7 +94,5 @@ loaded:
     mov ax, 0x20
     mov gs, ax
     mov fs, ax
-    mov rsp, stack_top ; Set the stack up
-    ; Perform an absolute jump
-    mov rax, long_mode_on
-    jmp rax
+
+    call kmain

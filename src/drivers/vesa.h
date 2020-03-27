@@ -1,7 +1,7 @@
 #ifndef VESA_H
 #define VESA_H
 #include <stdint.h>
-#include "multiboot.h"
+#include "stivale.h"
 #include "klibc/lock.h"
 
 typedef struct {
@@ -24,7 +24,7 @@ typedef struct {
     uint32_t *actual_framebuffer;
 } vesa_info_t;
 
-void init_vesa(multiboot_info_t *mb);
+void init_vesa(stivale_info_t *bootloader_info);
 void put_pixel(uint64_t x, uint64_t y, color_t color);
 void render_font(uint8_t font[128][8], char c, uint64_t x, uint64_t y, color_t fg, color_t bg);
 void vesa_scroll(uint64_t rows_shift, color_t bg);

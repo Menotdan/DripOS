@@ -8,30 +8,37 @@
 vesa_info_t vesa_display_info;
 lock_t vesa_lock = 0;
 
-void init_vesa(multiboot_info_t *mb) {
-    mb = (multiboot_info_t *) ((uint64_t) mb + 0xFFFF800000000000);
+void init_vesa(stivale_info_t *bootloader_info) {
+    bootloader_info = GET_HIGHER_HALF(stivale_info_t *, bootloader_info);
+
     /* Size info */
-    vesa_display_info.width = mb->framebuffer_width;
-    vesa_display_info.height = mb->framebuffer_height;
-    vesa_display_info.pitch = mb->framebuffer_pitch;
+    vesa_display_info.width = bootloader_info->framebuffer_width;
+    vesa_display_info.height = bootloader_info->framebuffer_height;
+    vesa_display_info.pitch = bootloader_info->framebuffer_pitch;
     vesa_display_info.framebuffer_size = vesa_display_info.height * vesa_display_info.pitch;
     vesa_display_info.framebuffer_pixels = vesa_display_info.width * vesa_display_info.height;
     /* Bitshift sizes */
-    vesa_display_info.red_shift = mb->framebuffer_red_field_position;
-    vesa_display_info.green_shift = mb->framebuffer_green_field_position;
-    vesa_display_info.blue_shift = mb->framebuffer_blue_field_position;
+    vesa_display_info.red_shift   = 16;
+    vesa_display_info.green_shift = 8;
+    vesa_display_info.blue_shift  = 0;
     /* Framebuffer address */
     vesa_display_info.framebuffer = (uint32_t *) kcalloc(vesa_display_info.framebuffer_size);
-    vesa_display_info.actual_framebuffer = (uint32_t *) (mb->framebuffer_addr + NORMAL_VMA_OFFSET);
+    vesa_display_info.actual_framebuffer = (uint32_t *) (bootloader_info->framebuffer_addr + NORMAL_VMA_OFFSET);
 
     /* Map the real framebuffer and as write combining */
-    vmm_map((void *) mb->framebuffer_addr, (void *) (mb->framebuffer_addr + NORMAL_VMA_OFFSET), 
+    vmm_map((void *) bootloader_info->framebuffer_addr, (void *) (bootloader_info->framebuffer_addr + NORMAL_VMA_OFFSET), 
         (vesa_display_info.framebuffer_size + 0x1000 - 1) / 0x1000, 
         VMM_PRESENT | VMM_WRITE);
-    vmm_set_pat((void *) (mb->framebuffer_addr + NORMAL_VMA_OFFSET), 
+    vmm_set_pat((void *) (bootloader_info->framebuffer_addr + NORMAL_VMA_OFFSET), 
         (vesa_display_info.framebuffer_size + 0x1000 - 1) / 0x1000, 1);
 
     sprintf("\n[VESA] Loaded a %lu x %lu display", vesa_display_info.width, vesa_display_info.height);
+    sprintf("\n[VESA] Framebuffer addresses: %lx, %lx, %lx", vesa_display_info.framebuffer, vesa_display_info.actual_framebuffer, bootloader_info->framebuffer_addr);
+    sprintf("\n[VESA] Display info:");
+    sprintf("\n  pitch: %u", bootloader_info->framebuffer_pitch);
+    sprintf("\n  width: %u", bootloader_info->framebuffer_width);
+    sprintf("\n  height: %u", bootloader_info->framebuffer_height);
+    sprintf("\n  bpp: %u", bootloader_info->framebuffer_bpp);
 }
 
 void put_pixel(uint64_t x, uint64_t y, color_t color) {

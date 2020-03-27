@@ -191,6 +191,8 @@ void memcpy(uint8_t *src, uint8_t *dst, uint64_t count) {
 }
 
 void memcpy32(uint32_t *src, uint32_t *dst, uint64_t count) {
+    sprintf("\n\n\n\n\n\n\n\n\nSrc: %lx Dst: %lx Count: %lx", src, dst, count);
+    sprintf("\n%lx return", __builtin_return_address(0));
     for (uint64_t i = 0; i<count; i++)
         *dst++ = *src++;
 }
