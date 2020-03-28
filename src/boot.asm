@@ -80,14 +80,17 @@ extern kmain
 global exec_start
 exec_start:
     lgdt [GDT_PTR_64]
-    jmp far qword [jmp_ptr]
 
-jmp_ptr:
-    dq loaded_cs
-    dw 0x8
+    ; Reload CS
+    push 0x10
+    push rsp
+    pushf
+    push 0x8
+    push loaded_cs
+    iretq
 
 loaded_cs:
-    mov ax, GDT64.Data
+    mov ax, 0x10
     mov ds, ax
     mov es, ax
     mov ss, ax

@@ -23,6 +23,11 @@ int echfs_read_block0(char *device, echfs_filesystem_t *output) {
     echfs_block0_t *block0 = kcalloc(sizeof(echfs_block0_t));
     int device_fd = fd_open(device, 0);
 
+    if (device_fd < 0) {
+        kfree(block0);
+        return 0;
+    }
+
     fd_read(device_fd, block0, sizeof(echfs_block0_t));
     fd_seek(device_fd, 0, 0);
 

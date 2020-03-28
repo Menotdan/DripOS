@@ -65,7 +65,7 @@ void attempt_mountpoint_handle(char *path) {
     sprintf("\n[VFS] Start path: ");
     sprint(local_path);
 
-    while (strcmp(local_path, "/") != 0) {
+    while (1) {
         sprintf("\n[VFS] Path: ");
         sprint(local_path);
         sprintf("\n[VFS] Other path: ");
@@ -82,9 +82,12 @@ void attempt_mountpoint_handle(char *path) {
         while (*tmp_get_path != '/')
             *(filesystem_path + strlen(filesystem_path)) = *tmp_get_path--;
         // Add the '/'
-        *(filesystem_path + strlen(filesystem_path)) = *tmp_get_path--;
+        *(filesystem_path + strlen(filesystem_path)) = *tmp_get_path;
 
-        path_remove_elem(local_path);
+        *tmp_get_path = '\0';
+        if (*local_path == '\0') {
+            break;
+        }
     }
 
     // Handle '/' as a mountpoint
@@ -92,7 +95,7 @@ void attempt_mountpoint_handle(char *path) {
     sprint(local_path);
     sprintf("\n[VFS] Other path: ");
     sprint(filesystem_path);
-    if (is_mountpoint(local_path)) {
+    if (is_mountpoint("/")) {
         reverse(filesystem_path);
         sprintf("\n[VFS] Doing mountpoint handle for ");
         sprint(filesystem_path);
@@ -136,7 +139,7 @@ void create_missing_nodes_from_path(char *path, vfs_ops_t ops, vfs_node_t *mount
 
 
     sprintf("\n[VFS] Parsing path ");
-    sprint(path); // Test case: echfs_mount/hello.txt
+    sprint(path);
     
 next_elem:
     for (uint64_t i = 0; *path != '/'; path++) {
@@ -195,6 +198,12 @@ vfs_node_t *vfs_open(char *input, int mode) {
         sprintf("\nName not mapped in vfs_open");
 
         kfree(name);
+        return (vfs_node_t *) 0;
+    }
+
+    if (*name != '/') {
+        kfree(name);
+        get_thread_locals()->errno = -ENOENT;
         return (vfs_node_t *) 0;
     }
 

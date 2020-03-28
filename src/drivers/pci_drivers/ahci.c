@@ -2,12 +2,13 @@
 #include "mm/vmm.h"
 #include "mm/pmm.h"
 #include "fs/devfs/devfs.h"
+#include "fs/partitions/mbr.h"
 #include "klibc/dynarray.h"
 #include "klibc/string.h"
 #include "klibc/stdlib.h"
+#include "klibc/errno.h"
 #include "drivers/pit.h"
 #include "proc/scheduler.h"
-#include "klibc/errno.h"
 
 #include "drivers/serial.h"
 #include "drivers/tty/tty.h"
@@ -375,6 +376,13 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
                 ops.close = ahci_close;
                 ops.seek = ahci_seek;
                 register_device(device_name, ops, port_data_heap);
+
+                char *full_dev_path = kcalloc(strlen("/dev/") + strlen(device_name) + 1);
+                strcat(full_dev_path, "/dev/");
+                strcat(full_dev_path, device_name);
+
+                read_mbr(full_dev_path, port_data.sector_size); // Check the partitions for the drive
+                kfree(full_dev_path);
             }
         }
     }
