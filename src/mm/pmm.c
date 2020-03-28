@@ -12,7 +12,7 @@ uint64_t total_memory = 0;
 uint64_t used_memory = 0;
 uint64_t available_memory = 0;
 
-lock_t pmm_lock = 0;
+lock_t pmm_lock = {0, 0};
 
 void pmm_set_bit(uint64_t page) {
     uint8_t bit = page & 0b111;
@@ -139,7 +139,7 @@ uint64_t find_free_page(uint64_t pages) {
 }
 
 void *pmm_alloc(uint64_t size) {
-    lock(&pmm_lock);
+    lock(pmm_lock);
 
     uint64_t pages = (size + 0x1000 - 1) / 0x1000;
     uint64_t free_page = find_free_page(pages);
@@ -151,12 +151,12 @@ void *pmm_alloc(uint64_t size) {
     available_memory -= pages * 0x1000;
     used_memory += pages * 0x1000;
 
-    unlock(&pmm_lock);
+    unlock(pmm_lock);
     return (void *) (free_page * 0x1000);
 }
 
 void pmm_unalloc(void *addr, uint64_t size) {
-    lock(&pmm_lock);
+    lock(pmm_lock);
 
     uint64_t page = ((uint64_t) addr & ~(0xfff)) / 0x1000;
     uint64_t pages = (size + 0x1000 - 1) / 0x1000;
@@ -168,7 +168,7 @@ void pmm_unalloc(void *addr, uint64_t size) {
     available_memory += pages * 0x1000;
     used_memory -= pages * 0x1000;
 
-    unlock(&pmm_lock);
+    unlock(pmm_lock);
 }
 
 uint64_t pmm_get_free_mem() {

@@ -5,9 +5,10 @@ section .stivalehdr
 
 stivale_header:
     dq stack.top    ; rsp
-    db 1            ; video mode
+    dw 1            ; video mode
     dw 0            ; fb_width
     dw 0            ; fb_height
+    dw 0            ; bpp
 
 section .bss
 

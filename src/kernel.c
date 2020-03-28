@@ -24,6 +24,8 @@
 
 /* Testing includes */
 #include "proc/scheduler.h"
+#include "proc/exec_formats/raw_binary.h"
+#include "proc/sleep_queue.h"
 #include "io/msr.h"
 
 #include "klibc/string.h"
@@ -33,6 +35,18 @@
 
 #define TODO_LIST_SIZE 7
 char *todo_list[TODO_LIST_SIZE] = {"Better syscall error handling", "Filesystem driver", "ELF Loading", "userspace libc", "minor: Sync TLB across CPUs", "minor: Add MMIO PCI", "minor: Retry AHCI commands"};
+
+
+// Testing sleep
+uint64_t delay = 5000;
+void video_thread() {
+    uint64_t count = 0;
+    uint64_t local_delay = delay;
+    while (1) {
+        kprintf("\n%lu seconds since thread start.", count++);
+        sleep_ms(local_delay / 20);
+    }
+}
 
 void kernel_task() {
     sprintf("\n[DripOS] Kernel thread: Scheduler enabled.");
@@ -56,11 +70,50 @@ void kernel_task() {
     }
 
     echfs_test("/dev/satadeva");
-    
-    #include "proc/exec_formats/raw_binary.h"
+
     kprintf("\nMemory used: %lu bytes", pmm_get_used_mem());
     kprintf("\n[DripOS] Loading binary from disk.\n");
     launch_binary("/echfs_mount/programs/program_1.bin");
+
+    new_kernel_process("Video nonsense", video_thread);
+    sleep_ms(100);
+    delay = 4000;
+    sleep_ms(100);
+    new_kernel_process("Video nonsense", video_thread);
+    delay = 3000;
+    sleep_ms(100);
+    new_kernel_process("Video nonsense", video_thread);
+    delay = 2000;
+    sleep_ms(100);
+    new_kernel_process("Video nonsense", video_thread);
+    delay = 1000;
+    sleep_ms(100);
+    new_kernel_process("Video nonsense", video_thread);
+    delay = 1000;
+    sleep_ms(100);
+    new_kernel_process("Video nonsense", video_thread);
+    delay = 1000;
+    sleep_ms(100);
+    new_kernel_process("Video nonsense", video_thread);
+    delay = 1000;
+    sleep_ms(100);
+    new_kernel_process("Video nonsense", video_thread);
+    delay = 1000;
+    sleep_ms(100);
+    new_kernel_process("Video nonsense", video_thread);
+    delay = 1000;
+    sleep_ms(100);
+    new_kernel_process("Video nonsense", video_thread);
+    delay = 1000;
+    sleep_ms(100);
+    new_kernel_process("Video nonsense", video_thread);
+    delay = 1000;
+    sleep_ms(100);
+    new_kernel_process("Video nonsense", video_thread);
+    delay = 1000;
+    sleep_ms(100);
+    new_kernel_process("Video nonsense", video_thread);
+    
 
     sprintf("\ndone kernel work");
 

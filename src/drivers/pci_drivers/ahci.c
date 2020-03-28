@@ -13,10 +13,10 @@
 #include "drivers/serial.h"
 #include "drivers/tty/tty.h"
 
-dynarray_t ahci_controllers = {0, 0, 0};
+dynarray_t ahci_controllers = {0, {0, 0}, 0};
 
 uint8_t sata_device_count = 0;
-lock_t ahci_lock = 0;
+lock_t ahci_lock = {0, 0};
 
 int ahci_open(char *path, int mode) {
     (void) path;
@@ -391,14 +391,14 @@ void ahci_enable_present_devs(ahci_controller_t controller) {
 }
 
 void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface) {
-    lock(&ahci_lock);
+    lock(ahci_lock);
     ahci_command_slot_t command_slot = ahci_allocate_command_slot(port, AHCI_GET_FIS_SIZE(1));
     ahci_command_header_t *header = ahci_get_cmd_header(port, command_slot.index);
     
     if (command_slot.index == -1) {
         kprintf("[AHCI] No command slot!\n");
 
-        unlock(&ahci_lock);
+        unlock(ahci_lock);
         return;
     }
 
@@ -434,7 +434,7 @@ void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface) {
         ahci_reset_command_engine(port);
 
         ahci_free_command_slot(command_slot.data, AHCI_GET_FIS_SIZE(1));
-        unlock(&ahci_lock);
+        unlock(ahci_lock);
         return;
     }
 
@@ -449,7 +449,7 @@ void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface) {
             pmm_unalloc(identify_region, 512);
 
             ahci_free_command_slot(command_slot.data, AHCI_GET_FIS_SIZE(1));
-            unlock(&ahci_lock);
+            unlock(ahci_lock);
             return;
         }
     }
@@ -477,7 +477,7 @@ void ahci_identify_sata(ahci_port_data_t *port, uint8_t packet_interface) {
     kprintf("[AHCI] Drive sector count: %lu, LBA48: %u\n", port->sector_count, (uint32_t) port->lba48);
 
     ahci_free_command_slot(command_slot.data, AHCI_GET_FIS_SIZE(1));
-    unlock(&ahci_lock);
+    unlock(ahci_lock);
     pmm_unalloc(identify_region, 512);
 }
 
@@ -550,7 +550,7 @@ int ahci_write_sata_bytes(ahci_port_data_t *port, void *buf, uint64_t count, uin
 }
 
 int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint16_t count, uint64_t offset, uint8_t write) {
-    lock(&ahci_lock);
+    lock(ahci_lock);
 
     uint64_t prdt_count = ((count * port->sector_size) + 0x400000 - 1) / 0x400000;
     ahci_command_slot_t command_slot = ahci_allocate_command_slot(port, AHCI_GET_FIS_SIZE(prdt_count + 1));
@@ -560,7 +560,7 @@ int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint16_t count, uint
         kprintf("[AHCI] No command slot!\n");
 
         ahci_free_command_slot(command_slot.data, AHCI_GET_FIS_SIZE(prdt_count + 1));
-        unlock(&ahci_lock);
+        unlock(ahci_lock);
         return 1;
     }
 
@@ -626,7 +626,7 @@ int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint16_t count, uint
         ahci_reset_command_engine(port);
 
         ahci_free_command_slot(command_slot.data, AHCI_GET_FIS_SIZE(prdt_count + 1));
-        unlock(&ahci_lock);
+        unlock(ahci_lock);
         return 2;
     }
 
@@ -640,13 +640,13 @@ int ahci_io_sata_sectors(ahci_port_data_t *port, void *buf, uint16_t count, uint
             ahci_reset_command_engine(port);
 
             ahci_free_command_slot(command_slot.data, AHCI_GET_FIS_SIZE(prdt_count + 1));
-            unlock(&ahci_lock);
+            unlock(ahci_lock);
             return 3;
         }
     }
 
     ahci_free_command_slot(command_slot.data, AHCI_GET_FIS_SIZE(prdt_count + 1));
-    unlock(&ahci_lock);
+    unlock(ahci_lock);
     return 0; // Return success
 }
 

@@ -38,8 +38,8 @@ void isr_handler(int_reg_t *r) {
                 uint64_t cr2;
                 asm volatile("movq %%cr2, %0;" : "=r"(cr2));
                 /* Ensure the display is not locked when we crash */
-                unlock(&base_tty.tty_lock);
-                unlock(&vesa_lock);
+                unlock(base_tty.tty_lock);
+                unlock(vesa_lock);
 
                 if (scheduler_enabled) {
                     kprintf("\nException on core %u with apic id %u! (cur task %s with TID %ld)", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid);

@@ -4,12 +4,15 @@
 #include "drivers/tty/tty.h"
 #include "klibc/stdlib.h"
 #include "proc/scheduler.h"
+#include "proc/sleep_queue.h"
 
 volatile uint64_t global_ticks = 0;
 
 void timer_handler(int_reg_t *r) {
     global_ticks++;
-    if (global_ticks % 2 == 0 && scheduler_enabled) {
+    advance_time(); // Sleep queue
+
+    if (global_ticks % 8 == 0 && scheduler_enabled) {
         schedule_bsp(r);
     }
 }

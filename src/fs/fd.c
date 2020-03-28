@@ -8,7 +8,7 @@
 
 fd_entry_t **fd_table;
 int fd_table_size = 0;
-lock_t fd_lock = 0;
+lock_t fd_lock = {0, 0};
 
 int fd_open(char *name, int mode) {
     vfs_node_t *node = vfs_open(name, mode);
@@ -68,7 +68,7 @@ int fd_seek(int fd, uint64_t offset, int whence) {
 }
 
 int fd_new(vfs_node_t *node, int mode) {
-    lock(&fd_lock);
+    lock(fd_lock);
     fd_entry_t *new_entry = kcalloc(sizeof(fd_entry_t));
     new_entry->node = node;
     new_entry->mode = mode;
@@ -86,30 +86,30 @@ int fd_new(vfs_node_t *node, int mode) {
     fd_table = krealloc(fd_table, fd_table_size * sizeof(fd_entry_t *));
 fnd:
     fd_table[i] = new_entry;
-    unlock(&fd_lock);
+    unlock(fd_lock);
     return i;
 }
 
 void fd_remove(int fd) {
-    lock(&fd_lock);
+    lock(fd_lock);
     
     if (fd < fd_table_size - 1) {
         kfree(fd_table[fd]);
         fd_table[fd] = (fd_entry_t *) 0;
     }
 
-    unlock(&fd_lock);
+    unlock(fd_lock);
 }
 
 fd_entry_t *fd_lookup(int fd) {
     fd_entry_t *ret;
-    lock(&fd_lock);
+    lock(fd_lock);
     if (fd < fd_table_size - 1 && fd >= 0) {
         ret = fd_table[fd];
     } else {
         sprintf("\nBad fd: %d", fd);
         ret = (fd_entry_t *) 0;
     }
-    unlock(&fd_lock);
+    unlock(fd_lock);
     return ret;
 }

@@ -13,7 +13,7 @@
 
 vfs_node_t *root_node;
 
-lock_t vfs_lock = 0;
+lock_t vfs_lock = {0, 0};
 uint64_t current_unid = 0; // Current unique node ID
 
 /* Dummy VFS ops */
@@ -111,19 +111,19 @@ void attempt_mountpoint_handle(char *path) {
 }
 
 uint8_t search_node_name(vfs_node_t *node, char *name) {
-    lock(&vfs_lock);
+    lock(vfs_lock);
     for (uint64_t i = 0; i < node->children_array_size; i++) {
         vfs_node_t *cur = node->children[i];
 
         if (cur) {
             if (strcmp(cur->name, name) == 0) {
-                unlock(&vfs_lock);
+                unlock(vfs_lock);
                 return 1;
             }
         }
     }
 
-    unlock(&vfs_lock);
+    unlock(vfs_lock);
     return 0;
 }
 
@@ -304,7 +304,7 @@ vfs_node_t *vfs_new_node(char *name, vfs_ops_t ops) {
 
 /* Add a VFS node as a child of a different VFS node */
 void vfs_add_child(vfs_node_t *parent, vfs_node_t *child) {
-    lock(&vfs_lock);
+    lock(vfs_lock);
     uint64_t i = 0;
     for (; i < parent->children_array_size; i++) {
         if (!parent->children[i]) {
@@ -321,19 +321,19 @@ fnd:
     parent->children[i] = child;
 done:
     child->parent = parent;
-    unlock(&vfs_lock);
+    unlock(vfs_lock);
 }
 
 /* Attempt to find a node from a given path */
 vfs_node_t *get_node_from_path(char *path) {
-    lock(&vfs_lock);
+    lock(vfs_lock);
     char *buffer = kcalloc(50);
     uint64_t buffer_size = 50;
     uint64_t buffer_index = 0;
     vfs_node_t *cur_node = root_node;
 
     if (*path++ != '/') { // If the path doesnt start with `/`
-        unlock(&vfs_lock);
+        unlock(vfs_lock);
         return (vfs_node_t *) 0;
     }
 
@@ -352,7 +352,7 @@ vfs_node_t *get_node_from_path(char *path) {
             }
             
             // No nodes found, return nothing
-            unlock(&vfs_lock);
+            unlock(vfs_lock);
             kfree(buffer);
             return (vfs_node_t *) 0;
         } else {
@@ -378,19 +378,19 @@ fnd:
         }
 
         // No nodes found, return nothing
-        unlock(&vfs_lock);
+        unlock(vfs_lock);
         kfree(buffer);
         return (vfs_node_t *) 0;
     }
 
 done:
-    unlock(&vfs_lock);
+    unlock(vfs_lock);
     kfree(buffer);
     return cur_node;
 }
 
 char *get_full_path(vfs_node_t *node) {
-    lock(&vfs_lock);
+    lock(vfs_lock);
     vfs_node_t *cur_node = node;
     char *path = (char *) 0;
     uint64_t path_index = 0;
@@ -406,7 +406,7 @@ char *get_full_path(vfs_node_t *node) {
         cur_node = cur_node->parent;
     }
 
-    unlock(&vfs_lock);
+    unlock(vfs_lock);
 
     reverse(path);
     return path;

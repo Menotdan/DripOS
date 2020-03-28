@@ -9,13 +9,11 @@ uint64_t get_bucket_from_hash(uint64_t hash) {
 
 hashmap_t *init_hashmap() {
     hashmap_t *ret = kcalloc(sizeof(hashmap_t));
-    ret->hashmap_lock = 0;
-    
     return ret;
 }
 
 hashmap_elem_t *hashmap_get_elem_dat(hashmap_t *hashmap, uint64_t key) {
-    lock(&hashmap->hashmap_lock);
+    lock(hashmap->hashmap_lock);
     hashmap_elem_t *ret = (hashmap_elem_t *) 0;
 
     uint64_t bucket = get_bucket_from_hash(key);
@@ -30,7 +28,7 @@ hashmap_elem_t *hashmap_get_elem_dat(hashmap_t *hashmap, uint64_t key) {
     }
 
 done:
-    unlock(&hashmap->hashmap_lock);
+    unlock(hashmap->hashmap_lock);
     return ret;
 }
 
@@ -62,7 +60,7 @@ void *hashmap_get_elem(hashmap_t *hashmap, uint64_t key) {
 
 void hashmap_set_elem(hashmap_t *hashmap, uint64_t key, void *data) {
     hashmap_elem_t *elem = hashmap_get_elem_dat(hashmap, key);
-    lock(&hashmap->hashmap_lock);
+    lock(hashmap->hashmap_lock);
     if (elem) {
         elem->data = data;
         hashmap_unref_elem(elem);
@@ -79,5 +77,5 @@ void hashmap_set_elem(hashmap_t *hashmap, uint64_t key, void *data) {
             hashmap->buckets[bucket].elements = elem;
         }
     }
-    unlock(&hashmap->hashmap_lock);
+    unlock(hashmap->hashmap_lock);
 }

@@ -5,18 +5,6 @@
 #include "drivers/tty/tty.h"
 #include "drivers/serial.h"
 
-void lock(lock_t *lock) {
-    if ((uint64_t) lock == 0x640) {
-        sprintf("\nFound bad lock!");
-        sprintf("\nCaller RIP: %lx", __builtin_return_address(0));
-        while (1)  {}
-    }
-    spinlock_lock(lock);
-}
-
-void unlock(lock_t *lock) {
-    spinlock_unlock(lock);
-}
 
 void interrupt_lock() {
     if (scheduler_enabled) {

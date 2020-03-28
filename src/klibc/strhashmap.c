@@ -21,13 +21,11 @@ uint64_t get_hash_from_str(char *str) {
 
 strhashmap_t *init_strhashmap() {
     strhashmap_t *ret = kcalloc(sizeof(strhashmap_t));
-    ret->hashmap_lock = 0;
-    
     return ret;
 }
 
 strhashmap_elem_t *strhashmap_get_elem_dat(strhashmap_t *hashmap, char *key) {
-    lock(&hashmap->hashmap_lock);
+    lock(hashmap->hashmap_lock);
     strhashmap_elem_t *ret = (strhashmap_elem_t *) 0;
 
 
@@ -43,7 +41,7 @@ strhashmap_elem_t *strhashmap_get_elem_dat(strhashmap_t *hashmap, char *key) {
     }
 
 done:
-    unlock(&hashmap->hashmap_lock);
+    unlock(hashmap->hashmap_lock);
     return ret;
 }
 
@@ -76,7 +74,7 @@ void *strhashmap_get_elem(strhashmap_t *hashmap, char *key) {
 
 void strhashmap_set_elem(strhashmap_t *hashmap, char *key, void *data) {
     strhashmap_elem_t *elem = strhashmap_get_elem_dat(hashmap, key);
-    lock(&hashmap->hashmap_lock);
+    lock(hashmap->hashmap_lock);
     if (elem) {
         elem->data = data;
         strhashmap_unref_elem(elem);
@@ -96,5 +94,5 @@ void strhashmap_set_elem(strhashmap_t *hashmap, char *key, void *data) {
             hashmap->buckets[bucket].elements = elem;
         }
     }
-    unlock(&hashmap->hashmap_lock);
+    unlock(hashmap->hashmap_lock);
 }

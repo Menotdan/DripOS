@@ -6,7 +6,7 @@
 #include "drivers/tty/tty.h"
 #include <stddef.h>
 
-lock_t vmm_spinlock = 0; // Spinlock for the VMM
+lock_t vmm_spinlock = {0, 0}; // Spinlock for the VMM
 uint64_t base_kernel_cr3 = 0;
 
 uint64_t vmm_get_pml4t() {
@@ -99,14 +99,14 @@ void vmm_remap_to_4k(pt_t *p2, uint16_t offset) {
 
 /* Check if an address is mapped */
 uint8_t is_mapped(void *data) {
-    lock(&vmm_spinlock);
+    lock(vmm_spinlock);
     uint64_t phys_addr = (uint64_t) virt_to_phys(data, (void *) vmm_get_pml4t());
 
     if (phys_addr == 0xFFFFFFFFFFFFFFFF) {
-        unlock(&vmm_spinlock);
+        unlock(vmm_spinlock);
         return 0;
     } else {
-        unlock(&vmm_spinlock);
+        unlock(vmm_spinlock);
         return 1;
     }
 }
@@ -162,7 +162,7 @@ pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4) {
 
 /* Map pages */
 int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t perms) {
-    lock(&vmm_spinlock);
+    lock(vmm_spinlock);
 
     int ret = 0;
 
@@ -186,13 +186,13 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
         }
         vmm_invlpg((uint64_t) cur_virt - 0x1000);
     }
-    unlock(&vmm_spinlock);
+    unlock(vmm_spinlock);
     return ret;
 }
 
 /* Remap pages */
 int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t perms) {
-    lock(&vmm_spinlock);
+    lock(vmm_spinlock);
 
     int ret = 0;
 
@@ -210,13 +210,13 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
         vmm_invlpg((uint64_t) cur_virt - 0x1000);
     }
 
-    unlock(&vmm_spinlock);
+    unlock(vmm_spinlock);
     return ret;
 }
 
 /* Unmap pages */
 int vmm_unmap_pages(void *virt, void *p4, uint64_t count) {
-    lock(&vmm_spinlock);
+    lock(vmm_spinlock);
 
     int ret = 0;
     uint64_t cur_virt = (uint64_t) virt;
@@ -234,13 +234,13 @@ int vmm_unmap_pages(void *virt, void *p4, uint64_t count) {
         cur_virt += 0x1000;
     }
 
-    unlock(&vmm_spinlock);
+    unlock(vmm_spinlock);
     return ret;
 }
 
 /* Set the PAT entries */
 void vmm_set_pat_pages(void *virt, void *p4, uint64_t count, uint8_t pat_entry) {
-    lock(&vmm_spinlock);
+    lock(vmm_spinlock);
 
     uint64_t cur_virt = (uint64_t) virt;
 
@@ -269,7 +269,7 @@ void vmm_set_pat_pages(void *virt, void *p4, uint64_t count, uint8_t pat_entry) 
         cur_virt += 0x1000;
     }
 
-    unlock(&vmm_spinlock);
+    unlock(vmm_spinlock);
 }
 
 void *vmm_fork_higher_half(void *old) {

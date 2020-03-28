@@ -13,7 +13,7 @@ LINKER = x86_64-elf-ld
 incPath = ~/DripOS/src
 GDB = gdb
 MEM = 2G # Memory for qemu
-CORES = 1
+CORES = 6
 O_LEVEL = 2 # Optimization level
 # Options for GCC
 CFLAGS = -g -fno-pic               \
@@ -31,7 +31,7 @@ CFLAGS = -g -fno-pic               \
 # First rule is run by default
 DripOS.img: kernel.elf
 	# Create blank image
-	dd if=/dev/zero of=DripOS.img bs=1M count=50
+	dd if=/dev/zero of=DripOS.img bs=1M count=7
 
 	# Create partition tables
 	parted -s DripOS.img mklabel msdos
@@ -49,7 +49,7 @@ kernel.elf: ${NASM_SOURCES:.real=.bin} ${OBJ}
 	${CC} -Wl,-z,max-page-size=0x1000,--gc-sections -nostdlib -Werror -Wall -Wextra -Wpedantic -Wunused-function -o $@ -T linker.ld ${OBJ}
 
 run: DripOS.img
-	- qemu-system-x86_64 -d guest_errors -smp ${CORES} -machine q35 -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -hdb DripOS.img -hda dripdisk.img
+	- qemu-system-x86_64 -d guest_errors,int -smp ${CORES} -machine q35 -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -hdb DripOS.img -hda dripdisk.img
 	make clean
 
 run-dripdbg: DripOS.img
@@ -76,7 +76,7 @@ update_qloader2:
 # To make an object, always compile from its .c
 
 %.o: %.c
-	${CC} ${CFLAGS} -D AMD64 -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -fno-omit-frame-pointer -ffunction-sections -fdata-sections -MD -c $< -o $@ -ffreestanding
+	${CC} ${CFLAGS} -D AMD64 -D DEBUG -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -fno-omit-frame-pointer -ffunction-sections -fdata-sections -MD -c $< -o $@ -ffreestanding
 
 %.bin: %.real
 	nasm -f bin -o $@ $<

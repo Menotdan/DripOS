@@ -16,7 +16,7 @@ extern char syscall_stub[];
 dynarray_t tasks;
 dynarray_t processes;
 uint8_t scheduler_enabled = 0;
-lock_t scheduler_lock = 0;
+lock_t scheduler_lock = {0, 0};
 
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
 task_regs_t default_user_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x23,0x1B,0,0x202,0};
@@ -27,6 +27,14 @@ uint64_t get_thread_list_size() {
 
 void *get_thread_elem(uint64_t elem) {
     return tasks.base[elem].data;
+}
+
+void ref_thread_elem(uint64_t elem) {
+    dynarray_getelem(&tasks, elem);
+}
+
+void unref_thread_elem(uint64_t elem) {
+    dynarray_unref(&tasks, elem);
 }
 
 thread_info_block_t *get_thread_locals() {
@@ -174,7 +182,7 @@ task_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) {
 /* Add a new thread to the dynarray and as a child of a process */
 int64_t add_new_child_thread(task_t *task, int64_t pid) {
     interrupt_lock();
-    lock(&scheduler_lock);
+    lock(scheduler_lock);
 
     /* Find the parent process */
     process_t *new_parent = dynarray_getelem(&processes, pid);
@@ -193,7 +201,7 @@ int64_t add_new_child_thread(task_t *task, int64_t pid) {
     /* Add the TID to it's parent's threads list */
     dynarray_add(&new_parent->threads, &new_tid, sizeof(int64_t));
 
-    unlock(&scheduler_lock);
+    unlock(scheduler_lock);
     interrupt_unlock();
     return new_tid;
 }
@@ -201,7 +209,7 @@ int64_t add_new_child_thread(task_t *task, int64_t pid) {
 /* Allocate new data for a process, then return the new PID */
 int64_t new_process(char *name, void *new_cr3) {
     interrupt_lock();
-    lock(&scheduler_lock);
+    lock(scheduler_lock);
 
     /* Allocate new process */
     process_t *new_process = kcalloc(sizeof(process_t));
@@ -218,7 +226,7 @@ int64_t new_process(char *name, void *new_cr3) {
     process_item->pid = pid;
     dynarray_unref(&processes, pid);
 
-    unlock(&scheduler_lock);
+    unlock(scheduler_lock);
     interrupt_unlock();
     /* Free the old data since it's in the dynarray */
     kfree(new_process);
@@ -277,7 +285,7 @@ void schedule_ap(int_reg_t *r) {
 }
 
 void schedule(int_reg_t *r) {
-    lock(&scheduler_lock);
+    lock(scheduler_lock);
 
     task_t *running_task = get_cpu_locals()->current_thread;
 
@@ -382,13 +390,13 @@ void schedule(int_reg_t *r) {
 
     get_cpu_locals()->total_tsc = read_tsc();
 
-    unlock(&scheduler_lock);
+    unlock(scheduler_lock);
 }
 
 int kill_task(int64_t tid) {
     int ret = 0;
     interrupt_lock();
-    lock(&scheduler_lock);
+    lock(scheduler_lock);
     task_t *task = dynarray_getelem(&tasks, tid);
     if (task) {
         // If we are running this thread, unref it a first time because it is refed from running
@@ -400,7 +408,7 @@ int kill_task(int64_t tid) {
     } else {
         ret = 1;
     }
-    unlock(&scheduler_lock);
+    unlock(scheduler_lock);
     interrupt_unlock();
     return ret;
 }

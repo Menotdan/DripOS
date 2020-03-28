@@ -14,7 +14,7 @@ tty_t base_tty;
 
 int tty_dev_write(fd_entry_t *fd_data, void *buf, uint64_t count) {
     (void) fd_data;
-    lock(&base_tty.tty_lock);
+    lock(base_tty.tty_lock);
 
     char *char_buf = buf;
     for (uint64_t i = 0; i < count; i++) {
@@ -23,7 +23,7 @@ int tty_dev_write(fd_entry_t *fd_data, void *buf, uint64_t count) {
 
     flip_buffers();
 
-    unlock(&base_tty.tty_lock);
+    unlock(base_tty.tty_lock);
     return 0;
 }
 
@@ -46,22 +46,23 @@ void tty_init(tty_t *tty, uint64_t font_width, uint64_t font_height) {
     tty->rows = vesa_display_info.height / font_height;
     tty->cols = vesa_display_info.width / font_width;
     tty->font = (uint8_t *) font8x8_basic;
-    tty->tty_lock = 0;
+    tty->tty_lock.current_holder = 0;
+    tty->tty_lock.lock_dat = 0;
     tty->kb_in_buffer = kcalloc(4096);
     tty->kb_in_buffer_index = 0;
     tty_clear(tty);
 }
 
 void tty_in(char c, tty_t *tty) {
-    lock(&tty->tty_lock);
+    lock(tty->tty_lock);
     tty->kb_in_buffer[tty->kb_in_buffer_index++] = c;
-    unlock(&tty->tty_lock);
+    unlock(tty->tty_lock);
 }
 
 char tty_get_char(tty_t *tty) {
-    lock(&tty->tty_lock);
+    lock(tty->tty_lock);
     if (tty->kb_in_buffer_index == 0) {
-        unlock(&tty->tty_lock);
+        unlock(tty->tty_lock);
         return 0; // No code
     }
 
@@ -69,7 +70,7 @@ char tty_get_char(tty_t *tty) {
     char ret = tty->kb_in_buffer[tty->kb_in_buffer_index - 1];
     tty->kb_in_buffer_index--;
 
-    unlock(&tty->tty_lock);
+    unlock(tty->tty_lock);
     return ret;
 }
 
@@ -100,10 +101,10 @@ void tty_seek_no_lock(uint64_t x, uint64_t y, tty_t *tty) {
 }
 
 void tty_clear(tty_t *tty) {
-    lock(&tty->tty_lock);
+    lock(tty->tty_lock);
     fill_screen(tty->bg);
     tty_seek_no_lock(0, 0, tty); // Since we already have the lock
-    unlock(&tty->tty_lock);
+    unlock(tty->tty_lock);
 }
 
 void kprint(char *s) {
@@ -113,7 +114,7 @@ void kprint(char *s) {
 }
 
 void kprintf(char *message, ...) {
-    lock(&base_tty.tty_lock);
+    lock(base_tty.tty_lock);
     va_list format_list;
     uint64_t index = 0;
     uint8_t big = 0;
@@ -186,6 +187,6 @@ void kprintf(char *message, ...) {
 
     va_end(format_list);
     flip_buffers();
-    unlock(&base_tty.tty_lock);
+    unlock(base_tty.tty_lock);
     yield();
 }
