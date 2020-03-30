@@ -13,10 +13,12 @@
 
 extern char syscall_stub[];
 
+worker_stack_t worker_stack;
+
 dynarray_t tasks;
 dynarray_t processes;
 uint8_t scheduler_enabled = 0;
-lock_t scheduler_lock = {0, 0};
+lock_t scheduler_lock = {0, 0, 0};
 
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
 task_regs_t default_user_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x23,0x1B,0,0x202,0};
@@ -35,6 +37,14 @@ void ref_thread_elem(uint64_t elem) {
 
 void unref_thread_elem(uint64_t elem) {
     dynarray_unref(&tasks, elem);
+}
+
+void lock_scheduler() {
+    lock(scheduler_lock);
+}
+
+void unlock_scheduler() {
+    unlock(scheduler_lock);
 }
 
 thread_info_block_t *get_thread_locals() {
@@ -70,6 +80,33 @@ void _idle() {
     }
 }
 
+/* Launch a high priority kernel worker */
+void launch_kernel_worker(void (*worker)()) {
+    lock(scheduler_lock);
+    worker_stack_t *cur = &worker_stack;
+    while (cur->next) {
+        cur = cur->next;
+    }
+
+    /* Allocate new on the "stack" */
+    cur->next = kcalloc(sizeof(worker_stack_t));
+    cur = cur->next;
+    
+    cur->thread.regs = default_kernel_regs;
+    cur->thread.kernel_stack = (uint64_t) kcalloc(0x1000) + 0x1000;
+    cur->thread.regs.rsp = (uint64_t) kcalloc(0x1000) + 0x1000;
+    cur->thread.regs.cr3 = base_kernel_cr3;
+    cur->thread.regs.rip = (uint64_t) worker;
+
+    cur->thread.ring = 0;
+    cur->thread.state = READY;
+
+    cur->thread.regs.fs = (uint64_t) kcalloc(sizeof(thread_info_block_t));
+    ((thread_info_block_t *) cur->thread.regs.fs)->meta_pointer = cur->thread.regs.fs;
+    unlock(scheduler_lock);
+}
+
+/* Initialize the BSP for scheduling */
 void scheduler_init_bsp() {
     tasks.array_size = 0;
     tasks.base = 0;
@@ -80,7 +117,7 @@ void scheduler_init_bsp() {
     write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x8 << 32));
     write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x18 << 48));
     write_msr(0xC0000082, (uint64_t) syscall_stub); // Start execution at the syscall stub when a syscall occurs
-    write_msr(0xC0000084, 0);
+    write_msr(0xC0000084, 0); // Mask nothing
     write_msr(0xC0000080, read_msr(0xC0000080) | 1); // Set the syscall enable bit
 
     new_process("Idle tasks", (void *) base_kernel_cr3); // Always PID 0
@@ -125,6 +162,7 @@ void scheduler_init_bsp() {
     }
 }
 
+/* Initilialize an AP for scheduling */
 void scheduler_init_ap() {
     /* Setup syscall MSRs for this CPU */
     write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x8 << 32));
@@ -181,7 +219,7 @@ task_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) {
 
 /* Add a new thread to the dynarray and as a child of a process */
 int64_t add_new_child_thread(task_t *task, int64_t pid) {
-    interrupt_lock();
+    interrupt_state_t state = interrupt_lock();
     lock(scheduler_lock);
 
     /* Find the parent process */
@@ -202,13 +240,13 @@ int64_t add_new_child_thread(task_t *task, int64_t pid) {
     dynarray_add(&new_parent->threads, &new_tid, sizeof(int64_t));
 
     unlock(scheduler_lock);
-    interrupt_unlock();
+    interrupt_unlock(state);
     return new_tid;
 }
 
 /* Allocate new data for a process, then return the new PID */
 int64_t new_process(char *name, void *new_cr3) {
-    interrupt_lock();
+    interrupt_state_t state = interrupt_lock();
     lock(scheduler_lock);
 
     /* Allocate new process */
@@ -227,12 +265,13 @@ int64_t new_process(char *name, void *new_cr3) {
     dynarray_unref(&processes, pid);
 
     unlock(scheduler_lock);
-    interrupt_unlock();
+    interrupt_unlock(state);
     /* Free the old data since it's in the dynarray */
     kfree(new_process);
     return pid;
 }
 
+/* Wrapper for some other parts of the "API" */
 void new_kernel_process(char *name, void (*main)()) {
     int64_t task_parent_pid = new_process(name, (void *) base_kernel_cr3);
     uint64_t new_rsp = (uint64_t) kcalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE;
@@ -395,7 +434,7 @@ void schedule(int_reg_t *r) {
 
 int kill_task(int64_t tid) {
     int ret = 0;
-    interrupt_lock();
+    interrupt_state_t state = interrupt_lock();
     lock(scheduler_lock);
     task_t *task = dynarray_getelem(&tasks, tid);
     if (task) {
@@ -409,11 +448,12 @@ int kill_task(int64_t tid) {
         ret = 1;
     }
     unlock(scheduler_lock);
-    interrupt_unlock();
+    interrupt_unlock(state);
     return ret;
 }
 
 int kill_process(int64_t pid) {
+    interrupt_state_t state = interrupt_lock();
     process_t *proc = dynarray_getelem(&processes, pid);
     if (proc) {
         for (int64_t t = 0; t < proc->threads.array_size; t++) {
@@ -426,5 +466,6 @@ int kill_process(int64_t pid) {
     }
     dynarray_remove(&processes, pid);
     dynarray_unref(&processes, pid);
+    interrupt_unlock(state);
     return 0;
 }

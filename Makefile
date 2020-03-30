@@ -13,7 +13,7 @@ LINKER = x86_64-elf-ld
 incPath = ~/DripOS/src
 GDB = gdb
 MEM = 2G # Memory for qemu
-CORES = 6
+CORES = 7
 O_LEVEL = 2 # Optimization level
 # Options for GCC
 CFLAGS = -g -fno-pic               \
@@ -49,7 +49,7 @@ kernel.elf: ${NASM_SOURCES:.real=.bin} ${OBJ}
 	${CC} -Wl,-z,max-page-size=0x1000,--gc-sections -nostdlib -Werror -Wall -Wextra -Wpedantic -Wunused-function -o $@ -T linker.ld ${OBJ}
 
 run: DripOS.img
-	- qemu-system-x86_64 -d guest_errors,int -smp ${CORES} -machine q35 -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -hdb DripOS.img -hda dripdisk.img
+	- qemu-system-x86_64 -d guest_errors -smp ${CORES} -machine q35 -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -hdb DripOS.img -hda dripdisk.img
 	make clean
 
 run-dripdbg: DripOS.img

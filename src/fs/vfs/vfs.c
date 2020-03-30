@@ -13,7 +13,7 @@
 
 vfs_node_t *root_node;
 
-lock_t vfs_lock = {0, 0};
+lock_t vfs_lock = {0, 0, 0};
 uint64_t current_unid = 0; // Current unique node ID
 
 /* Dummy VFS ops */

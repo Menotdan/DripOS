@@ -1,30 +1,45 @@
 #ifndef KLIBC_LOCK_H
 #define KLIBC_LOCK_H
 #include <stdint.h>
+#include "drivers/serial.h"
+#include "klibc/string.h"
 
-typedef struct {
+typedef volatile struct {
     uint32_t lock_dat;
-    uint64_t current_holder;
+    const char *current_holder;
+    const char *attempting_to_get;
 } lock_t;
 
+typedef uint8_t interrupt_state_t;
+
 #ifdef AMD64
-extern void spinlock_lock(uint32_t *lock);
-extern void spinlock_unlock(uint32_t *lock);
-extern uint32_t atomic_inc(uint32_t *data);
-extern uint32_t atomic_dec(uint32_t *data);
+extern void spinlock_lock(volatile uint32_t *lock);
+extern void spinlock_unlock(volatile uint32_t *lock);
+extern uint32_t atomic_inc(volatile uint32_t *data);
+extern uint32_t atomic_dec(volatile uint32_t *data);
 #else
-extern void spinlock_lock(uint32_t *lock);
-extern void spinlock_unlock(uint32_t *lock);
-extern uint32_t atomic_inc(uint32_t *data);
-extern uint32_t atomic_dec(uint32_t *data);
+extern void spinlock_lock(volatile uint32_t *lock);
+extern void spinlock_unlock(volatile uint32_t *lock);
+extern uint32_t atomic_inc(volatile uint32_t *data);
+extern uint32_t atomic_dec(volatile uint32_t *data);
 #endif
 
+// if (strcmp(#lock_, "dynarray->lock") != 0) {
+//     sprintf("\nLock: %s in file %s on line %d", #lock_, __FILE__, __LINE__);
+// }
+
+// if (strcmp(#lock_, "dynarray->lock") != 0) {
+//     sprintf("\nUnlock: %s in file %s on line %d", #lock_, __FILE__, __LINE__);
+// }
+
 #define lock(lock_) \
-    spinlock_lock(&lock_.lock_dat);
+    lock_.attempting_to_get = __FUNCTION__; \
+    spinlock_lock(&lock_.lock_dat); \
+    lock_.current_holder = __FUNCTION__;
 #define unlock(lock_) \
     spinlock_unlock(&lock_.lock_dat);
-void interrupt_lock();
-void interrupt_unlock();
+interrupt_state_t interrupt_lock();
+void interrupt_unlock(interrupt_state_t state);
 uint8_t check_interrupts();
 
 #endif

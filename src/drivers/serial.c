@@ -5,7 +5,7 @@
 #include "klibc/lock.h"
 #include "klibc/stdlib.h"
 
-lock_t serial_print_lock = {0, 0};
+lock_t serial_print_lock = {0, 0, 0};
 
 void init_serial(uint16_t com_port) {
     port_outb(com_port + 1, 0); // Disable interrupts for this COM port
@@ -118,11 +118,7 @@ void sprintf(char *message, ...) {
                     }
                     break;
                 case 's':
-                    if (big) {
-                        (void) va_arg(format_list, uint64_t);
-                    } else {
-                        sprint(va_arg(format_list, char *));
-                    }
+                    sprint(va_arg(format_list, char *));
                     break;
                 default:
                     break;

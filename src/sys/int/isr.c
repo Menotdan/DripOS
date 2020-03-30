@@ -5,6 +5,7 @@
 #include "drivers/serial.h"
 #include "drivers/pit.h"
 #include "drivers/ps2.h"
+#include "klibc/stdlib.h"
 #include "sys/apic.h"
 #include "io/ports.h"
 #include "mm/vmm.h"
@@ -89,13 +90,21 @@ void isr_handler(int_reg_t *r) {
 
     // If we make it here, send an EOI to our LAPIC
     write_lapic(0xB0, 0);
+
+    if (r->rip < KERNEL_VMA_OFFSET && r->cs == 0x8) {
+        panic("RIP bad!");
+    }
 }
 
 void panic_handler(int_reg_t *r) {
     vmm_set_pml4t(base_kernel_cr3); // Use base kernel CR3 in case the alternate CR3 is corrupted
 
+    send_panic_ipis();
+
     uint64_t cr2;
     asm volatile("movq %%cr2, %0;" : "=r"(cr2));
+
+    kprintf("\nPanic!\nReason: %s\n", r->rdi);
     if (scheduler_enabled) {
         kprintf("\nException on core %u with apic id %u! (cur task %s with TID %ld)", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid);
     } else {
@@ -103,9 +112,7 @@ void panic_handler(int_reg_t *r) {
     }
     kprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx CS: %lx\nSS: %lx RFLAGS: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2, r->cs, r->ss, r->rflags);
 
-    send_panic_ipis();
     while (1) { asm volatile("hlt"); }
-    
 }
 
 void isr_panic_idle(int_reg_t *r) {

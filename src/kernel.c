@@ -39,14 +39,24 @@ char *todo_list[TODO_LIST_SIZE] = {"Better syscall error handling", "Filesystem 
 
 // Testing sleep
 uint64_t delay = 5000;
+uint64_t y = 300;
 void video_thread() {
-    uint64_t count = 0;
-    uint64_t local_delay = delay;
+    uint64_t count = y;
+    y += 10;
+    uint64_t x = 0;
+    color_t color = {0, 255, 0};
     while (1) {
-        kprintf("\n%lu seconds since thread start.", count++);
-        sleep_ms(local_delay / 20);
+        while (x != vesa_display_info.width) {
+            put_pixel(x++, count, color);
+        }
+        color.r += 1;
+        x = 0;
+        flip_buffers();
+        sleep_ms(20);
     }
 }
+
+extern void sanity_thread_start();
 
 void kernel_task() {
     sprintf("\n[DripOS] Kernel thread: Scheduler enabled.");
@@ -75,45 +85,19 @@ void kernel_task() {
     kprintf("\n[DripOS] Loading binary from disk.\n");
     launch_binary("/echfs_mount/programs/program_1.bin");
 
-    new_kernel_process("Video nonsense", video_thread);
-    sleep_ms(100);
-    delay = 4000;
-    sleep_ms(100);
-    new_kernel_process("Video nonsense", video_thread);
-    delay = 3000;
-    sleep_ms(100);
-    new_kernel_process("Video nonsense", video_thread);
-    delay = 2000;
-    sleep_ms(100);
-    new_kernel_process("Video nonsense", video_thread);
-    delay = 1000;
-    sleep_ms(100);
-    new_kernel_process("Video nonsense", video_thread);
-    delay = 1000;
-    sleep_ms(100);
-    new_kernel_process("Video nonsense", video_thread);
-    delay = 1000;
-    sleep_ms(100);
-    new_kernel_process("Video nonsense", video_thread);
-    delay = 1000;
-    sleep_ms(100);
-    new_kernel_process("Video nonsense", video_thread);
-    delay = 1000;
-    sleep_ms(100);
-    new_kernel_process("Video nonsense", video_thread);
-    delay = 1000;
-    sleep_ms(100);
-    new_kernel_process("Video nonsense", video_thread);
-    delay = 1000;
-    sleep_ms(100);
-    new_kernel_process("Video nonsense", video_thread);
-    delay = 1000;
-    sleep_ms(100);
-    new_kernel_process("Video nonsense", video_thread);
-    delay = 1000;
-    sleep_ms(100);
-    new_kernel_process("Video nonsense", video_thread);
-    
+    new_kernel_process("Screen", video_thread);
+    new_kernel_process("Screen", video_thread);
+    new_kernel_process("Screen", video_thread);
+    new_kernel_process("Screen", video_thread);
+    new_kernel_process("Screen", video_thread);
+    new_kernel_process("Screen", video_thread);
+    new_kernel_process("Screen", video_thread);
+    new_kernel_process("Screen", video_thread);
+
+    // while (1) {
+    //     sleep_ms(100);
+    //     sprintf("\nuwu");
+    // }
 
     sprintf("\ndone kernel work");
 

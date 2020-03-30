@@ -13,10 +13,10 @@
 #include "drivers/serial.h"
 #include "drivers/tty/tty.h"
 
-dynarray_t ahci_controllers = {0, {0, 0}, 0};
+dynarray_t ahci_controllers = {0, {0, 0, 0}, 0};
 
 uint8_t sata_device_count = 0;
-lock_t ahci_lock = {0, 0};
+lock_t ahci_lock = {0, 0, 0};
 
 int ahci_open(char *path, int mode) {
     (void) path;

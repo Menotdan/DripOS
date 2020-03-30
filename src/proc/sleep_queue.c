@@ -8,11 +8,11 @@
 
 #include "drivers/serial.h"
 
-lock_t sleep_queue_lock = {0, 0};
+lock_t sleep_queue_lock = {0, 0, 0};
 sleep_queue_t base_queue = {0, 0, 0, 0};
 
 void insert_to_queue(uint64_t ticks, int64_t tid) {
-    interrupt_lock();
+    interrupt_state_t state = interrupt_lock();
     lock(sleep_queue_lock);
 
     uint64_t total = 0;
@@ -48,11 +48,13 @@ void insert_to_queue(uint64_t ticks, int64_t tid) {
         next->time_left -= before_relative;
     }
 
+    // sprintf("\nInserted.");
     unlock(sleep_queue_lock);
-    interrupt_unlock();
+    interrupt_unlock(state);
 }
 
 void advance_time() {
+    lock_scheduler();
     lock(sleep_queue_lock);
     sleep_queue_t *cur = base_queue.next;
     if (cur) {
@@ -74,9 +76,19 @@ void advance_time() {
         }
     }
     unlock(sleep_queue_lock);
+    unlock_scheduler();
 }
 
 void sleep_ms(uint64_t ms) {
+    interrupt_state_t state = interrupt_lock();
+    lock_scheduler();
+    sprintf("\nInserting to queue");
     insert_to_queue(ms, get_cpu_locals()->current_thread->tid); // Insert to the thread sleep queue
+    sprintf("\nIn queue");
     get_cpu_locals()->current_thread->state = SLEEP;
+    sprintf("\nSleeping");
+    unlock_scheduler();
+    interrupt_unlock(state);
+
+    yield();
 }

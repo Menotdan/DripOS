@@ -12,7 +12,7 @@ void timer_handler(int_reg_t *r) {
     global_ticks++;
     advance_time(); // Sleep queue
 
-    if (global_ticks % 8 == 0 && scheduler_enabled) {
+    if (global_ticks % 16 == 0 && scheduler_enabled) {
         schedule_bsp(r);
     }
 }

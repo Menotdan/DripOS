@@ -12,10 +12,14 @@ global atomic_dec
 ; spinlock_unlock(uint32_t *lock)
 
 spinlock_lock:
+    xor rax, rax
     lock bts dword [rdi], 0 ; If the bit is not set already, set it, and set the carry flag if it is set
     jc spin
     ret
 spin:
+    inc rax
+    cmp rax, 0x10000000
+    je deadlock
     pause
     test dword [rdi], 1 ; This will set the ZF if the bitwise and results in 0
     jnz spin ; If the lock is locked, keep spinning
@@ -42,3 +46,16 @@ atomic_dec:
     and rax, (1<<6)
     shr rax, 6
     ret
+
+extern deadlock_handler
+deadlock:
+    push rdi
+    push rdi ; align the stack :/
+
+    ; rdi is already set, so lets call the handler
+    xor rax, rax
+    call deadlock_handler
+
+    pop rdi
+    pop rdi
+    jmp spin ; rax is clear, lets continue

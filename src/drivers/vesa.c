@@ -6,7 +6,7 @@
 #include "drivers/serial.h"
 
 vesa_info_t vesa_display_info;
-lock_t vesa_lock = {0, 0};
+lock_t vesa_lock = {0, 0, 0};
 
 void init_vesa(stivale_info_t *bootloader_info) {
     bootloader_info = GET_HIGHER_HALF(stivale_info_t *, bootloader_info);
@@ -42,34 +42,34 @@ void init_vesa(stivale_info_t *bootloader_info) {
 }
 
 void put_pixel(uint64_t x, uint64_t y, color_t color) {
-    lock(vesa_lock);
     uint32_t color_dat = (color.r << vesa_display_info.red_shift) |
         (color.g << vesa_display_info.green_shift) |
         (color.b << vesa_display_info.blue_shift);
     
     uint64_t offset = (y * vesa_display_info.pitch) + (x * 4);
-    *(uint32_t *) ((uint64_t) vesa_display_info.framebuffer + offset) = color_dat;
+
+    lock(vesa_lock);
+    *(volatile uint32_t *) ((uint64_t) vesa_display_info.framebuffer + offset) = color_dat;
     unlock(vesa_lock);
 }
 
 void render_font(uint8_t font[128][8], char c, uint64_t x, uint64_t y, color_t fg, color_t bg) {
+    uint32_t color_dat_fg = (fg.r << vesa_display_info.red_shift) |
+                    (fg.g << vesa_display_info.green_shift) |
+                    (fg.b << vesa_display_info.blue_shift);
+    uint32_t color_dat_bg = (bg.r << vesa_display_info.red_shift) |
+                    (bg.g << vesa_display_info.green_shift) |
+                    (bg.b << vesa_display_info.blue_shift);
+
     lock(vesa_lock);
     for (uint8_t iy = 0; iy < 8; iy++) {
         for (uint8_t ix = 0; ix < 8; ix++) {
             if ((font[(uint8_t) c][iy] >> ix) & 1) {
-                uint32_t color_dat = (fg.r << vesa_display_info.red_shift) |
-                    (fg.g << vesa_display_info.green_shift) |
-                    (fg.b << vesa_display_info.blue_shift);
-                
                 uint64_t offset = ((iy + y) * vesa_display_info.pitch) + ((ix + x) * 4);
-                *(uint32_t *) ((uint64_t) vesa_display_info.framebuffer + offset) = color_dat;
-            } else {
-                uint32_t color_dat = (bg.r << vesa_display_info.red_shift) |
-                    (bg.g << vesa_display_info.green_shift) |
-                    (bg.b << vesa_display_info.blue_shift);
-                
+                *(uint32_t *) ((uint64_t) vesa_display_info.framebuffer + offset) = color_dat_fg;
+            } else {                
                 uint64_t offset = ((iy + y) * vesa_display_info.pitch) + ((ix + x) * 4);
-                *(uint32_t *) ((uint64_t) vesa_display_info.framebuffer + offset) = color_dat;
+                *(uint32_t *) ((uint64_t) vesa_display_info.framebuffer + offset) = color_dat_bg;
             }
         }
     }

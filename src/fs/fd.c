@@ -8,7 +8,7 @@
 
 fd_entry_t **fd_table;
 int fd_table_size = 0;
-lock_t fd_lock = {0, 0};
+lock_t fd_lock = {0, 0, 0};
 
 int fd_open(char *name, int mode) {
     vfs_node_t *node = vfs_open(name, mode);

@@ -45,6 +45,13 @@ typedef struct {
     uint8_t ring;
 } task_t;
 
+typedef struct kernel_worker_stack {
+    struct kernel_worker_stack *next;
+    struct kernel_worker_stack *prev;
+    task_t thread;    
+} worker_stack_t;
+
+
 typedef struct {
     char name[50]; // The name of the process
 
@@ -94,6 +101,8 @@ void start_test_user_task();
 void *get_thread_elem(uint64_t elem);
 void ref_thread_elem(uint64_t elem);
 void unref_thread_elem(uint64_t elem);
+void lock_scheduler();
+void unlock_scheduler();
 
 uint64_t get_thread_list_size();
 
