@@ -425,6 +425,7 @@ void configure_idt() {
     load_idt(); // Point to the IDT
     register_int_handler(32, timer_handler);
     register_int_handler(33, keyboard_handler);
+    register_int_handler(44, mouse_handler);
     register_int_handler(254, schedule);
     register_int_handler(253, schedule_ap);
     register_int_handler(252, isr_panic_idle);

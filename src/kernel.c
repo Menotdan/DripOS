@@ -17,6 +17,7 @@
 #include "drivers/vesa.h"
 #include "drivers/tty/tty.h"
 #include "drivers/pci.h"
+#include "drivers/ps2.h"
 
 #include "dripdbg/debug.h"
 
@@ -29,6 +30,7 @@
 #include "io/msr.h"
 
 #include "klibc/string.h"
+#include "klibc/math.h"
 #include "sys/smp.h"
 
 #include "fs/filesystems/echfs.h"
@@ -40,19 +42,22 @@ char *todo_list[TODO_LIST_SIZE] = {"Better syscall error handling", "Filesystem 
 // Testing sleep
 uint64_t delay = 5000;
 uint64_t y = 300;
+uint8_t random_num = 128;
+
+void random_thread() {
+    while (1) random_num = random(255);
+}
+
 void video_thread() {
-    uint64_t count = y;
-    y += 10;
-    uint64_t x = 0;
-    color_t color = {0, 255, 0};
     while (1) {
-        while (x != vesa_display_info.width) {
-            put_pixel(x++, count, color);
+        for (uint64_t y = 0; y < vesa_display_info.height; y++) {
+            for (uint64_t x = 0; x < vesa_display_info.width; x++) {
+                color_t color = {random_num, random_num, random_num};
+                put_pixel(x, y, color);
+            }
+            sleep_ms(16);
+            flip_buffers();
         }
-        color.r += 1;
-        x = 0;
-        flip_buffers();
-        sleep_ms(20);
     }
 }
 
@@ -81,18 +86,20 @@ void kernel_task() {
 
     echfs_test("/dev/satadeva");
 
+    new_kernel_process("random", random_thread);
+    new_kernel_process("random", random_thread);
+    new_kernel_process("random", random_thread);
+    new_kernel_process("random", random_thread);
+    new_kernel_process("random", random_thread);
+    new_kernel_process("random", random_thread);
+    new_kernel_process("random", random_thread);
+    new_kernel_process("Video", video_thread);
+
     kprintf("\nMemory used: %lu bytes", pmm_get_used_mem());
+    mouse_setup();
+
     kprintf("\n[DripOS] Loading binary from disk.\n");
     launch_binary("/echfs_mount/programs/program_1.bin");
-
-    new_kernel_process("Screen", video_thread);
-    new_kernel_process("Screen", video_thread);
-    new_kernel_process("Screen", video_thread);
-    new_kernel_process("Screen", video_thread);
-    new_kernel_process("Screen", video_thread);
-    new_kernel_process("Screen", video_thread);
-    new_kernel_process("Screen", video_thread);
-    new_kernel_process("Screen", video_thread);
 
     // while (1) {
     //     sleep_ms(100);

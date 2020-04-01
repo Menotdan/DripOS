@@ -4,10 +4,13 @@
 #include "klibc/string.h"
 #include "drivers/serial.h"
 #include "drivers/tty/tty.h"
+#include "cpuid.h"
 #include <stddef.h>
 
 lock_t vmm_spinlock = {0, 0, 0}; // Spinlock for the VMM
 uint64_t base_kernel_cr3 = 0;
+
+uint64_t cache_line_size = 0;
 
 uint64_t vmm_get_pml4t() {
     uint64_t ret;
@@ -21,6 +24,29 @@ void vmm_set_pml4t(uint64_t new) {
 
 void vmm_invlpg(uint64_t new) {
     asm volatile("invlpg (%0);" ::"r"(new) : "memory");
+}
+
+void vmm_clflush(void *addr, uint64_t count) {
+    if (!cache_line_size) {
+        uint64_t a,b,c,d;
+        __cpuid(1, a, b, c, d);
+        cache_line_size = (b >> 8) & 0xff;
+
+        // UNUSED
+        (void) a;
+        (void) c;
+        (void) d;
+    }
+    uint64_t cur_addr = ((uint64_t) addr / cache_line_size) * cache_line_size; // Round down to align
+    uint64_t end_byte = (uint64_t) addr + count;
+    uint64_t real_end = ((end_byte + cache_line_size - 1) / cache_line_size) * cache_line_size; // Round up
+    uint64_t real_count = (real_end - cur_addr) / cache_line_size;
+
+    while (real_count) {
+        asm volatile("invlpg (%0);" ::"r"(cur_addr) : "memory");
+        cur_addr += cache_line_size;
+        real_count--;
+    }
 }
 
 pt_off_t vmm_virt_to_offs(void *virt) {

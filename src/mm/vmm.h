@@ -54,9 +54,9 @@ uint8_t is_mapped(void *data);
 uint8_t range_mapped(void *data, uint64_t size);
 uint64_t vmm_get_pml4t();
 
-void *vmm_fork(void *old);
+void vmm_clflush(void *addr, uint64_t count);
+
 void *vmm_fork_higher_half(void *old);
-void *vmm_fork_lower_half(void *old);
 
 uint64_t get_entry(pt_t *cur_table, uint64_t offset);
 
