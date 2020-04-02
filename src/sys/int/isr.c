@@ -91,9 +91,7 @@ void isr_handler(int_reg_t *r) {
     // If we make it here, send an EOI to our LAPIC
     write_lapic(0xB0, 0);
 
-    if (r->rip < KERNEL_VMA_OFFSET && r->cs == 0x8) {
-        panic("RIP bad!");
-    }
+    //sprintf("\nCS: %lx, RIP: %lx", r->cs, r->rip);
 }
 
 void panic_handler(int_reg_t *r) {

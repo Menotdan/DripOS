@@ -19,6 +19,7 @@ void insert_to_queue(uint64_t ticks, int64_t tid) {
     sleep_queue_t *cur = &base_queue;
 
     while (1) {
+        sprintf("\nBoop");
         total += cur->time_left;
 
         if (!cur->next) {
@@ -60,18 +61,17 @@ void advance_time() {
     if (cur) {
         cur->time_left--;
         while (cur && cur->time_left == 0) {
+            sprintf("\nBoop2");
             sleep_queue_t *next = cur->next;
             UNCHAIN_LINKED_LIST(cur);
             int64_t tid = cur->tid;
             kfree(cur);
 
-            ref_thread_elem(tid);
             task_t *thread = get_thread_elem(tid);
             if (thread) { // In case the thread was killed in it's sleep
                 sprintf("\nState: %lu", thread->state);
-                thread->state = READY;
+                //thread->state = READY;
             }
-            unref_thread_elem(tid);
 
             cur = next;
         }
@@ -86,7 +86,7 @@ void sleep_ms(uint64_t ms) {
     sprintf("\nInserting to queue");
     insert_to_queue(ms, get_cpu_locals()->current_thread->tid); // Insert to the thread sleep queue
     sprintf("\nIn queue");
-    get_cpu_locals()->current_thread->state = SLEEP;
+    //get_cpu_locals()->current_thread->state = SLEEP;
     sprintf("\nSleeping");
     unlock_scheduler();
     interrupt_unlock(state);

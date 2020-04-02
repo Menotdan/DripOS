@@ -42,22 +42,31 @@ char *todo_list[TODO_LIST_SIZE] = {"Better syscall error handling", "Filesystem 
 // Testing sleep
 uint64_t delay = 5000;
 uint64_t y = 300;
-uint8_t random_num = 128;
-
-void random_thread() {
-    while (1) random_num = random(255);
-}
 
 void video_thread() {
+    uint8_t *data = kcalloc(vesa_display_info.height);
+    color_t color = {0, 0, 0};
     while (1) {
+        for (uint64_t i = 0; i < vesa_display_info.height; i++) data[i] = random(254) + 1;
+        uint64_t index;
+        
         for (uint64_t y = 0; y < vesa_display_info.height; y++) {
-            for (uint64_t x = 0; x < vesa_display_info.width; x++) {
-                color_t color = {random_num, random_num, random_num};
-                put_pixel(x, y, color);
+            while (1) {
+                index = random(vesa_display_info.height);
+                if (data[index]) break;
             }
-            sleep_ms(16);
-            flip_buffers();
+
+            color.r = data[index];
+            color.g = data[index];
+            color.b = data[index];
+            data[index] = 0;
+
+            for (uint64_t x = y; x < vesa_display_info.height; x++) {
+                put_pixel(y, x, color);
+            }
         }
+        flip_buffers();
+        sleep_ms(10);
     }
 }
 
@@ -86,13 +95,9 @@ void kernel_task() {
 
     echfs_test("/dev/satadeva");
 
-    new_kernel_process("random", random_thread);
-    new_kernel_process("random", random_thread);
-    new_kernel_process("random", random_thread);
-    new_kernel_process("random", random_thread);
-    new_kernel_process("random", random_thread);
-    new_kernel_process("random", random_thread);
-    new_kernel_process("random", random_thread);
+    new_kernel_process("Video", video_thread);
+    new_kernel_process("Video", video_thread);
+    new_kernel_process("Video", video_thread);
     new_kernel_process("Video", video_thread);
 
     kprintf("\nMemory used: %lu bytes", pmm_get_used_mem());
@@ -101,10 +106,10 @@ void kernel_task() {
     kprintf("\n[DripOS] Loading binary from disk.\n");
     launch_binary("/echfs_mount/programs/program_1.bin");
 
-    // while (1) {
-    //     sleep_ms(100);
-    //     sprintf("\nuwu");
-    // }
+    while (1) {
+        sleep_ms(10);
+        sprintf("\nuwu");
+    }
 
     sprintf("\ndone kernel work");
 

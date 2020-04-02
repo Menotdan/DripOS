@@ -41,9 +41,11 @@ void unref_thread_elem(uint64_t elem) {
 
 void lock_scheduler() {
     lock(scheduler_lock);
+    lock(tasks.lock);
 }
 
 void unlock_scheduler() {
+    unlock(tasks.lock);
     unlock(scheduler_lock);
 }
 
