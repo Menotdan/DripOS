@@ -70,7 +70,7 @@ void advance_time() {
             task_t *thread = get_thread_elem(tid);
             if (thread) { // In case the thread was killed in it's sleep
                 sprintf("\nState: %lu", thread->state);
-                //thread->state = READY;
+                thread->state = READY;
             }
 
             cur = next;

@@ -104,7 +104,7 @@ void kernel_task() {
     mouse_setup();
 
     kprintf("\n[DripOS] Loading binary from disk.\n");
-    launch_binary("/echfs_mount/programs/program_1.bin");
+    //launch_binary("/echfs_mount/programs/program_1.bin");
 
     while (1) {
         sleep_ms(10);
