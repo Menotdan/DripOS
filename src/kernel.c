@@ -113,10 +113,10 @@ void kernel_task() {
     kprintf("\n[DripOS] Loading binary from disk.\n");
     //launch_binary("/echfs_mount/programs/program_1.bin");
 
-    // while (1) {
-    //     sleep_ms(10);
-    //     sprintf("\nuwu");
-    // }
+    while (1) {
+        sleep_ms(10);
+        sprintf("\nuwu");
+    }
 
     sprintf("\ndone kernel work");
 

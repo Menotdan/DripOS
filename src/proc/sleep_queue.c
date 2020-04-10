@@ -71,6 +71,7 @@ void advance_time() {
             if (thread) { // In case the thread was killed in it's sleep
                 thread->state = READY;
             }
+            unref_thread_elem(tid);
 
             cur = next;
         }

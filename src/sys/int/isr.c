@@ -43,17 +43,17 @@ void isr_handler(int_reg_t *r) {
                 unlock(vesa_lock);
 
                 if (scheduler_enabled) {
-                    kprintf("\nException on core %u with apic id %u! (cur task %s with TID %ld)", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid);
+                    safe_kprintf("\nException on core %u with apic id %u! (cur task %s with TID %ld)", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid);
                 } else {
-                    kprintf("\nException on core %u with apic id %u!", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id);
+                    safe_kprintf("\nException on core %u with apic id %u!", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id);
                 }
-                kprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx CS: %lx\nSS: %lx RFLAGS: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2, r->cs, r->ss, r->rflags);
+                safe_kprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx CS: %lx\nSS: %lx RFLAGS: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2, r->cs, r->ss, r->rflags);
                 if (r->int_num == 14) {
-                    kprintf("\nERR Code: ");
-                    if (r->int_err & (1<<0)) { kprintf("P "); } else { kprintf("NP "); }
-                    if (r->int_err & (1<<1)) { kprintf("W "); } else { kprintf("R "); }
-                    if (r->int_err & (1<<2)) { kprintf("U "); } else { kprintf("S "); }
-                    if (r->int_err & (1<<3)) { kprintf("RES "); }
+                    safe_kprintf("\nERR Code: ");
+                    if (r->int_err & (1<<0)) { safe_kprintf("P "); } else { safe_kprintf("NP "); }
+                    if (r->int_err & (1<<1)) { safe_kprintf("W "); } else { safe_kprintf("R "); }
+                    if (r->int_err & (1<<2)) { safe_kprintf("U "); } else { safe_kprintf("S "); }
+                    if (r->int_err & (1<<3)) { safe_kprintf("RES "); }
                 }
 
                 while (1) { asm volatile("hlt"); }
@@ -102,13 +102,13 @@ void panic_handler(int_reg_t *r) {
     uint64_t cr2;
     asm volatile("movq %%cr2, %0;" : "=r"(cr2));
 
-    kprintf("\nPanic!\nReason: %s\n", r->rdi);
+    safe_kprintf("\nPanic!\nReason: %s\n", r->rdi);
     if (scheduler_enabled) {
-        kprintf("\nException on core %u with apic id %u! (cur task %s with TID %ld)", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid);
+        safe_kprintf("\nException on core %u with apic id %u! (cur task %s with TID %ld)", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid);
     } else {
-        kprintf("\nException on core %u with apic id %u!", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id);
+        safe_kprintf("\nException on core %u with apic id %u!", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id);
     }
-    kprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx CS: %lx\nSS: %lx RFLAGS: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2, r->cs, r->ss, r->rflags);
+    safe_kprintf("\nRAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx CS: %lx\nSS: %lx RFLAGS: %lx", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2, r->cs, r->ss, r->rflags);
 
     while (1) { asm volatile("hlt"); }
 }

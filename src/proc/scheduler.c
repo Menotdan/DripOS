@@ -28,7 +28,7 @@ uint64_t get_thread_list_size() {
 }
 
 void *get_thread_elem(uint64_t elem) {
-    return tasks.base[elem].data;
+    return dynarray_getelem(&tasks, elem);
 }
 
 void ref_thread_elem(uint64_t elem) {
@@ -41,11 +41,9 @@ void unref_thread_elem(uint64_t elem) {
 
 void lock_scheduler() {
     lock(scheduler_lock);
-    lock(tasks.lock);
 }
 
 void unlock_scheduler() {
-    unlock(tasks.lock);
     unlock(scheduler_lock);
 }
 

@@ -43,7 +43,7 @@ DripOS.img: kernel.elf
 	echfs-utils -m -p0 DripOS.img import qloader2.cfg qloader2.cfg
 
 	# Install qloader2
-	cd qloader2 && ./qloader2-install ../DripOS.img
+	cd qloader2 && ./qloader2-install qloader2.bin ../DripOS.img
 
 kernel.elf: ${NASM_SOURCES:.real=.bin} ${OBJ}
 	${CC} -Wl,-z,max-page-size=0x1000,--gc-sections -nostdlib -Werror -Wall -Wextra -Wpedantic -Wunused-function -o $@ -T linker.ld ${OBJ}
