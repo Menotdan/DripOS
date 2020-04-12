@@ -34,13 +34,13 @@ void isr_handler(int_reg_t *r) {
             vmm_set_pml4t(base_kernel_cr3); // Use base kernel CR3 in case the alternate CR3 is corrupted
             if (r->cs != 0x1B) {
                 /* Exception */
-                send_panic_ipis(); // Halt all other CPUs
-
                 uint64_t cr2;
                 asm volatile("movq %%cr2, %0;" : "=r"(cr2));
                 /* Ensure the display is not locked when we crash */
                 unlock(base_tty.tty_lock);
                 unlock(vesa_lock);
+
+                send_panic_ipis(); // Halt all other CPUs
 
                 if (scheduler_enabled) {
                     safe_kprintf("\nException on core %u with apic id %u! (cur task %s with TID %ld)", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid);
@@ -115,6 +115,7 @@ void panic_handler(int_reg_t *r) {
 
 void isr_panic_idle(int_reg_t *r) {
     (void) r;
+    kprintf_yieldless("CPU %u, Thread %ld\n", (uint32_t) get_cpu_locals()->cpu_index, get_cpu_locals()->current_thread->tid);
     while (1) { asm volatile("hlt"); }
 }
 
