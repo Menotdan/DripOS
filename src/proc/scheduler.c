@@ -385,6 +385,7 @@ void schedule(int_reg_t *r) {
     }
 
     if (tid_run != -1) {
+        assert(running_task->state == READY);
         running_task->state = RUNNING;
     }
 

@@ -19,7 +19,7 @@ void insert_to_queue(uint64_t ticks, int64_t tid) {
     sleep_queue_t *cur = &base_queue;
 
     while (1) {
-        sprintf("\nloop 2");
+        // sprintf("\nloop 2");
         total += cur->time_left;
 
         if (!cur->next) {
@@ -61,7 +61,7 @@ void advance_time() {
     if (cur) {
         cur->time_left--;
         while (cur && cur->time_left == 0) {
-            sprintf("\nloop 1");
+            // sprintf("\nloop 1");
             sleep_queue_t *next = cur->next;
             UNCHAIN_LINKED_LIST(cur);
             int64_t tid = cur->tid;
@@ -69,6 +69,7 @@ void advance_time() {
 
             task_t *thread = get_thread_elem(tid);
             if (thread) { // In case the thread was killed in it's sleep
+                assert(thread->state == SLEEP);
                 thread->state = READY;
             }
             unref_thread_elem(tid);
@@ -83,11 +84,12 @@ void advance_time() {
 void sleep_ms(uint64_t ms) {
     interrupt_state_t state = interrupt_lock();
     lock_scheduler();
-    sprintf("\nInserting to queue");
+    // sprintf("\nInserting to queue");
     insert_to_queue(ms, get_cpu_locals()->current_thread->tid); // Insert to the thread sleep queue
-    sprintf("\nIn queue");
-    //get_cpu_locals()->current_thread->state = SLEEP;
-    sprintf("\nSleeping");
+    // sprintf("\nIn queue");
+    assert(get_cpu_locals()->current_thread->state == RUNNING);
+    get_cpu_locals()->current_thread->state = SLEEP;
+    // sprintf("\nSleeping");
     unlock_scheduler();
     interrupt_unlock(state);
 

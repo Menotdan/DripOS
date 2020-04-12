@@ -72,9 +72,9 @@ uint64_t y = 300;
 
 void video_thread() {
     while (1) {
-        kprintf("test locks");
+        sleep_ms(10);
+        flip_buffers();
     }
-    
 }
 
 extern void sanity_thread_start();
@@ -102,10 +102,10 @@ void kernel_task() {
 
     echfs_test("/dev/satadeva");
 
-    // new_kernel_process("Video", video_thread);
-    // new_kernel_process("Video", video_thread);
-    // new_kernel_process("Video", video_thread);
-    // new_kernel_process("Video", video_thread);
+    new_kernel_process("Video", video_thread);
+    new_kernel_process("Video", video_thread);
+    new_kernel_process("Video", video_thread);
+    new_kernel_process("Video", video_thread);
 
     kprintf("\nMemory used: %lu bytes", pmm_get_used_mem());
     mouse_setup();
