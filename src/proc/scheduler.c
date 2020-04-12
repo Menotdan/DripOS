@@ -330,7 +330,7 @@ void schedule(int_reg_t *r) {
 
     if (running_task) {
         if (running_task->tid == get_cpu_locals()->idle_tid) {
-            end_idle(); // End idling for this CPU
+            end_idle(); // End idling timer for this CPU
         }
 
         running_task->regs.rax = r->rax;
@@ -425,7 +425,7 @@ void schedule(int_reg_t *r) {
     running_task->tsc_started = read_tsc();
 
     if (tid_run == -1) {
-        start_idle();
+        start_idle(); // Start idling timer
     }
 
     get_cpu_locals()->total_tsc = read_tsc();

@@ -102,10 +102,10 @@ void kernel_task() {
 
     echfs_test("/dev/satadeva");
 
-    new_kernel_process("Video", video_thread);
-    new_kernel_process("Video", video_thread);
-    new_kernel_process("Video", video_thread);
-    new_kernel_process("Video", video_thread);
+    // new_kernel_process("Video", video_thread);
+    // new_kernel_process("Video", video_thread);
+    // new_kernel_process("Video", video_thread);
+    // new_kernel_process("Video", video_thread);
 
     kprintf("\nMemory used: %lu bytes", pmm_get_used_mem());
     mouse_setup();
