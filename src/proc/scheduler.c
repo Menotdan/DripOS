@@ -327,7 +327,6 @@ void schedule(int_reg_t *r) {
     lock(scheduler_lock);
 
     task_t *running_task = get_cpu_locals()->current_thread;
-
     if (running_task) {
         if (running_task->tid == get_cpu_locals()->idle_tid) {
             end_idle(); // End idling timer for this CPU
@@ -364,15 +363,22 @@ void schedule(int_reg_t *r) {
         running_task->tsc_stopped = read_tsc();
         running_task->tsc_total += running_task->tsc_stopped - running_task->tsc_started;
 
+        if (running_task->running) {
+            running_task->running = 0;
+        }
+
         /* If we were previously running the task, then it is ready again since we are switching */
         if (running_task->state == RUNNING && running_task->tid != get_cpu_locals()->idle_tid) {
             running_task->state = READY;
+            log_debug("Set ready.");
+            assert(running_task->state == READY);
         }
 
         /* Unref the running task, so we can swap it out */
         dynarray_unref(&tasks, running_task->tid);
     }
 
+    // Run the next thread
     int64_t tid_run = pick_task();
 
     if (tid_run == -1) {
@@ -386,7 +392,11 @@ void schedule(int_reg_t *r) {
 
     if (tid_run != -1) {
         assert(running_task->state == READY);
+        assert(running_task->running == 0);
+        running_task->running = 1;
         running_task->state = RUNNING;
+        log_debug("Set running.");
+        assert(running_task->state == RUNNING);
     }
 
     r->rax = running_task->regs.rax;

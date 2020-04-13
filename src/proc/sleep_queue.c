@@ -69,8 +69,9 @@ void advance_time() {
 
             task_t *thread = get_thread_elem(tid);
             if (thread) { // In case the thread was killed in it's sleep
-                //assert(thread->state == SLEEP);
+                assert(thread->state == SLEEP);
                 thread->state = READY;
+                log_debug("Set ready.");
             }
             unref_thread_elem(tid);
 
@@ -88,7 +89,9 @@ void sleep_ms(uint64_t ms) {
 
     sprintf("\nState: %u", (uint32_t) get_cpu_locals()->current_thread->state);
     assert(get_cpu_locals()->current_thread->state == RUNNING);
-    //get_cpu_locals()->current_thread->state = SLEEP;
+    get_cpu_locals()->current_thread->state = SLEEP;
+    get_cpu_locals()->current_thread->running = 0;
+    log_debug("Set sleep.");
 
     unlock_scheduler();
     interrupt_unlock(state);

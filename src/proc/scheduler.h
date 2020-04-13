@@ -43,6 +43,8 @@ typedef struct {
     int64_t tid; // Task ID
     int64_t parent_pid; // The pid of the parent process
     uint8_t ring;
+
+    uint8_t running;
 } task_t;
 
 typedef struct kernel_worker_stack {

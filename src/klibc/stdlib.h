@@ -2,9 +2,13 @@
 #define KLIBC_STDLIB_H
 #include <stdint.h>
 #include "klibc/string.h"
+#include "drivers/serial.h"
 
 #define UNUSED(param) if (param) {}
-#define assert(statement) do { if (!(statement)) { char assert_fail_msg[200] = "Assert failed. File: "; strcat(assert_fail_msg, __FILE__); strcat(assert_fail_msg, ", Function: "); strcat(assert_fail_msg, (char *) __FUNCTION__); panic(assert_fail_msg); } } while (0)
+#define stringify_param(x) #x
+#define stringify(x) stringify_param(x)
+#define assert(statement) do { if (!(statement)) { panic("Assert failed. File: " __FILE__ ", Line: " stringify(__LINE__)); } } while (0)
+#define log_debug(msg) do { sprintf("\nFile: " __FILE__ ", Line: " stringify(__LINE__) " [ Debug ] " msg); } while (0)
 
 void *kmalloc(uint64_t size);
 void kfree(void *addr);

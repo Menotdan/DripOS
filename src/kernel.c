@@ -114,7 +114,7 @@ void kernel_task() {
     //launch_binary("/echfs_mount/programs/program_1.bin");
 
     while (1) {
-        sleep_ms(10);
+        sleep_ms(1);
         sprintf("\nuwu");
     }
 
