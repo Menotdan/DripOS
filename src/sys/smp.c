@@ -38,11 +38,11 @@ void send_ipi(uint8_t ap, uint32_t ipi_number) {
     write_lapic(0x300, ipi_number);
 }
 
-void write_cpu_data32(uint16_t offset, uint32_t data) {
+static void write_cpu_data32(uint16_t offset, uint32_t data) {
     *(volatile uint32_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
 }
 
-void write_cpu_data64(uint16_t offset, uint64_t data) {
+static void write_cpu_data64(uint16_t offset, uint64_t data) {
     *(volatile uint64_t *) (0x500 + NORMAL_VMA_OFFSET + offset) = data;
 }
 

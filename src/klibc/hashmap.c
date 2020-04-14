@@ -3,7 +3,20 @@
 #include "klibc/linked_list.h"
 #include "klibc/string.h"
 
-uint64_t get_bucket_from_hash(uint64_t hash) {
+typedef struct hashmap_elem {
+    uint64_t key;
+    void *data;
+    struct hashmap_elem *next;
+    struct hashmap_elem *prev;
+    uint32_t ref_count;
+} hashmap_elem_t;
+
+typedef struct {
+    hashmap_elem_t *elements;
+} hashmap_bucket_t;
+
+
+static uint64_t get_bucket_from_hash(uint64_t hash) {
     return hash % HASHMAP_BUCKET_SIZE;
 }
 
@@ -12,7 +25,7 @@ hashmap_t *init_hashmap() {
     return ret;
 }
 
-hashmap_elem_t *hashmap_get_elem_dat(hashmap_t *hashmap, uint64_t key) {
+static hashmap_elem_t *hashmap_get_elem_dat(hashmap_t *hashmap, uint64_t key) {
     lock(hashmap->hashmap_lock);
     hashmap_elem_t *ret = (hashmap_elem_t *) 0;
 
@@ -32,7 +45,7 @@ done:
     return ret;
 }
 
-void hashmap_unref_elem(hashmap_elem_t *elem) {
+static void hashmap_unref_elem(hashmap_elem_t *elem) {
     if (!atomic_dec(&elem->ref_count)) {
         // If no more refs exist, remove the elem
         UNCHAIN_LINKED_LIST(elem);

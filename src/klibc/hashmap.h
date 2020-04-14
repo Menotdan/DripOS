@@ -5,18 +5,6 @@
 
 #define HASHMAP_BUCKET_SIZE 200
 
-typedef struct hashmap_elem {
-    uint64_t key;
-    void *data;
-    struct hashmap_elem *next;
-    struct hashmap_elem *prev;
-    uint32_t ref_count;
-} hashmap_elem_t;
-
-typedef struct {
-    hashmap_elem_t *elements;
-} hashmap_bucket_t;
-
 typedef struct {
     hashmap_bucket_t buckets[HASHMAP_BUCKET_SIZE];
     lock_t hashmap_lock;

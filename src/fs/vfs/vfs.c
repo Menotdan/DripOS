@@ -57,7 +57,7 @@ int dummy_seek(fd_entry_t *node, uint64_t offset, int whence) {
 vfs_ops_t dummy_ops = {dummy_open, dummy_close, dummy_read, dummy_write, dummy_seek};
 
 /* some nonsense string handling and stuff for getting a mountpoint ig */
-void attempt_mountpoint_handle(char *path) {
+static void attempt_mountpoint_handle(char *path) {
     char *local_path = kcalloc(strlen(path) + 1);
     char *filesystem_path = kcalloc(strlen(path) + 1);
     strcpy(path, local_path);
@@ -110,7 +110,7 @@ void attempt_mountpoint_handle(char *path) {
     kfree(filesystem_path);
 }
 
-uint8_t search_node_name(vfs_node_t *node, char *name) {
+static uint8_t search_node_name(vfs_node_t *node, char *name) {
     lock(vfs_lock);
     for (uint64_t i = 0; i < node->children_array_size; i++) {
         vfs_node_t *cur = node->children[i];

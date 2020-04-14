@@ -13,6 +13,111 @@
 #include "drivers/serial.h"
 #include "drivers/tty/tty.h"
 
+#define	SATA_SIG_ATA	0x00000101	// SATA drive
+#define	SATA_SIG_ATAPI	0xEB140101	// SATAPI drive
+#define	SATA_SIG_SEMB	0xC33C0101	// Enclosure management bridge
+#define	SATA_SIG_PM	0x96690101	// Port multiplier
+
+typedef enum {
+	FIS_TYPE_REG_H2D	= 0x27,	// Register FIS - host to device
+	FIS_TYPE_REG_D2H	= 0x34,	// Register FIS - device to host
+	FIS_TYPE_DMA_ACT	= 0x39,	// DMA activate FIS - device to host
+	FIS_TYPE_DMA_SETUP	= 0x41,	// DMA setup FIS - bidirectional
+	FIS_TYPE_DATA		= 0x46,	// Data FIS - bidirectional
+	FIS_TYPE_BIST		= 0x58,	// BIST activate FIS - bidirectional
+	FIS_TYPE_PIO_SETUP	= 0x5F,	// PIO setup FIS - device to host
+	FIS_TYPE_DEV_BITS	= 0xA1,	// Set device bits FIS - device to host
+} FIS_TYPE;
+
+typedef enum {
+    ATA_COMMAND_IDENTIFY      = 0xEC,
+    ATA_COMMAND_DMA_READ      = 0xC8,
+    ATA_COMMAND_DMA_EXT_READ  = 0x25,
+    ATA_COMMAND_DMA_WRITE     = 0xCA,
+    ATA_COMMAND_DMA_EXT_WRITE = 0x35,
+} ATA_COMMAND;
+
+typedef enum {
+    ATAPI_COMMAND_IDENTIFY = 0xA1,
+} ATAPI_COMMAND;
+
+/* Different FISes */
+typedef struct {
+    uint8_t type; // FIS_TYPE_REG_H2D
+    struct {
+        uint8_t pm_port : 4;
+        uint8_t reserved : 3;
+        uint8_t c : 1;
+    } flags;
+
+    uint8_t command;
+    uint8_t features;
+    uint8_t lba_0;
+    uint8_t lba_1;
+    uint8_t lba_2;
+    uint8_t dev_head;
+    uint8_t lba_3;
+    uint8_t lba_4;
+    uint8_t lba_5;
+    uint8_t features_exp;
+    uint8_t sector_count_low;
+    uint8_t sector_count_high;
+    uint8_t reserved;
+    uint8_t control;
+    uint8_t reserved_0[4];
+} __attribute__((packed)) ahci_h2d_fis_t;
+
+typedef volatile struct {
+    uint32_t cap;
+    uint32_t global_host_control;
+    uint32_t isr_status;
+    uint32_t port_implemented;
+    uint32_t version;
+    uint32_t ccc_control;
+    uint32_t ccc_ports;
+    uint32_t enclosure_location;
+    uint32_t enclosure_control;
+    uint32_t cap2;
+    uint32_t handoff_control;
+
+    uint8_t  reserved[0x74];
+    uint8_t  vendor[0x60];
+
+    ahci_port_t ports[32];
+} __attribute__((packed)) abar_data_t;
+
+typedef struct {
+    pci_device_t device;
+    abar_data_t *ahci_bar; // Where the AHCI memory is
+} ahci_controller_t;
+
+typedef struct {
+    struct {
+        uint32_t command_fis_len : 5;
+        uint32_t atapi : 1;
+        uint32_t write : 1;
+        uint32_t prefetchable : 1;
+        uint32_t sata_reset_control : 1;
+        uint32_t bist : 1;
+        uint32_t clear : 1;
+        uint32_t reserved : 1;
+        uint32_t pmp : 4;
+        uint32_t prdt_count : 16;
+    } __attribute__((packed)) flags;
+
+    uint32_t prdbc;
+
+    uint32_t command_entry_ptr;
+    uint32_t command_entry_ptr_upper;
+
+    uint8_t reserved[16];
+} __attribute__((packed)) ahci_command_header_t;
+
+typedef struct {
+    int index;
+    ahci_command_entry_t *data;
+} ahci_command_slot_t;
+
 dynarray_t ahci_controllers = {0, {0, 0, 0}, 0};
 
 uint8_t sata_device_count = 0;
@@ -80,14 +185,14 @@ int ahci_write(fd_entry_t *fd_data, void *buf, uint64_t count) {
     return 0;
 }
 
-uint8_t port_present(ahci_controller_t controller, uint8_t port) {
+static uint8_t port_present(ahci_controller_t controller, uint8_t port) {
     if (controller.ahci_bar->port_implemented & (1<<port)) {
         return 1;
     }
     return 0;
 }
 
-int ahci_get_controller_ownership(ahci_controller_t controller) {
+static int ahci_get_controller_ownership(ahci_controller_t controller) {
     uint16_t minor = controller.ahci_bar->version & 0xFFFF;
     uint8_t minor_2 = minor >> 8;
     uint16_t major = (controller.ahci_bar->version >> 16) & 0xFFFF;
@@ -121,7 +226,7 @@ int ahci_get_controller_ownership(ahci_controller_t controller) {
     return 0; // success i guess
 }
 
-int ahci_stop_cmd(ahci_port_t *port) {
+static int ahci_stop_cmd(ahci_port_t *port) {
     port->command &= ~(1<<0); // Clear the ST bit
     port->command &= ~(1<<4); // Clear the FRE bit
 
@@ -135,7 +240,7 @@ int ahci_stop_cmd(ahci_port_t *port) {
     return 0;
 }
 
-int ahci_start_cmd(ahci_port_t *port) {
+static int ahci_start_cmd(ahci_port_t *port) {
     port->command |= (1<<0); // Set the ST bit
     port->command |= (1<<4); // Set the FRE bit
 
@@ -148,7 +253,7 @@ int ahci_start_cmd(ahci_port_t *port) {
     return 0;
 }
 
-int ahci_find_command_slot(ahci_port_data_t *port) {
+static int ahci_find_command_slot(ahci_port_data_t *port) {
     for (int i = 0; i < port->command_slot_count; i++) {
         if (!(port->port->command_issued & (1<<i)))
             return i; // If that command is not issued
@@ -156,7 +261,7 @@ int ahci_find_command_slot(ahci_port_data_t *port) {
     return -1;
 }
 
-ahci_command_slot_t ahci_allocate_command_slot(ahci_port_data_t *port, uint64_t fis_size) {
+static ahci_command_slot_t ahci_allocate_command_slot(ahci_port_data_t *port, uint64_t fis_size) {
     ahci_command_slot_t ret = {-1, (ahci_command_entry_t *) 0};
 
     int index = ahci_find_command_slot(port);
@@ -191,11 +296,11 @@ ahci_command_slot_t ahci_allocate_command_slot(ahci_port_data_t *port, uint64_t 
     return ret;
 }
 
-void ahci_free_command_slot(ahci_command_entry_t *command, uint64_t fis_size) {
+static void ahci_free_command_slot(ahci_command_entry_t *command, uint64_t fis_size) {
     pmm_unalloc((void *) command, fis_size);
 }
 
-ahci_command_header_t *ahci_get_cmd_header(ahci_port_data_t *port, uint8_t slot) {
+static ahci_command_header_t *ahci_get_cmd_header(ahci_port_data_t *port, uint8_t slot) {
     uint64_t header_address = (uint64_t) (port->port->command_list_base | 
         ((uint64_t) port->port->command_list_base_upper << 32));
     ahci_command_header_t *headers = GET_HIGHER_HALF(ahci_command_header_t *, header_address);
@@ -203,7 +308,7 @@ ahci_command_header_t *ahci_get_cmd_header(ahci_port_data_t *port, uint8_t slot)
     return headers + slot;
 }
 
-void ahci_fill_prdt(ahci_port_data_t *port, void *phys, ahci_prdt_entry_t *prdt) {
+static void ahci_fill_prdt(ahci_port_data_t *port, void *phys, ahci_prdt_entry_t *prdt) {
     prdt->data_base = (uint64_t) phys & 0xFFFFFFFF;
 
     if (port->addresses_64) {
@@ -217,22 +322,22 @@ void ahci_fill_prdt(ahci_port_data_t *port, void *phys, ahci_prdt_entry_t *prdt)
     }
 }
 
-void ahci_issue_command(ahci_port_data_t *port, int command_slot) {
+static void ahci_issue_command(ahci_port_data_t *port, int command_slot) {
     port->port->command_issued |= (1<<command_slot);
 }
  
-void ahci_wait_ready(ahci_port_data_t *port) {
+static void ahci_wait_ready(ahci_port_data_t *port) {
     while (port->port->task_file & (1<<3) && port->port->task_file & (1<<7))
         asm volatile("pause");
 }
 
-void ahci_comreset_port(ahci_port_data_t *port) {
+static void ahci_comreset_port(ahci_port_data_t *port) {
     port->port->sata_control = (port->port->sata_control & ~(0b1111)) | 0x1; // COMRESET
     sleep_no_task(2); // Delay
     port->port->sata_control = port->port->sata_control & ~(0b1111); // Resume normal state
 }
 
-void ahci_reset_command_engine(ahci_port_data_t *port) {
+static void ahci_reset_command_engine(ahci_port_data_t *port) {
     /* TODO: Retry running commands, except the one that errored */
     // uint32_t running_commands = port->port->command_issued;
 
@@ -253,7 +358,7 @@ void ahci_reset_command_engine(ahci_port_data_t *port) {
         asm volatile("pause");
 }
 
-int ahci_wait_command(ahci_port_data_t *port, int command_slot) {
+static int ahci_wait_command(ahci_port_data_t *port, int command_slot) {
     while (port->port->command_issued & (1<<command_slot)) {
         asm volatile("pause");
 
@@ -271,7 +376,7 @@ int ahci_wait_command(ahci_port_data_t *port, int command_slot) {
     return 0;
 }
 
-void ahci_enable_present_devs(ahci_controller_t controller) {
+static void ahci_enable_present_devs(ahci_controller_t controller) {
     // Find devices
     for (uint8_t p = 0; p < 32; p++) {
         if (port_present(controller, p)) {

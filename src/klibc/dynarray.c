@@ -73,34 +73,3 @@ out:
     unlock(dynarray->lock);
     return ret;
 }
-
-
-/* TODO: reimplement this when needed */
-
-// #define dynarray_search(type, dynarray, i_ptr, cond, index) ({
-//     __label__ fnd;
-//     __label__ out;
-//     type *ret = NULL;
-//
-//     lock(&dynarray##_lock); 
-//
-//     size_t i;
-//     size_t j = 0;
-//     for (i = 0; i < dynarray##_i; i++) {
-//         if (!dynarray[i] || !dynarray[i]->present)
-//             continue;
-//         type *elem = &dynarray[i]->data;
-//         if ((cond) && j++ == (index))
-//             goto fnd;
-//     }
-//     goto out;
-//
-// fnd:
-//     ret = &dynarray[i]->data;
-//     atomic_inc(&dynarray[i]->refcount);
-//     *(i_ptr) = i;
-//
-// out:
-//     unlock(&dynarray##_lock);
-//     ret;
-// })

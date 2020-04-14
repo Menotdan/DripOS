@@ -14,21 +14,21 @@ uint64_t available_memory = 0;
 
 lock_t pmm_lock = {0, 0, 0};
 
-void pmm_set_bit(uint64_t page) {
+static void pmm_set_bit(uint64_t page) {
     uint8_t bit = page & 0b111;
     uint64_t byte = page & ~(0b111);
 
     bitmap[byte] |= (1<<bit);
 }
 
-void pmm_clear_bit(uint64_t page) {
+static void pmm_clear_bit(uint64_t page) {
     uint8_t bit = page & 0b111;
     uint64_t byte = page & ~(0b111);
 
     bitmap[byte] &= ~(1<<bit);
 }
 
-uint8_t pmm_get_bit(uint64_t page) {
+static uint8_t pmm_get_bit(uint64_t page) {
     uint8_t bit = page & 0b111;
     uint64_t byte = page & ~(0b111);
 
@@ -110,7 +110,7 @@ void pmm_memory_setup(stivale_info_t *bootloader_info) {
     base_kernel_cr3 = vmm_get_pml4t();
 }
 
-uint64_t find_free_page(uint64_t pages) {
+static uint64_t find_free_page(uint64_t pages) {
     uint64_t found_pages = 0;
     uint64_t first_page = 0;
 

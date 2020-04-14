@@ -18,7 +18,7 @@ void register_int_handler(uint8_t n, int_handler_t handler) {
     handlers[n] = handler;
 }
 
-void send_panic_ipis() {
+static void send_panic_ipis() {
     madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
     for (uint64_t i = 0; i < cpu_vector.items_count; i++) {
         if ((cpus[i]->cpu_flags & 1 || cpus[i]->cpu_flags & 2) && cpus[i]->apic_id != get_lapic_id()) {

@@ -5,11 +5,23 @@
 
 #include "drivers/serial.h"
 
-uint64_t str_get_bucket_from_hash(uint64_t hash) {
+typedef struct strhashmap_elem {
+    char *key;
+    void *data;
+    struct strhashmap_elem *next;
+    struct strhashmap_elem *prev;
+    uint32_t ref_count;
+} strhashmap_elem_t;
+
+typedef struct {
+    strhashmap_elem_t *elements;
+} strhashmap_bucket_t;
+
+static uint64_t str_get_bucket_from_hash(uint64_t hash) {
     return hash % STRHASHMAP_BUCKET_SIZE;
 }
 
-uint64_t get_hash_from_str(char *str) {
+static uint64_t get_hash_from_str(char *str) {
     uint64_t hash = 5381;
     int c;
 
@@ -45,7 +57,7 @@ done:
     return ret;
 }
 
-void strhashmap_unref_elem(strhashmap_elem_t *elem) {
+static void strhashmap_unref_elem(strhashmap_elem_t *elem) {
     if (!atomic_dec(&elem->ref_count)) {
         // If no more refs exist, remove the elem
         UNCHAIN_LINKED_LIST(elem);

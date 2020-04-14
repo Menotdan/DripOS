@@ -11,7 +11,7 @@
 lock_t sleep_queue_lock = {0, 0, 0};
 sleep_queue_t base_queue = {0, 0, 0, 0};
 
-void insert_to_queue(uint64_t ticks, int64_t tid) {
+static void insert_to_queue(uint64_t ticks, int64_t tid) {
     interrupt_state_t state = interrupt_lock();
     lock(sleep_queue_lock);
 
@@ -72,6 +72,10 @@ void advance_time() {
                 assert(thread->state == SLEEP);
                 thread->state = READY;
                 log_debug("Set ready.");
+                sprintf(" TID: %ld, CPU: %u", tid, get_cpu_locals()->cpu_index);
+                thread->running = 0;
+                log_debug("Turned off running.");
+                sprintf(" TID: %ld, CPU: %u", tid, get_cpu_locals()->cpu_index);
             }
             unref_thread_elem(tid);
 
@@ -90,8 +94,8 @@ void sleep_ms(uint64_t ms) {
     sprintf("\nState: %u", (uint32_t) get_cpu_locals()->current_thread->state);
     assert(get_cpu_locals()->current_thread->state == RUNNING);
     get_cpu_locals()->current_thread->state = SLEEP;
-    get_cpu_locals()->current_thread->running = 0;
     log_debug("Set sleep.");
+    sprintf(" TID: %ld, CPU: %u", get_cpu_locals()->current_thread->tid, get_cpu_locals()->cpu_index);
 
     unlock_scheduler();
     interrupt_unlock(state);

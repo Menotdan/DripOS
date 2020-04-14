@@ -63,7 +63,7 @@ void yield() {
 }
 
 void panic(char *msg) {
-    sprintf("\nPanic with msg: %s", msg);
+    //sprintf("\nPanic with msg: %s", msg);
     asm volatile("mov %0, %%rdi; int $251;" ::"r"(msg) : "memory");
 
     // We shouldnt return

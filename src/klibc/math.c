@@ -7,10 +7,8 @@ int64_t abs(int64_t in) {
     return in;
 }
 
-
-
 /* MurmurHash2 algo */
-uint64_t psuedo_random(const void *key, uint64_t len, uint64_t seed) {
+static uint64_t psuedo_random(const void *key, uint64_t len, uint64_t seed) {
     // Some constants that happen to work well
 	const uint64_t m = 0x5bd1e995;
 	const int r = 24;
@@ -58,7 +56,7 @@ uint64_t psuedo_random(const void *key, uint64_t len, uint64_t seed) {
 }
 
 
-uint64_t current_seed = 0x464ef75;
+uint64_t current_seed = 0x464ef75ff3e552af;
 
 /* The truely epic random generator */
 uint64_t random(uint64_t max) {

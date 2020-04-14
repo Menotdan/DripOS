@@ -365,12 +365,15 @@ void schedule(int_reg_t *r) {
 
         if (running_task->running) {
             running_task->running = 0;
+            log_debug("Turned off running.");
+            sprintf(" TID: %ld, CPU: %u", running_task->tid, get_cpu_locals()->cpu_index);
         }
 
         /* If we were previously running the task, then it is ready again since we are switching */
         if (running_task->state == RUNNING && running_task->tid != get_cpu_locals()->idle_tid) {
             running_task->state = READY;
             log_debug("Set ready.");
+            sprintf(" TID: %ld, CPU: %u", running_task->tid, get_cpu_locals()->cpu_index);
             assert(running_task->state == READY);
         }
 
@@ -394,8 +397,11 @@ void schedule(int_reg_t *r) {
         assert(running_task->state == READY);
         assert(running_task->running == 0);
         running_task->running = 1;
+        log_debug("Set the running member.");
+        sprintf(" TID: %ld, CPU: %u", running_task->tid, get_cpu_locals()->cpu_index);
         running_task->state = RUNNING;
         log_debug("Set running.");
+        sprintf(" TID: %ld, CPU: %u", running_task->tid, get_cpu_locals()->cpu_index);
         assert(running_task->state == RUNNING);
     }
 

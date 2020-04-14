@@ -5,18 +5,6 @@
 
 #define STRHASHMAP_BUCKET_SIZE 200
 
-typedef struct strhashmap_elem {
-    char *key;
-    void *data;
-    struct strhashmap_elem *next;
-    struct strhashmap_elem *prev;
-    uint32_t ref_count;
-} strhashmap_elem_t;
-
-typedef struct {
-    strhashmap_elem_t *elements;
-} strhashmap_bucket_t;
-
 typedef struct {
     strhashmap_bucket_t buckets[STRHASHMAP_BUCKET_SIZE];
     lock_t hashmap_lock;
