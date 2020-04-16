@@ -2,6 +2,7 @@
 #include "klibc/dynarray.h"
 #include "klibc/stdlib.h"
 #include "klibc/string.h"
+#include "klibc/queue.h"
 #include "drivers/tty/tty.h"
 #include "drivers/serial.h"
 #include "io/msr.h"
@@ -17,6 +18,7 @@ worker_stack_t worker_stack;
 
 dynarray_t tasks;
 dynarray_t processes;
+
 uint8_t scheduler_enabled = 0;
 lock_t scheduler_lock = {0, 0, 0};
 
@@ -381,8 +383,11 @@ void schedule(int_reg_t *r) {
         dynarray_unref(&tasks, running_task->tid);
     }
 
+    log_debug("Picking new thread");
+    sprintf(", Core: %u", get_cpu_locals()->cpu_index);
     // Run the next thread
     int64_t tid_run = pick_task();
+    log_debug("Picked");
 
     if (tid_run == -1) {
         /* Idle */
@@ -404,6 +409,7 @@ void schedule(int_reg_t *r) {
         sprintf(" TID: %ld, CPU: %u", running_task->tid, get_cpu_locals()->cpu_index);
         assert(running_task->state == RUNNING);
     }
+    log_debug("Setting the thread state");
 
     r->rax = running_task->regs.rax;
     r->rbx = running_task->regs.rbx;
@@ -428,15 +434,21 @@ void schedule(int_reg_t *r) {
     r->cs = running_task->regs.cs;
     r->ss = running_task->regs.ss;
 
+    log_debug("Set registers");
+
     write_msr(0xC0000100, running_task->regs.fs); // Set FS.base
+    log_debug("Set FS");
+
 
     get_thread_locals()->tid = running_task->tid;
     get_cpu_locals()->thread_kernel_stack = running_task->kernel_stack;
     get_cpu_locals()->thread_user_stack = running_task->user_stack;
+    log_debug("Set locals");
 
     if (vmm_get_pml4t() != running_task->regs.cr3) {
         vmm_set_pml4t(running_task->regs.cr3);
     }
+    log_debug("Set pml4t");
 
     running_task->tsc_started = read_tsc();
 
@@ -445,6 +457,8 @@ void schedule(int_reg_t *r) {
     }
 
     get_cpu_locals()->total_tsc = read_tsc();
+
+    log_debug("Done");
 
     unlock(scheduler_lock);
 }

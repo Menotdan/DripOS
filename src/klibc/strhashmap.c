@@ -5,18 +5,6 @@
 
 #include "drivers/serial.h"
 
-typedef struct strhashmap_elem {
-    char *key;
-    void *data;
-    struct strhashmap_elem *next;
-    struct strhashmap_elem *prev;
-    uint32_t ref_count;
-} strhashmap_elem_t;
-
-typedef struct {
-    strhashmap_elem_t *elements;
-} strhashmap_bucket_t;
-
 static uint64_t str_get_bucket_from_hash(uint64_t hash) {
     return hash % STRHASHMAP_BUCKET_SIZE;
 }

@@ -11,4 +11,10 @@
     if(new_elem->next) new_elem->next->prev = new_elem; \
     after->next = new_elem;
 
+#define CHAIN_LINKED_LIST_BEFORE(before, new_elem)      \
+    if (before->prev) before->prev->next = new_elem;    \
+    new_elem->prev = before->prev;                      \
+    new_elem->next = before;                            \
+    before->prev = new_elem;
+
 #endif

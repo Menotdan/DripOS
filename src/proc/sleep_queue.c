@@ -55,8 +55,8 @@ static void insert_to_queue(uint64_t ticks, int64_t tid) {
 }
 
 void advance_time() {
-    lock_scheduler();
     lock(sleep_queue_lock);
+    lock_scheduler();
     sleep_queue_t *cur = base_queue.next;
     if (cur) {
         cur->time_left--;
@@ -82,15 +82,16 @@ void advance_time() {
             cur = next;
         }
     }
-    unlock(sleep_queue_lock);
     unlock_scheduler();
+    unlock(sleep_queue_lock);
 }
 
 void sleep_ms(uint64_t ms) {
     interrupt_state_t state = interrupt_lock();
-    lock_scheduler();
+    log_debug("Inserting to queue");
     insert_to_queue(ms, get_cpu_locals()->current_thread->tid); // Insert to the thread sleep queue
-
+    log_debug("Inserted to queue");
+    lock_scheduler();
     sprintf("\nState: %u", (uint32_t) get_cpu_locals()->current_thread->state);
     assert(get_cpu_locals()->current_thread->state == RUNNING);
     get_cpu_locals()->current_thread->state = SLEEP;
@@ -98,7 +99,11 @@ void sleep_ms(uint64_t ms) {
     sprintf(" TID: %ld, CPU: %u", get_cpu_locals()->current_thread->tid, get_cpu_locals()->cpu_index);
 
     unlock_scheduler();
-    interrupt_unlock(state);
-
+    assert(check_interrupts() == 0);
+    lock(sleep_queue_lock); // Prevent the sleep queue from setting ready
+    log_debug("Yielding");
     yield(); // Leave in case the scheduler hasn't scheduled us out itself
+    log_debug("Yielded");
+    unlock(sleep_queue_lock);
+    interrupt_unlock(state);
 }
