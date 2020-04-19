@@ -11,7 +11,10 @@ void syscall_write(syscall_reg_t *r);
 void syscall_open(syscall_reg_t *r);
 void syscall_close(syscall_reg_t *r);
 void syscall_seek(syscall_reg_t *r);
+void syscall_nanosleep(syscall_reg_t *r);
 void syscall_empty(syscall_reg_t *r);
+
+void init_syscalls();
 
 extern uint64_t memcpy_from_userspace(void *dst, void *src, uint64_t byte_count);
 extern uint64_t strcpy_from_userspace(char *dst, char *src);

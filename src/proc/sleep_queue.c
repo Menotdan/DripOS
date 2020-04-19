@@ -2,9 +2,11 @@
 #include "drivers/pit.h"
 #include "proc/scheduler.h"
 #include "sys/smp.h"
+#include "mm/vmm.h"
 #include "klibc/stdlib.h"
 #include "klibc/lock.h"
 #include "klibc/linked_list.h"
+#include "klibc/errno.h"
 
 #include "drivers/serial.h"
 
@@ -93,4 +95,26 @@ void sleep_ms(uint64_t ms) {
     force_unlocked_schedule(); // Leave in case the scheduler hasn't scheduled us out itself
 
     interrupt_unlock(state);
+}
+
+/* Nanosleep syscall */
+int nanosleep(struct timespec *req, struct timespec *rem) {
+    if (!range_mapped(req, sizeof(struct timespec))) {
+        get_thread_locals()->errno = -EFAULT;
+        return 1;
+    }
+    
+    if (!range_mapped(rem, sizeof(struct timespec)) && rem) {
+        get_thread_locals()->errno = -EFAULT;
+        return 1;
+    }
+
+    if (req->nanoseconds > 999999999) {
+        get_thread_locals()->errno = -EINVAL;
+        return 1;
+    }
+    sprintf("\nSleeping for %lu ms", (req->nanoseconds / 1000000) + (req->seconds * 1000));
+    sleep_ms((req->nanoseconds / 1000000) + (req->seconds * 1000));
+
+    return 0;
 }

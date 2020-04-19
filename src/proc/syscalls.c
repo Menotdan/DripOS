@@ -1,22 +1,50 @@
 #include "syscalls.h"
 #include "fs/fd.h"
 #include "proc/scheduler.h"
+#include "proc/sleep_queue.h"
 #include "klibc/errno.h"
+#include "klibc/stdlib.h"
 
 #include "drivers/serial.h"
 
-#define HANDLER_COUNT 9
+int HANDLER_COUNT = 0;
 typedef void (*syscall_handler_t)(syscall_reg_t *r);
 
-syscall_handler_t syscall_handlers[] = {syscall_read, syscall_write, syscall_open, syscall_close, syscall_empty, 
-    syscall_empty, syscall_empty, syscall_empty, syscall_seek};
+syscall_handler_t *syscall_handlers = 0;
+
+void register_syscall(int num, syscall_handler_t handler) {
+    if (HANDLER_COUNT < num+1) {
+        syscall_handlers = krealloc(syscall_handlers, sizeof(syscall_handler_t)*(num+1));
+        HANDLER_COUNT = num+1;
+        for (int i = 0; i < HANDLER_COUNT; i++) {
+            if (!syscall_handlers[i]) {
+                syscall_handlers[i] = syscall_empty;
+            }
+        }
+    }
+
+    syscall_handlers[num] = handler;
+}
+
+void init_syscalls() {
+    register_syscall(0, syscall_read);
+    register_syscall(1, syscall_write);
+    register_syscall(2, syscall_open);
+    register_syscall(3, syscall_close);
+    register_syscall(8, syscall_seek);
+    register_syscall(35, syscall_nanosleep);
+}
 
 void syscall_handler(syscall_reg_t *r) {
     sprintf("\nGot syscall with rax = %lx", r->rax);
-    if (r->rax < HANDLER_COUNT) {
+    if (r->rax < (uint64_t) HANDLER_COUNT) {
         get_thread_locals()->errno = 0; // Clear errno
         syscall_handlers[r->rax](r);
     }
+}
+
+void syscall_nanosleep(syscall_reg_t *r) {
+    r->rax = nanosleep((struct timespec *) r->rdi, (struct timespec *) r->rsi);
 }
 
 void syscall_read(syscall_reg_t *r) {

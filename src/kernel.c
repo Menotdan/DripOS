@@ -27,6 +27,7 @@
 #include "proc/scheduler.h"
 #include "proc/exec_formats/raw_binary.h"
 #include "proc/sleep_queue.h"
+#include "proc/syscalls.h"
 #include "io/msr.h"
 
 #include "klibc/string.h"
@@ -75,21 +76,21 @@ void kernel_task() {
 
     echfs_test("/dev/satadeva");
 
-    new_kernel_process("Video", video_thread);
-    new_kernel_process("Video", video_thread);
-    new_kernel_process("Video", video_thread);
-    new_kernel_process("Video", video_thread);
+    // new_kernel_process("Video", video_thread);
+    // new_kernel_process("Video", video_thread);
+    // new_kernel_process("Video", video_thread);
+    // new_kernel_process("Video", video_thread);
 
     kprintf("\nMemory used: %lu bytes", pmm_get_used_mem());
     mouse_setup();
 
     kprintf("\n[DripOS] Loading binary from disk.\n");
-    //launch_binary("/echfs_mount/programs/program_1.bin");
+    launch_binary("/echfs_mount/programs/sleep_test3.bin");
 
-    while (1) {
-        sleep_ms(1);
-        sprintf("\nuwu");
-    }
+    // while (1) {
+    //     sleep_ms(1);
+    //     sprintf("\nuwu");
+    // }
 
     sprintf("\ndone kernel work");
 
@@ -144,6 +145,8 @@ void kmain(stivale_info_t *bootloader_info) {
     sprintf("\n[DripOS] Launching all SMP cores...");
     launch_cpus();
     sprintf("\n[DripOS] Finished loading SMP cores.");
+
+    init_syscalls();
 
     tty_clear(&base_tty);
 

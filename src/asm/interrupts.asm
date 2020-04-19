@@ -54,26 +54,8 @@ pop rbx
 pop rax
 %endmacro
 
-section .rodata
-err_msg:
-    db 10,"Error with RSP in ISR",0
-err_msg2:
-    db 10,"Error with RSP data in ISR",0
 
 section .text
-
-extern sprintf
-isr_err:
-    mov rdi, err_msg
-    cld
-    call sprintf
-    jmp $
-
-isr_err2:
-    mov rdi, err_msg2
-    cld
-    call sprintf
-    jmp $
 
 isr_common:
     pushaq
@@ -82,16 +64,11 @@ isr_common:
     mov ds, ax
     cld
     xor rax, rax
-    mov rbx, rsp
     mov rdi, rsp
     call isr_handler
-    cmp rbx, rsp
-    jne isr_err
     popaq
     ; Remove the error code and interrupt number
     add rsp, 16
-    cmp qword [rsp], 0xFFFFFFFF80000000
-    jb isr_err2
     iretq
 
 isr 0
