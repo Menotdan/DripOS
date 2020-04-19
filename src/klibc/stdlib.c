@@ -5,6 +5,7 @@
 #include "proc/scheduler.h"
 #include "klibc/lock.h"
 
+#include "drivers/tty/tty.h"
 #include "drivers/serial.h"
 
 void *kmalloc(uint64_t size) {
@@ -56,15 +57,13 @@ void *krealloc(void *addr, uint64_t new_size) {
     return new_buffer;
 }
 
-void yield() {
-    if (scheduler_enabled) {
-        asm volatile("int $254");
-    }
-}
-
 void panic(char *msg) {
     //sprintf("\nPanic with msg: %s", msg);
-    asm volatile("mov %0, %%rdi; int $251;" ::"r"(msg) : "memory");
+    if (check_interrupts()) {
+        asm volatile("mov %0, %%rdi; int $251;" ::"r"(msg) : "memory");
+    } else {
+        kprintf("\nPanic! Message: %s", msg);
+    }
 
     // We shouldnt return
     while (1) { asm volatile("hlt"); }

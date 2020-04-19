@@ -316,18 +316,32 @@ int64_t pick_task() {
     return tid_ret; // Return -1 by default for idle
 }
 
+void yield() {
+    if (scheduler_enabled) {
+        lock(scheduler_lock);
+        asm volatile("int $254");
+    }
+}
+
+void force_unlocked_schedule() {
+    if (scheduler_enabled) {
+        asm volatile("int $254");
+    }
+}
+
 void schedule_bsp(int_reg_t *r) {
     send_scheduler_ipis();
+
+    lock(scheduler_lock);
     schedule(r);
 }
 
 void schedule_ap(int_reg_t *r) {
+    lock(scheduler_lock);
     schedule(r);
 }
 
 void schedule(int_reg_t *r) {
-    lock(scheduler_lock);
-
     task_t *running_task = get_cpu_locals()->current_thread;
     if (running_task) {
         if (running_task->tid == get_cpu_locals()->idle_tid) {
@@ -367,15 +381,11 @@ void schedule(int_reg_t *r) {
 
         if (running_task->running) {
             running_task->running = 0;
-            log_debug("Turned off running.");
-            sprintf(" TID: %ld, CPU: %u", running_task->tid, get_cpu_locals()->cpu_index);
         }
 
         /* If we were previously running the task, then it is ready again since we are switching */
         if (running_task->state == RUNNING && running_task->tid != get_cpu_locals()->idle_tid) {
             running_task->state = READY;
-            log_debug("Set ready.");
-            sprintf(" TID: %ld, CPU: %u", running_task->tid, get_cpu_locals()->cpu_index);
             assert(running_task->state == READY);
         }
 
@@ -383,11 +393,8 @@ void schedule(int_reg_t *r) {
         dynarray_unref(&tasks, running_task->tid);
     }
 
-    log_debug("Picking new thread");
-    sprintf(", Core: %u", get_cpu_locals()->cpu_index);
     // Run the next thread
     int64_t tid_run = pick_task();
-    log_debug("Picked");
 
     if (tid_run == -1) {
         /* Idle */
@@ -402,14 +409,9 @@ void schedule(int_reg_t *r) {
         assert(running_task->state == READY);
         assert(running_task->running == 0);
         running_task->running = 1;
-        log_debug("Set the running member.");
-        sprintf(" TID: %ld, CPU: %u", running_task->tid, get_cpu_locals()->cpu_index);
         running_task->state = RUNNING;
-        log_debug("Set running.");
-        sprintf(" TID: %ld, CPU: %u", running_task->tid, get_cpu_locals()->cpu_index);
         assert(running_task->state == RUNNING);
     }
-    log_debug("Setting the thread state");
 
     r->rax = running_task->regs.rax;
     r->rbx = running_task->regs.rbx;
@@ -434,21 +436,15 @@ void schedule(int_reg_t *r) {
     r->cs = running_task->regs.cs;
     r->ss = running_task->regs.ss;
 
-    log_debug("Set registers");
-
     write_msr(0xC0000100, running_task->regs.fs); // Set FS.base
-    log_debug("Set FS");
-
 
     get_thread_locals()->tid = running_task->tid;
     get_cpu_locals()->thread_kernel_stack = running_task->kernel_stack;
     get_cpu_locals()->thread_user_stack = running_task->user_stack;
-    log_debug("Set locals");
 
     if (vmm_get_pml4t() != running_task->regs.cr3) {
         vmm_set_pml4t(running_task->regs.cr3);
     }
-    log_debug("Set pml4t");
 
     running_task->tsc_started = read_tsc();
 
@@ -457,8 +453,6 @@ void schedule(int_reg_t *r) {
     }
 
     get_cpu_locals()->total_tsc = read_tsc();
-
-    log_debug("Done");
 
     unlock(scheduler_lock);
 }

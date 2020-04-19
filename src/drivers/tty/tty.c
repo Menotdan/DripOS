@@ -188,7 +188,7 @@ void kprintf(char *message, ...) {
     va_end(format_list);
     flip_buffers();
     unlock(base_tty.tty_lock);
-    yield();
+    //yield();
 }
 
 void kprintf_yieldless(char *message, ...) {

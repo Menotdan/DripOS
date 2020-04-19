@@ -81,12 +81,16 @@ typedef struct {
 } __attribute__((packed)) thread_info_block_t;
 
 
+/* Scheduling */
 void schedule(int_reg_t *r);
 void schedule_ap(int_reg_t *r);
 void schedule_bsp(int_reg_t *r);
 void scheduler_init_bsp();
 void scheduler_init_ap();
+void yield();
+void force_unlocked_schedule();
 
+/* "API" */
 thread_info_block_t *get_thread_locals();
 int64_t add_new_child_thread(task_t *task, int64_t pid);
 task_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring);
@@ -95,18 +99,20 @@ int64_t new_process(char *name, void *new_cr3);
 void new_kernel_process(char *name, void (*main)());
 void new_user_process(char *name, void (*virt_main)(), void (*phys_main)(), uint64_t code_size);
 
+/* Killing stuff */
 int kill_process(int64_t pid);
 int kill_task(int64_t tid);
 
-void start_test_user_task();
+void start_test_user_task(); // bruh
 
+/* Cringe functions for DripDBG */
 void *get_thread_elem(uint64_t elem);
 void ref_thread_elem(uint64_t elem);
 void unref_thread_elem(uint64_t elem);
 void lock_scheduler();
 void unlock_scheduler();
-
 uint64_t get_thread_list_size();
+
 
 extern uint8_t scheduler_started;
 extern uint8_t scheduler_enabled;

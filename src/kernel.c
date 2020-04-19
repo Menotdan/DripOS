@@ -43,36 +43,9 @@ char *todo_list[TODO_LIST_SIZE] = {"Better syscall error handling", "Filesystem 
 uint64_t delay = 5000;
 uint64_t y = 300;
 
-// void video_thread() {
-//     uint8_t *data = kcalloc(vesa_display_info.height);
-//     color_t color = {0, 0, 0};
-//     while (1) {
-//         for (uint64_t i = 0; i < vesa_display_info.height; i++) data[i] = random(254) + 1;
-//         uint64_t index;
-        
-//         for (uint64_t y = 0; y < vesa_display_info.height; y++) {
-//             while (1) {
-//                 index = random(vesa_display_info.height);
-//                 if (data[index]) break;
-//             }
-
-//             color.r = data[index];
-//             color.g = data[index];
-//             color.b = data[index];
-//             data[index] = 0;
-
-//             for (uint64_t x = y; x < vesa_display_info.height; x++) {
-//                 put_pixel(y, x, color);
-//             }
-//         }
-//         flip_buffers();
-//         sleep_ms(10);
-//     }
-// }
-
 void video_thread() {
     while (1) {
-        sleep_ms(10);
+        sleep_ms(1);
         flip_buffers();
     }
 }
@@ -102,10 +75,10 @@ void kernel_task() {
 
     echfs_test("/dev/satadeva");
 
-    // new_kernel_process("Video", video_thread);
-    // new_kernel_process("Video", video_thread);
-    // new_kernel_process("Video", video_thread);
-    // new_kernel_process("Video", video_thread);
+    new_kernel_process("Video", video_thread);
+    new_kernel_process("Video", video_thread);
+    new_kernel_process("Video", video_thread);
+    new_kernel_process("Video", video_thread);
 
     kprintf("\nMemory used: %lu bytes", pmm_get_used_mem());
     mouse_setup();
@@ -130,14 +103,21 @@ void kernel_task() {
 void kmain(stivale_info_t *bootloader_info) {
     init_serial(COM1);
 
+    char *kernel_options = (char *) ((uint64_t) bootloader_info->cmdline + 0xFFFF800000000000);
+    sprintf("\nKernel Options: %s", kernel_options);
+
     if (bootloader_info) {
-        sprintf("[DripOS] Setting up memory bitmaps.");
+        sprintf("\n[DripOS] Setting up memory bitmaps.");
         pmm_memory_setup(bootloader_info);
     }
 
     sprintf("\n[DripOS] Initializing TTY");
     init_vesa(bootloader_info);
     tty_init(&base_tty, 8, 8);
+
+    if (strcmp(kernel_options, "nocrash") == 1) {
+        panic("Kernel option 'nocrash' not specified!");
+    }
 
     acpi_init(bootloader_info);
     sprintf("\n[DripOS] Configuring LAPICs and IOAPIC routing.");
