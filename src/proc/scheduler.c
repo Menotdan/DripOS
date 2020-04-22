@@ -3,10 +3,12 @@
 #include "klibc/stdlib.h"
 #include "klibc/string.h"
 #include "klibc/queue.h"
+#include "klibc/errno.h"
 #include "drivers/tty/tty.h"
 #include "drivers/serial.h"
 #include "io/msr.h"
 #include "mm/vmm.h"
+#include "mm/pmm.h"
 #include "sys/smp.h"
 #include "sys/apic.h"
 
@@ -258,6 +260,9 @@ int64_t new_process(char *name, void *new_cr3) {
     /* Default UID and GID */
     new_process->uid = 0;
     new_process->gid = 0;
+    new_process->fd_table = kcalloc(10 * sizeof(fd_entry_t));
+    new_process->fd_table_size = 10;
+    new_process->allocation_table = kcalloc(sizeof(rangemap_t));
     strcpy(name, new_process->name);
 
     /* Add element to the dynarray and save the PID */
@@ -493,4 +498,92 @@ int kill_process(int64_t pid) {
     dynarray_unref(&processes, pid);
     interrupt_unlock(state);
     return 0;
+}
+
+process_t *reference_process(int64_t pid) {
+    process_t *ret = (process_t *) dynarray_getelem(&processes, pid);
+    return ret;
+}
+
+void deref_process(int64_t pid) {
+    dynarray_unref(&processes, pid);
+}
+
+void *allocate_process_mem(int pid, uint64_t size) {
+    size = ((size + 0x1000 - 1) / 0x1000) * 0x1000;
+    process_t *process = reference_process(pid);
+    if (!process) return (void *) 0;
+
+    uint64_t free = rangemap_find_free_area(process->allocation_table, size);
+    if (free + size > 0x7fffffffffff) return (void *) 0; // Higher than usable memory
+
+    rangemap_add_range(process->allocation_table, free, free + size);
+    deref_process(pid);
+    return (void *) free;
+}
+
+int free_process_mem(int pid, uint64_t address) {
+    process_t *process = reference_process(pid);
+    if (!process) return -1;
+
+    if (rangemap_entry_present(process->allocation_table, address)) return -2;
+
+    rangemap_mark_free(process->allocation_table, address);
+    deref_process(pid);
+
+    return 0;
+}
+
+int mark_process_mem_used(int pid, uint64_t addr, uint64_t size) {
+    size = ((size + 0x1000 - 1) / 0x1000) * 0x1000;
+    process_t *process = reference_process(pid);
+    if (!process) return -1;
+
+    if (rangemap_entry_present(process->allocation_table, addr)) return -2;
+    rangemap_add_range(process->allocation_table, addr, addr + size);
+    deref_process(pid);
+
+    return 0;
+}
+
+int map_user_memory(int pid, void *phys, void *virt, uint64_t size, uint16_t perms) {
+    size = ((size + 0x1000 - 1) / 0x1000);
+    process_t *process = reference_process(pid);
+    if (!process) return -1;
+
+    void *cr3 = (void *) process->cr3;
+    return vmm_map_pages(phys, virt, cr3, size, perms | VMM_PRESENT | VMM_USER);
+}
+
+int unmap_user_memory(int pid, void *virt, uint64_t size) {
+    size = ((size + 0x1000 - 1) / 0x1000);
+    process_t *process = reference_process(pid);
+    if (!process) return -1;
+
+    void *cr3 = (void *) process->cr3;
+    return vmm_unmap_pages(virt, cr3, size);
+}
+
+
+void *mmap(void *addr_hint, uint64_t size, int prot, int flags, int fd, uint64_t offset) {
+    int pid = get_cpu_locals()->current_thread->parent_pid;
+    void *memory = allocate_process_mem(pid, size);
+    void *phys_mem = pmm_alloc(size);
+
+    if (!memory) {
+        get_thread_locals()->errno = -ENOMEM;
+        pmm_unalloc(phys_mem, size);
+        return (void *) 0;
+    }
+
+    int not_mapped = map_user_memory(pid, phys_mem, memory, size, VMM_WRITE);
+    if (not_mapped != 0) {
+        panic("Failed memory mapping!");
+
+        /* We won't get control back, but meh */
+        pmm_unalloc(phys_mem, size);
+        return (void *) 0;
+    }
+
+    return memory;
 }

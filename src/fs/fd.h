@@ -3,6 +3,12 @@
 #include <stdint.h>
 #include "vfs/vfs.h"
 
+typedef struct fd_entry {
+    vfs_node_t *node;
+    uint64_t seek;
+    int mode;
+} fd_entry_t;
+
 struct vfs_node;
 typedef struct vfs_node vfs_node_t;
 

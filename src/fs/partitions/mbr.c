@@ -13,12 +13,13 @@ int mbr_open(char *name, int mode) {
     return 0;
 }
 
-int mbr_close(fd_entry_t *fd) {
-    (void) fd;
+int mbr_close(int fd_no) {
+    (void) fd_no;
     return 0;
 }
 
-int mbr_read(fd_entry_t *fd_dat, void *buf, uint64_t count) {
+int mbr_read(int fd_no, void *buf, uint64_t count) {
+    fd_entry_t *fd_dat = fd_lookup(fd_no);
     mbr_part_offset_t *data = get_device_data(fd_dat->node);
     int fd = fd_open(data->drive, 0);
 
@@ -29,7 +30,8 @@ int mbr_read(fd_entry_t *fd_dat, void *buf, uint64_t count) {
     return ret;
 }
 
-int mbr_write(fd_entry_t *fd_dat, void *buf, uint64_t count) {
+int mbr_write(int fd_no, void *buf, uint64_t count) {
+    fd_entry_t *fd_dat = fd_lookup(fd_no);
     mbr_part_offset_t *data = get_device_data(fd_dat->node);
     int fd = fd_open(data->drive, 0);
 
@@ -40,8 +42,8 @@ int mbr_write(fd_entry_t *fd_dat, void *buf, uint64_t count) {
     return ret;
 }
 
-int mbr_seek(fd_entry_t *fd, uint64_t offset, int whence) {
-    (void) fd;
+int mbr_seek(int fd_no, uint64_t offset, int whence) {
+    (void) fd_no;
     (void) offset;
     (void) whence;
 

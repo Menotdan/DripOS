@@ -69,3 +69,27 @@ void rangemap_mark_free(rangemap_t *rangemap, uint64_t addr) {
         current = current->next;
     }
 }
+
+uint8_t rangemap_entry_present(rangemap_t *rangemap, uint64_t addr) {
+    rangemap_t *current = rangemap;
+    while (current) {
+        if (current->start == addr && !(current == rangemap)) {
+            return 1;
+        }
+        current = current->next;
+    }
+
+    return 0;
+}
+
+uint64_t rangemap_get_entry_size(rangemap_t *rangemap, uint64_t addr) {
+    rangemap_t *current = rangemap;
+    while (current) {
+        if (current->start == addr && !(current == rangemap)) {
+            return current->end - current->start;
+        }
+        current = current->next;
+    }
+
+    return 0;
+}

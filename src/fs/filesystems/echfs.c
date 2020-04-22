@@ -84,6 +84,18 @@ void *echfs_read_block(echfs_filesystem_t *filesystem, uint64_t block) {
     return data_area;
 }
 
+/* Write a block to an echFS drive */
+void echfs_write_block(echfs_filesystem_t *filesystem, uint64_t block, void *data) {
+    int device_fd = fd_open(filesystem->device_name, 0);
+
+    // Read data
+    fd_seek(device_fd, block * filesystem->block_size, 0);
+    fd_write(device_fd, data, filesystem->block_size);
+
+    // Close and return
+    fd_close(device_fd);
+}
+
 /* Read a directory entry from the main directory */
 echfs_dir_entry_t *echfs_read_dir_entry(echfs_filesystem_t *filesystem, uint64_t entry) {
     echfs_dir_entry_t *data_area = kcalloc(sizeof(echfs_dir_entry_t));
@@ -97,6 +109,17 @@ echfs_dir_entry_t *echfs_read_dir_entry(echfs_filesystem_t *filesystem, uint64_t
     return data_area;
 }
 
+/* Write a directory entry to the main directory */
+void echfs_write_dir_entry(echfs_filesystem_t *filesystem, uint64_t entry, echfs_dir_entry_t *data) {
+    int device_fd = fd_open(filesystem->device_name, 0);
+
+    uint64_t main_dir_start_byte = filesystem->main_dir_block * filesystem->block_size;
+    fd_seek(device_fd, main_dir_start_byte + (entry * sizeof(echfs_dir_entry_t)), 0);
+    fd_write(device_fd, data, sizeof(echfs_dir_entry_t));
+
+    fd_close(device_fd);
+}
+
 /* Get the entry in the allocation table for a block */
 uint64_t echfs_get_entry_for_block(echfs_filesystem_t *filesystem, uint64_t block) {
     uint64_t alloc_table_block = ((block * 8) / filesystem->block_size) + 16;
@@ -106,6 +129,17 @@ uint64_t echfs_get_entry_for_block(echfs_filesystem_t *filesystem, uint64_t bloc
 
     kfree(alloc_table_data);
     return entry;
+}
+
+/* Get the entry in the allocation table for a block */
+void echfs_set_entry_for_block(echfs_filesystem_t *filesystem, uint64_t block, uint64_t data) {
+    uint64_t alloc_table_block = ((block * 8) / filesystem->block_size) + 16;
+
+    uint64_t *alloc_table_data = echfs_read_block(filesystem, alloc_table_block);
+    alloc_table_data[block % (filesystem->block_size / 8)] = data;
+    echfs_write_block(filesystem, alloc_table_block, alloc_table_data);
+
+    kfree(alloc_table_data);
 }
 
 /* Read a file */
@@ -223,7 +257,6 @@ next_elem:
         if (found_elem_index != ECHFS_SEARCH_FAIL) {
             if (cur_entry) kfree(cur_entry); // Free the old entry, if it exists
             cur_entry = echfs_read_dir_entry(filesystem, found_elem_index);
-            if (!cur_entry) sprintf("\n[DripOS] Ah yes. Unreachable code. Good stuff.");
 
             sprintf("\n[EchFS] Resolved path.");
             return cur_entry;
@@ -237,9 +270,7 @@ next_elem:
     return (echfs_dir_entry_t *) 0;
 }
 
-
 /* EchFS VFS ops */
-
 int echfs_open(char *name, int mode) {
     (void) name;
     (void) mode;
@@ -247,26 +278,28 @@ int echfs_open(char *name, int mode) {
     return 0;
 }
 
-int echfs_close(fd_entry_t *fd) {
-    (void) fd;
+int echfs_close(int fd_no) {
+    (void) fd_no;
 
     return 0;
 }
 
-int echfs_seek(fd_entry_t *fd, uint64_t offset, int whence) {
-    (void) fd;
+int echfs_seek(int fd_no, uint64_t offset, int whence) {
+    (void) fd_no;
     (void) offset;
     (void) whence;
 
     return 0;
 }
 
-int echfs_read(fd_entry_t *fd, void *buf, uint64_t count) {
-    char *path = get_full_path(fd->node);
+int echfs_read(int fd_no, void *buf, uint64_t count) {
+    fd_entry_t *fd = fd_lookup(fd_no);
+    vfs_node_t *node = fd->node;
+    char *path = get_full_path(node);
     sprintf("\n[EchFS] Full path: ");
     sprint(path);
 
-    echfs_filesystem_t *filesystem_info = get_unid_fs_data(fd->node->mountpoint->unid);
+    echfs_filesystem_t *filesystem_info = get_unid_fs_data(node->fs_root->unid);
     if (filesystem_info) {
         sprintf("\n[EchFS] Got read for mountpoint ");
         sprint(filesystem_info->mountpoint_path);
@@ -315,34 +348,25 @@ int echfs_read(fd_entry_t *fd, void *buf, uint64_t count) {
     }
 }
 
-void echfs_node_gen(void *filesystem_descriptor, char *filename) {
-    echfs_filesystem_t *filesystem = (echfs_filesystem_t *) filesystem_descriptor;
+/* Node generator for VFS */
+void echfs_node_gen(vfs_node_t *fs_node, vfs_node_t *target_node, char *path) {
+    echfs_filesystem_t *fs_data = get_unid_fs_data(fs_node->unid);
 
-    // For the extra '/' i might need :shrug:
-    char *full_vfs_path = kcalloc(strlen(filesystem->mountpoint_path) + strlen(filename) + 2);
-    strcat(full_vfs_path, filesystem->mountpoint_path);
-    path_join(full_vfs_path, filename);
-
-    sprintf("\n[EchFS] Handling node gen for file ");
-    sprint(filename);
-    sprintf("\n[EchFS] Full path: ");
-    sprint(full_vfs_path);
+    sprintf("\n[EchFS] Searching for path %s", path);
 
     uint8_t err;
-    echfs_dir_entry_t *entry = echfs_path_resolve(filesystem, filename, &err);
-    if (entry) {
-        sprintf("\n[EchFS] Got entry in FS.");
-        // Ah yes, we have entry, now do thing with path lol
-        vfs_ops_t echfs_ops = dummy_ops;
+    echfs_dir_entry_t *entry = echfs_path_resolve(fs_data, path, &err);
+    if (!entry) return;
+    sprintf("\n[EchFS] Got entry for path %s", path);
+    kfree(entry);
 
-        // VFS ops
-        echfs_ops.read = echfs_read;
-        echfs_ops.seek = echfs_seek;
-        echfs_ops.open = echfs_open;
-        echfs_ops.close = echfs_close;
+    vfs_ops_t echfs_ops = {echfs_open, echfs_close, echfs_read, 0, echfs_seek};
 
-        create_missing_nodes_from_path(full_vfs_path, echfs_ops, filesystem->mountpoint);
-    }
+    /* Set all the VFS ops */
+    set_child_ops(target_node, echfs_ops);
+    target_node->ops = echfs_ops;
+    set_child_fs_root(target_node, fs_node);
+    target_node->fs_root = fs_node;
 }
 
 void echfs_test(char *device) {
@@ -375,7 +399,7 @@ void echfs_test(char *device) {
         vfs_add_child(root_node, echfs_mountpoint);
 
         register_unid(echfs_mountpoint->unid, filesystem);
-        register_mountpoint(mountpoint_lol, echfs_node_gen, filesystem);
+        echfs_mountpoint->node_handle = echfs_node_gen;
 
         int hello_fd = fd_open("/echfs_mount/hello/README.md", 0);
         sprintf("\n[EchFS] FD: %d", hello_fd);

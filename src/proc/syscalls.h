@@ -11,6 +11,7 @@ void syscall_write(syscall_reg_t *r);
 void syscall_open(syscall_reg_t *r);
 void syscall_close(syscall_reg_t *r);
 void syscall_seek(syscall_reg_t *r);
+void syscall_mmap(syscall_reg_t *r);
 void syscall_nanosleep(syscall_reg_t *r);
 void syscall_empty(syscall_reg_t *r);
 

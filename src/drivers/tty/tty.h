@@ -21,8 +21,8 @@ typedef struct {
 
 extern tty_t base_tty;
 
-int tty_dev_write(fd_entry_t *fd_data, void *buf, uint64_t count);
-int tty_dev_read(fd_entry_t *fd_data, void *buf, uint64_t count);
+int tty_dev_write(int fd_no, void *buf, uint64_t count);
+int tty_dev_read(int fd_no, void *buf, uint64_t count);
 
 char tty_get_char(tty_t *tty);
 void tty_in(char c, tty_t *tty);

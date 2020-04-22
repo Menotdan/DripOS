@@ -129,19 +129,20 @@ int ahci_open(char *path, int mode) {
     return 0;
 }
 
-int ahci_close(fd_entry_t *fd_data) {
-    (void) fd_data;
+int ahci_close(int fd_no) {
+    (void) fd_no;
     return 0;
 }
 
-int ahci_seek(fd_entry_t *fd_data, uint64_t offset, int whence) {
-    (void) fd_data;
+int ahci_seek(int fd_no, uint64_t offset, int whence) {
+    (void) fd_no;
     (void) offset;
     (void) whence;
     return 0;
 }
 
-int ahci_read(fd_entry_t *fd_data, void *buf, uint64_t count) {
+int ahci_read(int fd_no, void *buf, uint64_t count) {
+    fd_entry_t *fd_data = fd_lookup(fd_no);
     vfs_node_t *node = fd_data->node;
 
     ahci_port_data_t *port_data_for_device = get_device_data(node);
@@ -163,7 +164,8 @@ int ahci_read(fd_entry_t *fd_data, void *buf, uint64_t count) {
     return 0;
 }
 
-int ahci_write(fd_entry_t *fd_data, void *buf, uint64_t count) {
+int ahci_write(int fd_no, void *buf, uint64_t count) {
+    fd_entry_t *fd_data = fd_lookup(fd_no);
     vfs_node_t *node = fd_data->node;
 
     ahci_port_data_t *port_data_for_device = get_device_data(node);

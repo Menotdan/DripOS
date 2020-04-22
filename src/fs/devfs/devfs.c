@@ -1,6 +1,7 @@
 #include "devfs.h"
 #include "drivers/serial.h"
 #include "klibc/hashmap.h"
+#include "fs/fd.h"
 
 vfs_node_t *devfs_root;
 hashmap_t *devfs_hashmap;
@@ -10,7 +11,8 @@ int devfs_open(char *name, int mode) {
     return 0;
 }
 
-int devfs_close(fd_entry_t *fd_data) {
+int devfs_close(int fd_no) {
+    fd_entry_t *fd_data = fd_lookup(fd_no);
     vfs_node_t *node = fd_data->node;
 
     sprintf("\n[DevFS] Closing %s", node->name);

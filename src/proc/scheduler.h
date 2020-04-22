@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include "sys/int/isr.h"
 #include "klibc/dynarray.h"
+#include "klibc/rangemap.h"
+#include "fs/fd.h"
 
 #define READY 0
 #define RUNNING 1
@@ -62,6 +64,11 @@ typedef struct {
     dynarray_t threads; // The threads this process has
     int64_t pid; // Process ID
 
+    fd_entry_t **fd_table;
+    int fd_table_size;
+
+    rangemap_t *allocation_table;
+
     int64_t uid; // User id of the user runnning this process
     int64_t gid; // Group id of the user running this process
     uint64_t permissions; // Misc permission flags
@@ -113,6 +120,17 @@ void lock_scheduler();
 void unlock_scheduler();
 uint64_t get_thread_list_size();
 
+/* Process interface things */
+process_t *reference_process(int64_t pid);
+void deref_process(int64_t pid);
+
+/* Process virtual memory management */
+void *allocate_process_mem(int pid, uint64_t size);
+int free_process_mem(int pid, uint64_t address);
+int mark_process_mem_used(int pid, uint64_t addr, uint64_t size);
+int map_user_memory(int pid, void *phys, void *virt, uint64_t size, uint16_t perms);
+
+void *mmap(void *addr_hint, uint64_t size, int prot, int flags, int fd, uint64_t offset);
 
 extern uint8_t scheduler_started;
 extern uint8_t scheduler_enabled;

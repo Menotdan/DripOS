@@ -15,10 +15,12 @@ static void new_binary_process(char *process_name, void *exec_ptr, void *code, u
     int64_t pid = new_process(process_name, cr3);
 
     void *code_phys = GET_LOWER_HALF(void *, code);
-    vmm_map_pages(code_phys, exec_ptr, cr3, (program_size + 0x1000 - 1) / 0x1000, 
-        VMM_USER | VMM_WRITE | VMM_PRESENT);
-    vmm_map_pages(rsp_phys, (void *) USER_STACK_START, cr3, TASK_STACK_PAGES, 
-        VMM_USER | VMM_WRITE | VMM_PRESENT);
+
+    /* Map memory and mark it as used in the process's address space */
+    map_user_memory(pid, code_phys, exec_ptr, program_size, VMM_WRITE);
+    map_user_memory(pid, rsp_phys, (void *) USER_STACK_START, TASK_STACK_SIZE, VMM_WRITE);
+    mark_process_mem_used(pid, (void *) USER_STACK_START, TASK_STACK_SIZE);
+    mark_process_mem_used(pid, exec_ptr, program_size);
     
     add_new_child_thread(new_thread, pid);
 }

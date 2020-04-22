@@ -16,99 +16,47 @@ vfs_node_t *root_node;
 lock_t vfs_lock = {0, 0, 0};
 uint64_t current_unid = 0; // Current unique node ID
 
-/* Dummy VFS ops */
-int dummy_open(char *name, int mode) {
-    (void) name;
-    (void) mode;
+vfs_ops_t null_vfs_ops = {0, 0, 0, 0, 0};
+
+/* Dummy ops */
+int dummy_open(char *_1, int _2) {
+    (void) _1;
+    (void) _2;
     get_thread_locals()->errno = -ENOSYS;
     return -1;
 }
 
-int dummy_close(fd_entry_t *node) {
-    (void) node;
+int dummy_close(int _) {
+    (void) _;
     get_thread_locals()->errno = -ENOSYS;
     return -1;
 }
 
-int dummy_read(fd_entry_t *node, void *buf, uint64_t bytes) {
-    (void) node;
-    (void) buf;
-    (void) bytes;
+int dummy_read(int _1, void *_2, uint64_t _3) {
+    (void) _1;
+    (void) _2;
+    (void) _3;
     get_thread_locals()->errno = -ENOSYS;
     return -1;
 }
 
-int dummy_write(fd_entry_t *node, void *buf, uint64_t bytes) {
-    (void) node;
-    (void) buf;
-    (void) bytes;
+int dummy_write(int _1, void *_2, uint64_t _3) {
+    (void) _1;
+    (void) _2;
+    (void) _3;
     get_thread_locals()->errno = -ENOSYS;
     return -1;
 }
 
-int dummy_seek(fd_entry_t *node, uint64_t offset, int whence) {
-    (void) node;
-    (void) offset;
-    (void) whence;
+int dummy_seek(int _1, uint64_t _2, int _3) {
+    (void) _1;
+    (void) _2;
+    (void) _3;
     get_thread_locals()->errno = -ENOSYS;
     return -1;
 }
 
 vfs_ops_t dummy_ops = {dummy_open, dummy_close, dummy_read, dummy_write, dummy_seek};
-
-/* some nonsense string handling and stuff for getting a mountpoint ig */
-static void attempt_mountpoint_handle(char *path) {
-    char *local_path = kcalloc(strlen(path) + 1);
-    char *filesystem_path = kcalloc(strlen(path) + 1);
-    strcpy(path, local_path);
-
-    sprintf("\n[VFS] Start path: ");
-    sprint(local_path);
-
-    while (1) {
-        sprintf("\n[VFS] Path: ");
-        sprint(local_path);
-        sprintf("\n[VFS] Other path: ");
-        sprint(filesystem_path);
-        if (is_mountpoint(local_path)) {
-            reverse(filesystem_path);
-            sprintf("\n[VFS] Doing mountpoint handle for ");
-            sprint(filesystem_path);
-            gen_node_mountpoint(local_path, filesystem_path);
-
-            return;
-        }
-        char *tmp_get_path = local_path + strlen(local_path) - 1;
-        while (*tmp_get_path != '/')
-            *(filesystem_path + strlen(filesystem_path)) = *tmp_get_path--;
-        // Add the '/'
-        *(filesystem_path + strlen(filesystem_path)) = *tmp_get_path;
-
-        *tmp_get_path = '\0';
-        if (*local_path == '\0') {
-            break;
-        }
-    }
-
-    // Handle '/' as a mountpoint
-    sprintf("\n[VFS] Path: ");
-    sprint(local_path);
-    sprintf("\n[VFS] Other path: ");
-    sprint(filesystem_path);
-    if (is_mountpoint("/")) {
-        reverse(filesystem_path);
-        sprintf("\n[VFS] Doing mountpoint handle for ");
-        sprint(filesystem_path);
-        gen_node_mountpoint(local_path, filesystem_path);
-
-        return;
-    }
-
-    sprintf("\nDoneee");
-
-    kfree(local_path);
-    kfree(filesystem_path);
-}
 
 static uint8_t search_node_name(vfs_node_t *node, char *name) {
     lock(vfs_lock);
@@ -127,7 +75,9 @@ static uint8_t search_node_name(vfs_node_t *node, char *name) {
     return 0;
 }
 
-void create_missing_nodes_from_path(char *path, vfs_ops_t ops, vfs_node_t *mountpoint) {
+vfs_node_t *create_missing_nodes_from_path(char *path, vfs_ops_t ops) {
+    vfs_node_t *first_missing = 0;
+
     char *temp_buffer = kcalloc(strlen(path)); // temporary buffer for each part of the path
     char *current_full_path = kcalloc(strlen(path)); // temporary buffer for all of the path we have parsed
     vfs_node_t *cur_node = (vfs_node_t *) 0;
@@ -149,19 +99,19 @@ next_elem:
             if (!cur_node) {
                 kfree(temp_buffer);
                 kfree(current_full_path);
-                return;
+                return first_missing;
             }
 
             // Add the final node
             if (!search_node_name(cur_node, temp_buffer)) {
                 vfs_node_t *new_node = vfs_new_node(temp_buffer, ops);
-                new_node->mountpoint = mountpoint;
                 vfs_add_child(cur_node, new_node);
+                if (!first_missing) first_missing = new_node;
             }
 
             kfree(temp_buffer);
             kfree(current_full_path);
-            return;
+            return first_missing;
         }
 
         temp_buffer[i++] = *path;
@@ -172,14 +122,14 @@ next_elem:
     if (!cur_node) {
         kfree(temp_buffer);
         kfree(current_full_path);
-        return;
+        return first_missing;
     }
 
     // Add the next node
     if (!search_node_name(cur_node, temp_buffer)) {
         vfs_node_t *new_node = vfs_new_node(temp_buffer, ops);
-        new_node->mountpoint = mountpoint;
         vfs_add_child(cur_node, new_node);
+        if (!first_missing) first_missing = new_node;
     }
 
     path_join(current_full_path, temp_buffer);
@@ -188,88 +138,10 @@ next_elem:
     goto next_elem;
 }
 
-/* VFS ops things */
-vfs_node_t *vfs_open(char *input, int mode) {
-    char *name = kcalloc(4098);
-    uint64_t data_count = strcpy_from_userspace(name, input);
-
-    if (data_count == 0xFFFF || data_count == 0xFFFFF) { // Name too big or PF
-        get_thread_locals()->errno = -EFAULT;
-        sprintf("\nName not mapped in vfs_open");
-
-        kfree(name);
-        return (vfs_node_t *) 0;
-    }
-
-    if (*name != '/') {
-        kfree(name);
-        get_thread_locals()->errno = -ENOENT;
-        return (vfs_node_t *) 0;
-    }
-
-    if (name[strlen(name) - 1] == '/' && strlen(name) != 1) name[strlen(name) - 1] = '\0'; // Remove the last '/'
-
-    vfs_node_t *node = get_node_from_path(name);
-    if (node) {
-        /* Call the actual open ops */
-        node->ops.open(name, mode);
-    } else {
-        sprintf("\nAttempting mountpoint handle");
-        attempt_mountpoint_handle(name);
-        node = get_node_from_path(name);
-        if (node) {
-            node->ops.open(name, mode);
-        } else {
-            get_thread_locals()->errno = -ENOENT; // Set errno and we will then return null
-        }
-    }
-
-    kfree(name);
-    return node;
-}
-
-int vfs_close(fd_entry_t *node) {
-    /* If no mappings exist */
-    if (!range_mapped(node, sizeof(vfs_node_t))) {
-        sprintf("\nNode not mapped in vfs_close");
-        get_thread_locals()->errno = -EFAULT;
-        return -1;
-    }
-
-    return node->node->ops.close(node);
-}
-
-int vfs_read(fd_entry_t *node, void *buf, uint64_t count) {
-    /* If no mappings exist */
-    if (!range_mapped(node, sizeof(vfs_node_t)) || !range_mapped(buf, count)) {
-        sprintf("\nNode/buffer not mapped in vfs_read");
-        get_thread_locals()->errno = -EFAULT;
-        return -1;
-    }
-
-    return node->node->ops.read(node, buf, count);
-}
-
-int vfs_write(fd_entry_t *node, void *buf, uint64_t count) {
-    /* If no mappings exist */
-    if (!range_mapped(node, sizeof(vfs_node_t)) || !range_mapped(buf, count)) {
-        sprintf("\nNode/buffer not mapped in vfs_write");
-        get_thread_locals()->errno = -EFAULT;
-        return -1;
-    }
-
-    return node->node->ops.write(node, buf, count);
-}
-
-int vfs_seek(fd_entry_t *node, uint64_t offset, int whence) {
-    /* If no mappings exist */
-    if (!range_mapped(node, sizeof(vfs_node_t))) {
-        sprintf("\nNode not mapped in vfs_close");
-        get_thread_locals()->errno = -EFAULT;
-        return 0;
-    }
-
-    return node->node->ops.seek(node, offset, whence);
+void dummy_node_handle(vfs_node_t *_1, vfs_node_t *_2, char *_3) {
+    (void) _1;
+    (void) _2;
+    (void) _3;
 }
 
 /* Setting up the root node */
@@ -277,6 +149,7 @@ void vfs_init() {
     root_node = kcalloc(sizeof(vfs_node_t));
     root_node->children_array_size = 10;
     root_node->children = kcalloc(10 * sizeof(vfs_node_t *));
+    root_node->node_handle = dummy_node_handle; // root node should have a node handler to prevent death
     init_filesystem_handler();
 }
 
@@ -294,6 +167,8 @@ vfs_node_t *vfs_new_node(char *name, vfs_ops_t ops) {
     /* Set name and ops */
     node->ops = ops;
     node->name = kcalloc(strlen(name) + 1);
+    node->fs_root = 0;
+    node->node_handle = 0;
     strcpy(name, node->name);
 
     sprintf("\n[VFS] Created new node with name ");
@@ -389,6 +264,69 @@ done:
     return cur_node;
 }
 
+void remove_node(vfs_node_t *node) {
+    lock(vfs_lock);
+    for (uint64_t i = 0; i < node->parent->children_array_size; i++) {
+        if (node->parent->children[i] == node) {
+            node->parent->children[i] = 0;
+        }
+    }
+
+    kfree(node);
+    unlock(vfs_lock);
+}
+
+void set_child_ops(vfs_node_t *node, vfs_ops_t ops) {
+    vfs_node_t *current_work = node;
+
+loop:
+    for (uint64_t i = 0; i < current_work->children_array_size; i++) {
+        if (current_work->children[i] && current_work->children[i]->ops.open != ops.open) {
+            current_work = current_work->children[i];
+            goto loop;
+        }
+    }
+    if (current_work == node) return;
+    vfs_node_t *parent = current_work->parent;
+    current_work->ops = ops;
+    current_work = parent;
+    goto loop;
+}
+
+void set_child_fs_root(vfs_node_t *node, vfs_node_t *fs_root) {
+    vfs_node_t *current_work = node;
+
+loop:
+    for (uint64_t i = 0; i < current_work->children_array_size; i++) {
+        if (current_work->children[i] && current_work->children[i]->fs_root != fs_root) {
+            current_work = current_work->children[i];
+            goto loop;
+        }
+    }
+    if (current_work == node) return;
+    vfs_node_t *parent = current_work->parent;
+    current_work->fs_root = fs_root;
+    current_work = parent;
+    goto loop;
+}
+
+void remove_children(vfs_node_t *node) {
+    vfs_node_t *current_work = node;
+
+loop:
+    for (uint64_t i = 0; i < current_work->children_array_size; i++) {
+        if (current_work->children[i]) {
+            current_work = current_work->children[i];
+            goto loop;
+        }
+    }
+    if (current_work == node) return;
+    vfs_node_t *parent = current_work->parent;
+    remove_node(current_work);
+    current_work = parent;
+    goto loop;
+}
+
 char *get_full_path(vfs_node_t *node) {
     lock(vfs_lock);
     vfs_node_t *cur_node = node;
@@ -396,6 +334,7 @@ char *get_full_path(vfs_node_t *node) {
     uint64_t path_index = 0;
     while (cur_node != root_node) {
         path = krealloc(path, path_index + strlen(cur_node->name) + 1);
+
         for (uint64_t i = strlen(cur_node->name) - 1; i > 0; i--) {
             path[path_index++] = cur_node->name[i];
         }
@@ -403,6 +342,7 @@ char *get_full_path(vfs_node_t *node) {
 
         // Add the preceding '/'
         path[path_index++] = '/';
+        path[path_index] = '\0';
         cur_node = cur_node->parent;
     }
 
@@ -410,4 +350,61 @@ char *get_full_path(vfs_node_t *node) {
 
     reverse(path);
     return path;
+}
+
+vfs_node_t *vfs_open(char *name, int mode) {
+    vfs_node_t *node = get_node_from_path(name);
+    if (!node) {
+        sprintf("\n[VFS] Handling mountpoint for %s", name);
+        /* The first missing node, where the generator should start generating */
+        vfs_node_t *missing_start = create_missing_nodes_from_path(name, null_vfs_ops);
+
+        node = get_node_from_path(name);
+        while (node && !node->node_handle) {
+            node = node->parent;
+        }
+
+        char *temp_name = name;
+        char *full_path = get_full_path(node);
+        sprintf("\n[VFS] Mountpoint at %s", full_path);
+        temp_name += strlen(full_path);
+        kfree(full_path);
+
+        sprintf("\n[VFS] Temp name: %s", temp_name);
+
+        node->node_handle(node, missing_start, temp_name);
+        node = get_node_from_path(name);
+        if (!node->ops.open) {
+            // No file or directory
+            remove_children(missing_start);
+            remove_node(missing_start);
+            node = 0;
+        }
+    }
+
+    if (node) {
+        node->ops.open(name, mode);
+    }
+
+    return node;
+}
+
+int vfs_read(int fd, void *buf, uint64_t count) {
+    vfs_node_t *node = fd_lookup(fd)->node;
+    return node->ops.read(fd, buf, count);
+}
+
+int vfs_write(int fd, void *buf, uint64_t count) {
+    vfs_node_t *node = fd_lookup(fd)->node;
+    return node->ops.write(fd, buf, count);
+}
+
+int vfs_close(int fd) {
+    vfs_node_t *node = fd_lookup(fd)->node;
+    return node->ops.close(fd);
+}
+
+int vfs_seek(int fd, uint64_t offset, int whence) {
+    vfs_node_t *node = fd_lookup(fd)->node;
+    return node->ops.seek(fd, offset, whence);
 }
