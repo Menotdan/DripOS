@@ -163,12 +163,17 @@ int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_
 
 /* Add the thread to the dynarray */
 int64_t start_thread(task_t *thread) {
+    interrupt_state_t state = interrupt_lock();
+    lock(scheduler_lock);
+
     int64_t tid = dynarray_add(&tasks, thread, sizeof(task_t));
     kfree(thread);
     thread = dynarray_getelem(&tasks, tid);
     thread->tid = tid;
     dynarray_unref(&tasks, tid);
 
+    unlock(scheduler_lock);
+    interrupt_unlock(state);
     return tid;
 }
 
