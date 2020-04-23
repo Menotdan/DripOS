@@ -69,7 +69,7 @@ void syscall_seek(syscall_reg_t *r) {
 }
 
 void syscall_mmap(syscall_reg_t *r) {
-    r->rax = mmap((void *) r->rdi, r->rsi, (int) r->rdx, (int) r->r10, (int) r->r8, r->r9);
+    r->rax = (uint64_t) mmap((void *) r->rdi, r->rsi, (int) r->rdx, (int) r->r10, (int) r->r8, r->r9);
 }
 
 void syscall_empty(syscall_reg_t *r) {

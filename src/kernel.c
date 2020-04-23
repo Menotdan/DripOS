@@ -53,6 +53,33 @@ void video_thread() {
 
 extern void sanity_thread_start();
 
+void kernel_process(int argc, char **argv) {
+    fd_write(0, "\nHello from stdout!", 19);
+    kprintf("\nargc: %d, argv: %lx", argc, argv);
+
+    pci_init(); // Setup PCI devices and their drivers
+
+    kprintf("\n[DripOS Kernel] Bultin todo list:");
+    for (uint64_t i = 0; i < TODO_LIST_SIZE; i++) {
+        kprintf("\n  %s", todo_list[i]);
+    }
+
+    echfs_test("/dev/satadeva");
+    kprintf("\nMemory used: %lu bytes", pmm_get_used_mem());
+    mouse_setup();
+
+    kprintf("\n[DripOS] Loading binary from disk.\n");
+    launch_binary("/echfs_mount/programs/mmap_test1.bin");
+
+    sprintf("\ndone kernel work");
+
+#ifdef DBGPROTO
+    setup_drip_dgb();
+#endif
+
+    kill_process(get_cpu_locals()->current_thread->parent_pid); // suicide
+}
+
 void kernel_task() {
     sprintf("\n[DripOS] Kernel thread: Scheduler enabled.");
 
@@ -67,37 +94,10 @@ void kernel_task() {
     ops.read = tty_dev_read;
     register_device("tty1", ops, (void *) 0);
 
-    pci_init(); // Setup PCI devices and their drivers
+    kprintf("\nSetting up PID 0...");
+    new_kernel_process("Kernel process", kernel_process);
 
-    kprintf("\n[DripOS Kernel] Bultin todo list:");
-    for (uint64_t i = 0; i < TODO_LIST_SIZE; i++) {
-        kprintf("\n  %s", todo_list[i]);
-    }
-
-    echfs_test("/dev/satadeva");
-
-    // new_kernel_process("Video", video_thread);
-    // new_kernel_process("Video", video_thread);
-    // new_kernel_process("Video", video_thread);
-    // new_kernel_process("Video", video_thread);
-
-    kprintf("\nMemory used: %lu bytes", pmm_get_used_mem());
-    mouse_setup();
-
-    kprintf("\n[DripOS] Loading binary from disk.\n");
-    launch_binary("/echfs_mount/programs/sleep_test3.bin");
-
-    // while (1) {
-    //     sleep_ms(1);
-    //     sprintf("\nuwu");
-    // }
-
-    sprintf("\ndone kernel work");
-
-#ifdef DBGPROTO
-    setup_drip_dgb();
-#endif
-    while (1) { asm volatile("hlt"); }
+    kill_task(get_cpu_locals()->current_thread->tid); // suicide
 }
 
 // Kernel main function, execution starts here :D
@@ -139,7 +139,10 @@ void kmain(stivale_info_t *bootloader_info) {
     set_pit_freq();
     sprintf("\n[DripOS] Timers set.");
 
-    new_kernel_process("Kernel process", kernel_task);
+    task_t *kernel_thread = create_thread("Kernel setup worker", kernel_task, 
+        (uint64_t) kmalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE, 0);
+    start_thread(kernel_thread);
+
     sprintf("\n[DripOS] Launched kernel thread, scheduler disabled...");
 
     sprintf("\n[DripOS] Launching all SMP cores...");

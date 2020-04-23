@@ -37,7 +37,7 @@ void dynarray_unref(dynarray_t *dynarray, int64_t element) {
 void *dynarray_getelem(dynarray_t *dynarray, int64_t element) {
     lock(dynarray->lock); \
     void *ptr = NULL;
-    if (dynarray->base[element].data && dynarray->base[element].present) { \
+    if (dynarray->array_size > element && dynarray->base[element].data && dynarray->base[element].present) { \
         ptr = dynarray->base[element].data;
         atomic_inc(&dynarray->base[element].ref_count);
     }

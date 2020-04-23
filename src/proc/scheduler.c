@@ -124,46 +124,14 @@ void scheduler_init_bsp() {
     write_msr(0xC0000084, 0); // Mask nothing
     write_msr(0xC0000080, read_msr(0xC0000080) | 1); // Set the syscall enable bit
 
-    new_process("Idle tasks", (void *) base_kernel_cr3); // Always PID 0
-    sprintf("\nCreated idle process");
-
-    //new_kernel_process("First task", main_task);
-    //new_kernel_process("Second task", second_task);
-    //new_kernel_process("Third task", third_task);
-
-    /* Setup the idle task */
-
+    /* Setup the idle thread */
     uint64_t idle_rsp = (uint64_t) kcalloc(0x1000) + 0x1000;
-    int64_t idle_tid = new_thread("idle", _idle, idle_rsp, 0, 0);
-    task_t *idle_task = dynarray_getelem(&tasks, idle_tid);
-
-    idle_task->state = BLOCKED;
-
-    dynarray_unref(&tasks, idle_tid);
+    task_t *new_idle = create_thread("Idle thread", _idle, idle_rsp, 0);
+    new_idle->state = BLOCKED; // Idle thread will *not* run unless provoked
+    int64_t idle_tid = start_thread(new_idle);
 
     get_cpu_locals()->idle_tid = idle_tid;
-
     sprintf("\nIdle task: %ld", get_cpu_locals()->idle_tid);
-
-    for (int64_t p = 0; p < processes.array_size; p++) {
-        process_t *proc = dynarray_getelem(&processes, p);
-        if (proc) {
-            sprintf("\nProc name: %s", proc->name);
-            sprintf("\nPID: %ld", proc->pid);
-            for (int64_t t = 0; t < proc->threads.array_size; t++) {
-                int64_t *tid = dynarray_getelem(&proc->threads, t);
-                if (tid) {
-                    task_t *task = dynarray_getelem(&tasks, *tid);
-                    sprintf("\n  Task for %ld", proc->pid);
-                    sprintf("\n    Task name: %s", task->name);
-                    sprintf("\n    TID: %ld", task->tid);
-                    sprintf("\n    Parent pid: %ld", task->parent_pid);
-                }
-                dynarray_unref(&proc->threads, t);
-            }
-        }
-        dynarray_unref(&processes, p);
-    }
 }
 
 /* Initilialize an AP for scheduling */
@@ -175,14 +143,11 @@ void scheduler_init_ap() {
     write_msr(0xC0000084, 0);
     write_msr(0xC0000080, read_msr(0xC0000080) | 1); // Set the syscall enable bit
 
-    /* Create idle task */
+    /* Setup the idle thread */
     uint64_t idle_rsp = (uint64_t) kcalloc(0x1000) + 0x1000;
-    int64_t idle_tid = new_thread("idle", _idle, idle_rsp, 0, 0);
-    task_t *idle_task = dynarray_getelem(&tasks, idle_tid);
-
-    idle_task->state = BLOCKED;
-
-    dynarray_unref(&tasks, idle_tid);
+    task_t *new_idle = create_thread("Idle thread", _idle, idle_rsp, 0);
+    new_idle->state = BLOCKED; // Idle thread will *not* run unless provoked
+    int64_t idle_tid = start_thread(new_idle);
 
     get_cpu_locals()->idle_tid = idle_tid;
     sprintf("\nIdle task: %ld", get_cpu_locals()->idle_tid);
@@ -194,6 +159,17 @@ int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_
     int64_t new_tid = add_new_child_thread(new_task, pid);
     kfree(new_task);
     return new_tid;
+}
+
+/* Add the thread to the dynarray */
+int64_t start_thread(task_t *thread) {
+    int64_t tid = dynarray_add(&tasks, thread, sizeof(task_t));
+    kfree(thread);
+    thread = dynarray_getelem(&tasks, tid);
+    thread->tid = tid;
+    dynarray_unref(&tasks, tid);
+
+    return tid;
 }
 
 /* Allocate data for a new thread data block and return it */
@@ -275,6 +251,12 @@ int64_t new_process(char *name, void *new_cr3) {
     interrupt_unlock(state);
     /* Free the old data since it's in the dynarray */
     kfree(new_process);
+
+    /* Open stdout, stdin, and stderr */
+    open_remote_fd("/dev/tty1", 0, pid); // stdout
+    open_remote_fd("/dev/tty1", 0, pid); // stdin
+    open_remote_fd("/dev/tty1", 0, pid); // stderr
+
     return pid;
 }
 
@@ -411,6 +393,7 @@ void schedule(int_reg_t *r) {
     }
 
     if (tid_run != -1) {
+        sprintf("\ntid_run: %ld, task: %s", tid_run, running_task->name);
         assert(running_task->state == READY);
         assert(running_task->running == 0);
         running_task->running = 1;
@@ -471,15 +454,16 @@ int kill_task(int64_t tid) {
         // If we are running this thread, unref it a first time because it is refed from running
         if (task->tid == get_cpu_locals()->current_thread->tid) {
             dynarray_unref(&tasks, tid);
+            get_cpu_locals()->current_thread = (void *) 0;
         }
         dynarray_remove(&tasks, tid);
         dynarray_unref(&tasks, tid);
     } else {
         ret = 1;
     }
-    unlock(scheduler_lock);
+    force_unlocked_schedule();
     interrupt_unlock(state);
-    return ret;
+    return ret; // make gcc happy
 }
 
 int kill_process(int64_t pid) {
@@ -585,5 +569,12 @@ void *mmap(void *addr_hint, uint64_t size, int prot, int flags, int fd, uint64_t
         return (void *) 0;
     }
 
+    sprintf("\nAllocated %lu bytes for process %d. Phys: %lx, Virt: %lx", size, pid, phys_mem, memory);
     return memory;
+
+    (void) addr_hint;
+    (void) prot;
+    (void) flags;
+    (void) fd;
+    (void) offset;
 }

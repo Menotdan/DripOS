@@ -12,7 +12,7 @@ typedef struct fd_entry {
 struct vfs_node;
 typedef struct vfs_node vfs_node_t;
 
-int fd_new(vfs_node_t *node, int mode);
+int fd_new(vfs_node_t *node, int mode, int pid);
 void fd_remove(int fd);
 fd_entry_t *fd_lookup(int fd);
 
@@ -22,5 +22,7 @@ int fd_close(int fd);
 int fd_read(int fd, void *buf, uint64_t count);
 int fd_write(int fd, void *buf, uint64_t count);
 int fd_seek(int fd, uint64_t offset, int whence);
+
+int open_remote_fd(char *name, int mode, int pid);
 
 #endif

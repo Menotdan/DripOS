@@ -14,7 +14,15 @@ int fd_open(char *name, int mode) {
     if (!node) {
         return get_thread_locals()->errno;
     }
-    return fd_new(node, mode);
+    return fd_new(node, mode, get_cpu_locals()->current_thread->parent_pid);
+}
+
+int open_remote_fd(char *name, int mode, int pid) {
+    vfs_node_t *node = vfs_open(name, mode);
+    if (!node) {
+        return get_thread_locals()->errno;
+    }
+    return fd_new(node, mode, pid);
 }
 
 int fd_close(int fd) {
@@ -64,9 +72,9 @@ int fd_seek(int fd, uint64_t offset, int whence) {
     return vfs_seek(fd, offset, whence);
 }
 
-int fd_new(vfs_node_t *node, int mode) {
+int fd_new(vfs_node_t *node, int mode, int pid) {
     lock(fd_lock);
-    process_t *current_process = reference_process(get_cpu_locals()->current_thread->parent_pid);
+    process_t *current_process = reference_process(pid);
     fd_entry_t **fd_table = current_process->fd_table;
     int *fd_table_size = &current_process->fd_table_size;
 
