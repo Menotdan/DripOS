@@ -5,6 +5,13 @@
 #include "klibc/lock.h"
 #include "drivers/serial.h"
 
+/* Setup vfs driver */
+#include "fs/vfs/vfs.h"
+#include "fs/devfs/devfs.h"
+#include "fs/fd.h"
+#include "proc/scheduler.h"
+#include "klibc/errno.h"
+
 vesa_info_t vesa_display_info;
 lock_t vesa_lock = {0, 0, 0};
 
@@ -124,4 +131,69 @@ void fill_screen(color_t color) {
     memcpy32(vesa_display_info.framebuffer, vesa_display_info.actual_framebuffer,
         vesa_display_info.framebuffer_pixels);
     unlock(vesa_lock);
+}
+
+int vesa_seek(int fd, uint64_t offset, int whence) {
+    (void) offset;
+
+    fd_entry_t *fd_data = fd_lookup(fd);
+    if (whence == 3) {
+        fd_data->seek = vesa_display_info.framebuffer_size;
+    }
+    return fd_data->seek;
+}
+
+int vesa_write(int fd, void *buf, uint64_t count) {
+    fd_entry_t *fd_data = fd_lookup(fd);
+
+    /* Align args to 4 bytes */
+    if (count & 0b11) {
+        get_thread_locals()->errno = -EINVAL;
+        return -1;
+    }
+    if (fd_data->seek & 0b11 || fd_data->seek + count > vesa_display_info.framebuffer_size) {
+        get_thread_locals()->errno = -ESPIPE; // Bro seek must be 4 byte aligned
+        return -1;
+    }
+
+    lock(vesa_lock);
+    uint32_t *fb_seeked = (uint32_t *)
+        ((uint64_t) vesa_display_info.framebuffer + fd_data->seek);
+
+    uint32_t *realfb_seeked = (uint32_t *)
+        ((uint64_t) vesa_display_info.actual_framebuffer + fd_data->seek);
+
+    memcpy32(buf, fb_seeked, count / 4);
+    memcpy32(buf, realfb_seeked, count / 4);
+    unlock(vesa_lock);
+
+    return 0;
+}
+
+int vesa_read(int fd, void *buf, uint64_t count) {
+    fd_entry_t *fd_data = fd_lookup(fd);
+
+    /* Align args to 4 bytes */
+    if (count & 0b11) {
+        get_thread_locals()->errno = -EINVAL;
+        return -1;
+    }
+    if (fd_data->seek & 0b11 || fd_data->seek + count > vesa_display_info.framebuffer_size) {
+        get_thread_locals()->errno = -ESPIPE; // Bro seek must be 4 byte aligned
+        return -1;
+    }
+
+    lock(vesa_lock);
+    uint32_t *fb_seeked = (uint32_t *)
+        ((uint64_t) vesa_display_info.framebuffer + fd_data->seek);
+
+    memcpy32(fb_seeked, buf, count / 4);
+    unlock(vesa_lock);
+
+    return 0;
+}
+
+void setup_vesa_device() {
+    vfs_ops_t ops = {devfs_open, devfs_close, vesa_read, vesa_write, vesa_seek};
+    register_device("vesafb", ops, (void *) 0);
 }

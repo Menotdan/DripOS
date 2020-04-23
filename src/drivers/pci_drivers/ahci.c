@@ -438,6 +438,7 @@ static void ahci_enable_present_devs(ahci_controller_t controller) {
                 // Command list base
                 port->command_list_base = ahci_data_base & 0xFFFFFFFF;
                 port->command_list_base_upper = (ahci_data_base >> 32) & 0xFFFFFFFF;
+
                 // Received FIS base
                 port->fis_base = ahci_fis_base & 0xFFFFFFFF;
                 port->fis_base_upper = (ahci_fis_base >> 32) & 0xFFFFFFFF;
@@ -446,9 +447,11 @@ static void ahci_enable_present_devs(ahci_controller_t controller) {
                     kprintf("[AHCI] ERROR: Allocation for 32 bit ahci device has been put past 4GiB!\n");
                     continue;
                 }
+
                 // Command list base
                 port->command_list_base = ahci_data_base & 0xFFFFFFFF;
                 port->command_list_base_upper = 0;
+
                 // FIS base
                 port->fis_base = ahci_fis_base & 0xFFFFFFFF;
                 port->fis_base_upper = 0;

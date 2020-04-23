@@ -32,6 +32,8 @@ void flip_buffers();
 void clear_buffer();
 void fill_screen(color_t color);
 
+void setup_vesa_device();
+
 extern lock_t vesa_lock;
 extern vesa_info_t vesa_display_info;
 

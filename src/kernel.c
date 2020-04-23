@@ -57,6 +57,10 @@ void kernel_process(int argc, char **argv) {
     fd_write(0, "\nHello from stdout!", 19);
     kprintf("\nargc: %d, argv: %lx", argc, argv);
 
+    int vesa_fd = fd_open("/dev/vesafb", 0);
+    fd_write(vesa_fd, "hellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhell", 88);
+    fd_close(vesa_fd);
+
     pci_init(); // Setup PCI devices and their drivers
 
     kprintf("\n[DripOS Kernel] Bultin todo list:");

@@ -3,6 +3,9 @@
 #include "klibc/hashmap.h"
 #include "fs/fd.h"
 
+/* Devices we want to register */
+#include "drivers/vesa.h"
+
 vfs_node_t *devfs_root;
 hashmap_t *devfs_hashmap;
 
@@ -19,6 +22,10 @@ int devfs_close(int fd_no) {
     return 0;
 }
 
+void register_devices() {
+    setup_vesa_device();
+}
+
 void devfs_init() {
     /* Setup the devfs root */
     devfs_root = vfs_new_node("dev", dummy_ops);
@@ -27,6 +34,8 @@ void devfs_init() {
 
     /* Setup the devfs hashmap */
     devfs_hashmap = init_hashmap();
+
+    register_devices();
 }
 
 void devfs_sprint_devices() {
