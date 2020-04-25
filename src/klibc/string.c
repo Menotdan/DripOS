@@ -12,6 +12,7 @@ void strcpy(char *src, char *dst) {
     uint64_t len = strlen(src);
     for (uint64_t i = 0; i < len; i++)
         *dst++ = *src++;
+    *dst = '\0';
 }
 
 int strcmp(char *s1, char *s2) {

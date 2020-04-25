@@ -2,18 +2,32 @@
 #include "klibc/lock.h"
 #include "klibc/stdlib.h"
 #include "klibc/errno.h"
+#include "mm/vmm.h"
 #include "sys/smp.h"
 #include "proc/scheduler.h"
+#include "proc/safe_userspace.h"
 
 #include "drivers/serial.h"
 
 lock_t fd_lock = {0, 0, 0};
 
 int fd_open(char *name, int mode) {
-    vfs_node_t *node = vfs_open(name, mode);
+    char *string = kcalloc(4097);
+    int64_t ret = strcpy_from_userspace(name, string);
+    sprintf("\nstrcpy returned: %ld", ret);
+    if (ret == -1) { // if err
+        get_thread_locals()->errno = -EFAULT;
+        return get_thread_locals()->errno;
+    } else {
+        sprintf("\ndata: %x", *string);
+    }
+
+    vfs_node_t *node = vfs_open(string, mode);
+    kfree(string);
     if (!node) {
         return get_thread_locals()->errno;
     }
+
     return fd_new(node, mode, get_cpu_locals()->current_thread->parent_pid);
 }
 
@@ -22,6 +36,7 @@ int open_remote_fd(char *name, int mode, int pid) {
     if (!node) {
         return get_thread_locals()->errno;
     }
+    
     return fd_new(node, mode, pid);
 }
 
@@ -42,6 +57,12 @@ int fd_read(int fd, void *buf, uint64_t count) {
         get_thread_locals()->errno = -EBADF;
         return get_thread_locals()->errno;
     }
+
+    if (!range_mapped(buf, count)) {
+        get_thread_locals()->errno = -EFAULT;
+        return get_thread_locals()->errno;
+    }
+
     return vfs_read(fd, buf, count);
 }
 
@@ -51,6 +72,12 @@ int fd_write(int fd, void *buf, uint64_t count) {
         get_thread_locals()->errno = -EBADF;
         return get_thread_locals()->errno;
     }
+
+    if (!range_mapped(buf, count)) {
+        get_thread_locals()->errno = -EFAULT;
+        return get_thread_locals()->errno;
+    }
+
     return vfs_write(fd, buf, count);
 }
 
