@@ -157,7 +157,6 @@ void scheduler_init_ap() {
 int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_t ring) {
     task_t *new_task = create_thread(name, main, rsp, ring);
     int64_t new_tid = add_new_child_thread(new_task, pid);
-    kfree(new_task);
     return new_tid;
 }
 
@@ -217,9 +216,76 @@ int64_t add_new_child_thread(task_t *task, int64_t pid) {
     task_item->tid = new_tid;
     task_item->regs.cr3 = new_parent->cr3; // Inherit parent's cr3
     task_item->parent_pid = pid;
+
+    if (new_parent->threads.array_size == 0) { // No children
+        // -1 because kmalloc creates boundaries so page might not be mapped :|
+        void *phys = virt_to_phys((void *) (task_item->regs.rsp - 1), (pt_t *) task_item->regs.cr3);
+        if ((uint64_t) phys == 0xFFFFFFFFFFFFFFFF) {
+            sprintf("\nRSP not mapped :thonk:");
+            goto done;
+        }
+        sprintf("\nvirt: %lx", task_item->regs.rsp);
+        sprintf("\nphys: %lx", phys);
+        uint64_t stack = GET_HIGHER_HALF(uint64_t, phys) + 1;
+        sprintf("\nstack var: %lx", stack);
+        uint64_t old_stack = stack;
+
+        int argc = 3;
+        char *argv[] = {task_item->name, "hello", "urdum"};
+
+        /* Add argc, argv, and auxv */
+
+        // Actual data
+        uint64_t *string_offsets = kcalloc(sizeof(uint64_t) * argc);
+        uint64_t total_string_len = 0;
+        for (int i = 0; i < argc; i++) {
+            total_string_len += (strlen(argv[i]) + 1);
+            string_offsets[i] = total_string_len;
+
+            char *new_string = (char *) (stack - string_offsets[i]);
+            sprintf("\nString: %lx, string offset: %lu", new_string, string_offsets[i]);
+            strcpy(argv[i], new_string);
+        }
+        stack -= total_string_len;
+        stack = stack & ~(0b1111); // align the stack
+
+        uint64_t auxv_count = 1;
+        auxv_t *auxv = (auxv_t *) stack - (auxv_count * 16);
+        for (uint64_t i = 0; i < auxv_count; i++) {
+            auxv[i].a_un.a_val = 0;
+            auxv[i].a_type = 0;
+        }
+        stack -= (auxv_count * 16);
+        uint64_t auxv_offset = old_stack - stack; // rdx = Top of stack - auxv_offset
+
+        *(uint64_t *) (stack - 8) = 0;
+        stack -= 8;
+
+        uint64_t enviroment_count = 1;
+        stack -= enviroment_count * 8;
+        char **enviroment = (char **) stack;
+        for (uint64_t i = 0; i < enviroment_count; i++) {
+            enviroment[i] = 0;
+        }
+
+        stack -= 8;
+        *(uint64_t *) (stack) = 0;
+
+        stack -= argc * 8;
+        for (int i = 0; i < argc; i++) {
+            *(uint64_t *) (stack + (i * 8)) = task_item->regs.rsp - string_offsets[i]; // Point to the strings
+        }
+        uint64_t argv_offset = old_stack - stack; // rsi = Top of stack - argv_offset
+
+        task_item->regs.rdi = (uint64_t) argc;
+        task_item->regs.rsi = task_item->regs.rsp - argv_offset;
+        task_item->regs.rdx = task_item->regs.rsp - auxv_offset;
+        task_item->regs.rsp -= (old_stack - stack);
+    }
+done:
+
     dynarray_unref(&tasks, new_tid);
-    task->tid = new_tid;
-    task->parent_pid = pid;
+    kfree(task);
 
     /* Add the TID to it's parent's threads list */
     dynarray_add(&new_parent->threads, &new_tid, sizeof(int64_t));

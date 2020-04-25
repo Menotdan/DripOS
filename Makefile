@@ -14,7 +14,7 @@ incPath = ~/DripOS/src
 GDB = gdb
 MEM = 2G # Memory for qemu
 CORES = 8
-O_LEVEL = 2 # Optimization level
+O_LEVEL = 0 # Optimization level
 # Options for GCC
 CFLAGS = -g -fno-pic               \
     -z max-page-size=0x1000        \

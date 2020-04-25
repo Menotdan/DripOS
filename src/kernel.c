@@ -56,6 +56,11 @@ extern void sanity_thread_start();
 void kernel_process(int argc, char **argv) {
     fd_write(0, "\nHello from stdout!", 19);
     kprintf("\nargc: %d, argv: %lx", argc, argv);
+    if (argv) {
+        for (int i = 0; i < argc; i++) {
+            kprintf("\nargv: %s", argv[i]);
+        }
+    }
 
     int vesa_fd = fd_open("/dev/vesafb", 0);
     fd_write(vesa_fd, "hellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhell", 88);

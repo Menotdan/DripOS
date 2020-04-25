@@ -87,6 +87,14 @@ typedef struct {
     uint64_t tsc_total; // The total time this task has been running for
 } __attribute__((packed)) thread_info_block_t;
 
+typedef struct {
+    int64_t a_type;
+    union {
+        long a_val;
+        void *a_ptr;
+        void (*a_func)();
+    } a_un;
+} auxv_t;
 
 /* Scheduling */
 void schedule(int_reg_t *r);
