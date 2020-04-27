@@ -77,8 +77,8 @@ void kernel_process(int argc, char **argv) {
     kprintf("\nMemory used: %lu bytes", pmm_get_used_mem());
     mouse_setup();
 
-    kprintf("\n[DripOS] Loading binary from disk.\n");
-    launch_binary("/echfs_mount/programs/mmap_test1.bin");
+    kprintf("\n[DripOS] Loading init from disk.\n");
+    launch_binary("/echfs_mount/programs/mmap_test4.bin"); // This is init :meme:
 
     sprintf("\ndone kernel work");
 

@@ -4,6 +4,7 @@
 #include "sys/int/isr.h"
 #include "klibc/dynarray.h"
 #include "klibc/rangemap.h"
+#include "klibc/lock.h"
 #include "fs/fd.h"
 
 #define READY 0
@@ -67,7 +68,8 @@ typedef struct {
     fd_entry_t **fd_table;
     int fd_table_size;
 
-    rangemap_t *allocation_table;
+    uint64_t current_brk;
+    lock_t brk_lock;
 
     int64_t uid; // User id of the user runnning this process
     int64_t gid; // Group id of the user running this process
@@ -77,8 +79,8 @@ typedef struct {
 typedef struct {
     /* Do NOT remove these */
     uint64_t meta_pointer;
-    /* These are fine to move around and change types of */
 
+    /* These are fine to move around and change types of */
     int errno;
 
     int64_t tid;
@@ -139,7 +141,8 @@ int free_process_mem(int pid, uint64_t address);
 int mark_process_mem_used(int pid, uint64_t addr, uint64_t size);
 int map_user_memory(int pid, void *phys, void *virt, uint64_t size, uint16_t perms);
 
-void *mmap(void *addr_hint, uint64_t size, int prot, int flags, int fd, uint64_t offset);
+void *psuedo_mmap(void *base, uint64_t len);
+int munmap(char *addr, uint64_t len);
 
 extern uint8_t scheduler_started;
 extern uint8_t scheduler_enabled;

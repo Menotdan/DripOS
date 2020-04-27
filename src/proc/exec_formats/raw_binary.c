@@ -19,8 +19,6 @@ static void new_binary_process(char *process_name, void *exec_ptr, void *code, u
     /* Map memory and mark it as used in the process's address space */
     map_user_memory(pid, code_phys, exec_ptr, program_size, VMM_WRITE);
     map_user_memory(pid, rsp_phys, (void *) USER_STACK_START, TASK_STACK_SIZE, VMM_WRITE);
-    mark_process_mem_used(pid, USER_STACK_START, TASK_STACK_SIZE);
-    mark_process_mem_used(pid, (uint64_t) exec_ptr, program_size);
     
     add_new_child_thread(new_thread, pid);
 }

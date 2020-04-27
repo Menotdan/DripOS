@@ -194,6 +194,8 @@ task_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) {
     new_task->ring = ring;
     new_task->regs.cr3 = base_kernel_cr3;
     new_task->regs.fs = (uint64_t) kcalloc(sizeof(thread_info_block_t));
+    vmm_remap(GET_LOWER_HALF(void *, new_task->regs.fs), (void *) new_task->regs.fs,
+        1, VMM_PRESENT | VMM_WRITE | VMM_USER);
     ((thread_info_block_t *) new_task->regs.fs)->meta_pointer = new_task->regs.fs;
     new_task->state = READY;
     strcpy(name, new_task->name);
@@ -309,7 +311,7 @@ int64_t new_process(char *name, void *new_cr3) {
     new_process->gid = 0;
     new_process->fd_table = kcalloc(10 * sizeof(fd_entry_t));
     new_process->fd_table_size = 10;
-    new_process->allocation_table = kcalloc(sizeof(rangemap_t));
+    new_process->current_brk = 0x10000000000;
     strcpy(name, new_process->name);
 
     /* Add element to the dynarray and save the PID */
@@ -564,50 +566,16 @@ void deref_process(int64_t pid) {
     dynarray_unref(&processes, pid);
 }
 
-void *allocate_process_mem(int pid, uint64_t size) {
-    size = ((size + 0x1000 - 1) / 0x1000) * 0x1000;
-    process_t *process = reference_process(pid);
-    if (!process) return (void *) 0;
-
-    uint64_t free = rangemap_find_free_area(process->allocation_table, size);
-    if (free + size > 0x7fffffffffff) return (void *) 0; // Higher than usable memory
-
-    rangemap_add_range(process->allocation_table, free, free + size);
-    deref_process(pid);
-    return (void *) free;
-}
-
-int free_process_mem(int pid, uint64_t address) {
-    process_t *process = reference_process(pid);
-    if (!process) return -1;
-
-    if (rangemap_entry_present(process->allocation_table, address)) return -2;
-
-    rangemap_mark_free(process->allocation_table, address);
-    deref_process(pid);
-
-    return 0;
-}
-
-int mark_process_mem_used(int pid, uint64_t addr, uint64_t size) {
-    size = ((size + 0x1000 - 1) / 0x1000) * 0x1000;
-    process_t *process = reference_process(pid);
-    if (!process) return -1;
-
-    if (rangemap_entry_present(process->allocation_table, addr)) return -2;
-    rangemap_add_range(process->allocation_table, addr, addr + size);
-    deref_process(pid);
-
-    return 0;
-}
-
 int map_user_memory(int pid, void *phys, void *virt, uint64_t size, uint16_t perms) {
     size = ((size + 0x1000 - 1) / 0x1000);
     process_t *process = reference_process(pid);
     if (!process) return -1;
 
     void *cr3 = (void *) process->cr3;
-    return vmm_map_pages(phys, virt, cr3, size, perms | VMM_PRESENT | VMM_USER);
+    int ret = vmm_map_pages(phys, virt, cr3, size, perms | VMM_PRESENT | VMM_USER);
+    deref_process(pid);
+
+    return ret;
 }
 
 int unmap_user_memory(int pid, void *virt, uint64_t size) {
@@ -616,36 +584,101 @@ int unmap_user_memory(int pid, void *virt, uint64_t size) {
     if (!process) return -1;
 
     void *cr3 = (void *) process->cr3;
-    return vmm_unmap_pages(virt, cr3, size);
+    int ret = vmm_unmap_pages(virt, cr3, size);
+    deref_process(pid);
+
+    return ret;
 }
 
+void *psuedo_mmap(void *base, uint64_t len) {
+    len = (len + 0x1000 - 1) / 0x1000;
+    process_t *process = reference_process(get_cpu_locals()->current_thread->parent_pid);
+    if (!process) { get_thread_locals()->errno = -ESRCH; return (void *) 0; } // bruh
 
-void *mmap(void *addr_hint, uint64_t size, int prot, int flags, int fd, uint64_t offset) {
-    int pid = get_cpu_locals()->current_thread->parent_pid;
-    void *memory = allocate_process_mem(pid, size);
-    void *phys_mem = pmm_alloc(size);
+    void *phys = pmm_alloc(len * 0x1000);
 
-    if (!memory) {
-        get_thread_locals()->errno = -ENOMEM;
-        pmm_unalloc(phys_mem, size);
-        return (void *) 0;
+    if (base) {
+        uint64_t mapped = 0;
+        int map_err = 0;
+        sprintf("\n[MMAP] Mapping at base = %lx", base);
+        for (uint64_t i = 0; i < len; i++) {
+            int err = vmm_map_pages(phys, (void *) ((uint64_t) base + i * 0x1000), 
+                (void *) process->cr3, 1, 
+                VMM_WRITE | VMM_USER | VMM_PRESENT);
+            
+            if (err) {
+                sprintf("\nVMM returned %d", err);
+                mapped = i;
+                map_err = 1;
+                break;
+            }
+        }
+
+        if (map_err) {
+            /* Unmap the error */
+            for (uint64_t i = 0; i < mapped; i++) {
+                vmm_unmap_pages((void *) ((uint64_t) base + i * 0x1000), 
+                    (void *) process->cr3, 1);
+            }
+            get_thread_locals()->errno = -ENOMEM;
+            return (void *) 0;
+        } else {
+            void *ret = (void *) base;
+            return ret;
+        }
+    } else {
+        lock(process->brk_lock);
+        uint64_t mapped = 0;
+        int map_err = 0;
+        sprintf("\n[MMAP] Mapping at current_brk = %lx", process->current_brk);
+        for (uint64_t i = 0; i < len; i++) {
+            int err = vmm_map_pages(phys, (void *) ((uint64_t) process->current_brk + i * 0x1000), 
+                (void *) process->cr3, 1, 
+                VMM_WRITE | VMM_USER | VMM_PRESENT);
+            
+            if (err) {
+                sprintf("\nVMM returned %d", err);
+                mapped = i;
+                map_err = 1;
+                break;
+            }
+        }
+
+        if (map_err) {
+            /* Unmap the error */
+            for (uint64_t i = 0; i < mapped; i++) {
+                vmm_unmap_pages((void *) ((uint64_t) process->current_brk + i * 0x1000), 
+                    (void *) process->cr3, 1);
+            }
+            get_thread_locals()->errno = -ENOMEM;
+
+            unlock(process->brk_lock);
+            return (void *) 0;
+        } else {
+            void *ret = (void *) process->current_brk;
+            process->current_brk += len * 0x1000;
+
+            unlock(process->brk_lock);
+            return ret;
+        }
+    }
+}
+
+int munmap(char *addr, uint64_t len) {
+    len = (len + 0x1000 - 1) / 0x1000;
+    if ((uint64_t) addr != (uint64_t) addr & ~(0xfff)) {
+        get_thread_locals()->errno = -EINVAL;
+        return -1;
+    }
+    if ((uint64_t) addr > 0x7fffffffffff) {
+        // Not user memory, stupid userspace
+        get_thread_locals()->errno = -EINVAL;
+        return -1;
     }
 
-    int not_mapped = map_user_memory(pid, phys_mem, memory, size, VMM_WRITE);
-    if (not_mapped != 0) {
-        panic("Failed memory mapping!");
-
-        /* We won't get control back, but meh */
-        pmm_unalloc(phys_mem, size);
-        return (void *) 0;
+    for (uint64_t i = 0; i < len; i++) {
+        vmm_unmap(addr, 1);
+        addr += 0x1000;
     }
-
-    sprintf("\nAllocated %lu bytes for process %d. Phys: %lx, Virt: %lx", size, pid, phys_mem, memory);
-    return memory;
-
-    (void) addr_hint;
-    (void) prot;
-    (void) flags;
-    (void) fd;
-    (void) offset;
+    return 0;
 }

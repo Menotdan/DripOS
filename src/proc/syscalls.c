@@ -27,13 +27,18 @@ void register_syscall(int num, syscall_handler_t handler) {
 }
 
 void init_syscalls() {
+    /* Useful */
     register_syscall(0, syscall_read);
     register_syscall(1, syscall_write);
     register_syscall(2, syscall_open);
     register_syscall(3, syscall_close);
     register_syscall(8, syscall_seek);
     register_syscall(9, syscall_mmap);
+    register_syscall(11, syscall_munmap);
     register_syscall(35, syscall_nanosleep);
+
+    /* Memes */
+    register_syscall(123, syscall_print_num);
 }
 
 void syscall_handler(syscall_reg_t *r) {
@@ -69,7 +74,16 @@ void syscall_seek(syscall_reg_t *r) {
 }
 
 void syscall_mmap(syscall_reg_t *r) {
-    r->rax = (uint64_t) mmap((void *) r->rdi, r->rsi, (int) r->rdx, (int) r->r10, (int) r->r8, r->r9);
+    r->rax = (uint64_t) psuedo_mmap((void *) r->rdi, r->rsi);
+}
+
+void syscall_munmap(syscall_reg_t *r) {
+    r->rax = (uint64_t) munmap((void *) r->rdi, r->rsi);
+}
+
+void syscall_print_num(syscall_reg_t *r) {
+    sprintf("\nPRINTING NUMBER FROM SYSCALL: %lu", r->rdi);
+    r->rax = 0;
 }
 
 void syscall_empty(syscall_reg_t *r) {
