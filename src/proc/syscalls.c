@@ -35,6 +35,7 @@ void init_syscalls() {
     register_syscall(8, syscall_seek);
     register_syscall(9, syscall_mmap);
     register_syscall(11, syscall_munmap);
+    register_syscall(24, syscall_yield);
     register_syscall(35, syscall_nanosleep);
 
     /* Memes */
@@ -79,6 +80,11 @@ void syscall_mmap(syscall_reg_t *r) {
 
 void syscall_munmap(syscall_reg_t *r) {
     r->rax = (uint64_t) munmap((void *) r->rdi, r->rsi);
+}
+
+void syscall_yield(syscall_reg_t *r) {
+    (void) r;
+    yield();
 }
 
 void syscall_print_num(syscall_reg_t *r) {
