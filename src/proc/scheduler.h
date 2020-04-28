@@ -21,6 +21,10 @@
 #define USER_STACK_START (USER_STACK - TASK_STACK_SIZE + 16)
 
 typedef struct {
+    uint64_t r15, r14, r13, r12, r11, r10, r9, r8, rsi, rdi, rbp, rdx, rcx, rbx, rax;
+} __attribute__((packed)) syscall_reg_t;
+
+typedef struct {
     uint64_t rax, rbx, rcx, rdx, rbp, rdi, rsi, r8, r9, r10, r11, r12, r13, r14, r15;
     uint64_t rsp, rip;
     uint64_t ss, cs, fs;

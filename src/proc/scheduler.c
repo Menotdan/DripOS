@@ -466,7 +466,6 @@ void schedule(int_reg_t *r) {
     }
 
     if (tid_run != -1) {
-        sprintf("\ntid_run: %ld, task: %s", tid_run, running_task->name);
         assert(running_task->state == READY);
         assert(running_task->running == 0);
         running_task->running = 1;
@@ -694,7 +693,7 @@ int munmap(char *addr, uint64_t len) {
     return 0;
 }
 
-int fork() {
+int fork(syscall_reg_t *r) {
     sprintf("\nForking.");
     interrupt_state_t state = interrupt_lock();
     process_t *process = reference_process(get_cpu_locals()->current_thread->parent_pid); // Old process
@@ -724,7 +723,24 @@ int fork() {
     task_t *old_thread = get_cpu_locals()->current_thread;
 
     task_t *thread = create_thread(old_thread->name, (void (*)()) old_thread->regs.rip, old_thread->regs.rsp, old_thread->ring);
-    thread->regs = old_thread->regs; // Same registers
+    thread->regs.rax = (uint64_t) new_pid;
+    thread->regs.rbx = r->rbx;
+    thread->regs.rcx = r->rcx;
+    thread->regs.rdx = r->rdx;
+    thread->regs.rbp = r->rbp;
+    thread->regs.rsi = r->rsi;
+    thread->regs.rdi = r->rdi;
+    thread->regs.r8 = r->r8;
+    thread->regs.r9 = r->r9;
+    thread->regs.r10 = r->r10;
+    thread->regs.r11 = r->r11;
+    thread->regs.r12 = r->r12;
+    thread->regs.r13 = r->r13;
+    thread->regs.r14 = r->r14;
+    thread->regs.r15 = r->r15;
+    thread->regs.rsp = get_cpu_locals()->thread_user_stack;
+    thread->regs.rip = r->rcx;
+    thread->regs.rflags = r->r11;
 
     unlock(scheduler_lock);
 
@@ -734,5 +750,5 @@ int fork() {
     deref_process(new_pid);
     deref_process(process->pid);
     interrupt_unlock(state);
-    return 0;
+    return new_pid;
 }

@@ -113,7 +113,6 @@ int nanosleep(struct timespec *req, struct timespec *rem) {
         get_thread_locals()->errno = -EINVAL;
         return 1;
     }
-    sprintf("\nSleeping for %lu ms", (req->nanoseconds / 1000000) + (req->seconds * 1000));
     sleep_ms((req->nanoseconds / 1000000) + (req->seconds * 1000));
 
     return 0;

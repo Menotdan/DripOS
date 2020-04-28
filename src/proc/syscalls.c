@@ -1,6 +1,5 @@
 #include "syscalls.h"
 #include "fs/fd.h"
-#include "proc/scheduler.h"
 #include "proc/sleep_queue.h"
 #include "klibc/errno.h"
 #include "klibc/stdlib.h"
@@ -44,7 +43,7 @@ void init_syscalls() {
 }
 
 void syscall_handler(syscall_reg_t *r) {
-    sprintf("\nGot syscall with rax = %lx", r->rax);
+    //sprintf("\nGot syscall with rax = %lx", r->rax);
     if (r->rax < (uint64_t) HANDLER_COUNT) {
         get_thread_locals()->errno = 0; // Clear errno
         syscall_handlers[r->rax](r);

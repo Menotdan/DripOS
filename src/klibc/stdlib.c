@@ -18,7 +18,7 @@ void *kmalloc(uint64_t size) {
     *(uint64_t *) size_data = size + 0x2000;
 
     /* Unmap size data for lower bounds reads/writes */
-    sprintf("\n+mem %lu %lu", size_data, *(uint64_t *) size_data);
+    //sprintf("\n+mem %lu %lu", size_data, *(uint64_t *) size_data);
     vmm_unmap((void *) size_data, 1);
     return (void *) (size_data + 0x1000);
 }
@@ -36,7 +36,7 @@ void kfree(void *addr) {
     if ((uint64_t) phys != 0xFFFFFFFFFFFFFFFF) {
         pmm_unalloc(phys, *size_data);
     }
-    sprintf("\n-mem %lu %lu", size_data, *size_data);
+    //sprintf("\n-mem %lu %lu", size_data, *size_data);
 }
 
 void *kcalloc(uint64_t size) {
