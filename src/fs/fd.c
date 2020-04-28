@@ -159,3 +159,35 @@ fd_entry_t *fd_lookup(int fd) {
     unlock(fd_lock);
     return ret;
 }
+
+void clone_fds(int64_t old_pid, int64_t new_pid) {
+    lock(fd_lock);
+    process_t *old = reference_process(old_pid);
+    process_t *new = reference_process(new_pid);
+
+    for (int i = 0; i < old->fd_table_size; i++) {
+        if (old->fd_table[i]) {
+            fd_entry_t *new_fd = kcalloc(sizeof(fd_entry_t));
+            new_fd->node = old->fd_table[i]->node;
+            new_fd->mode = old->fd_table[i]->mode;
+            new_fd->seek = old->fd_table[i]->seek;
+
+            int i = 0;
+            for (; i < new->fd_table_size; i++) {
+                if (!new->fd_table[i]) {
+                    // Found an empty space
+                    goto fnd;
+                }
+            }
+            i = new->fd_table_size; // Get the old table size
+            new->fd_table_size += 10;
+            new->fd_table = krealloc(new->fd_table, new->fd_table_size * sizeof(fd_entry_t *));
+        fnd:
+            new->fd_table[i] = new_fd;
+        }
+    }
+
+    deref_process(new_pid);
+    deref_process(old_pid);
+    unlock(fd_lock);
+}

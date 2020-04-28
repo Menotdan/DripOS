@@ -7,6 +7,8 @@
 #include "cpuid.h"
 #include <stddef.h>
 
+#include "proc/scheduler.h"
+
 lock_t vmm_spinlock = {0, 0, 0}; // Spinlock for the VMM
 uint64_t base_kernel_cr3 = 0;
 
@@ -51,16 +53,27 @@ void vmm_invlpg(uint64_t new) {
 // }
 
 pt_off_t vmm_virt_to_offs(void *virt) {
-    uintptr_t addr = (uintptr_t)virt;
+    uint64_t addr = (uint64_t)virt;
 
     pt_off_t off = {
-        .p4_off = (addr & ((size_t) 0x1ff << 39)) >> 39,
-        .p3_off = (addr & ((size_t) 0x1ff << 30)) >> 30,
-        .p2_off = (addr & ((size_t) 0x1ff << 21)) >> 21,
-        .p1_off = (addr & ((size_t) 0x1ff << 12)) >> 12,
+        .p4_off = (addr & ((uint64_t) 0x1ff << 39)) >> 39,
+        .p3_off = (addr & ((uint64_t) 0x1ff << 30)) >> 30,
+        .p2_off = (addr & ((uint64_t) 0x1ff << 21)) >> 21,
+        .p1_off = (addr & ((uint64_t) 0x1ff << 12)) >> 12,
     };
 
     return off;
+}
+
+void *vmm_offs_to_virt(pt_off_t offs) {
+    uint64_t addr = 0;
+
+    addr |= offs.p4_off << 39;
+    addr |= offs.p3_off << 30;
+    addr |= offs.p2_off << 21;
+    addr |= offs.p1_off << 12;
+
+    return (void *) addr;
 }
 
 uint64_t get_entry(pt_t *cur_table, uint64_t offset) {
@@ -301,6 +314,7 @@ void vmm_set_pat_pages(void *virt, void *p4, uint64_t count, uint8_t pat_entry) 
 }
 
 void *vmm_fork_higher_half(void *old) {
+    lock(vmm_spinlock);
     pt_t *old_p4 = GET_HIGHER_HALF(pt_t *, old);
     void *ret = pmm_alloc(0x1000);
     pt_t *new_p4 = GET_HIGHER_HALF(pt_t *, ret);
@@ -311,6 +325,50 @@ void *vmm_fork_higher_half(void *old) {
         new_p4->table[i] = old_p4->table[i];
     }
 
+    unlock(vmm_spinlock);
+    return ret;
+}
+
+void *vmm_fork(void *old) {
+    void *ret = vmm_fork_higher_half(old);
+    pt_t *table = GET_HIGHER_HALF(pt_t *, old);
+    lock(vmm_spinlock);
+    for (uint64_t w = 0; w < 256; w++) {
+        /* P4 */
+        if (table->table[w] & VMM_PRESENT) {
+            pt_t *table_z = GET_HIGHER_HALF(pt_t *, table->table[w] & VMM_4K_PERM_MASK);
+            for (uint64_t z = 0; z < 512; z++) {
+                /* P3 */
+                if (table_z->table[z] & VMM_PRESENT) {
+                    pt_t *table_y = GET_HIGHER_HALF(pt_t *, table_z->table[z] & VMM_4K_PERM_MASK);
+                    for (uint64_t y = 0; y < 512; y++) {
+                        /* P2 */
+                        if (table_y->table[y] & VMM_PRESENT) {
+                            pt_t *table_x = GET_HIGHER_HALF(pt_t *, table_y->table[y] & VMM_4K_PERM_MASK);
+                            for (uint64_t x = 0; x < 512; x++) {
+                                /* P1 */
+                                if (table_x->table[x] & VMM_PRESENT) {
+                                    pt_off_t offs = {w, z, y, x};
+                                    void *virt = vmm_offs_to_virt(offs);
+                                    void *phys = virt_to_phys(virt, GET_LOWER_HALF(pt_t *, table));
+                                    void *new_phys = pmm_alloc(0x1000);
+
+                                    /* Copy the data */
+                                    memcpy64(GET_HIGHER_HALF(void *, phys), GET_HIGHER_HALF(void *, new_phys), 0x200);
+
+                                    /* Map new page */
+                                    unlock(vmm_spinlock);
+                                    vmm_map_pages(new_phys, virt, ret, 1, table_x->table[x] & ~(VMM_4K_PERM_MASK));
+                                    lock(vmm_spinlock);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    unlock(vmm_spinlock);
     return ret;
 }
 

@@ -73,6 +73,7 @@ typedef struct {
 
     int64_t uid; // User id of the user runnning this process
     int64_t gid; // Group id of the user running this process
+    int64_t ppid; // Parent process id
     uint64_t permissions; // Misc permission flags
 } process_t;
 
@@ -143,6 +144,9 @@ int map_user_memory(int pid, void *phys, void *virt, uint64_t size, uint16_t per
 
 void *psuedo_mmap(void *base, uint64_t len);
 int munmap(char *addr, uint64_t len);
+
+/* Fork, exec, etc */
+int fork();
 
 extern uint8_t scheduler_started;
 extern uint8_t scheduler_enabled;

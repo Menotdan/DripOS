@@ -16,6 +16,7 @@ void syscall_mmap(syscall_reg_t *r);      // 9
 void syscall_munmap(syscall_reg_t *r);    // 11
 void syscall_yield(syscall_reg_t *r);     // 24
 void syscall_nanosleep(syscall_reg_t *r); // 35
+void syscall_fork(syscall_reg_t *r);      // 57
 
 /* Meme syscalls (very temporary) */
 void syscall_print_num(syscall_reg_t *r);

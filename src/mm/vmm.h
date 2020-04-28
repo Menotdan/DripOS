@@ -17,8 +17,8 @@
 #define NORMAL_VMA_OFFSET 0xFFFF800000000000
 #define KERNEL_VMA_OFFSET 0xFFFFFFFF80000000
 
-#define GET_HIGHER_HALF(type, lower_half) (type) ((uint64_t) lower_half + NORMAL_VMA_OFFSET)
-#define GET_LOWER_HALF(type, higher_half) (type) ((uint64_t) higher_half - NORMAL_VMA_OFFSET)
+#define GET_HIGHER_HALF(type, lower_half) (type) ((uint64_t) (lower_half) + NORMAL_VMA_OFFSET)
+#define GET_LOWER_HALF(type, higher_half) (type) ((uint64_t) (higher_half) - NORMAL_VMA_OFFSET)
 
 typedef struct {
     uint64_t p4_off;
@@ -57,6 +57,7 @@ uint64_t vmm_get_pml4t();
 void vmm_clflush(void *addr, uint64_t count);
 
 void *vmm_fork_higher_half(void *old);
+void *vmm_fork(void *old);
 
 uint64_t get_entry(pt_t *cur_table, uint64_t offset);
 

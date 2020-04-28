@@ -30,6 +30,7 @@ void endian_reverse(uint8_t *buffer, uint64_t word_count);
 /* Memory functions */
 void memcpy(uint8_t *src, uint8_t *dst, uint64_t count);
 void memcpy32(uint32_t *src, uint32_t *dst, uint64_t count);
+void memcpy64(uint64_t *src, uint64_t *dst, uint64_t count);
 void memset(uint8_t *dst, uint8_t data, uint64_t count);
 void memset32(uint32_t *dst, uint32_t data, uint64_t count);
 

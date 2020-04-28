@@ -15,22 +15,22 @@ uint64_t available_memory = 0;
 lock_t pmm_lock = {0, 0, 0};
 
 static void pmm_set_bit(uint64_t page) {
-    uint8_t bit = page & 0b111;
-    uint64_t byte = page & ~(0b111);
+    uint8_t bit = page % 8;
+    uint64_t byte = page / 8;
 
     bitmap[byte] |= (1<<bit);
 }
 
 static void pmm_clear_bit(uint64_t page) {
-    uint8_t bit = page & 0b111;
-    uint64_t byte = page & ~(0b111);
+    uint8_t bit = page % 8;
+    uint64_t byte = page / 8;
 
     bitmap[byte] &= ~(1<<bit);
 }
 
 static uint8_t pmm_get_bit(uint64_t page) {
-    uint8_t bit = page & 0b111;
-    uint64_t byte = page & ~(0b111);
+    uint8_t bit = page % 8;
+    uint64_t byte = page / 8;
 
     return bitmap[byte] & (1<<bit);
 }

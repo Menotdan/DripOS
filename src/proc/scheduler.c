@@ -558,12 +558,20 @@ int kill_process(int64_t pid) {
 }
 
 process_t *reference_process(int64_t pid) {
+    interrupt_state_t state = interrupt_lock();
+    lock(scheduler_lock);
     process_t *ret = (process_t *) dynarray_getelem(&processes, pid);
+    unlock(scheduler_lock);
+    interrupt_unlock(state);
     return ret;
 }
 
 void deref_process(int64_t pid) {
+    interrupt_state_t state = interrupt_lock();
+    lock(scheduler_lock);
     dynarray_unref(&processes, pid);
+    unlock(scheduler_lock);
+    interrupt_unlock(state);
 }
 
 int map_user_memory(int pid, void *phys, void *virt, uint64_t size, uint16_t perms) {
@@ -666,7 +674,10 @@ void *psuedo_mmap(void *base, uint64_t len) {
 
 int munmap(char *addr, uint64_t len) {
     len = (len + 0x1000 - 1) / 0x1000;
-    if ((uint64_t) addr != (uint64_t) addr & ~(0xfff)) {
+    process_t *process = reference_process(get_cpu_locals()->current_thread->parent_pid);
+    if (!process) { get_thread_locals()->errno = -ESRCH; return -1; } // bruh
+
+    if ((uint64_t) addr != ((uint64_t) addr & ~(0xfff))) {
         get_thread_locals()->errno = -EINVAL;
         return -1;
     }
@@ -680,5 +691,48 @@ int munmap(char *addr, uint64_t len) {
         vmm_unmap(addr, 1);
         addr += 0x1000;
     }
+    return 0;
+}
+
+int fork() {
+    sprintf("\nForking.");
+    interrupt_state_t state = interrupt_lock();
+    process_t *process = reference_process(get_cpu_locals()->current_thread->parent_pid); // Old process
+    sprintf("\nReferenced process");
+    void *new_cr3 = vmm_fork((void *) process->cr3); // Fork address space
+    int64_t new_pid = new_process(process->name, new_cr3); // Create the new process
+    process_t *new_process = reference_process(new_pid); // Get the process struct
+
+    /* Copy fds */
+    clone_fds(process->pid, new_process->pid);
+
+    lock(scheduler_lock);
+
+    /* Parent id */
+    new_process->ppid = process->pid;
+
+    /* Other ids */
+    new_process->uid = process->uid;
+    new_process->gid = process->gid;
+    
+    /* Other data about the process */
+    lock(process->brk_lock);
+    new_process->current_brk = process->current_brk;
+    unlock(process->brk_lock);
+
+    /* New thread */
+    task_t *old_thread = get_cpu_locals()->current_thread;
+
+    task_t *thread = create_thread(old_thread->name, (void (*)()) old_thread->regs.rip, old_thread->regs.rsp, old_thread->ring);
+    thread->regs = old_thread->regs; // Same registers
+
+    unlock(scheduler_lock);
+
+    add_new_child_thread(thread, new_pid); // Add the thread
+
+    /* Bye bye */
+    deref_process(new_pid);
+    deref_process(process->pid);
+    interrupt_unlock(state);
     return 0;
 }
