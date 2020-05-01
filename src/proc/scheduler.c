@@ -694,10 +694,8 @@ int munmap(char *addr, uint64_t len) {
 }
 
 int fork(syscall_reg_t *r) {
-    sprintf("\nForking.");
     interrupt_state_t state = interrupt_lock();
     process_t *process = reference_process(get_cpu_locals()->current_thread->parent_pid); // Old process
-    sprintf("\nReferenced process");
     void *new_cr3 = vmm_fork((void *) process->cr3); // Fork address space
     int64_t new_pid = new_process(process->name, new_cr3); // Create the new process
     process_t *new_process = reference_process(new_pid); // Get the process struct
@@ -723,7 +721,7 @@ int fork(syscall_reg_t *r) {
     task_t *old_thread = get_cpu_locals()->current_thread;
 
     task_t *thread = create_thread(old_thread->name, (void (*)()) old_thread->regs.rip, old_thread->regs.rsp, old_thread->ring);
-    thread->regs.rax = (uint64_t) new_pid;
+    thread->regs.rax = 0;
     thread->regs.rbx = r->rbx;
     thread->regs.rcx = r->rcx;
     thread->regs.rdx = r->rdx;

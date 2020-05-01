@@ -10,7 +10,9 @@ vfs_node_t *devfs_root;
 hashmap_t *devfs_hashmap;
 
 int devfs_open(char *name, int mode) {
-    sprintf("\n[DevFS] Opening %s with mode %d", name, mode);
+    //sprintf("\n[DevFS] Opening %s with mode %d", name, mode);
+    (void) name;
+    (void) mode;
     return 0;
 }
 
@@ -18,7 +20,8 @@ int devfs_close(int fd_no) {
     fd_entry_t *fd_data = fd_lookup(fd_no);
     vfs_node_t *node = fd_data->node;
 
-    sprintf("\n[DevFS] Closing %s", node->name);
+    //sprintf("\n[DevFS] Closing %s", node->name);
+    (void) node;
     return 0;
 }
 

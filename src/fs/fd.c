@@ -119,8 +119,8 @@ int fd_new(vfs_node_t *node, int mode, int pid) {
     fd_table = krealloc(fd_table, *fd_table_size * sizeof(fd_entry_t *));
 fnd:
     fd_table[i] = new_entry;
-    sprintf("\nFd new: %d", i);
-    sprintf("\nFd table: %lx", fd_table);
+    //sprintf("\nFd new: %d", i);
+    //sprintf("\nFd table: %lx", fd_table);
     unlock(fd_lock);
     return i;
 }
@@ -133,8 +133,8 @@ void fd_remove(int fd) {
     
     if (fd < *fd_table_size - 1) {
         kfree(fd_table[fd]);
-        sprintf("\nFd removed: %d", fd);
-        sprintf("\nFd table: %lx", fd_table);
+        //sprintf("\nFd removed: %d", fd);
+        //sprintf("\nFd table: %lx", fd_table);
         fd_table[fd] = (fd_entry_t *) 0;
     }
 
@@ -148,12 +148,12 @@ fd_entry_t *fd_lookup(int fd) {
     fd_entry_t **fd_table = current_process->fd_table;
     int *fd_table_size = &current_process->fd_table_size;
 
-    sprintf("\nFd lookup: %d", fd);
-    sprintf("\nFd table: %lx", &fd_table[fd]);
+    //sprintf("\nFd lookup: %d", fd);
+    //sprintf("\nFd table: %lx", &fd_table[fd]);
     if (fd < *fd_table_size - 1 && fd >= 0) {
         ret = fd_table[fd];
     } else {
-        sprintf("\nBad fd: %d", fd);
+        //sprintf("\nBad fd: %d", fd);
         ret = (fd_entry_t *) 0;
     }
     unlock(fd_lock);

@@ -24,14 +24,6 @@ extern uint32_t atomic_inc(volatile uint32_t *data);
 extern uint32_t atomic_dec(volatile uint32_t *data);
 #endif
 
-// if (strcmp(#lock_, "dynarray->lock") != 0) {
-//     sprintf("\nLock: %s in file %s on line %d", #lock_, __FILE__, __LINE__);
-// }
-
-// if (strcmp(#lock_, "dynarray->lock") != 0) {
-//     sprintf("\nUnlock: %s in file %s on line %d", #lock_, __FILE__, __LINE__);
-// }
-
 #define lock(lock_) \
     lock_.attempting_to_get = __FUNCTION__; \
     spinlock_lock(&lock_.lock_dat); \
