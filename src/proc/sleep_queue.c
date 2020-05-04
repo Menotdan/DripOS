@@ -10,7 +10,7 @@
 
 #include "drivers/serial.h"
 
-lock_t sleep_queue_lock = {0, 0, 0};
+lock_t sleep_queue_lock = {0, 0, 0, 0};
 sleep_queue_t base_queue = {0, 0, 0, 0};
 
 static void insert_to_queue(uint64_t ticks, int64_t tid) {
@@ -67,7 +67,7 @@ void advance_time() {
             sleep_queue_t *next = cur->next;
             UNCHAIN_LINKED_LIST(cur);
             int64_t tid = cur->tid;
-            kfree(cur);
+            //kfree(cur);
 
             task_t *thread = get_thread_elem(tid);
             if (thread) { // In case the thread was killed in it's sleep

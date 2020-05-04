@@ -13,7 +13,7 @@
 #include "klibc/errno.h"
 
 vesa_info_t vesa_display_info;
-lock_t vesa_lock = {0, 0, 0};
+lock_t vesa_lock = {0, 0, 0, 0};
 
 void init_vesa(stivale_info_t *bootloader_info) {
     bootloader_info = GET_HIGHER_HALF(stivale_info_t *, bootloader_info);

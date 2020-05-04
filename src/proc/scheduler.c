@@ -22,7 +22,7 @@ dynarray_t tasks;
 dynarray_t processes;
 
 uint8_t scheduler_enabled = 0;
-lock_t scheduler_lock = {0, 0, 0};
+lock_t scheduler_lock = {0, 0, 0, 0};
 
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
 task_regs_t default_user_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x23,0x1B,0,0x202,0};

@@ -12,7 +12,7 @@ uint64_t total_memory = 0;
 uint64_t used_memory = 0;
 uint64_t available_memory = 0;
 
-lock_t pmm_lock = {0, 0, 0};
+lock_t pmm_lock = {0, 0, 0, 0};
 
 static void pmm_set_bit(uint64_t page) {
     uint8_t bit = page % 8;

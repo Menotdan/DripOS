@@ -9,7 +9,7 @@
 
 #include "drivers/serial.h"
 
-lock_t fd_lock = {0, 0, 0};
+lock_t fd_lock = {0, 0, 0, 0};
 
 int fd_open(char *name, int mode) {
     char *string = kcalloc(4097);

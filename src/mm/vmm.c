@@ -9,7 +9,7 @@
 
 #include "proc/scheduler.h"
 
-lock_t vmm_spinlock = {0, 0, 0}; // Spinlock for the VMM
+lock_t vmm_spinlock = {0, 0, 0, 0}; // Spinlock for the VMM
 uint64_t base_kernel_cr3 = 0;
 
 uint64_t cache_line_size = 0;
