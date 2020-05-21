@@ -62,10 +62,12 @@ isr_common:
     xor ax, ax
     mov es, ax
     mov ds, ax
+    mov qword [gs:16], 1 ; in_irq
     cld
     xor rax, rax
     mov rdi, rsp
     call isr_handler
+    mov qword [gs:16], 0 ; in_irq
     popaq
     ; Remove the error code and interrupt number
     add rsp, 16

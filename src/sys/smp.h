@@ -10,6 +10,7 @@ typedef struct {
     uint64_t meta_pointer;
     uint64_t thread_kernel_stack;
     uint64_t thread_user_stack;
+    uint64_t in_irq;
     /* Change these ig lol */
     uint8_t apic_id;
     uint8_t cpu_index;
