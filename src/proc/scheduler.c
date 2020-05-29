@@ -16,13 +16,12 @@
 
 extern char syscall_stub[];
 
-worker_stack_t worker_stack;
-
 dynarray_t tasks;
 dynarray_t processes;
 
 uint8_t scheduler_enabled = 0;
 lock_t scheduler_lock = {0, 0, 0, 0};
+int cpu_holding_sched_lock = -1; // -1 means unknown/none
 
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
 task_regs_t default_user_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x23,0x1B,0,0x202,0};
@@ -84,32 +83,6 @@ void _idle() {
     }
 }
 
-/* Launch a high priority kernel worker */
-void launch_kernel_worker(void (*worker)()) {
-    lock(scheduler_lock);
-    worker_stack_t *cur = &worker_stack;
-    while (cur->next) {
-        cur = cur->next;
-    }
-
-    /* Allocate new on the "stack" */
-    cur->next = kcalloc(sizeof(worker_stack_t));
-    cur = cur->next;
-    
-    cur->thread.regs = default_kernel_regs;
-    cur->thread.kernel_stack = (uint64_t) kcalloc(0x1000) + 0x1000;
-    cur->thread.regs.rsp = (uint64_t) kcalloc(0x1000) + 0x1000;
-    cur->thread.regs.cr3 = base_kernel_cr3;
-    cur->thread.regs.rip = (uint64_t) worker;
-
-    cur->thread.ring = 0;
-    cur->thread.state = READY;
-
-    cur->thread.regs.fs = (uint64_t) kcalloc(sizeof(thread_info_block_t));
-    ((thread_info_block_t *) cur->thread.regs.fs)->meta_pointer = cur->thread.regs.fs;
-    unlock(scheduler_lock);
-}
-
 /* Initialize the BSP for scheduling */
 void scheduler_init_bsp() {
     tasks.array_size = 0;
@@ -162,8 +135,8 @@ int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_
 
 /* Add the thread to the dynarray */
 int64_t start_thread(task_t *thread) {
-    interrupt_state_t state = interrupt_lock();
     lock(scheduler_lock);
+    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
 
     int64_t tid = dynarray_add(&tasks, thread, sizeof(task_t));
     kfree(thread);
@@ -171,8 +144,8 @@ int64_t start_thread(task_t *thread) {
     thread->tid = tid;
     dynarray_unref(&tasks, tid);
 
+    cpu_holding_sched_lock = -1;
     unlock(scheduler_lock);
-    interrupt_unlock(state);
     return tid;
 }
 
@@ -194,6 +167,7 @@ task_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) {
     new_task->ring = ring;
     new_task->regs.cr3 = base_kernel_cr3;
     new_task->regs.fs = (uint64_t) kcalloc(sizeof(thread_info_block_t));
+    new_task->sleep_node = kcalloc(sizeof(sleep_queue_t));
     vmm_remap(GET_LOWER_HALF(void *, new_task->regs.fs), (void *) new_task->regs.fs,
         1, VMM_PRESENT | VMM_WRITE | VMM_USER);
     ((thread_info_block_t *) new_task->regs.fs)->meta_pointer = new_task->regs.fs;
@@ -205,8 +179,8 @@ task_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) {
 
 /* Add a new thread to the dynarray and as a child of a process */
 int64_t add_new_child_thread(task_t *task, int64_t pid) {
-    interrupt_state_t state = interrupt_lock();
     lock(scheduler_lock);
+    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
 
     /* Find the parent process */
     process_t *new_parent = dynarray_getelem(&processes, pid);
@@ -292,15 +266,15 @@ done:
     /* Add the TID to it's parent's threads list */
     dynarray_add(&new_parent->threads, &new_tid, sizeof(int64_t));
 
+    cpu_holding_sched_lock = -1;
     unlock(scheduler_lock);
-    interrupt_unlock(state);
     return new_tid;
 }
 
 /* Allocate new data for a process, then return the new PID */
 int64_t new_process(char *name, void *new_cr3) {
-    interrupt_state_t state = interrupt_lock();
     lock(scheduler_lock);
+    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
 
     /* Allocate new process */
     process_t *new_process = kcalloc(sizeof(process_t));
@@ -320,8 +294,8 @@ int64_t new_process(char *name, void *new_cr3) {
     process_item->pid = pid;
     dynarray_unref(&processes, pid);
 
+    cpu_holding_sched_lock = -1;
     unlock(scheduler_lock);
-    interrupt_unlock(state);
     /* Free the old data since it's in the dynarray */
     kfree(new_process);
 
@@ -392,12 +366,24 @@ void force_unlocked_schedule() {
 void schedule_bsp(int_reg_t *r) {
     send_scheduler_ipis();
 
-    lock(scheduler_lock);
+    if (spinlock_check_and_lock(&scheduler_lock.lock_dat)) {
+        if (cpu_holding_sched_lock != -1 && cpu_holding_sched_lock != get_cpu_locals()->cpu_index) {
+            lock(scheduler_lock);
+        } else {
+            return;
+        }
+    }
     schedule(r);
 }
 
 void schedule_ap(int_reg_t *r) {
-    lock(scheduler_lock);
+    if (spinlock_check_and_lock(&scheduler_lock.lock_dat)) {
+        if (cpu_holding_sched_lock != -1 && cpu_holding_sched_lock != get_cpu_locals()->cpu_index) {
+            lock(scheduler_lock);
+        } else {
+            return;
+        }
+    }
     schedule(r);
 }
 
@@ -519,8 +505,9 @@ void schedule(int_reg_t *r) {
 
 int kill_task(int64_t tid) {
     int ret = 0;
-    interrupt_state_t state = interrupt_lock();
     lock(scheduler_lock);
+    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
+
     task_t *task = dynarray_getelem(&tasks, tid);
     if (task) {
         // If we are running this thread, unref it a first time because it is refed from running
@@ -533,13 +520,12 @@ int kill_task(int64_t tid) {
     } else {
         ret = 1;
     }
+    cpu_holding_sched_lock = -1;
     force_unlocked_schedule();
-    interrupt_unlock(state);
     return ret; // make gcc happy
 }
 
 int kill_process(int64_t pid) {
-    interrupt_state_t state = interrupt_lock();
     process_t *proc = dynarray_getelem(&processes, pid);
     if (proc) {
         for (int64_t t = 0; t < proc->threads.array_size; t++) {
@@ -552,25 +538,28 @@ int kill_process(int64_t pid) {
     }
     dynarray_remove(&processes, pid);
     dynarray_unref(&processes, pid);
-    interrupt_unlock(state);
     return 0;
 }
 
 process_t *reference_process(int64_t pid) {
-    interrupt_state_t state = interrupt_lock();
     lock(scheduler_lock);
+    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
+
     process_t *ret = (process_t *) dynarray_getelem(&processes, pid);
+
+    cpu_holding_sched_lock = -1;
     unlock(scheduler_lock);
-    interrupt_unlock(state);
     return ret;
 }
 
 void deref_process(int64_t pid) {
-    interrupt_state_t state = interrupt_lock();
     lock(scheduler_lock);
+    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
+
     dynarray_unref(&processes, pid);
+
+    cpu_holding_sched_lock = -1;
     unlock(scheduler_lock);
-    interrupt_unlock(state);
 }
 
 int map_user_memory(int pid, void *phys, void *virt, uint64_t size, uint16_t perms) {
@@ -660,12 +649,15 @@ void *psuedo_mmap(void *base, uint64_t len) {
             get_thread_locals()->errno = -ENOMEM;
 
             unlock(process->brk_lock);
+            sprintf("\nhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh");
             return (void *) 0;
         } else {
             void *ret = (void *) process->current_brk;
             process->current_brk += len * 0x1000;
 
             unlock(process->brk_lock);
+            sprintf("\nhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh2");
+            sprintf(" = %lx", ret);
             return ret;
         }
     }
@@ -694,7 +686,6 @@ int munmap(char *addr, uint64_t len) {
 }
 
 int fork(syscall_reg_t *r) {
-    interrupt_state_t state = interrupt_lock();
     process_t *process = reference_process(get_cpu_locals()->current_thread->parent_pid); // Old process
     void *new_cr3 = vmm_fork((void *) process->cr3); // Fork address space
     int64_t new_pid = new_process(process->name, new_cr3); // Create the new process
@@ -704,6 +695,7 @@ int fork(syscall_reg_t *r) {
     clone_fds(process->pid, new_process->pid);
 
     lock(scheduler_lock);
+    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
 
     /* Parent id */
     new_process->ppid = process->pid;
@@ -740,6 +732,7 @@ int fork(syscall_reg_t *r) {
     thread->regs.rip = r->rcx;
     thread->regs.rflags = r->r11;
 
+    cpu_holding_sched_lock = -1;
     unlock(scheduler_lock);
 
     add_new_child_thread(thread, new_pid); // Add the thread
@@ -747,6 +740,5 @@ int fork(syscall_reg_t *r) {
     /* Bye bye */
     deref_process(new_pid);
     deref_process(process->pid);
-    interrupt_unlock(state);
     return new_pid;
 }

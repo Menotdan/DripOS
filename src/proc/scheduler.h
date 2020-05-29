@@ -1,6 +1,7 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 #include <stdint.h>
+#include "sleep_queue.h"
 #include "sys/int/isr.h"
 #include "klibc/dynarray.h"
 #include "klibc/rangemap.h"
@@ -52,14 +53,8 @@ typedef struct {
     uint8_t ring;
 
     uint8_t running;
+    sleep_queue_t *sleep_node;
 } task_t;
-
-typedef struct kernel_worker_stack {
-    struct kernel_worker_stack *next;
-    struct kernel_worker_stack *prev;
-    task_t thread;    
-} worker_stack_t;
-
 
 typedef struct {
     char name[50]; // The name of the process
@@ -154,5 +149,7 @@ int fork();
 
 extern uint8_t scheduler_started;
 extern uint8_t scheduler_enabled;
+extern lock_t scheduler_lock;
+extern int cpu_holding_sched_lock;
 
 #endif

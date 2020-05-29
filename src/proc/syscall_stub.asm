@@ -39,6 +39,12 @@ pop rax
 extern syscall_handler
 global syscall_stub
 
+extern sprintf
+bruh:
+    mov rdi, syscall_error
+    call sprintf
+    jmp $
+
 syscall_stub:
     ; Store the user stack and restore the kernel stack
     mov qword [gs:16], rsp
@@ -48,6 +54,8 @@ syscall_stub:
     mov rdi, rsp
     call syscall_handler
     popaq
+    cmp rax, 0
+    je bruh
     ; Return from the syscall
     push 0x23 ; SS
     push qword [gs:16] ; RSP
@@ -56,3 +64,7 @@ syscall_stub:
     push rcx ; RIP
 
     iretq
+
+section .rodata
+syscall_error:
+    db "syscall returned 0 :/",10,0

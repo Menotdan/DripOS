@@ -59,3 +59,10 @@ deadlock:
     pop rdi
     pop rdi
     jmp spin ; rax is clear, lets continue
+
+global spinlock_check_and_lock
+spinlock_check_and_lock:
+    xor eax, eax
+    lock bts dword [rdi], 0
+    setc al
+    ret

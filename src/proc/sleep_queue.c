@@ -12,9 +12,9 @@
 
 lock_t sleep_queue_lock = {0, 0, 0, 0};
 sleep_queue_t base_queue = {0, 0, 0, 0};
+uint64_t lagged_ticks = 0;
 
 static void insert_to_queue(uint64_t ticks, int64_t tid) {
-    interrupt_state_t state = interrupt_lock();
     lock(sleep_queue_lock);
 
     uint64_t total = 0;
@@ -41,7 +41,9 @@ static void insert_to_queue(uint64_t ticks, int64_t tid) {
 
     sleep_queue_t *next = cur->next;
     uint64_t before_relative = ticks - total;
-    sleep_queue_t *new = kcalloc(sizeof(sleep_queue_t));
+    sleep_queue_t *new = get_cpu_locals()->current_thread->sleep_node;
+    new->next = (void *) 0;
+    new->prev = (void *) 0;
     CHAIN_LINKED_LIST(cur, new);
     new->time_left = before_relative;
     new->tid = tid;
@@ -53,48 +55,51 @@ static void insert_to_queue(uint64_t ticks, int64_t tid) {
 
     // sprintf("\nInserted.");
     unlock(sleep_queue_lock);
-    interrupt_unlock(state);
 }
 
 void advance_time() {
-    lock_scheduler();
+    if (spinlock_check_and_lock(&scheduler_lock.lock_dat)) {
+        sprintf("Scheduler was locked in advance time");
+        lagged_ticks += 1;
+        return;
+    }
+
     lock(sleep_queue_lock);
-    sleep_queue_t *cur = base_queue.next;
-    if (cur) {
-        cur->time_left--;
-        while (cur && cur->time_left == 0) {
-            assert(cur);
-            sleep_queue_t *next = cur->next;
-            UNCHAIN_LINKED_LIST(cur);
-            int64_t tid = cur->tid;
-            //kfree(cur);
+    for (uint64_t i = 0; i < lagged_ticks + 1; i++) { // Count down for all the lagged ticks + the current tick
+        sleep_queue_t *cur = base_queue.next;
+        if (cur) {
+            cur->time_left--;
+            while (cur && cur->time_left == 0) {
+                assert(cur);
+                sleep_queue_t *next = cur->next;
+                UNCHAIN_LINKED_LIST(cur);
+                int64_t tid = cur->tid;
 
-            task_t *thread = get_thread_elem(tid);
-            if (thread) { // In case the thread was killed in it's sleep
-                assert(thread->state == SLEEP);
-                thread->state = READY;
-                thread->running = 0;
+                task_t *thread = get_thread_elem(tid);
+                if (thread) { // In case the thread was killed in it's sleep
+                    assert(thread->state == SLEEP);
+                    thread->state = READY;
+                    thread->running = 0;
+                }
+                unref_thread_elem(tid);
+
+                cur = next;
             }
-            unref_thread_elem(tid);
-
-            cur = next;
         }
     }
     unlock(sleep_queue_lock);
-    unlock_scheduler();
+    unlock(scheduler_lock);
 }
 
 void sleep_ms(uint64_t ms) {
-    interrupt_state_t state = interrupt_lock();
-
-    lock_scheduler();
+    lock(scheduler_lock);
+    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
     assert(get_cpu_locals()->current_thread->state == RUNNING);
     get_cpu_locals()->current_thread->state = SLEEP;
 
     insert_to_queue(ms, get_cpu_locals()->current_thread->tid); // Insert to the thread sleep queue
+    cpu_holding_sched_lock = -1;
     force_unlocked_schedule(); // Leave in case the scheduler hasn't scheduled us out itself
-
-    interrupt_unlock(state);
 }
 
 /* Nanosleep syscall */

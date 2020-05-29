@@ -15,6 +15,7 @@ typedef volatile struct {
 
 extern void spinlock_lock(volatile uint32_t *lock);
 extern void spinlock_unlock(volatile uint32_t *lock);
+extern uint64_t spinlock_check_and_lock(volatile uint32_t *lock);
 extern uint32_t atomic_inc(volatile uint32_t *data);
 extern uint32_t atomic_dec(volatile uint32_t *data);
 
@@ -24,11 +25,9 @@ uint8_t check_interrupts();
 
 #define lock(lock_) \
     lock_.attempting_to_get = __FUNCTION__; \
-    lock_.interrupt_state = interrupt_lock(); \
     spinlock_lock(&lock_.lock_dat); \
     lock_.current_holder = __FUNCTION__;
 #define unlock(lock_) \
-    spinlock_unlock(&lock_.lock_dat); \
-    interrupt_unlock(lock_.interrupt_state);
+    spinlock_unlock(&lock_.lock_dat);
 
 #endif

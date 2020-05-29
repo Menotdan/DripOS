@@ -76,6 +76,7 @@ void syscall_seek(syscall_reg_t *r) {
 
 void syscall_mmap(syscall_reg_t *r) {
     r->rax = (uint64_t) psuedo_mmap((void *) r->rdi, r->rsi);
+    sprintf("\nr->rax = %lx", r->rax);
 }
 
 void syscall_munmap(syscall_reg_t *r) {
