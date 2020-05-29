@@ -78,7 +78,7 @@ void kernel_process(int argc, char **argv) {
     mouse_setup();
 
     kprintf("\n[DripOS] Loading init from disk.\n");
-    launch_binary("/echfs_mount/programs/fork_bomb2.bin"); // This is init :meme:
+    launch_binary("/echfs_mount/programs/fork_bomb3.bin"); // This is init :meme:
 
     sprintf("\ndone kernel work");
 

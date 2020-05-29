@@ -367,22 +367,25 @@ void schedule_bsp(int_reg_t *r) {
     send_scheduler_ipis();
 
     if (spinlock_check_and_lock(&scheduler_lock.lock_dat)) {
-        if (cpu_holding_sched_lock != -1 && cpu_holding_sched_lock != get_cpu_locals()->cpu_index) {
-            lock(scheduler_lock);
-        } else {
-            return;
-        }
+        // if (cpu_holding_sched_lock != -1 && cpu_holding_sched_lock != get_cpu_locals()->cpu_index) {
+        //     sprintf("cpu_holding_sched_lock: %d", cpu_holding_sched_lock);
+        //     lock(scheduler_lock);
+        // } else {
+        //     return;
+        // }
+        return;
     }
     schedule(r);
 }
 
 void schedule_ap(int_reg_t *r) {
     if (spinlock_check_and_lock(&scheduler_lock.lock_dat)) {
-        if (cpu_holding_sched_lock != -1 && cpu_holding_sched_lock != get_cpu_locals()->cpu_index) {
-            lock(scheduler_lock);
-        } else {
-            return;
-        }
+        // if (cpu_holding_sched_lock != -1 && cpu_holding_sched_lock != get_cpu_locals()->cpu_index) {
+        //     lock(scheduler_lock);
+        // } else {
+        //     return;
+        // }
+        return;
     }
     schedule(r);
 }
@@ -596,14 +599,12 @@ void *psuedo_mmap(void *base, uint64_t len) {
     if (base) {
         uint64_t mapped = 0;
         int map_err = 0;
-        sprintf("\n[MMAP] Mapping at base = %lx", base);
         for (uint64_t i = 0; i < len; i++) {
             int err = vmm_map_pages(phys, (void *) ((uint64_t) base + i * 0x1000), 
                 (void *) process->cr3, 1, 
                 VMM_WRITE | VMM_USER | VMM_PRESENT);
             
             if (err) {
-                sprintf("\nVMM returned %d", err);
                 mapped = i;
                 map_err = 1;
                 break;
@@ -626,14 +627,12 @@ void *psuedo_mmap(void *base, uint64_t len) {
         lock(process->brk_lock);
         uint64_t mapped = 0;
         int map_err = 0;
-        sprintf("\n[MMAP] Mapping at current_brk = %lx", process->current_brk);
         for (uint64_t i = 0; i < len; i++) {
             int err = vmm_map_pages(phys, (void *) ((uint64_t) process->current_brk + i * 0x1000), 
                 (void *) process->cr3, 1, 
                 VMM_WRITE | VMM_USER | VMM_PRESENT);
             
             if (err) {
-                sprintf("\nVMM returned %d", err);
                 mapped = i;
                 map_err = 1;
                 break;
@@ -649,15 +648,12 @@ void *psuedo_mmap(void *base, uint64_t len) {
             get_thread_locals()->errno = -ENOMEM;
 
             unlock(process->brk_lock);
-            sprintf("\nhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh");
             return (void *) 0;
         } else {
             void *ret = (void *) process->current_brk;
             process->current_brk += len * 0x1000;
 
             unlock(process->brk_lock);
-            sprintf("\nhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh2");
-            sprintf(" = %lx", ret);
             return ret;
         }
     }

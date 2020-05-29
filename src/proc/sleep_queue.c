@@ -59,12 +59,14 @@ static void insert_to_queue(uint64_t ticks, int64_t tid) {
 
 void advance_time() {
     if (spinlock_check_and_lock(&scheduler_lock.lock_dat)) {
-        sprintf("Scheduler was locked in advance time");
         lagged_ticks += 1;
         return;
     }
 
     lock(sleep_queue_lock);
+    if (lagged_ticks > 50) {
+        sprintf("[DripOS] Warning, kernel may be lagging, %lu ticks skipped.", lagged_ticks);
+    }
     for (uint64_t i = 0; i < lagged_ticks + 1; i++) { // Count down for all the lagged ticks + the current tick
         sleep_queue_t *cur = base_queue.next;
         if (cur) {
@@ -87,6 +89,7 @@ void advance_time() {
             }
         }
     }
+    lagged_ticks = 0;
     unlock(sleep_queue_lock);
     unlock(scheduler_lock);
 }

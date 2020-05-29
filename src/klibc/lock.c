@@ -26,6 +26,6 @@ uint8_t check_interrupts() {
 }
 
 void deadlock_handler(lock_t *lock) {
-    sprintf("\nWarning: Potential deadlock in a lock held by %s", lock->current_holder);
+    sprintf("\nWarning: Potential deadlock in lock %s held by %s", lock->lock_name, lock->current_holder);
     sprintf("\nAttempting to get lock from %s", lock->attempting_to_get);
 }

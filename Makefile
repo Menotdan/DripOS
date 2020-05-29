@@ -54,7 +54,7 @@ run: DripOS.img
 	make clean
 
 run-dripdbg: DripOS.img
-	- qemu-system-x86_64 -d guest_errors -smp ${CORES} -machine q35 -no-shutdown -no-reboot -chardev socket,id=char0,port=12345,host=127.0.0.1 -serial chardev:char0 -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -cdrom DripOS.img -hda dripdisk.img
+	- qemu-system-x86_64 -d guest_errors -smp ${CORES} -machine q35 -no-shutdown -no-reboot -chardev socket,id=char0,port=12345,host=127.0.0.1 -serial chardev:char0 -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -hdb DripOS.img -hda dripdisk.img
 	make clean
 
 run-kvm: DripOS.img
@@ -63,7 +63,7 @@ run-kvm: DripOS.img
 
 # Open the connection to qemu and load our kernel-object file with symbols
 debug: DripOS.img
-	sudo qemu-system-x86_64 -enable-kvm -smp ${CORES} -vga std -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -cdrom DripOS.img -hda dripdisk.img &
+	sudo qemu-system-x86_64 -machine q35 -smp ${CORES} -vga std -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -s -S -boot menu=on -hdb DripOS.img -hda dripdisk.img &
 	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf"
 	make clean
 

@@ -10,7 +10,7 @@ typedef volatile struct {
     uint32_t lock_dat;
     const char *current_holder;
     const char *attempting_to_get;
-    interrupt_state_t interrupt_state;
+    const char *lock_name;
 } lock_t;
 
 extern void spinlock_lock(volatile uint32_t *lock);
@@ -25,6 +25,7 @@ uint8_t check_interrupts();
 
 #define lock(lock_) \
     lock_.attempting_to_get = __FUNCTION__; \
+    lock_.lock_name = #lock_; \
     spinlock_lock(&lock_.lock_dat); \
     lock_.current_holder = __FUNCTION__;
 #define unlock(lock_) \
