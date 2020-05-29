@@ -12,6 +12,7 @@ typedef struct linked_strings {
 void reverse(char s[]);
 void strcpy(char *src, char *dst);
 int strcmp(char *s1, char *s2);
+int strncmp(char *s1, char *s2, int len);
 void strcat(char *dst, char *src);
 uint64_t strlen(char str[]);
 

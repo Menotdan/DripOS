@@ -295,6 +295,7 @@ int echfs_seek(int fd_no, uint64_t offset, int whence) {
 int echfs_read(int fd_no, void *buf, uint64_t count) {
     fd_entry_t *fd = fd_lookup(fd_no);
     vfs_node_t *node = fd->node;
+    assert(node);
     char *path = get_full_path(node);
     sprintf("\n[EchFS] Full path: ");
     sprint(path);
@@ -337,10 +338,10 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
         memcpy(local_buf + fd->seek, buf, count_to_read); // Copy the data
         kfree(local_buf);
         kfree(entry);
-        sprintf("\n[EchFS] Read data successfully!");
+        sprintf("\n[EchFS] Read data successfully!\n");
         return count_to_read; // Done
     } else {
-        sprintf("\n[EchFS] Read died somehow");
+        sprintf("\n[EchFS] Read died somehow\n");
         get_thread_locals()->errno = -ENOENT;
 
         kfree(path);

@@ -35,6 +35,7 @@
 #include "sys/smp.h"
 
 #include "fs/filesystems/echfs.h"
+#include "proc/exec_formats/elf.h"
 
 #define TODO_LIST_SIZE 7
 char *todo_list[TODO_LIST_SIZE] = {"Better syscall error handling", "Filesystem driver", "ELF Loading", "userspace libc", "minor: Sync TLB across CPUs", "minor: Add MMIO PCI", "minor: Retry AHCI commands"};
@@ -62,10 +63,6 @@ void kernel_process(int argc, char **argv) {
         }
     }
 
-    int vesa_fd = fd_open("/dev/vesafb", 0);
-    fd_write(vesa_fd, "hellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhellhell", 88);
-    fd_close(vesa_fd);
-
     pci_init(); // Setup PCI devices and their drivers
 
     kprintf("\n[DripOS Kernel] Bultin todo list:");
@@ -77,8 +74,10 @@ void kernel_process(int argc, char **argv) {
     kprintf("\nMemory used: %lu bytes", pmm_get_used_mem());
     mouse_setup();
 
-    kprintf("\n[DripOS] Loading init from disk.\n");
-    launch_binary("/echfs_mount/programs/fork_bomb3.bin"); // This is init :meme:
+    //kprintf("\n[DripOS] Loading init from disk.\n");
+    //launch_binary("/echfs_mount/programs/fork_bomb3.bin"); // This is init :meme:
+
+    load_elf("/echfs_mount/elf_test.elf");
 
     sprintf("\ndone kernel work");
 

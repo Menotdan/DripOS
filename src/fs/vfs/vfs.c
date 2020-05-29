@@ -328,11 +328,15 @@ loop:
 }
 
 char *get_full_path(vfs_node_t *node) {
+    assert(node);
+
     lock(vfs_lock);
     vfs_node_t *cur_node = node;
     char *path = (char *) 0;
     uint64_t path_index = 0;
     while (cur_node != root_node) {
+        assert(cur_node);
+        assert(cur_node->name);
         path = krealloc(path, path_index + strlen(cur_node->name) + 1);
 
         for (uint64_t i = strlen(cur_node->name) - 1; i > 0; i--) {
@@ -343,6 +347,9 @@ char *get_full_path(vfs_node_t *node) {
         // Add the preceding '/'
         path[path_index++] = '/';
         path[path_index] = '\0';
+        if (!cur_node->parent) {
+            sprintf("bruh\n");
+        }
         cur_node = cur_node->parent;
     }
 
@@ -358,13 +365,18 @@ vfs_node_t *vfs_open(char *name, int mode) {
         sprintf("\n[VFS] Handling mountpoint for %s", name);
         /* The first missing node, where the generator should start generating */
         vfs_node_t *missing_start = create_missing_nodes_from_path(name, null_vfs_ops);
+        assert(missing_start);
 
         node = get_node_from_path(name);
         while (node && !node->node_handle) {
             node = node->parent;
+            if (node == root_node) {
+                return (void *) 0; // Welp
+            }
         }
 
         char *temp_name = name;
+        assert(node);
         char *full_path = get_full_path(node);
         sprintf("\n[VFS] Mountpoint at %s", full_path);
         temp_name += strlen(full_path);

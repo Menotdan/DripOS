@@ -16,11 +16,18 @@ void strcpy(char *src, char *dst) {
 }
 
 int strcmp(char *s1, char *s2) {
-    if (strlen(s1) != strlen(s2)) { return 1; }
+    if (strlen(s1) != strlen(s2)) return 1;
     while (*s1 != '\0' && *s2 != '\0') {
-        if (*s1 != *s2) { return 1; }
+        if (*s1 != *s2) return 1;
         s1++;
         s2++;
+    }
+    return 0;
+}
+
+int strncmp(char *s1, char *s2, int len) {
+    for (int i = 0; i < len; i++) {
+        if (s1[i] != s2[i]) return 1;
     }
     return 0;
 }
