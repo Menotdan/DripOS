@@ -18,6 +18,7 @@ extern char syscall_stub[];
 
 dynarray_t tasks;
 dynarray_t processes;
+uint64_t process_count = 0;
 
 uint8_t scheduler_enabled = 0;
 lock_t scheduler_lock = {0, 0, 0, 0};
@@ -304,6 +305,7 @@ int64_t new_process(char *name, void *new_cr3) {
     open_remote_fd("/dev/tty1", 0, pid); // stdin
     open_remote_fd("/dev/tty1", 0, pid); // stderr
 
+    process_count++;
     return pid;
 }
 
