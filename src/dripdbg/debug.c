@@ -154,7 +154,7 @@ void debug_worker() {
                 uint64_t tid = atou(buffer + 1);
                 kill_task(tid);
             } else {
-                kprintf("\n[DripDBG] Unknown message: '%s'", buffer);
+                kprintf("[DripDBG] Unknown message: '%s'\n", buffer);
             }
         }
 

@@ -326,7 +326,7 @@ void add_pci_device(pci_device_t new_device) {
 
 /* Scan a bus rescursively */
 void scan_bus(uint8_t bus) {
-    kprintf("\nChecking bus %u", (uint32_t) bus);
+    kprintf("Checking bus %u\n", (uint32_t) bus);
     for (uint8_t dev = 0; dev < 32; dev++) { // Loop all devices
         if (check_function(bus, dev, 0)) { // If this is even a valid device
             if (is_pci_bridge(bus, dev, 0)) { // Is this a PCI bridge
@@ -363,10 +363,10 @@ void pci_init() {
     scan_bus(0); // Check all bus 0 devices, and then if we find bridges, use those as well
     for (uint64_t device = 0; device < curent_position; device++) {
         pci_device_t dev = pci_devices[device];
-        kprintf("\n[PCI] Vendor: %x on %u:%u.%u", (uint32_t) pci_get_vendor(dev.bus, dev.device, dev.function), (uint32_t) dev.bus, (uint32_t) dev.device, (uint32_t) dev.function);
+        kprintf("[PCI] Vendor: %x on %u:%u.%u\n", (uint32_t) pci_get_vendor(dev.bus, dev.device, dev.function), (uint32_t) dev.bus, (uint32_t) dev.device, (uint32_t) dev.function);
         pci_id_t ids = get_pci_ids(dev.bus, dev.device, dev.function);
-        kprintf("\n[PCI] Device type: %s", device_code_to_string(ids.class, ids.subclass, ids.prog_if));
-        kprintf("\n[PCI] Device ID: %x\n", (uint32_t) ids.device_id);
+        kprintf("[PCI] Device type: %s\n", device_code_to_string(ids.class, ids.subclass, ids.prog_if));
+        kprintf("[PCI] Device ID: %x\n", (uint32_t) ids.device_id);
         for (uint64_t d = 0; d < driver_count; d++) {
             drivers[d](dev); // The driver can handle checking if the device is correct
         }

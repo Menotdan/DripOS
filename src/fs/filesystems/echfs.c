@@ -34,7 +34,7 @@ int echfs_read_block0(char *device, echfs_filesystem_t *output) {
     if (block0->sig[0] == '_' && block0->sig[1] == 'E' && block0->sig[2] == 'C' && block0->sig[3] == 'H' &&
         block0->sig[4] == '_' && block0->sig[5] == 'F' && block0->sig[6] == 'S' && block0->sig[7] == '_') {
 
-        sprintf("\nFound echFS drive.\nBlock count: %lu, Block size: %lu\nMain dir blocks: %lu", block0->block_count, block0->block_size, block0->main_dir_blocks);
+        sprintf("Found echFS drive.\nBlock count: %lu, Block size: %lu\nMain dir blocks: %lu\n", block0->block_count, block0->block_size, block0->main_dir_blocks);
 
         /* Set data for the filesystem structure */
 
@@ -225,22 +225,20 @@ next_elem:
     }
     filename++; // Get rid of the final '/'
 
-    sprintf("\n[EchFS] Path: ");
-    sprint(current_name);
+    sprintf("[EchFS] Path: %s\n", current_name);
 
-    // Do magic lookup things
-
+    /* Do magic lookup things */
     if (!is_last) {
         /* Lookup the directory IDs */
         uint64_t found_elem_index = echfs_find_entry_name_parent(filesystem, current_name, current_parent);
         if (found_elem_index != ECHFS_SEARCH_FAIL) {
             if (cur_entry) kfree(cur_entry); // Free the old entry, if it exists
             cur_entry = echfs_read_dir_entry(filesystem, found_elem_index);
-            if (!cur_entry) sprintf("\n[DripOS] Ah yes. Unreachable code. Good stuff.");
+            if (!cur_entry) sprintf("[DripOS] ok then\n");
 
             // Found file in path, before last entry
             if (cur_entry->entry_type != 1) {
-                sprint(cur_entry->name);
+                sprintf("%s\n", cur_entry->name);
                 if (cur_entry) kfree(cur_entry);
                 *err_code |= (1<<2); // Search failed
                 return (echfs_dir_entry_t *) 0;
@@ -258,7 +256,7 @@ next_elem:
             if (cur_entry) kfree(cur_entry); // Free the old entry, if it exists
             cur_entry = echfs_read_dir_entry(filesystem, found_elem_index);
 
-            sprintf("\n[EchFS] Resolved path.");
+            sprintf("[EchFS] Resolved path.\n");
             return cur_entry;
         } else {
             if (cur_entry) kfree(cur_entry);
@@ -297,21 +295,18 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
     vfs_node_t *node = fd->node;
     assert(node);
     char *path = get_full_path(node);
-    sprintf("\n[EchFS] Full path: ");
-    sprint(path);
+    sprintf("[EchFS] Full path: %s\n", path);
 
     echfs_filesystem_t *filesystem_info = get_unid_fs_data(node->fs_root->unid);
     if (filesystem_info) {
-        sprintf("\n[EchFS] Got read for mountpoint ");
-        sprint(filesystem_info->mountpoint_path);
+        sprintf("[EchFS] Got read for mountpoint %s\n", filesystem_info->mountpoint_path);
         path += strlen(filesystem_info->mountpoint_path);
-        sprintf("\n[EchFS] File path: ");
-        sprint(path);
+        sprintf("[EchFS] File path: %s\n", path);
 
         uint8_t err;
         echfs_dir_entry_t *entry = echfs_path_resolve(filesystem_info, path, &err);
         if (!entry) {
-            sprintf("\n[EchFS] Read died somehow with entry getting");
+            sprintf("[EchFS] Read died somehow with entry getting\n");
             get_thread_locals()->errno = -ENOENT;
 
             kfree(path);
@@ -320,7 +315,7 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
 
         uint64_t read_count = 0;
         uint8_t *local_buf = echfs_read_file(filesystem_info, entry, &read_count);
-        sprintf("\nBuf addr: %lx", local_buf);
+        sprintf("Buf addr: %lx\n", local_buf);
 
         uint64_t count_to_read = count;
 
@@ -338,10 +333,10 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
         memcpy(local_buf + fd->seek, buf, count_to_read); // Copy the data
         kfree(local_buf);
         kfree(entry);
-        sprintf("\n[EchFS] Read data successfully!\n");
+        sprintf("[EchFS] Read data successfully!\n");
         return count_to_read; // Done
     } else {
-        sprintf("\n[EchFS] Read died somehow\n");
+        sprintf("[EchFS] Read died somehow\n");
         get_thread_locals()->errno = -ENOENT;
 
         kfree(path);
@@ -353,12 +348,12 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
 void echfs_node_gen(vfs_node_t *fs_node, vfs_node_t *target_node, char *path) {
     echfs_filesystem_t *fs_data = get_unid_fs_data(fs_node->unid);
 
-    sprintf("\n[EchFS] Searching for path %s", path);
+    sprintf("[EchFS] Searching for path %s\n", path);
 
     uint8_t err;
     echfs_dir_entry_t *entry = echfs_path_resolve(fs_data, path, &err);
     if (!entry) return;
-    sprintf("\n[EchFS] Got entry for path %s", path);
+    sprintf("[EchFS] Got entry for path %s\n", path);
     kfree(entry);
 
     vfs_ops_t echfs_ops = {echfs_open, echfs_close, echfs_read, 0, echfs_seek};
@@ -376,11 +371,11 @@ void echfs_test(char *device) {
     int is_echfs = echfs_read_block0(device, filesystem);
 
     if (is_echfs) {
-        sprintf("\nMain directory block: %lu", filesystem->main_dir_block);
+        sprintf("Main directory block: %lu\n", filesystem->main_dir_block);
 
         echfs_dir_entry_t *entry0 = echfs_read_dir_entry(filesystem, 3);
 
-        sprintf("\nFile name: ");
+        sprintf("File name: \n");
         sprintf(entry0->name);
 
         kfree(entry0);
@@ -396,20 +391,20 @@ void echfs_test(char *device) {
         vfs_node_t *echfs_mountpoint = vfs_new_node(mountpoint_name_lol, dummy_ops);
         filesystem->mountpoint = echfs_mountpoint;
         
-        sprintf("\nUNID for mountpoint: %lu", echfs_mountpoint->unid);
+        sprintf("UNID for mountpoint: %lu\n", echfs_mountpoint->unid);
         vfs_add_child(root_node, echfs_mountpoint);
 
         register_unid(echfs_mountpoint->unid, filesystem);
         echfs_mountpoint->node_handle = echfs_node_gen;
 
         int hello_fd = fd_open("/echfs_mount/hello/README.md", 0);
-        sprintf("\n[EchFS] FD: %d", hello_fd);
+        sprintf("[EchFS] FD: %d\n", hello_fd);
 
         char *buf = kcalloc(100);
         fd_seek(hello_fd, 0, 0);
-        sprintf("\nErrno: %d", fd_read(hello_fd, buf, 0));
-        sprintf("\n[EchFS] Read data: ");
-        sprint(buf);
+        sprintf("Errno: %d\n", fd_read(hello_fd, buf, 0));
+        sprintf("[EchFS] Read data: \n");
+        sprintf("%s\n", buf);
         fd_close(hello_fd);
     }
 }

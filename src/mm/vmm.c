@@ -358,7 +358,6 @@ void *vmm_fork(void *old) {
 
                                     /* Map new page */
                                     unlock(vmm_spinlock);
-                                    //sprintf("\nMapping data from old_phys = %lx to new_phys = %lx with virt = %lx", phys, new_phys, virt);
                                     vmm_map_pages(new_phys, virt, ret, 1, table_x->table[x] & ~(VMM_4K_PERM_MASK));
                                     lock(vmm_spinlock);
                                 }

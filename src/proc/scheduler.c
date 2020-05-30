@@ -105,7 +105,7 @@ void scheduler_init_bsp() {
     int64_t idle_tid = start_thread(new_idle);
 
     get_cpu_locals()->idle_tid = idle_tid;
-    sprintf("\nIdle task: %ld", get_cpu_locals()->idle_tid);
+    sprintf("Idle task: %ld\n", get_cpu_locals()->idle_tid);
 }
 
 /* Initilialize an AP for scheduling */
@@ -124,7 +124,7 @@ void scheduler_init_ap() {
     int64_t idle_tid = start_thread(new_idle);
 
     get_cpu_locals()->idle_tid = idle_tid;
-    sprintf("\nIdle task: %ld", get_cpu_locals()->idle_tid);
+    sprintf("Idle task: %ld\n", get_cpu_locals()->idle_tid);
 }
 
 /* Create a new thread *and* add it to the dynarray */
@@ -185,7 +185,7 @@ int64_t add_new_child_thread(task_t *task, int64_t pid) {
 
     /* Find the parent process */
     process_t *new_parent = dynarray_getelem(&processes, pid);
-    if (!new_parent) { sprintf("\n[Scheduler] Couldn't find parent"); return -1; }
+    if (!new_parent) { sprintf("[Scheduler] Couldn't find parent\n"); return -1; }
 
     /* Store the new task and save its TID */
     int64_t new_tid = dynarray_add(&tasks, task, sizeof(task_t));
@@ -198,13 +198,13 @@ int64_t add_new_child_thread(task_t *task, int64_t pid) {
         // -1 because kmalloc creates boundaries so page might not be mapped :|
         void *phys = virt_to_phys((void *) (task_item->regs.rsp - 1), (pt_t *) task_item->regs.cr3);
         if ((uint64_t) phys == 0xFFFFFFFFFFFFFFFF) {
-            sprintf("\nRSP not mapped :thonk:");
+            sprintf("RSP not mapped :thonk:\n");
             goto done;
         }
-        sprintf("\nvirt: %lx", task_item->regs.rsp);
-        sprintf("\nphys: %lx", phys);
+        sprintf("virt: %lx\n", task_item->regs.rsp);
+        sprintf("phys: %lx\n", phys);
         uint64_t stack = GET_HIGHER_HALF(uint64_t, phys) + 1;
-        sprintf("\nstack var: %lx", stack);
+        sprintf("stack var: %lx\n", stack);
         uint64_t old_stack = stack;
 
         int argc = 3;
@@ -220,7 +220,7 @@ int64_t add_new_child_thread(task_t *task, int64_t pid) {
             string_offsets[i] = total_string_len;
 
             char *new_string = (char *) (stack - string_offsets[i]);
-            sprintf("\nString: %lx, string offset: %lu", new_string, string_offsets[i]);
+            sprintf("String: %lx, string offset: %lu\n", new_string, string_offsets[i]);
             strcpy(argv[i], new_string);
         }
         stack -= total_string_len;

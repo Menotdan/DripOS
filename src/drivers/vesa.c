@@ -39,13 +39,13 @@ void init_vesa(stivale_info_t *bootloader_info) {
     vmm_set_pat((void *) (bootloader_info->framebuffer_addr + NORMAL_VMA_OFFSET), 
         (vesa_display_info.framebuffer_size + 0x1000 - 1) / 0x1000, 1);
 
-    sprintf("\n[VESA] Loaded a %lu x %lu display", vesa_display_info.width, vesa_display_info.height);
-    sprintf("\n[VESA] Framebuffer addresses: %lx, %lx, %lx", vesa_display_info.framebuffer, vesa_display_info.actual_framebuffer, bootloader_info->framebuffer_addr);
-    sprintf("\n[VESA] Display info:");
-    sprintf("\n  pitch: %u", bootloader_info->framebuffer_pitch);
-    sprintf("\n  width: %u", bootloader_info->framebuffer_width);
-    sprintf("\n  height: %u", bootloader_info->framebuffer_height);
-    sprintf("\n  bpp: %u", bootloader_info->framebuffer_bpp);
+    sprintf("[VESA] Loaded a %lu x %lu display\n", vesa_display_info.width, vesa_display_info.height);
+    sprintf("[VESA] Framebuffer addresses: %lx, %lx, %lx\n", vesa_display_info.framebuffer, vesa_display_info.actual_framebuffer, bootloader_info->framebuffer_addr);
+    sprintf("[VESA] Display info:\n");
+    sprintf("  pitch: %u\n", bootloader_info->framebuffer_pitch);
+    sprintf("  width: %u\n", bootloader_info->framebuffer_width);
+    sprintf("  height: %u\n", bootloader_info->framebuffer_height);
+    sprintf("  bpp: %u\n", bootloader_info->framebuffer_bpp);
 }
 
 void put_pixel(uint64_t x, uint64_t y, color_t color) {

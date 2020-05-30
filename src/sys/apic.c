@@ -16,7 +16,7 @@ void parse_madt() {
     madt_t *madt = (madt_t *) search_sdt_header("APIC");
 
     if (madt) {
-        kprintf("\n[MADT] Found MADT %lx", madt);
+        kprintf("[MADT] Found MADT %lx\n", madt);
         /* Initialize all of our vectors */
         vector_init(&cpu_vector);
         vector_init(&iso_vector);
@@ -25,24 +25,24 @@ void parse_madt() {
         uint64_t bytes_for_entries = madt->header.length - (sizeof(madt->header) + sizeof(madt->local_apic_addr) + sizeof(madt->apic_flags));
         lapic_base = (uint64_t) madt->local_apic_addr;
 
-        sprintf("\n[MADT] MADT entries:");
+        sprintf("[MADT] MADT entries:\n");
         for (uint64_t e = 0; e < bytes_for_entries; e++) {
             uint8_t type = madt->entries[e++];
             uint8_t size = madt->entries[e++];
 
             if (type == 0) {
                 madt_ent0_t *ent = (madt_ent0_t *) &(madt->entries[e]);
-                sprintf("\nCPU:\n");
+                sprintf("CPU:\n");
                 sprintf("  ACPI ID: %u\n", (uint32_t) ent->acpi_processor_id);
                 sprintf("  APIC ID: %u\n", (uint32_t) ent->apic_id);
-                sprintf("  Flags: %u", ent->cpu_flags);
+                sprintf("  Flags: %u\n", ent->cpu_flags);
                 vector_add(&cpu_vector, (void *) ent);
             } else if (type == 1) {
                 madt_ent1_t *ent = (madt_ent1_t *) &(madt->entries[e]);
-                sprintf("\nIOAPIC:\n");
+                sprintf("IOAPIC:\n");
                 sprintf("  ID: %u\n", (uint32_t) ent->ioapic_id);
                 sprintf("  Addr: %x\n", (uint32_t) ent->ioapic_addr);
-                sprintf("  GSI Base: %x", (uint32_t) ent->gsi_base);
+                sprintf("  GSI Base: %x\n", (uint32_t) ent->gsi_base);
                 vector_add(&ioapic_vector, (void *) ent);
 
                 /* Map the IOAPICs into virtual memory */
@@ -57,33 +57,33 @@ void parse_madt() {
                 }
             } else if (type == 2) {
                 madt_ent2_t *ent = (madt_ent2_t *) &(madt->entries[e]);
-                sprintf("\nISO:\n");
+                sprintf("ISO:\n");
                 sprintf("  Bus src: %u\n", (uint32_t) ent->bus_src);
                 sprintf("  IRQ src: %u\n", (uint32_t) ent->irq_src);
                 sprintf("  GSI: %u\n", (uint32_t) ent->gsi);
-                sprintf("  Flags: %x", (uint32_t) ent->flags);
+                sprintf("  Flags: %x\n", (uint32_t) ent->flags);
                 vector_add(&iso_vector, (void *) ent);
             } else if (type == 4) {
                 madt_ent4_t *ent = (madt_ent4_t *) &(madt->entries[e]);
-                sprintf("\nNMI:\n");
+                sprintf("NMI:\n");
                 sprintf("  Processor ID: %u\n", (uint32_t) ent->acpi_processor_id);
                 sprintf("  LINT: %u\n", (uint32_t) ent->lint);
-                sprintf("  Flags: %u", (uint32_t) ent->flags);
+                sprintf("  Flags: %u\n", (uint32_t) ent->flags);
                 vector_add(&nmi_vector, (void *) ent);
             } else if (type == 5) {
                 madt_ent5_t *ent = (madt_ent5_t *) &(madt->entries[e]);
-                sprintf("\nLAPIC override:\n");
-                sprintf("  Addr: %lx", ent->local_apic_override);
+                sprintf("LAPIC override:\n");
+                sprintf("  Addr: %lx\n", ent->local_apic_override);
                 lapic_base = ent->local_apic_override;
             }
 
             e += size - 3;
         }
-        kprintf("\nLAPIC addr: %lx", lapic_base);
-        kprintf("\nCPUs: %lu", cpu_vector.items_count);
-        kprintf("\nISOs: %lu", iso_vector.items_count);
-        kprintf("\nIOAPICs: %lu", ioapic_vector.items_count);
-        kprintf("\nNMIs: %lu", nmi_vector.items_count);
+        kprintf("LAPIC addr: %lx\n", lapic_base);
+        kprintf("CPUs: %lu\n", cpu_vector.items_count);
+        kprintf("ISOs: %lu\n", iso_vector.items_count);
+        kprintf("IOAPICs: %lu\n", ioapic_vector.items_count);
+        kprintf("NMIs: %lu\n", nmi_vector.items_count);
         /* Handle cross page mapping for the LAPIC */
         if (lapic_base / 0x1000 != (lapic_base + 0x400) / 0x1000) {
             vmm_map((void *) lapic_base, (void *) (lapic_base + KERNEL_VM_OFFSET), 2, VMM_PRESENT | VMM_WRITE);
@@ -92,7 +92,7 @@ void parse_madt() {
         }
         lapic_base += KERNEL_VM_OFFSET; // Offset it into virtual higher half
     } else {
-        kprintf("\nNo MADT...");
+        kprintf("No MADT...\n");
     }
 }
 
@@ -185,7 +185,7 @@ void mask_gsi(uint32_t gsi) {
         return;
     }
     apic_write_redirection_table(gsi, current_data | (1<<16));
-    sprintf("\n[APIC] Masked GSI %u", gsi);
+    sprintf("[APIC] Masked GSI %u\n", gsi);
 }
 
 void redirect_gsi(uint8_t irq, uint32_t gsi, uint16_t flags, uint8_t apic) {
@@ -202,7 +202,7 @@ void redirect_gsi(uint8_t irq, uint32_t gsi, uint16_t flags, uint8_t apic) {
     // Add the APIC id of the target processor to handle this GSI
     redirect |= ((uint64_t) apic) << 56;
     apic_write_redirection_table(gsi, redirect);
-    sprintf("\n[APIC] Mapped GSI %u to IRQ %u on LAPIC %u", gsi, (uint32_t) irq, (uint32_t) apic);
+    sprintf("[APIC] Mapped GSI %u to IRQ %u on LAPIC %u\n", gsi, (uint32_t) irq, (uint32_t) apic);
 }
 
 void configure_apic() {

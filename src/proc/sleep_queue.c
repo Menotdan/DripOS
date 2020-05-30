@@ -21,7 +21,6 @@ static void insert_to_queue(uint64_t ticks, int64_t tid) {
     sleep_queue_t *cur = &base_queue;
 
     while (1) {
-        // sprintf("\nloop 2");
         total += cur->time_left;
 
         if (!cur->next) {
@@ -52,8 +51,6 @@ static void insert_to_queue(uint64_t ticks, int64_t tid) {
     if (next) {
         next->time_left -= before_relative;
     }
-
-    // sprintf("\nInserted.");
     unlock(sleep_queue_lock);
 }
 

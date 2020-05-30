@@ -55,31 +55,31 @@ void video_thread() {
 extern void sanity_thread_start();
 
 void kernel_process(int argc, char **argv) {
-    fd_write(0, "\nHello from stdout!", 19);
-    kprintf("\nargc: %d, argv: %lx", argc, argv);
+    fd_write(0, "Hello from stdout!\n", 19);
+    kprintf("argc: %d, argv: %lx\n", argc, argv);
     if (argv) {
         for (int i = 0; i < argc; i++) {
-            kprintf("\nargv: %s", argv[i]);
+            kprintf("argv: %s\n", argv[i]);
         }
     }
 
     pci_init(); // Setup PCI devices and their drivers
 
-    kprintf("\n[DripOS Kernel] Bultin todo list:");
+    kprintf("[DripOS Kernel] Bultin todo list:\n");
     for (uint64_t i = 0; i < TODO_LIST_SIZE; i++) {
-        kprintf("\n  %s", todo_list[i]);
+        kprintf("  %s\n", todo_list[i]);
     }
 
     echfs_test("/dev/satadeva");
-    kprintf("\nMemory used: %lu bytes", pmm_get_used_mem());
+    kprintf("Memory used: %lu bytes\n", pmm_get_used_mem());
     mouse_setup();
 
-    //kprintf("\n[DripOS] Loading init from disk.\n");
+    //kprintf("[DripOS] Loading init from disk.\n");
     //launch_binary("/echfs_mount/programs/fork_bomb3.bin"); // This is init :meme:
 
     load_elf("/echfs_mount/elf_test.elf");
 
-    sprintf("\ndone kernel work");
+    sprintf("done kernel work\n");
 
 #ifdef DBGPROTO
     setup_drip_dgb();
@@ -89,12 +89,12 @@ void kernel_process(int argc, char **argv) {
 }
 
 void kernel_task() {
-    sprintf("\n[DripOS] Kernel thread: Scheduler enabled.");
+    sprintf("[DripOS] Kernel thread: Scheduler enabled.\n");
 
-    kprintf("\n[DripOS] Loading VFS");
+    kprintf("[DripOS] Loading VFS\n");
     vfs_init(); // Setup VFS
     devfs_init();
-    kprintf("\n[DripOS] Loaded VFS");
+    kprintf("[DripOS] Loaded VFS\n");
     vfs_ops_t ops = dummy_ops;
     ops.open = devfs_open;
     ops.close = devfs_close;
@@ -102,7 +102,7 @@ void kernel_task() {
     ops.read = tty_dev_read;
     register_device("tty1", ops, (void *) 0);
 
-    kprintf("\nSetting up PID 0...");
+    kprintf("Setting up PID 0...\n");
     new_kernel_process("Kernel process", kernel_process);
 
     kill_task(get_cpu_locals()->current_thread->tid); // suicide
@@ -113,14 +113,14 @@ void kmain(stivale_info_t *bootloader_info) {
     init_serial(COM1);
 
     char *kernel_options = (char *) ((uint64_t) bootloader_info->cmdline + 0xFFFF800000000000);
-    sprintf("\nKernel Options: %s", kernel_options);
+    sprintf("Kernel Options: %s\n", kernel_options);
 
     if (bootloader_info) {
-        sprintf("\n[DripOS] Setting up memory bitmaps.");
+        sprintf("[DripOS] Setting up memory bitmaps.\n");
         pmm_memory_setup(bootloader_info);
     }
 
-    sprintf("\n[DripOS] Initializing TTY");
+    sprintf("[DripOS] Initializing TTY\n");
     init_vesa(bootloader_info);
     tty_init(&base_tty, 8, 8);
 
@@ -129,7 +129,7 @@ void kmain(stivale_info_t *bootloader_info) {
     }
 
     acpi_init(bootloader_info);
-    sprintf("\n[DripOS] Configuring LAPICs and IOAPIC routing.");
+    sprintf("[DripOS] Configuring LAPICs and IOAPIC routing.\n");
     configure_apic();
 
     new_cpu_locals(); // Setup CPU locals for our CPU
@@ -138,30 +138,30 @@ void kmain(stivale_info_t *bootloader_info) {
     set_kernel_stack((uint64_t) kmalloc(0x1000) + 0x1000);
 
 
-    sprintf("\n[DripOS] Set kernel stacks.");
+    sprintf("[DripOS] Set kernel stacks.\n");
     scheduler_init_bsp();
 
-    sprintf("\n[DripOS] Registering interrupts and setting interrupt flag.");
+    sprintf("[DripOS] Registering interrupts and setting interrupt flag.\n");
     configure_idt();
-    sprintf("\n[DripOS] Setting timer speed to 1000 hz.");
+    sprintf("[DripOS] Setting timer speed to 1000 hz.\n");
     set_pit_freq();
-    sprintf("\n[DripOS] Timers set.");
+    sprintf("[DripOS] Timers set.\n");
 
     task_t *kernel_thread = create_thread("Kernel setup worker", kernel_task, 
         (uint64_t) kmalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE, 0);
     start_thread(kernel_thread);
 
-    sprintf("\n[DripOS] Launched kernel thread, scheduler disabled...");
+    sprintf("[DripOS] Launched kernel thread, scheduler disabled...\n");
 
-    sprintf("\n[DripOS] Launching all SMP cores...");
+    sprintf("[DripOS] Launching all SMP cores...\n");
     launch_cpus();
-    sprintf("\n[DripOS] Finished loading SMP cores.");
+    sprintf("[DripOS] Finished loading SMP cores.\n");
 
     init_syscalls();
 
     tty_clear(&base_tty);
 
-    sprintf("\n[DripOS] Loading scheduler...");
+    sprintf("[DripOS] Loading scheduler...\n");
     scheduler_enabled = 1;
 
     while (1) {

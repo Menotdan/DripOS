@@ -43,7 +43,6 @@ void init_syscalls() {
 }
 
 void syscall_handler(syscall_reg_t *r) {
-    //sprintf("\nGot syscall with rax = %lx", r->rax);
     if (r->rax < (uint64_t) HANDLER_COUNT) {
         get_thread_locals()->errno = 0; // Clear errno
         syscall_handlers[r->rax](r);
@@ -93,12 +92,12 @@ void syscall_fork(syscall_reg_t *r) {
 }
 
 void syscall_print_num(syscall_reg_t *r) {
-    sprintf("\nPRINTING NUMBER FROM SYSCALL: %lu", r->rdi);
+    sprintf("PRINTING NUMBER FROM SYSCALL: %lu\n", r->rdi);
     r->rax = 0;
 }
 
 void syscall_empty(syscall_reg_t *r) {
-    sprintf("\n[DripOS] Warning! Unimplemented syscall %lu!", r->rax);
+    sprintf("[DripOS] Warning! Unimplemented syscall %lu!\n", r->rax);
     r->rax = -ENOSYS;
     get_thread_locals()->errno = -ENOSYS;
 }

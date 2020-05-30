@@ -218,7 +218,7 @@ static int ahci_get_controller_ownership(ahci_controller_t controller) {
             uint32_t handoff_control = controller.ahci_bar->handoff_control;
             if (!(handoff_control & (1<<1)) && (handoff_control & (1<<0) || handoff_control & (1<<4))) {
                 // We don't have control :(
-                kprintf("\n[AHCI] error: Failed to get ownership from BIOS");
+                kprintf("[AHCI] error: Failed to get ownership from BIOS\n");
                 return 1;
             }
             controller.ahci_bar->handoff_control |= (1<<3); // Clear the OOC
@@ -369,7 +369,7 @@ static int ahci_wait_command(ahci_port_data_t *port, int command_slot) {
             // Task file error
             if (port->port->task_file & (1<<0)) {
                 // Error with transfer
-                sprintf("\n[AHCI] Error!");
+                sprintf("[AHCI] Error!\n");
                 return 1;
             }
         }
@@ -382,7 +382,7 @@ static void ahci_enable_present_devs(ahci_controller_t controller) {
     // Find devices
     for (uint8_t p = 0; p < 32; p++) {
         if (port_present(controller, p)) {
-            sprintf("\n[AHCI] Port %u implemented", (uint32_t) p);
+            sprintf("[AHCI] Port %u implemented\n", (uint32_t) p);
             ahci_port_t *port = &controller.ahci_bar->ports[p];
             uint8_t com_status = port->sata_status & 0b1111;
 
@@ -393,16 +393,16 @@ static void ahci_enable_present_devs(ahci_controller_t controller) {
                     kprintf("[AHCI] Warning: No COMRESET implemented!\n");
                     continue;
                 } else if (com_status == 4) {
-                    sprintf("\n[AHCI] Phy offline");
+                    sprintf("[AHCI] Phy offline\n");
                     continue;
                 } else {
-                    sprintf("\n[AHCI] Unknown status");
+                    sprintf("[AHCI] Unknown status\n");
                     continue;
                 }
             }
 
             // Setup the device if it is present
-            sprintf("\n[AHCI] Found present device %u", (uint32_t) p);
+            sprintf("[AHCI] Found present device %u\n", (uint32_t) p);
             uint8_t ipm = (port->sata_status >> 8) & 0b1111;
             if (ipm != 1) {
                 kprintf("[AHCI] Warning: Device sleeping\n");
@@ -429,7 +429,7 @@ static void ahci_enable_present_devs(ahci_controller_t controller) {
             }
 
             ahci_stop_cmd(port);
-            sprintf("\n[AHCI] Stopped command engine");
+            sprintf("[AHCI] Stopped command engine\n");
             uint64_t ahci_data_base = (uint64_t) pmm_alloc((32 * 32) + 256); // 32 command slots
             uint64_t ahci_fis_base = ahci_data_base + (32 * 32); // 32 FIS areas
             memset(GET_HIGHER_HALF(uint8_t *, ahci_data_base), 0, (32 * 32) + 256); // Clear the areas
@@ -456,14 +456,14 @@ static void ahci_enable_present_devs(ahci_controller_t controller) {
                 port->fis_base = ahci_fis_base & 0xFFFFFFFF;
                 port->fis_base_upper = 0;
             }
-            sprintf("\n[AHCI] Setup the port");
+            sprintf("[AHCI] Setup the port\n");
 
             if (ahci_start_cmd(port) != 0) {
                 kprintf("[AHCI] Command engine failed!\n");
                 continue;
             }
 
-            sprintf("\n[AHCI] Port ready");
+            sprintf("[AHCI] Port ready\n");
 
             port->interrupt_status = 0xFFFFFFFF;
 
@@ -790,7 +790,7 @@ void ahci_init_controller(pci_device_t device) {
     }
     kprintf("[AHCI] Got ownership of controller\n");
     uint8_t iss = (controller.ahci_bar->cap >> 20) & 0b1111;
-    sprintf("\n[AHCI] Controller link speed: ");
+    sprintf("[AHCI] Controller link speed: \n");
 
     switch (iss)
     {

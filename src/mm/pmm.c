@@ -38,7 +38,7 @@ static uint8_t pmm_get_bit(uint64_t page) {
 void pmm_memory_setup(stivale_info_t *bootloader_info) {
     // Bitmap set to kernel_end rounded up to a page
     bootloader_info = GET_HIGHER_HALF(stivale_info_t *, bootloader_info);
-    sprintf("\n%lx bootloader info addr", bootloader_info);
+    sprintf("%lx bootloader info addr\n", bootloader_info);
     bitmap = (uint8_t *) ((((uint64_t) __kernel_end) + 0x1000 - 1) & ~(0xfff));
 
     // Dont destroy the bootloader info
@@ -48,8 +48,8 @@ void pmm_memory_setup(stivale_info_t *bootloader_info) {
 
     // Setup the bitmap for the PMM
     e820_entry_t *mmap = GET_HIGHER_HALF(e820_entry_t *, bootloader_info->memory_map_addr);
-    sprintf("\ne820 addrs: %lx %lx", bootloader_info->memory_map_addr, mmap);
-    sprintf("\n %u x %u", bootloader_info->framebuffer_width, bootloader_info->framebuffer_height);
+    sprintf("e820 addrs: %lx %lx\n", bootloader_info->memory_map_addr, mmap);
+    sprintf(" %u x %u\n", bootloader_info->framebuffer_width, bootloader_info->framebuffer_height);
 
     // Calculate length of memory
     e820_entry_t start = mmap[0];
@@ -65,7 +65,7 @@ void pmm_memory_setup(stivale_info_t *bootloader_info) {
         uint64_t rounded_block_end = ROUND_UP((mmap[i].addr + mmap[i].len), 0x1000);
         uint64_t rounded_block_len = rounded_block_end - rounded_block_start;
 
-        sprintf("\n%lx - %lx", mmap[i].addr, mmap[i].addr + mmap[i].len);
+        sprintf("%lx - %lx\n", mmap[i].addr, mmap[i].addr + mmap[i].len);
         if (mmap[i].type == STIVALE_MEMORY_AVAILABLE && mmap[i].addr >= 0x100000) { // Ignore low 640K so we dont use it
             for (uint64_t i = 0; i < rounded_block_len / 0x1000; i++) {
                 pmm_clear_bit(i + (rounded_block_start / 0x1000)); // set the memory as avaiable
@@ -77,7 +77,7 @@ void pmm_memory_setup(stivale_info_t *bootloader_info) {
 
     // Make sure the kernel and bitmap are not marked as available
     uint64_t kernel_start = (uint64_t) __kernel_start;
-    sprintf("\nkernel_start: %lx %lx", kernel_start, kernel_start - KERNEL_VMA_OFFSET);
+    sprintf("kernel_start: %lx %lx\n", kernel_start, kernel_start - KERNEL_VMA_OFFSET);
     uint64_t kernel_bitmap_len = ((uint64_t) bitmap + bitmap_bytes) - kernel_start;
     uint64_t kernel_bitmap_start_page = (kernel_start - KERNEL_VMA_OFFSET) / 0x1000;
     uint64_t kernel_bitmap_pages = (kernel_bitmap_len + 0x1000 - 1) / 0x1000;
@@ -130,7 +130,7 @@ static uint64_t find_free_page(uint64_t pages) {
         }
     }
 
-    sprintf("\n[PMM] Error! Couldn't find free memory!");
+    sprintf("[PMM] Error! Couldn't find free memory!\n");
     while (1) {
         asm volatile("hlt");
     }

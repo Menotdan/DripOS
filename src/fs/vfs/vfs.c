@@ -88,8 +88,7 @@ vfs_node_t *create_missing_nodes_from_path(char *path, vfs_ops_t ops) {
     if (path[strlen(path) - 1] == '/') path[strlen(path) - 1] = '\0';
 
 
-    sprintf("\n[VFS] Parsing path ");
-    sprint(path);
+    sprintf("[VFS] Parsing path %s\n", path);
     
 next_elem:
     for (uint64_t i = 0; *path != '/'; path++) {
@@ -171,8 +170,7 @@ vfs_node_t *vfs_new_node(char *name, vfs_ops_t ops) {
     node->node_handle = 0;
     strcpy(name, node->name);
 
-    sprintf("\n[VFS] Created new node with name ");
-    sprint(node->name);
+    sprintf("[VFS] Created new node with name %s\n", node->name);
 
     return node;
 }
@@ -362,7 +360,7 @@ char *get_full_path(vfs_node_t *node) {
 vfs_node_t *vfs_open(char *name, int mode) {
     vfs_node_t *node = get_node_from_path(name);
     if (!node) {
-        sprintf("\n[VFS] Handling mountpoint for %s", name);
+        sprintf("[VFS] Handling mountpoint for %s\n", name);
         /* The first missing node, where the generator should start generating */
         vfs_node_t *missing_start = create_missing_nodes_from_path(name, null_vfs_ops);
         assert(missing_start);
@@ -378,11 +376,11 @@ vfs_node_t *vfs_open(char *name, int mode) {
         char *temp_name = name;
         assert(node);
         char *full_path = get_full_path(node);
-        sprintf("\n[VFS] Mountpoint at %s", full_path);
+        sprintf("[VFS] Mountpoint at %s\n", full_path);
         temp_name += strlen(full_path);
         kfree(full_path);
 
-        sprintf("\n[VFS] Temp name: %s", temp_name);
+        sprintf("[VFS] Temp name: %s\n", temp_name);
 
         node->node_handle(node, missing_start, temp_name);
         node = get_node_from_path(name);

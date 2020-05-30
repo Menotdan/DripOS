@@ -48,26 +48,19 @@ static void write_cpu_data64(uint16_t offset, uint64_t data) {
 
 void launch_cpus() {
     /* Copy trampoline code */
-    sprintf("\nCopying trampoline code");
     uint64_t code_size = smp_trampoline_end - smp_trampoline;
     memcpy((uint8_t *) smp_trampoline, (uint8_t *) (0x1000 + NORMAL_VMA_OFFSET), code_size);
     memset((uint8_t *) (0x500 + NORMAL_VMA_OFFSET), 0, 0xB00);
 
-    sprintf("\ndone");
-
     vmm_map((void *) 0, (void *) 0, 1 + ((code_size + 0x1000 - 1) / 0x1000), VMM_WRITE | VMM_PRESENT);
     vmm_map((void *) (GDT64 - KERNEL_VMA_OFFSET), (void *) (GDT64 - KERNEL_VMA_OFFSET), 1, VMM_WRITE | VMM_PRESENT);
 
-    sprintf("\nDone copying");
     /* Setup all the CPUs */
     madt_ent0_t *cpu;
     for (uint64_t i = 0; i < cpu_vector.items_count; i++) {
         cpu = cpu_vector.items[i];
         if (cpu->apic_id != get_lapic_id()) {
-            sprintf("\nFound AP");
             if (cpu->cpu_flags & 0x1 || cpu->cpu_flags & 0x2) {
-                sprintf("\nFound bootable AP");
-
                 /* Clear flags */
                 memset((uint8_t *) (0x500 + NORMAL_VMA_OFFSET), 0, 0xB00);
 
@@ -83,26 +76,24 @@ void launch_cpus() {
                 sleep_no_task(10);
                 send_ipi(cpu->apic_id, 0x600 | 1);
                 sleep_no_task(10);
-                if (*(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) == 1 
-                    || *(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) == 2) {
-                    kprintf("\nCpu %lu booted", (uint64_t) ++cores_booted);
-                    while (*(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) != 2) { asm volatile("nop"); }
+                if (*GET_HIGHER_HALF(uint16_t *, 0x500) == 1 
+                    || *GET_HIGHER_HALF(uint16_t *, 0x500) == 2) {
+                    kprintf("Cpu %lu booted\n", (uint64_t) ++cores_booted);
+                    while (*GET_HIGHER_HALF(uint16_t *, 0x500) != 2) { asm volatile("nop"); }
                 } else {
                     send_ipi(cpu->apic_id, 0x500);
                     sleep_no_task(10);
                     send_ipi(cpu->apic_id, 0x600 | 1);
                     sleep_no_task(1000);
-                    if (*(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) == 1 
-                        || *(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) == 2) {
-                        kprintf("\nCpu %lu booted", (uint64_t) ++cores_booted);
-                        while (*(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) != 2) { asm volatile("nop"); }
+                    if (*GET_HIGHER_HALF(uint16_t *, 0x500) == 1 
+                        || *GET_HIGHER_HALF(uint16_t *, 0x500) == 2) {
+                        kprintf("Cpu %lu booted\n", (uint64_t) ++cores_booted);
+                        while (*GET_HIGHER_HALF(uint16_t *, 0x500) != 2) { asm volatile("nop"); }
                     } else {
-                        kprintf("\nFailed CPU boot :(");
+                        kprintf("Failed CPU boot :(\n");
                     }
                 }
             }
-        } else {
-            sprintf("\nFound BSP");
         }
     }
     vmm_unmap((void *) 0, 1 + ((code_size + 0x1000 - 1) / 0x1000));
@@ -110,7 +101,7 @@ void launch_cpus() {
 }
 
 void smp_entry_point() {
-    kprintf("\nHello from SMP");
+    kprintf("Hello from SMP\n");
 
     new_cpu_locals(); // Setup CPU locals for this CPU
     cpu_locals_t *cpu_locals = get_cpu_locals();
@@ -120,12 +111,12 @@ void smp_entry_point() {
     load_tss();
     set_panic_stack((uint64_t) kmalloc(0x1000) + 0x1000);
     set_kernel_stack((uint64_t) kmalloc(0x1000) + 0x1000);
-    kprintf("\nOur index is %u", (uint32_t) cpu_locals->cpu_index);
+    kprintf("Our index is %u\n", (uint32_t) cpu_locals->cpu_index);
     configure_apic_ap();
     scheduler_init_ap();
     configure_idt();
 
     /* After init, let the BSP know that we are done */
-    *(uint16_t *) (0x500 + NORMAL_VMA_OFFSET) = 2;
+    *GET_HIGHER_HALF(uint16_t *, 0x500) = 2;
     while (1) { asm volatile("hlt"); }
 }

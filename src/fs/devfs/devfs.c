@@ -10,7 +10,6 @@ vfs_node_t *devfs_root;
 hashmap_t *devfs_hashmap;
 
 int devfs_open(char *name, int mode) {
-    //sprintf("\n[DevFS] Opening %s with mode %d", name, mode);
     (void) name;
     (void) mode;
     return 0;
@@ -19,8 +18,6 @@ int devfs_open(char *name, int mode) {
 int devfs_close(int fd_no) {
     fd_entry_t *fd_data = fd_lookup(fd_no);
     vfs_node_t *node = fd_data->node;
-
-    //sprintf("\n[DevFS] Closing %s", node->name);
     (void) node;
     return 0;
 }
@@ -42,11 +39,11 @@ void devfs_init() {
 }
 
 void devfs_sprint_devices() {
-    sprintf("\n[DevFS] Device List:");
+    sprintf("[DevFS] Device List:\n");
     for (uint64_t i = 0; i < devfs_root->children_array_size; i++) {
         vfs_node_t *child = devfs_root->children[i];
         if (child) {
-            sprintf("\n  Device %s", child->name);
+            sprintf("  Device %s\n", child->name);
         }
     }
 }

@@ -209,7 +209,6 @@ void memcpy64(uint64_t *src, uint64_t *dst, uint64_t count) {
 }
 
 void memset(uint8_t *dst, uint8_t data, uint64_t count) {
-    // sprintf("\nMemset from %lx", __builtin_return_address(0));
     for (uint64_t i = 0; i<count; i++)
         *dst++ = data;
 }

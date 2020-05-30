@@ -9,7 +9,7 @@ void wait_read() {
 
 void keyboard_handler(int_reg_t *r) {
     uint8_t scan = port_inb(0x60); // Get the scancode
-    sprintf("\nKeyboard: %x", scan);
+    sprintf("Keyboard: %x\n", scan);
     UNUSED(r);
     UNUSED(scan);
 }
@@ -25,8 +25,8 @@ void mouse_handler(int_reg_t *r) {
     int x = (int) move_x - (int) ((extra_bits << 4) & 0x100);
     int y = (int) move_y - (int) ((extra_bits << 3) & 0x100);
 
-    //sprintf("\nByte 0: %x\nByte 1: %x\nByte 2: %x", extra_bits, move_x, move_y);
-    //sprintf("\nMouse: %d, %d", x, y);
+    //sprintf("Byte 0: %x\nByte 1: %x\nByte 2: %x\n", extra_bits, move_x, move_y);
+    //sprintf("Mouse: %d, %d\n", x, y);
 
     if (!(x == 65 && y == 65) && !(x == 97 && y == -159)) {
         mouse_x += x / MOUSE_SENSITIVITY;
@@ -58,7 +58,7 @@ void mouse_setup() {
     port_outb(0x64, 0x20);
     wait_read();
     uint8_t status = port_inb(0x60);
-    kprintf("\n[PS/2] Status: %x", status);
+    kprintf("[PS/2] Status: %x\n", status);
 
     status |= (1<<1);
     status &= ~(1<<5);
@@ -72,7 +72,7 @@ void mouse_setup() {
     uint8_t ack = port_inb(0x60); // Get the ack
 
     if (ack != 0xFA) { // Check if its correct
-        kprintf("\n[PS/2] Mouse setup failed.");
+        kprintf("[PS/2] Mouse setup failed.\n");
     }
 
     port_inb(0x60);

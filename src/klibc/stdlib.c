@@ -18,7 +18,7 @@ void *kmalloc(uint64_t size) {
     *(uint64_t *) size_data = size + 0x2000;
 
     /* Unmap size data for lower bounds reads/writes */
-    //sprintf("\n+mem %lu %lu", size_data, *(uint64_t *) size_data);
+    //sprintf("+mem %lu %lu\n", size_data, *(uint64_t *) size_data);
     vmm_unmap((void *) size_data, 1);
     return (void *) (size_data + 0x1000);
 }
@@ -36,7 +36,7 @@ void kfree(void *addr) {
     if ((uint64_t) phys != 0xFFFFFFFFFFFFFFFF) {
         pmm_unalloc(phys, *size_data);
     }
-    //sprintf("\n-mem %lu %lu", size_data, *size_data);
+    //sprintf("-mem %lu %lu\n", size_data, *size_data);
 }
 
 void *kcalloc(uint64_t size) {
@@ -60,11 +60,10 @@ void *krealloc(void *addr, uint64_t new_size) {
 }
 
 void panic(char *msg) {
-    //sprintf("\nPanic with msg: %s", msg);
     if (check_interrupts()) {
         asm volatile("mov %0, %%rdi; int $251;" ::"r"(msg) : "memory");
     } else {
-        kprintf("\nPanic! Message: %s", msg);
+        kprintf("Panic! Message: %s\n", msg);
     }
 
     // We shouldnt return
