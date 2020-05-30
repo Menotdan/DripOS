@@ -16,7 +16,8 @@
 #include "drivers/serial.h"
 #include "proc/scheduler.h"
 
-hashmap_t *echfs_mountpoints;
+hashmap_t cached_blocks;
+lock_t echfs_cache_lock = {0, 0, 0, 0};
 
 /* Parse the first block of information */
 int echfs_read_block0(char *device, echfs_filesystem_t *output) {
@@ -73,11 +74,27 @@ int echfs_read_block0(char *device, echfs_filesystem_t *output) {
 /* Read a block off of an echFS drive */
 void *echfs_read_block(echfs_filesystem_t *filesystem, uint64_t block) {
     void *data_area = kcalloc(filesystem->block_size);
+
+    lock(echfs_cache_lock);
+    void *cached = hashmap_get_elem(&cached_blocks, block);
+    if (cached) {
+        memcpy(cached, data_area, filesystem->block_size);
+        unlock(echfs_cache_lock);
+        return data_area;
+    }
+    unlock(echfs_cache_lock);
+
     int device_fd = fd_open(filesystem->device_name, 0);
 
     // Read data
     fd_seek(device_fd, block * filesystem->block_size, 0);
     fd_read(device_fd, data_area, filesystem->block_size);
+
+    lock(echfs_cache_lock);
+    void *cached_block = kcalloc(filesystem->block_size);
+    memcpy(data_area, cached_block, filesystem->block_size);
+    hashmap_set_elem(&cached_blocks, block, cached_block);
+    unlock(echfs_cache_lock);
 
     // Close and return
     fd_close(device_fd);
@@ -91,6 +108,13 @@ void echfs_write_block(echfs_filesystem_t *filesystem, uint64_t block, void *dat
     // Read data
     fd_seek(device_fd, block * filesystem->block_size, 0);
     fd_write(device_fd, data, filesystem->block_size);
+
+    lock(echfs_cache_lock);
+    void *cached = hashmap_get_elem(&cached_blocks, block);
+    if (cached) {
+        memcpy(data, cached, filesystem->block_size);
+    }
+    unlock(echfs_cache_lock);
 
     // Close and return
     fd_close(device_fd);
@@ -225,7 +249,7 @@ next_elem:
     }
     filename++; // Get rid of the final '/'
 
-    sprintf("[EchFS] Path: %s\n", current_name);
+    //sprintf("[EchFS] Path: %s\n", current_name);
 
     /* Do magic lookup things */
     if (!is_last) {
@@ -238,7 +262,7 @@ next_elem:
 
             // Found file in path, before last entry
             if (cur_entry->entry_type != 1) {
-                sprintf("%s\n", cur_entry->name);
+                //sprintf("%s\n", cur_entry->name);
                 if (cur_entry) kfree(cur_entry);
                 *err_code |= (1<<2); // Search failed
                 return (echfs_dir_entry_t *) 0;
@@ -256,7 +280,7 @@ next_elem:
             if (cur_entry) kfree(cur_entry); // Free the old entry, if it exists
             cur_entry = echfs_read_dir_entry(filesystem, found_elem_index);
 
-            sprintf("[EchFS] Resolved path.\n");
+            //sprintf("[EchFS] Resolved path.\n");
             return cur_entry;
         } else {
             if (cur_entry) kfree(cur_entry);
@@ -295,13 +319,13 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
     vfs_node_t *node = fd->node;
     assert(node);
     char *path = get_full_path(node);
-    sprintf("[EchFS] Full path: %s\n", path);
+    //sprintf("[EchFS] Full path: %s\n", path);
 
     echfs_filesystem_t *filesystem_info = get_unid_fs_data(node->fs_root->unid);
     if (filesystem_info) {
-        sprintf("[EchFS] Got read for mountpoint %s\n", filesystem_info->mountpoint_path);
+        //sprintf("[EchFS] Got read for mountpoint %s\n", filesystem_info->mountpoint_path);
         path += strlen(filesystem_info->mountpoint_path);
-        sprintf("[EchFS] File path: %s\n", path);
+        //sprintf("[EchFS] File path: %s\n", path);
 
         uint8_t err;
         echfs_dir_entry_t *entry = echfs_path_resolve(filesystem_info, path, &err);
@@ -315,7 +339,7 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
 
         uint64_t read_count = 0;
         uint8_t *local_buf = echfs_read_file(filesystem_info, entry, &read_count);
-        sprintf("Buf addr: %lx\n", local_buf);
+        //sprintf("Buf addr: %lx\n", local_buf);
 
         uint64_t count_to_read = count;
 
@@ -333,7 +357,7 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
         memcpy(local_buf + fd->seek, buf, count_to_read); // Copy the data
         kfree(local_buf);
         kfree(entry);
-        sprintf("[EchFS] Read data successfully!\n");
+        //sprintf("[EchFS] Read data successfully!\n");
         return count_to_read; // Done
     } else {
         sprintf("[EchFS] Read died somehow\n");
@@ -348,12 +372,12 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
 void echfs_node_gen(vfs_node_t *fs_node, vfs_node_t *target_node, char *path) {
     echfs_filesystem_t *fs_data = get_unid_fs_data(fs_node->unid);
 
-    sprintf("[EchFS] Searching for path %s\n", path);
+    //sprintf("[EchFS] Searching for path %s\n", path);
 
     uint8_t err;
     echfs_dir_entry_t *entry = echfs_path_resolve(fs_data, path, &err);
     if (!entry) return;
-    sprintf("[EchFS] Got entry for path %s\n", path);
+    //sprintf("[EchFS] Got entry for path %s\n", path);
     kfree(entry);
 
     vfs_ops_t echfs_ops = {echfs_open, echfs_close, echfs_read, 0, echfs_seek};
