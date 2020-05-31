@@ -152,7 +152,7 @@ int fork();
 extern uint8_t scheduler_started;
 extern uint8_t scheduler_enabled;
 extern lock_t scheduler_lock;
-extern int cpu_holding_sched_lock;
+extern interrupt_safe_lock_t sched_lock;
 extern uint64_t process_count;
 
 #endif

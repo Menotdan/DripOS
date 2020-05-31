@@ -22,7 +22,7 @@ uint64_t process_count = 0;
 
 uint8_t scheduler_enabled = 0;
 lock_t scheduler_lock = {0, 0, 0, 0};
-int cpu_holding_sched_lock = -1; // -1 means unknown/none
+interrupt_safe_lock_t sched_lock = {0, 0, 0, 0, -1};
 
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
 task_regs_t default_user_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x23,0x1B,0,0x202,0};
@@ -44,11 +44,11 @@ void unref_thread_elem(uint64_t elem) {
 }
 
 void lock_scheduler() {
-    lock(scheduler_lock);
+    interrupt_safe_lock(sched_lock);
 }
 
 void unlock_scheduler() {
-    unlock(scheduler_lock);
+    interrupt_safe_unlock(sched_lock);
 }
 
 thread_info_block_t *get_thread_locals() {
@@ -136,8 +136,7 @@ int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_
 
 /* Add the thread to the dynarray */
 int64_t start_thread(task_t *thread) {
-    lock(scheduler_lock);
-    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
+    interrupt_safe_lock(sched_lock);
 
     int64_t tid = dynarray_add(&tasks, thread, sizeof(task_t));
     kfree(thread);
@@ -145,8 +144,7 @@ int64_t start_thread(task_t *thread) {
     thread->tid = tid;
     dynarray_unref(&tasks, tid);
 
-    cpu_holding_sched_lock = -1;
-    unlock(scheduler_lock);
+    interrupt_safe_unlock(sched_lock);
     return tid;
 }
 
@@ -180,8 +178,7 @@ task_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) {
 
 /* Add a new thread to the dynarray and as a child of a process */
 int64_t add_new_child_thread(task_t *task, int64_t pid) {
-    lock(scheduler_lock);
-    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
+    interrupt_safe_lock(sched_lock);
 
     /* Find the parent process */
     process_t *new_parent = dynarray_getelem(&processes, pid);
@@ -267,8 +264,7 @@ done:
     /* Add the TID to it's parent's threads list */
     dynarray_add(&new_parent->threads, &new_tid, sizeof(int64_t));
 
-    cpu_holding_sched_lock = -1;
-    unlock(scheduler_lock);
+    interrupt_safe_unlock(sched_lock);
     return new_tid;
 }
 
@@ -295,8 +291,7 @@ process_t *create_process(char *name, void *new_cr3) {
     Params:
         process: The pointer to the process struct, gets freed on return. */
 int64_t add_process(process_t *process) {
-    lock(scheduler_lock);
-    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
+    interrupt_safe_lock(sched_lock);
 
     /* Add element to the dynarray and save the PID */
     int64_t pid = dynarray_add(&processes, (void *) process, sizeof(process_t));
@@ -304,8 +299,7 @@ int64_t add_process(process_t *process) {
     process_item->pid = pid;
     dynarray_unref(&processes, pid);
 
-    cpu_holding_sched_lock = -1;
-    unlock(scheduler_lock);
+    interrupt_safe_unlock(sched_lock);
 
     /* Open stdout, stdin, and stderr */
     open_remote_fd("/dev/tty1", 0, pid); // stdout
@@ -369,7 +363,7 @@ int64_t pick_task() {
 
 void yield() {
     if (scheduler_enabled) {
-        lock(scheduler_lock);
+        interrupt_safe_lock(sched_lock);
         asm volatile("int $254");
     }
 }
@@ -383,28 +377,15 @@ void force_unlocked_schedule() {
 void schedule_bsp(int_reg_t *r) {
     send_scheduler_ipis();
 
-    if (spinlock_check_and_lock(&scheduler_lock.lock_dat)) {
-        // if (cpu_holding_sched_lock != -1 && cpu_holding_sched_lock != get_cpu_locals()->cpu_index) {
-        //     sprintf("cpu_holding_sched_lock: %d", cpu_holding_sched_lock);
-        //     lock(scheduler_lock);
-        // } else {
-        //     return;
-        // }
-        return;
+    if (interrupt_safe_lock(sched_lock)) {
+        schedule(r);
     }
-    schedule(r);
 }
 
 void schedule_ap(int_reg_t *r) {
-    if (spinlock_check_and_lock(&scheduler_lock.lock_dat)) {
-        // if (cpu_holding_sched_lock != -1 && cpu_holding_sched_lock != get_cpu_locals()->cpu_index) {
-        //     lock(scheduler_lock);
-        // } else {
-        //     return;
-        // }
-        return;
+    if (interrupt_safe_lock(sched_lock)) {
+        schedule(r);
     }
-    schedule(r);
 }
 
 void schedule(int_reg_t *r) {
@@ -520,13 +501,12 @@ void schedule(int_reg_t *r) {
 
     get_cpu_locals()->total_tsc = read_tsc();
 
-    unlock(scheduler_lock);
+    interrupt_safe_unlock(sched_lock);
 }
 
 int kill_task(int64_t tid) {
     int ret = 0;
-    lock(scheduler_lock);
-    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
+    interrupt_safe_lock(sched_lock);
 
     task_t *task = dynarray_getelem(&tasks, tid);
     if (task) {
@@ -540,7 +520,7 @@ int kill_task(int64_t tid) {
     } else {
         ret = 1;
     }
-    cpu_holding_sched_lock = -1;
+
     force_unlocked_schedule();
     return ret; // make gcc happy
 }
@@ -562,24 +542,20 @@ int kill_process(int64_t pid) {
 }
 
 process_t *reference_process(int64_t pid) {
-    lock(scheduler_lock);
-    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
+    interrupt_safe_lock(sched_lock);
 
     process_t *ret = (process_t *) dynarray_getelem(&processes, pid);
 
-    cpu_holding_sched_lock = -1;
-    unlock(scheduler_lock);
+    interrupt_safe_unlock(sched_lock);
     return ret;
 }
 
 void deref_process(int64_t pid) {
-    lock(scheduler_lock);
-    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
+    interrupt_safe_lock(sched_lock);
 
     dynarray_unref(&processes, pid);
 
-    cpu_holding_sched_lock = -1;
-    unlock(scheduler_lock);
+    interrupt_safe_unlock(sched_lock);
 }
 
 int map_user_memory(int pid, void *phys, void *virt, uint64_t size, uint16_t perms) {
@@ -707,8 +683,7 @@ int fork(syscall_reg_t *r) {
     /* Copy fds */
     clone_fds(process->pid, new_process->pid);
 
-    lock(scheduler_lock);
-    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
+    interrupt_safe_lock(sched_lock);
 
     /* Parent id */
     new_process->ppid = process->pid;
@@ -745,8 +720,7 @@ int fork(syscall_reg_t *r) {
     thread->regs.rip = r->rcx;
     thread->regs.rflags = r->r11;
 
-    cpu_holding_sched_lock = -1;
-    unlock(scheduler_lock);
+    interrupt_safe_unlock(sched_lock);
 
     add_new_child_thread(thread, new_pid); // Add the thread
 

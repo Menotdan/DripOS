@@ -55,7 +55,7 @@ static void insert_to_queue(uint64_t ticks, int64_t tid) {
 }
 
 void advance_time() {
-    if (spinlock_check_and_lock(&scheduler_lock.lock_dat)) {
+    if (!interrupt_safe_lock(sched_lock)) {
         lagged_ticks += 1;
         return;
     }
@@ -88,17 +88,15 @@ void advance_time() {
     }
     lagged_ticks = 0;
     unlock(sleep_queue_lock);
-    unlock(scheduler_lock);
+    interrupt_safe_unlock(sched_lock);
 }
 
 void sleep_ms(uint64_t ms) {
-    lock(scheduler_lock);
-    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
+    interrupt_safe_lock(sched_lock);
     assert(get_cpu_locals()->current_thread->state == RUNNING);
     get_cpu_locals()->current_thread->state = SLEEP;
 
     insert_to_queue(ms, get_cpu_locals()->current_thread->tid); // Insert to the thread sleep queue
-    cpu_holding_sched_lock = -1;
     force_unlocked_schedule(); // Leave in case the scheduler hasn't scheduled us out itself
 }
 
