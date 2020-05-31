@@ -299,7 +299,7 @@ int64_t add_process(process_t *process) {
     cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
 
     /* Add element to the dynarray and save the PID */
-    int64_t pid = dynarray_add(&processes, (void *) new_process, sizeof(process_t));
+    int64_t pid = dynarray_add(&processes, (void *) process, sizeof(process_t));
     process_t *process_item = dynarray_getelem(&processes, pid);
     process_item->pid = pid;
     dynarray_unref(&processes, pid);
@@ -314,7 +314,7 @@ int64_t add_process(process_t *process) {
 
     process_count++;
     kfree(process);
-
+    return pid;
 }
 
 /* Allocate new data for a process, then return the new PID */
@@ -753,5 +753,6 @@ int fork(syscall_reg_t *r) {
     /* Bye bye */
     deref_process(new_pid);
     deref_process(process->pid);
+    yield();
     return new_pid;
 }

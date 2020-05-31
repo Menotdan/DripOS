@@ -2,17 +2,16 @@
 #include "fs/fd.h"
 #include "mm/vmm.h"
 #include "mm/pmm.h"
-#include "proc/scheduler.h"
 #include "drivers/serial.h"
 #include "klibc/string.h"
 #include "klibc/stdlib.h"
 
-process_t *load_elf(char *path) {
+int64_t load_elf(char *path) {
     sprintf("[ELF] Attempting to load %s\n", path);
     int fd = fd_open(path, 0);
     if (fd < 0) {
         sprintf("Loading elf failed! path: %s, error: %d\n", path, fd);
-        return;
+        return fd;
     }
     char elf_magic[4];
     fd_seek(fd, 0, 0);
@@ -21,7 +20,7 @@ process_t *load_elf(char *path) {
     if (strncmp("\x7f""ELF", elf_magic, 4)) {
         sprintf("Elf magic invalid!\n");
         fd_close(fd);
-        return;
+        return -1;
     }
 
     elf_ehdr_t *ehdr = kmalloc(sizeof(elf_ehdr_t));
@@ -66,7 +65,37 @@ process_t *load_elf(char *path) {
 
     void *elf_address_space = vmm_fork_higher_half((void *) base_kernel_cr3);
     process_t *elf_process = create_process(path, elf_address_space);
+    for (uint64_t i = 0; i < ehdr->e_phnum; i++) {
+        sprintf("phdr_type = %u, phdr_size = %lu, phdr_addr = %lx, phdr_phys = %lx, phdr_offset = %lu, phdr_filesize = %lu\n", phdrs[i].p_type, phdrs[i].p_memsz, phdrs[i].p_vaddr, phdrs[i].p_paddr, phdrs[i].p_offset, phdrs[i].p_filesz);
+        if (phdrs[i].p_type == PT_LOAD) {
+            if (phdrs[i].p_memsz == 0) continue; // Empty phdr :/
+            uint64_t pages = (phdrs[i].p_memsz + 0x1000 - 1) / 0x1000;
+
+            void *virt = (void *) phdrs[i].p_vaddr;
+            void *region_phys = pmm_alloc(phdrs[i].p_memsz);
+            void *region_virt = GET_HIGHER_HALF(void *, region_phys);
+            memset(region_virt, 0, phdrs[i].p_memsz);
+
+            fd_seek(fd, phdrs[i].p_offset, 0);
+            fd_read(fd, region_virt, phdrs[i].p_filesz);
+
+            vmm_map_pages(region_phys, virt, elf_address_space, pages, VMM_PRESENT | VMM_USER | VMM_WRITE);
+        }
+    }
+
+    void *virt_stack = (void *) USER_STACK_START;
+    void *phys_stack_region = pmm_alloc(TASK_STACK_SIZE);
+    void *virt_stack_region = GET_HIGHER_HALF(void *, phys_stack_region);
+    memset(virt_stack_region, 0, TASK_STACK_SIZE);
+
+    vmm_map_pages(phys_stack_region, virt_stack, elf_address_space, TASK_STACK_PAGES, 
+        VMM_PRESENT | VMM_USER | VMM_WRITE);
+
+    // Now for a thread
+    task_t *elf_main_thread = create_thread(path, (void *) ehdr->e_entry, USER_STACK, 3);
+    int64_t pid = add_process(elf_process);
+    add_new_child_thread(elf_main_thread, pid);
 
     fd_close(fd);
-    return elf_process;
+    return pid;
 }

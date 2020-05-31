@@ -33,7 +33,7 @@ int open_remote_fd(char *name, int mode, int pid) {
     if (!node) {
         return get_thread_locals()->errno;
     }
-    
+
     return fd_new(node, mode, pid);
 }
 
@@ -97,8 +97,9 @@ int fd_seek(int fd, uint64_t offset, int whence) {
 }
 
 int fd_new(vfs_node_t *node, int mode, int pid) {
-    lock(fd_lock);
     process_t *current_process = reference_process(pid);
+
+    lock(fd_lock);
     fd_entry_t **fd_table = current_process->fd_table;
     int *fd_table_size = &current_process->fd_table_size;
 
@@ -120,12 +121,15 @@ int fd_new(vfs_node_t *node, int mode, int pid) {
 fnd:
     fd_table[i] = new_entry;
     unlock(fd_lock);
+
+    deref_process(pid);
     return i;
 }
 
 void fd_remove(int fd) {
-    lock(fd_lock);
     process_t *current_process = reference_process(get_cpu_locals()->current_thread->parent_pid);
+
+    lock(fd_lock);
     fd_entry_t **fd_table = current_process->fd_table;
     int *fd_table_size = &current_process->fd_table_size;
     
@@ -135,12 +139,14 @@ void fd_remove(int fd) {
     }
 
     unlock(fd_lock);
+    deref_process(get_cpu_locals()->current_thread->parent_pid);
 }
 
 fd_entry_t *fd_lookup(int fd) {
     fd_entry_t *ret;
-    lock(fd_lock);
     process_t *current_process = reference_process(get_cpu_locals()->current_thread->parent_pid);
+
+    lock(fd_lock);
     fd_entry_t **fd_table = current_process->fd_table;
     int *fd_table_size = &current_process->fd_table_size;
 
@@ -150,14 +156,16 @@ fd_entry_t *fd_lookup(int fd) {
         ret = (fd_entry_t *) 0;
     }
     unlock(fd_lock);
+
+    deref_process(get_cpu_locals()->current_thread->parent_pid);
     return ret;
 }
 
 void clone_fds(int64_t old_pid, int64_t new_pid) {
-    lock(fd_lock);
     process_t *old = reference_process(old_pid);
     process_t *new = reference_process(new_pid);
 
+    lock(fd_lock);
     for (int i = 0; i < old->fd_table_size; i++) {
         if (old->fd_table[i]) {
             fd_entry_t *new_fd = kcalloc(sizeof(fd_entry_t));
@@ -179,8 +187,8 @@ void clone_fds(int64_t old_pid, int64_t new_pid) {
             new->fd_table[i] = new_fd;
         }
     }
+    unlock(fd_lock);
 
     deref_process(new_pid);
     deref_process(old_pid);
-    unlock(fd_lock);
 }

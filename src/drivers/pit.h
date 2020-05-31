@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include "sys/int/isr.h"
 
+#define sched_period 8
+
 void timer_handler(int_reg_t *r);
 void set_pit_freq();
 void sleep_no_task(uint64_t ticks);

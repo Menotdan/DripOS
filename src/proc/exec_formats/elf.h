@@ -1,6 +1,9 @@
 #ifndef ELF_H
 #define ELF_H
 #include <stdint.h>
+#include "proc/scheduler.h"
+
+#define PT_LOAD 1
 
 typedef struct elf_ehdr {
     uint8_t iden_bytes[16];
@@ -43,6 +46,6 @@ typedef struct elf_shdr {
     uint64_t sh_entsize;
 } __attribute__((packed)) elf_shdr_t;
 
-void load_elf(char *path);
+int64_t load_elf(char *path);
 
 #endif
