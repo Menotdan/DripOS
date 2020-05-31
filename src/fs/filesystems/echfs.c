@@ -339,7 +339,6 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
 
         uint64_t read_count = 0;
         uint8_t *local_buf = echfs_read_file(filesystem_info, entry, &read_count);
-        //sprintf("Buf addr: %lx\n", local_buf);
 
         uint64_t count_to_read = count;
 
@@ -357,6 +356,7 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
         memcpy(local_buf + fd->seek, buf, count_to_read); // Copy the data
         kfree(local_buf);
         kfree(entry);
+        fd->seek += count_to_read;
         //sprintf("[EchFS] Read data successfully!\n");
         return count_to_read; // Done
     } else {

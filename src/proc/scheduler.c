@@ -272,15 +272,13 @@ done:
     return new_tid;
 }
 
-/* Allocate new data for a process, then return the new PID */
-int64_t new_process(char *name, void *new_cr3) {
-    lock(scheduler_lock);
-    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
-
+process_t *create_process(char *name, void *new_cr3) {
     /* Allocate new process */
     process_t *new_process = kcalloc(sizeof(process_t));
+
     /* New cr3 */
     new_process->cr3 = (uint64_t) new_cr3;
+
     /* Default UID and GID */
     new_process->uid = 0;
     new_process->gid = 0;
@@ -288,6 +286,17 @@ int64_t new_process(char *name, void *new_cr3) {
     new_process->fd_table_size = 10;
     new_process->current_brk = 0x10000000000;
     strcpy(name, new_process->name);
+
+    return new_process;
+}
+
+
+/* Add a process to the dynarray, this will free process, so it will not be usable anymore
+    Params:
+        process: The pointer to the process struct, gets freed on return. */
+int64_t add_process(process_t *process) {
+    lock(scheduler_lock);
+    cpu_holding_sched_lock = get_cpu_locals()->cpu_index;
 
     /* Add element to the dynarray and save the PID */
     int64_t pid = dynarray_add(&processes, (void *) new_process, sizeof(process_t));
@@ -297,8 +306,6 @@ int64_t new_process(char *name, void *new_cr3) {
 
     cpu_holding_sched_lock = -1;
     unlock(scheduler_lock);
-    /* Free the old data since it's in the dynarray */
-    kfree(new_process);
 
     /* Open stdout, stdin, and stderr */
     open_remote_fd("/dev/tty1", 0, pid); // stdout
@@ -306,6 +313,14 @@ int64_t new_process(char *name, void *new_cr3) {
     open_remote_fd("/dev/tty1", 0, pid); // stderr
 
     process_count++;
+    kfree(process);
+
+}
+
+/* Allocate new data for a process, then return the new PID */
+int64_t new_process(char *name, void *new_cr3) {
+    process_t *process = create_process(name, new_cr3);
+    int64_t pid = add_process(process);
     return pid;
 }
 

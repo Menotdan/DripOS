@@ -116,6 +116,8 @@ int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_
 int64_t new_process(char *name, void *new_cr3);
 void new_kernel_process(char *name, void (*main)());
 void new_user_process(char *name, void (*virt_main)(), void (*phys_main)(), uint64_t code_size);
+int64_t add_process(process_t *process);
+process_t *create_process(char *name, void *new_cr3);
 
 /* Killing stuff */
 int kill_process(int64_t pid);
