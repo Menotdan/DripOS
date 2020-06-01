@@ -6,7 +6,7 @@
 #include "klibc/string.h"
 #include "klibc/stdlib.h"
 
-int64_t load_elf(char *path) {
+void *load_elf_addrspace(char *path, uint64_t *entry_out) {
     sprintf("[ELF] Attempting to load %s\n", path);
     int fd = fd_open(path, 0);
     if (fd < 0) {
@@ -64,7 +64,6 @@ int64_t load_elf(char *path) {
     sprintf("Elf loaded correctly!\n");
 
     void *elf_address_space = vmm_fork_higher_half((void *) base_kernel_cr3);
-    process_t *elf_process = create_process(path, elf_address_space);
     for (uint64_t i = 0; i < ehdr->e_phnum; i++) {
         sprintf("phdr_type = %u, phdr_size = %lu, phdr_addr = %lx, phdr_phys = %lx, phdr_offset = %lu, phdr_filesize = %lu\n", phdrs[i].p_type, phdrs[i].p_memsz, phdrs[i].p_vaddr, phdrs[i].p_paddr, phdrs[i].p_offset, phdrs[i].p_filesz);
         if (phdrs[i].p_type == PT_LOAD) {
@@ -91,11 +90,19 @@ int64_t load_elf(char *path) {
     vmm_map_pages(phys_stack_region, virt_stack, elf_address_space, TASK_STACK_PAGES, 
         VMM_PRESENT | VMM_USER | VMM_WRITE);
 
-    // Now for a thread
-    task_t *elf_main_thread = create_thread(path, (void *) ehdr->e_entry, USER_STACK, 3);
-    int64_t pid = add_process(elf_process);
-    add_new_child_thread(elf_main_thread, pid);
+    *entry_out = ehdr->e_entry;
 
     fd_close(fd);
+    return elf_address_space;
+}
+
+int64_t load_elf(char *path) {
+    uint64_t entry_point = 0;
+    void *address_space = load_elf_addrspace(path, &entry_point);
+    process_t *process = create_process(path, address_space);
+    thread_t *thread = create_thread(path, (void *) entry_point, USER_STACK, 3);
+    int64_t pid = add_process(process);
+    add_new_child_thread(thread, pid);
+
     return pid;
 }

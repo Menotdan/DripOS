@@ -34,6 +34,25 @@ typedef struct {
 } task_regs_t;
 
 typedef struct {
+    int64_t a_type;
+    union {
+        long a_val;
+        void *a_ptr;
+        void (*a_func)();
+    } a_un;
+} auxv_t;
+
+typedef struct {
+    char **argv;
+    char **enviroment;
+    auxv_t *auxv;
+
+    int argc;
+    int envc;
+    int auxc;
+} main_thread_vars_t;
+
+typedef struct {
     char name[50]; // The name of the task
 
     task_regs_t regs; // The task's registers
@@ -54,7 +73,9 @@ typedef struct {
 
     uint8_t running;
     sleep_queue_t *sleep_node;
-} task_t;
+
+    main_thread_vars_t vars;
+} thread_t;
 
 typedef struct {
     char name[50]; // The name of the process
@@ -89,15 +110,6 @@ typedef struct {
     uint64_t tsc_total; // The total time this task has been running for
 } __attribute__((packed)) thread_info_block_t;
 
-typedef struct {
-    int64_t a_type;
-    union {
-        long a_val;
-        void *a_ptr;
-        void (*a_func)();
-    } a_un;
-} auxv_t;
-
 /* Scheduling */
 void schedule(int_reg_t *r);
 void schedule_ap(int_reg_t *r);
@@ -109,15 +121,20 @@ void force_unlocked_schedule();
 
 /* "API" */
 thread_info_block_t *get_thread_locals();
-int64_t add_new_child_thread(task_t *task, int64_t pid);
-task_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring);
-int64_t start_thread(task_t *thread);
+int64_t add_new_child_thread(thread_t *task, int64_t pid);
+thread_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring);
+int64_t start_thread(thread_t *thread);
 int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_t ring);
 int64_t new_process(char *name, void *new_cr3);
 void new_kernel_process(char *name, void (*main)());
 void new_user_process(char *name, void (*virt_main)(), void (*phys_main)(), uint64_t code_size);
 int64_t add_process(process_t *process);
 process_t *create_process(char *name, void *new_cr3);
+
+/* Argument passing */
+void add_argv(main_thread_vars_t *vars, char *string);
+void add_auxv(main_thread_vars_t *vars, auxv_t *auxv);
+void add_env(main_thread_vars_t *vars, char *string);
 
 /* Killing stuff */
 int kill_process(int64_t pid);

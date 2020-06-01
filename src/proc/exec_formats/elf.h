@@ -47,5 +47,6 @@ typedef struct elf_shdr {
 } __attribute__((packed)) elf_shdr_t;
 
 int64_t load_elf(char *path);
+void *load_elf_addrspace(char *path, uint64_t *entry_out);
 
 #endif

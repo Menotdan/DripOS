@@ -81,7 +81,7 @@ void debug_worker() {
                 char *data = kcalloc(1);
                 for (uint64_t i = 0; i < get_thread_list_size(); i++) {
                     if (get_thread_elem(i)) {
-                        task_t *task = get_thread_elem(i);
+                        thread_t *task = get_thread_elem(i);
                         data = krealloc(data, strlen(data) + 3 + strlen(task->name));
                         strcat(data, "+=");
                         strcat(data, task->name);
@@ -94,7 +94,7 @@ void debug_worker() {
                 char *data = kcalloc(1);
                 for (uint64_t i = 0; i < get_thread_list_size(); i++) {
                     if (get_thread_elem(i)) {
-                        task_t *task = get_thread_elem(i);
+                        thread_t *task = get_thread_elem(i);
                         char id[30];
                         utoa(task->tid, id);
                         data = krealloc(data, strlen(data) + 3 + strlen(id));
@@ -109,7 +109,7 @@ void debug_worker() {
                 char *data = kcalloc(1);
                 uint64_t cur_buf_size = 1;
                 uint64_t tid = atou(buffer + 1);
-                task_t *task = get_thread_elem(tid);
+                thread_t *task = get_thread_elem(tid);
 
                 // Get the data together
                 data = dripdbg_add_list_int(data, task->regs.rax, &cur_buf_size);
@@ -141,7 +141,7 @@ void debug_worker() {
                 char *data = kcalloc(1);
                 uint64_t cur_buf_size = 1;
                 uint64_t tid = atou(buffer + 1);
-                task_t *task = get_thread_elem(tid);
+                thread_t *task = get_thread_elem(tid);
 
                 data = dripdbg_add_list_int(data, task->tsc_started, &cur_buf_size);
                 data = dripdbg_add_list_int(data, task->tsc_stopped, &cur_buf_size);

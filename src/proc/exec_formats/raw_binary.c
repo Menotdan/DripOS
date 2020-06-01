@@ -9,7 +9,7 @@ static void new_binary_process(char *process_name, void *exec_ptr, void *code, u
     void *rsp = kcalloc(TASK_STACK_SIZE);
     void *rsp_phys = GET_LOWER_HALF(void *, rsp);
 
-    task_t *new_thread = create_thread(process_name, exec_ptr, USER_STACK, 3);
+    thread_t *new_thread = create_thread(process_name, exec_ptr, USER_STACK, 3);
 
     void *cr3 = vmm_fork_higher_half((void *) vmm_get_pml4t());
     int64_t pid = new_process(process_name, cr3);

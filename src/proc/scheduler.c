@@ -100,7 +100,7 @@ void scheduler_init_bsp() {
 
     /* Setup the idle thread */
     uint64_t idle_rsp = (uint64_t) kcalloc(0x1000) + 0x1000;
-    task_t *new_idle = create_thread("Idle thread", _idle, idle_rsp, 0);
+    thread_t *new_idle = create_thread("Idle thread", _idle, idle_rsp, 0);
     new_idle->state = BLOCKED; // Idle thread will *not* run unless provoked
     int64_t idle_tid = start_thread(new_idle);
 
@@ -119,7 +119,7 @@ void scheduler_init_ap() {
 
     /* Setup the idle thread */
     uint64_t idle_rsp = (uint64_t) kcalloc(0x1000) + 0x1000;
-    task_t *new_idle = create_thread("Idle thread", _idle, idle_rsp, 0);
+    thread_t *new_idle = create_thread("Idle thread", _idle, idle_rsp, 0);
     new_idle->state = BLOCKED; // Idle thread will *not* run unless provoked
     int64_t idle_tid = start_thread(new_idle);
 
@@ -129,16 +129,16 @@ void scheduler_init_ap() {
 
 /* Create a new thread *and* add it to the dynarray */
 int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_t ring) {
-    task_t *new_task = create_thread(name, main, rsp, ring);
+    thread_t *new_task = create_thread(name, main, rsp, ring);
     int64_t new_tid = add_new_child_thread(new_task, pid);
     return new_tid;
 }
 
 /* Add the thread to the dynarray */
-int64_t start_thread(task_t *thread) {
+int64_t start_thread(thread_t *thread) {
     interrupt_safe_lock(sched_lock);
 
-    int64_t tid = dynarray_add(&tasks, thread, sizeof(task_t));
+    int64_t tid = dynarray_add(&tasks, thread, sizeof(thread_t));
     kfree(thread);
     thread = dynarray_getelem(&tasks, tid);
     thread->tid = tid;
@@ -149,9 +149,9 @@ int64_t start_thread(task_t *thread) {
 }
 
 /* Allocate data for a new thread data block and return it */
-task_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) {
+thread_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) {
     /* Allocate new task and it's kernel stack */
-    task_t *new_task = kcalloc(sizeof(task_t));
+    thread_t *new_task = kcalloc(sizeof(thread_t));
     new_task->kernel_stack = (uint64_t) kcalloc(0x1000) + 0x1000;
 
     /* Setup ring */
@@ -173,11 +173,39 @@ task_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) {
     new_task->state = READY;
     strcpy(name, new_task->name);
 
+    /* Create null argv, enviroment, and auxv */
+    new_task->vars.envc = 0;
+    new_task->vars.argc = 0;
+    new_task->vars.auxc = 0;
+    new_task->vars.enviroment = kcalloc(sizeof(char *) * 1);
+    new_task->vars.auxv = kcalloc(sizeof(auxv_t) * 1);
+
     return new_task;
 }
 
+/* Expects something in higher half */
+void add_argv(main_thread_vars_t *vars, char *string) {
+    vars->argv = krealloc(vars->argv, (vars->argc + 1) * sizeof(char *));
+    vars->argv[vars->argc] = string;
+    vars->argc++;
+}
+
+void add_auxv(main_thread_vars_t *vars, auxv_t *auxv) {
+    vars->auxv = krealloc(vars->auxv, (vars->auxc + 2) * sizeof(auxv_t));
+    vars->auxv[vars->auxc + 1].a_type = auxv->a_type;
+    vars->auxv[vars->auxc + 1].a_un.a_val = auxv->a_un.a_val;
+    vars->auxc++;
+}
+
+/* Expects something in higher half */
+void add_env(main_thread_vars_t *vars, char *string) {
+    vars->enviroment = krealloc(vars->enviroment, (vars->envc + 2) * sizeof(char *));
+    vars->enviroment[vars->envc + 1] = string;
+    vars->envc++;
+}
+
 /* Add a new thread to the dynarray and as a child of a process */
-int64_t add_new_child_thread(task_t *task, int64_t pid) {
+int64_t add_new_child_thread(thread_t *task, int64_t pid) {
     interrupt_safe_lock(sched_lock);
 
     /* Find the parent process */
@@ -185,8 +213,8 @@ int64_t add_new_child_thread(task_t *task, int64_t pid) {
     if (!new_parent) { sprintf("[Scheduler] Couldn't find parent\n"); return -1; }
 
     /* Store the new task and save its TID */
-    int64_t new_tid = dynarray_add(&tasks, task, sizeof(task_t));
-    task_t *task_item = dynarray_getelem(&tasks, new_tid);
+    int64_t new_tid = dynarray_add(&tasks, task, sizeof(thread_t));
+    thread_t *task_item = dynarray_getelem(&tasks, new_tid);
     task_item->tid = new_tid;
     task_item->regs.cr3 = new_parent->cr3; // Inherit parent's cr3
     task_item->parent_pid = pid;
@@ -204,8 +232,8 @@ int64_t add_new_child_thread(task_t *task, int64_t pid) {
         sprintf("stack var: %lx\n", stack);
         uint64_t old_stack = stack;
 
-        int argc = 3;
-        char *argv[] = {task_item->name, "hello", "urdum"};
+        int argc = task->vars.argc;
+        char **argv = task->vars.argv;
 
         /* Add argc, argv, and auxv */
 
@@ -223,11 +251,12 @@ int64_t add_new_child_thread(task_t *task, int64_t pid) {
         stack -= total_string_len;
         stack = stack & ~(0b1111); // align the stack
 
-        uint64_t auxv_count = 1;
+        uint64_t auxv_count = task->vars.auxc + 1;
+        auxv_t *input_auxv = task->vars.auxv;
         auxv_t *auxv = (auxv_t *) stack - (auxv_count * 16);
-        for (uint64_t i = 0; i < auxv_count; i++) {
-            auxv[i].a_un.a_val = 0;
-            auxv[i].a_type = 0;
+        for (uint64_t i = 0; i < auxv_count; i++) { // Include the null auxv
+            auxv[i].a_un.a_val = input_auxv[i].a_un.a_val;
+            auxv[i].a_type = input_auxv[i].a_type;
         }
         stack -= (auxv_count * 16);
         uint64_t auxv_offset = old_stack - stack; // rdx = Top of stack - auxv_offset
@@ -235,11 +264,16 @@ int64_t add_new_child_thread(task_t *task, int64_t pid) {
         *(uint64_t *) (stack - 8) = 0;
         stack -= 8;
 
-        uint64_t enviroment_count = 1;
+        uint64_t enviroment_count = task->vars.envc + 1;
         stack -= enviroment_count * 8;
         char **enviroment = (char **) stack;
         for (uint64_t i = 0; i < enviroment_count; i++) {
-            enviroment[i] = 0;
+            if (task->vars.enviroment[i]) {
+                enviroment[i] = kcalloc(strlen(task->vars.enviroment[i]));
+                strcpy(task->vars.enviroment[i], enviroment[i]);
+            } else {
+                enviroment[i] = 0;
+            }
         }
 
         stack -= 8;
@@ -334,7 +368,7 @@ int64_t pick_task() {
 
     /* Prioritze tasks right after the current task */
     for (int64_t t = get_cpu_locals()->current_thread->tid + 1; t < tasks.array_size; t++) {
-        task_t *task = dynarray_getelem(&tasks, t);
+        thread_t *task = dynarray_getelem(&tasks, t);
         if (task) {
             if (task->state == READY) {
                 tid_ret = task->tid;
@@ -347,7 +381,7 @@ int64_t pick_task() {
 
     /* Then look at the rest of the tasks */
     for (int64_t t = 0; t < get_cpu_locals()->current_thread->tid + 1; t++) {
-        task_t *task = dynarray_getelem(&tasks, t);
+        thread_t *task = dynarray_getelem(&tasks, t);
         if (task) {
             if (task->state == READY) {
                 tid_ret = task->tid;
@@ -389,7 +423,7 @@ void schedule_ap(int_reg_t *r) {
 }
 
 void schedule(int_reg_t *r) {
-    task_t *running_task = get_cpu_locals()->current_thread;
+    thread_t *running_task = get_cpu_locals()->current_thread;
     if (running_task) {
         if (running_task->tid == get_cpu_locals()->idle_tid) {
             end_idle(); // End idling timer for this CPU
@@ -508,7 +542,7 @@ int kill_task(int64_t tid) {
     int ret = 0;
     interrupt_safe_lock(sched_lock);
 
-    task_t *task = dynarray_getelem(&tasks, tid);
+    thread_t *task = dynarray_getelem(&tasks, tid);
     if (task) {
         // If we are running this thread, unref it a first time because it is refed from running
         if (task->tid == get_cpu_locals()->current_thread->tid) {
@@ -698,9 +732,9 @@ int fork(syscall_reg_t *r) {
     unlock(process->brk_lock);
 
     /* New thread */
-    task_t *old_thread = get_cpu_locals()->current_thread;
+    thread_t *old_thread = get_cpu_locals()->current_thread;
 
-    task_t *thread = create_thread(old_thread->name, (void (*)()) old_thread->regs.rip, old_thread->regs.rsp, old_thread->ring);
+    thread_t *thread = create_thread(old_thread->name, (void (*)()) old_thread->regs.rip, old_thread->regs.rsp, old_thread->ring);
     thread->regs.rax = 0;
     thread->regs.rbx = r->rbx;
     thread->regs.rcx = r->rcx;

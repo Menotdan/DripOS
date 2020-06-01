@@ -147,7 +147,7 @@ void kmain(stivale_info_t *bootloader_info) {
     set_pit_freq();
     sprintf("[DripOS] Timers set.\n");
 
-    task_t *kernel_thread = create_thread("Kernel setup worker", kernel_task, 
+    thread_t *kernel_thread = create_thread("Kernel setup worker", kernel_task, 
         (uint64_t) kmalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE, 0);
     start_thread(kernel_thread);
 

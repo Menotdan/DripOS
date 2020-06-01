@@ -71,7 +71,7 @@ void isr_handler(int_reg_t *r) {
                     sprintf("Killed task %ld\n", get_cpu_locals()->current_thread->tid);
                     kill_task(get_cpu_locals()->current_thread->tid);
                 }
-                get_cpu_locals()->current_thread = (task_t *) 0;
+                get_cpu_locals()->current_thread = (thread_t *) 0;
                 schedule(r); // Schedule for this CPU
             }
         }

@@ -14,7 +14,7 @@ typedef struct {
     /* Change these ig lol */
     uint8_t apic_id;
     uint8_t cpu_index;
-    task_t *current_thread;
+    thread_t *current_thread;
     int64_t pid;
     int64_t tid;
     int64_t idle_tid; // The TID for this CPUs idle task
