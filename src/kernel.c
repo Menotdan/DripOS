@@ -36,6 +36,7 @@
 
 #include "fs/filesystems/echfs.h"
 #include "proc/exec_formats/elf.h"
+#include "proc/event.h"
 
 #define TODO_LIST_SIZE 7
 char *todo_list[TODO_LIST_SIZE] = {"Better syscall error handling", "Filesystem driver", "ELF Loading", "userspace libc", "minor: Sync TLB across CPUs", "minor: Add MMIO PCI", "minor: Retry AHCI commands"};
@@ -50,6 +51,15 @@ void video_thread() {
         sleep_ms(1);
         flip_buffers();
     }
+}
+
+event_t event = 0;
+
+void event_system_test() {
+    sprintf("waiting for event\n");
+    await_event(&event);
+    sprintf("event fired\n");
+    while (1) { asm("pause"); }
 }
 
 extern void sanity_thread_start();
@@ -77,9 +87,13 @@ void kernel_process(int argc, char **argv) {
     //kprintf("[DripOS] Loading init from disk.\n");
     //launch_binary("/echfs_mount/programs/fork_bomb3.bin"); // This is init :meme:
 
-    load_elf("/echfs_mount/elf_test.elf");
+    //load_elf("/echfs_mount/elf_test.elf");
 
     sprintf("done kernel work\n");
+    new_kernel_process("lul", event_system_test);
+    sleep_ms(10000);
+    trigger_event(&event);
+    sprintf("Triggered event\n");
 
 #ifdef DBGPROTO
     setup_drip_dgb();

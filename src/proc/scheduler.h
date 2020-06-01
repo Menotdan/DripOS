@@ -12,8 +12,8 @@
 #define RUNNING 1
 #define BLOCKED 2
 #define SLEEP 3
-#define RUNNING_IDLE 4
-#define READY_IDLE 5
+#define WAIT_EVENT 4
+#define WAIT_EVENT_TIMEOUT 5
 
 #define TASK_STACK_SIZE 0x4000
 #define TASK_STACK_PAGES (TASK_STACK_SIZE + 0x1000 - 1) / 0x1000
@@ -75,6 +75,10 @@ typedef struct {
     sleep_queue_t *sleep_node;
 
     main_thread_vars_t vars;
+
+    int *event;
+    uint64_t event_timeout;
+    uint64_t event_wait_start;
 } thread_t;
 
 typedef struct {

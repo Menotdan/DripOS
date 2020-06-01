@@ -368,12 +368,17 @@ int64_t pick_task() {
 
     /* Prioritze tasks right after the current task */
     for (int64_t t = get_cpu_locals()->current_thread->tid + 1; t < tasks.array_size; t++) {
+        //sprintf("Looking at t = %ld in first loop\n", t);
         thread_t *task = dynarray_getelem(&tasks, t);
         if (task) {
-            if (task->state == READY) {
+            if (task->state == READY || task->state == WAIT_EVENT || task->state == WAIT_EVENT_TIMEOUT) {
                 tid_ret = task->tid;
                 dynarray_unref(&tasks, t);
+                //sprintf("picked in first loop with state %u and event %lx\n", task->state, task->event);
                 return tid_ret;
+            }
+            if (task->state == SLEEP) {
+                //sprintf("Time left: %lu\n", task->sleep_node->time_left);
             }
         }
         dynarray_unref(&tasks, t);
@@ -381,11 +386,13 @@ int64_t pick_task() {
 
     /* Then look at the rest of the tasks */
     for (int64_t t = 0; t < get_cpu_locals()->current_thread->tid + 1; t++) {
+        //sprintf("Looking at t = %ld in second loop\n", t);
         thread_t *task = dynarray_getelem(&tasks, t);
         if (task) {
-            if (task->state == READY) {
+            if (task->state == READY || task->state == WAIT_EVENT || task->state == WAIT_EVENT_TIMEOUT) {
                 tid_ret = task->tid;
                 dynarray_unref(&tasks, t);
+                //sprintf("picked in second loop with state %u and event %lx\n", task->state, task->event);
                 return tid_ret;
             }
         }
@@ -474,18 +481,51 @@ void schedule(int_reg_t *r) {
         dynarray_unref(&tasks, running_task->tid);
     }
 
+    int64_t tid_run;
+    int64_t picked_first = -1;
+repick_task:
     // Run the next thread
-    int64_t tid_run = pick_task();
+    tid_run = pick_task();
 
     if (tid_run == -1) {
         /* Idle */
         get_cpu_locals()->current_thread = dynarray_getelem(&tasks, get_cpu_locals()->idle_tid);
         running_task = get_cpu_locals()->current_thread;
     } else {
-        get_cpu_locals()->current_thread = dynarray_getelem(&tasks, tid_run);
+        if (picked_first == -1) {
+            picked_first = tid_run;
+        } else if (picked_first == tid_run) {
+            // welp
+            tid_run = -1;
+            get_cpu_locals()->current_thread = dynarray_getelem(&tasks, get_cpu_locals()->idle_tid);
+            running_task = get_cpu_locals()->current_thread;
+            goto picked;
+        }
+        thread_t *to_run = dynarray_getelem(&tasks, tid_run);
+        get_cpu_locals()->current_thread = to_run;
         running_task = get_cpu_locals()->current_thread;
+        if (to_run->state == WAIT_EVENT) {
+            if (*to_run->event) {
+                atomic_dec((uint32_t *) to_run->event);
+                to_run->state = READY;
+            } else {
+                dynarray_unref(&tasks, tid_run); // welp, we are repicking :/
+                goto repick_task;
+            }
+        } else if (to_run->state == WAIT_EVENT_TIMEOUT) {
+            if (*to_run->event) {
+                atomic_dec((uint32_t *) to_run->event);
+                to_run->state = READY;
+            } else if (to_run->event_wait_start - global_ticks >= to_run->event_timeout) {
+                to_run->state = READY;
+            } else {
+                dynarray_unref(&tasks, tid_run); // welp, we are repicking :/
+                goto repick_task;
+            }
+        }
     }
 
+picked:
     if (tid_run != -1) {
         assert(running_task->state == READY);
         assert(running_task->running == 0);
