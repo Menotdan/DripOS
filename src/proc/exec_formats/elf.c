@@ -11,7 +11,7 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out) {
     int fd = fd_open(path, 0);
     if (fd < 0) {
         sprintf("Loading elf failed! path: %s, error: %d\n", path, fd);
-        return fd;
+        return (void *) 0;
     }
     char elf_magic[4];
     fd_seek(fd, 0, 0);
@@ -20,7 +20,7 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out) {
     if (strncmp("\x7f""ELF", elf_magic, 4)) {
         sprintf("Elf magic invalid!\n");
         fd_close(fd);
-        return -1;
+        return (void *) 0;
     }
 
     elf_ehdr_t *ehdr = kmalloc(sizeof(elf_ehdr_t));
