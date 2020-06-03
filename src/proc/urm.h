@@ -2,7 +2,7 @@
 #define URM_H
 #include <stdint.h>
 #include "event.h"
-#include "lock.h"
+#include "klibc/lock.h"
 
 typedef enum {
     URM_KILL_PROCESS,

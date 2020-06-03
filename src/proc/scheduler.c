@@ -12,6 +12,7 @@
 #include "sys/apic.h"
 
 #include "drivers/pit.h"
+#include "urm.h"
 
 extern char syscall_stub[];
 
@@ -29,6 +30,8 @@ interrupt_safe_lock_t sched_lock = {0, 0, 0, 0, -1};
 
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
 task_regs_t default_user_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x23,0x1B,0,0x202,0};
+
+int scheduler_ran = 0;
 
 uint64_t get_thread_list_size() {
     return threads_list_size;
@@ -54,6 +57,8 @@ void send_scheduler_ipis() {
         if (i < cpu_vector.items_count) {
             if ((cpus[i]->cpu_flags & 1 || cpus[i]->cpu_flags & 2) && cpus[i]->apic_id != get_lapic_id()) {
                 send_ipi(cpus[i]->apic_id, (1 << 14) | 253); // Send interrupt 253
+                while (!scheduler_ran) { asm("pause"); }
+                scheduler_ran = 0;
             }
         }
     }
@@ -90,6 +95,9 @@ void scheduler_init_bsp() {
     new_idle->state = BLOCKED; // Idle thread will *not* run unless provoked
     int64_t idle_tid = start_thread(new_idle);
 
+    thread_t *urm = create_thread("URM", urm_thread, ((uint64_t) kcalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE), 0);
+    start_thread(urm);
+
     get_cpu_locals()->idle_tid = idle_tid;
     sprintf("Idle task: %ld\n", get_cpu_locals()->idle_tid);
 }
@@ -123,7 +131,6 @@ int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_
 /* Add the thread to the dynarray */
 int64_t start_thread(thread_t *thread) {
     interrupt_safe_lock(sched_lock);
-
     int64_t tid = -1;
     for (uint64_t i = 0; i < threads_list_size; i++) {
         if (!threads[i]) {
@@ -441,15 +448,22 @@ void force_unlocked_schedule() {
 void schedule_bsp(int_reg_t *r) {
     send_scheduler_ipis();
 
-    if (interrupt_safe_lock(sched_lock)) {
+    if (!spinlock_check_and_lock(&sched_lock.lock_dat)) {
+        sched_lock.current_holder = __FUNCTION__;
         schedule(r);
+    } else {
+        //sprintf("Scheduler was locked~! By %s.\n", sched_lock.current_holder);
     }
 }
 
 void schedule_ap(int_reg_t *r) {
-    if (interrupt_safe_lock(sched_lock)) {
+    if (!spinlock_check_and_lock(&sched_lock.lock_dat)) {
+        sched_lock.current_holder = __FUNCTION__;
         schedule(r);
+    } else {
+        //sprintf("Scheduler was locked~! By %s.\n", sched_lock.current_holder);
     }
+    scheduler_ran = 1;
 }
 
 void schedule(int_reg_t *r) {
@@ -489,6 +503,8 @@ void schedule(int_reg_t *r) {
 
         running_task->tsc_stopped = read_tsc();
         running_task->tsc_total += running_task->tsc_stopped - running_task->tsc_started;
+        
+        running_task->cpu = -1;
 
         if (running_task->running) {
             running_task->running = 0;
@@ -506,7 +522,7 @@ void schedule(int_reg_t *r) {
 repick_task:
     // Run the next thread
     tid_run = pick_task();
-
+    //sprintf("Picked %ld\n", tid_run);
     if (tid_run == -1) {
         /* Idle */
         get_cpu_locals()->current_thread = threads[get_cpu_locals()->idle_tid];
@@ -552,6 +568,8 @@ picked:
         assert(running_task->state == RUNNING);
     }
 
+    running_task->cpu = (int) get_cpu_locals()->cpu_index;
+
     r->rax = running_task->regs.rax;
     r->rbx = running_task->regs.rbx;
     r->rcx = running_task->regs.rcx;
@@ -596,45 +614,20 @@ picked:
     interrupt_safe_unlock(sched_lock);
 }
 
-/* TODO: CREATE A THREAD TO KILL THREADS, THIS CODE IS BAD, WILL CAUSE DATA CORRUPTION [URGENT] */
-
 int kill_task(int64_t tid) {
-    int ret = 0;
-    interrupt_safe_lock(sched_lock);
-
-    if ((uint64_t) tid >= threads_list_size) {
-        return 1;
-    }
-    thread_t *thread = threads[tid];
-    if (thread) {
-        // If we are running this thread, unref it a first time because it is refed from running
-        if (thread->tid == get_cpu_locals()->current_thread->tid) {
-            get_cpu_locals()->current_thread = (void *) 0;
-        }
-        threads[tid] = (void *) 0;
-    } else {
-        ret = 1;
-    }
-
-    force_unlocked_schedule();
-    return ret; // make gcc happy
+    urm_kill_thread_data data;
+    data.tid = tid;
+    send_urm_request(&data, URM_KILL_THREAD);
+    return 0;
 }
 
 int kill_process(int64_t pid) {
-    if ((uint64_t) pid >= process_list_size) {
-        return 1;
+    urm_kill_process_data data;
+    data.pid = pid;
+    send_urm_request(&data, URM_KILL_PROCESS);
+    if (pid == get_cpu_locals()->current_thread->parent_pid) {
+        while (1) { asm("hlt"); }
     }
-
-    process_t *proc = processes[pid];
-    if (proc) {
-        for (int64_t t = 0; (uint64_t) t < proc->threads_size; t++) {
-            if (proc->threads[t]) {
-                kill_task(proc->threads[t]);
-            }
-        }
-    }
-    processes[pid] = (void *) 0;
-    
     return 0;
 }
 

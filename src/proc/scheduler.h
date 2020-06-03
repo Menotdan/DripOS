@@ -64,7 +64,7 @@ typedef struct {
     uint64_t tsc_total; // The total time this task has been running for
 
     uint8_t state; // State of the task
-    uint8_t cpu; // CPU the task is running on
+    int cpu; // CPU the task is running on
 
     int64_t tid; // Task ID
     int64_t parent_pid; // The pid of the parent process

@@ -87,7 +87,7 @@ void kernel_process(int argc, char **argv) {
     //kprintf("[DripOS] Loading init from disk.\n");
     //launch_binary("/echfs_mount/programs/fork_bomb3.bin"); // This is init :meme:
 
-    load_elf("/echfs_mount/programs/fork_bomb_speed.elf");
+    sprintf("Elf PID: %ld\n", load_elf("/echfs_mount/programs/fork_bomb_speed.elf"));
 
     sprintf("done kernel work\n");
 
@@ -96,6 +96,7 @@ void kernel_process(int argc, char **argv) {
 #endif
 
     kill_process(get_cpu_locals()->current_thread->parent_pid); // suicide
+    sprintf("WHY DID THIS RETURN!?\n");
 }
 
 void kernel_task() {
@@ -116,6 +117,7 @@ void kernel_task() {
     new_kernel_process("Kernel process", kernel_process);
 
     kill_task(get_cpu_locals()->current_thread->tid); // suicide
+    sprintf("WHY DID THIS RETURN 2!?\n");
 }
 
 // Kernel main function, execution starts here :D
@@ -147,15 +149,14 @@ void kmain(stivale_info_t *bootloader_info) {
     set_panic_stack((uint64_t) kmalloc(0x1000) + 0x1000);
     set_kernel_stack((uint64_t) kmalloc(0x1000) + 0x1000);
 
-
-    sprintf("[DripOS] Set kernel stacks.\n");
-    scheduler_init_bsp();
-
     sprintf("[DripOS] Registering interrupts and setting interrupt flag.\n");
     configure_idt();
     sprintf("[DripOS] Setting timer speed to 1000 hz.\n");
     set_pit_freq();
     sprintf("[DripOS] Timers set.\n");
+
+    sprintf("[DripOS] Set kernel stacks.\n");
+    scheduler_init_bsp();
 
     thread_t *kernel_thread = create_thread("Kernel setup worker", kernel_task, 
         (uint64_t) kmalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE, 0);

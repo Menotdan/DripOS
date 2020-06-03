@@ -113,6 +113,8 @@ void panic_handler(int_reg_t *r) {
 
 void isr_panic_idle(int_reg_t *r) {
     (void) r;
+    unlock(base_tty.tty_lock);
+    unlock(vesa_lock);
     kprintf_yieldless("CPU %u, Thread %ld\n", (uint32_t) get_cpu_locals()->cpu_index, get_cpu_locals()->current_thread->tid);
     while (1) { asm volatile("hlt"); }
 }

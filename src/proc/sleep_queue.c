@@ -55,10 +55,12 @@ static void insert_to_queue(uint64_t ticks, int64_t tid) {
 }
 
 void advance_time() {
-    if (!interrupt_safe_lock(sched_lock)) {
+    assert(!check_interrupts());
+    if (spinlock_check_and_lock(&sched_lock.lock_dat)) {
         lagged_ticks += 1;
         return;
     }
+    sched_lock.current_holder = __FUNCTION__;
 
     lock(sleep_queue_lock);
     if (lagged_ticks > (sched_period * 3)) {
