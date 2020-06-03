@@ -139,6 +139,7 @@ static uint64_t find_free_page(uint64_t pages) {
 }
 
 void *pmm_alloc(uint64_t size) {
+    interrupt_state_t state = interrupt_lock();
     lock(pmm_lock);
 
     uint64_t pages = (size + 0x1000 - 1) / 0x1000;
@@ -152,10 +153,12 @@ void *pmm_alloc(uint64_t size) {
     used_memory += pages * 0x1000;
 
     unlock(pmm_lock);
+    interrupt_unlock(state);
     return (void *) (free_page * 0x1000);
 }
 
 void pmm_unalloc(void *addr, uint64_t size) {
+    interrupt_state_t state = interrupt_lock();
     lock(pmm_lock);
 
     uint64_t page = ((uint64_t) addr & ~(0xfff)) / 0x1000;
@@ -169,6 +172,7 @@ void pmm_unalloc(void *addr, uint64_t size) {
     used_memory -= pages * 0x1000;
 
     unlock(pmm_lock);
+    interrupt_unlock(state);
 }
 
 uint64_t pmm_get_free_mem() {

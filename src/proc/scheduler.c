@@ -1,5 +1,4 @@
 #include "scheduler.h"
-#include "klibc/dynarray.h"
 #include "klibc/stdlib.h"
 #include "klibc/string.h"
 #include "klibc/queue.h"
@@ -16,8 +15,12 @@
 
 extern char syscall_stub[];
 
-dynarray_t tasks;
-dynarray_t processes;
+uint64_t threads_list_size = 0;
+uint64_t process_list_size = 0;
+thread_t **threads;
+process_t **processes;
+
+
 uint64_t process_count = 0;
 
 uint8_t scheduler_enabled = 0;
@@ -28,19 +31,7 @@ task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,
 task_regs_t default_user_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x23,0x1B,0,0x202,0};
 
 uint64_t get_thread_list_size() {
-    return tasks.array_size;
-}
-
-void *get_thread_elem(uint64_t elem) {
-    return dynarray_getelem(&tasks, elem);
-}
-
-void ref_thread_elem(uint64_t elem) {
-    dynarray_getelem(&tasks, elem);
-}
-
-void unref_thread_elem(uint64_t elem) {
-    dynarray_unref(&tasks, elem);
+    return threads_list_size;
 }
 
 void lock_scheduler() {
@@ -86,11 +77,6 @@ void _idle() {
 
 /* Initialize the BSP for scheduling */
 void scheduler_init_bsp() {
-    tasks.array_size = 0;
-    tasks.base = 0;
-    processes.array_size = 0;
-    processes.base = 0;
-
     /* Setup syscall MSRs for this CPU */
     write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x8 << 32));
     write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x18 << 48));
@@ -138,11 +124,21 @@ int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_
 int64_t start_thread(thread_t *thread) {
     interrupt_safe_lock(sched_lock);
 
-    int64_t tid = dynarray_add(&tasks, thread, sizeof(thread_t));
-    kfree(thread);
-    thread = dynarray_getelem(&tasks, tid);
+    int64_t tid = -1;
+    for (uint64_t i = 0; i < threads_list_size; i++) {
+        if (!threads[i]) {
+            tid = i;
+            break;
+        }
+    }
+    if (tid == -1) {
+        threads = krealloc(threads, (threads_list_size + 10) * sizeof(thread_t *));
+        tid = threads_list_size;
+        threads_list_size += 10;
+    }
     thread->tid = tid;
-    dynarray_unref(&tasks, tid);
+
+    threads[tid] = thread;
 
     interrupt_safe_unlock(sched_lock);
     return tid;
@@ -205,35 +201,53 @@ void add_env(main_thread_vars_t *vars, char *string) {
 }
 
 /* Add a new thread to the dynarray and as a child of a process */
-int64_t add_new_child_thread(thread_t *task, int64_t pid) {
+int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
     interrupt_safe_lock(sched_lock);
 
+    int64_t index = -1;
+
     /* Find the parent process */
-    process_t *new_parent = dynarray_getelem(&processes, pid);
+    process_t *new_parent = (void *) 0;
+    if ((uint64_t) pid < process_list_size) {
+        new_parent = processes[pid];
+    }
     if (!new_parent) { sprintf("[Scheduler] Couldn't find parent\n"); return -1; }
 
     /* Store the new task and save its TID */
-    int64_t new_tid = dynarray_add(&tasks, task, sizeof(thread_t));
-    thread_t *task_item = dynarray_getelem(&tasks, new_tid);
-    task_item->tid = new_tid;
-    task_item->regs.cr3 = new_parent->cr3; // Inherit parent's cr3
-    task_item->parent_pid = pid;
 
-    if (new_parent->threads.array_size == 0) { // No children
+    int64_t new_tid = -1;
+    for (uint64_t i = 0; i < threads_list_size; i++) {
+        if (!threads[i]) {
+            new_tid = i;
+            break;
+        }
+    }
+    if (new_tid == -1) {
+        threads = krealloc(threads, (threads_list_size + 10) * sizeof(thread_t *));
+        new_tid = threads_list_size;
+        threads_list_size += 10;
+    }
+    threads[new_tid] = thread;
+
+    thread->tid = new_tid;
+    thread->regs.cr3 = new_parent->cr3; // Inherit parent's cr3
+    thread->parent_pid = pid;
+
+    if (new_parent->threads_size == 0) { // No children
         // -1 because kmalloc creates boundaries so page might not be mapped :|
-        void *phys = virt_to_phys((void *) (task_item->regs.rsp - 1), (pt_t *) task_item->regs.cr3);
+        void *phys = virt_to_phys((void *) (thread->regs.rsp - 1), (pt_t *) thread->regs.cr3);
         if ((uint64_t) phys == 0xFFFFFFFFFFFFFFFF) {
             sprintf("RSP not mapped :thonk:\n");
             goto done;
         }
-        sprintf("virt: %lx\n", task_item->regs.rsp);
+        sprintf("virt: %lx\n", thread->regs.rsp);
         sprintf("phys: %lx\n", phys);
         uint64_t stack = GET_HIGHER_HALF(uint64_t, phys) + 1;
         sprintf("stack var: %lx\n", stack);
         uint64_t old_stack = stack;
 
-        int argc = task->vars.argc;
-        char **argv = task->vars.argv;
+        int argc = thread->vars.argc;
+        char **argv = thread->vars.argv;
 
         /* Add argc, argv, and auxv */
 
@@ -251,8 +265,8 @@ int64_t add_new_child_thread(thread_t *task, int64_t pid) {
         stack -= total_string_len;
         stack = stack & ~(0b1111); // align the stack
 
-        uint64_t auxv_count = task->vars.auxc + 1;
-        auxv_t *input_auxv = task->vars.auxv;
+        uint64_t auxv_count = thread->vars.auxc + 1;
+        auxv_t *input_auxv = thread->vars.auxv;
         auxv_t *auxv = (auxv_t *) stack - (auxv_count * 16);
         for (uint64_t i = 0; i < auxv_count; i++) { // Include the null auxv
             auxv[i].a_un.a_val = input_auxv[i].a_un.a_val;
@@ -264,13 +278,13 @@ int64_t add_new_child_thread(thread_t *task, int64_t pid) {
         *(uint64_t *) (stack - 8) = 0;
         stack -= 8;
 
-        uint64_t enviroment_count = task->vars.envc + 1;
+        uint64_t enviroment_count = thread->vars.envc + 1;
         stack -= enviroment_count * 8;
         char **enviroment = (char **) stack;
         for (uint64_t i = 0; i < enviroment_count; i++) {
-            if (task->vars.enviroment[i]) {
-                enviroment[i] = kcalloc(strlen(task->vars.enviroment[i]));
-                strcpy(task->vars.enviroment[i], enviroment[i]);
+            if (thread->vars.enviroment[i]) {
+                enviroment[i] = kcalloc(strlen(thread->vars.enviroment[i]));
+                strcpy(thread->vars.enviroment[i], enviroment[i]);
             } else {
                 enviroment[i] = 0;
             }
@@ -281,22 +295,29 @@ int64_t add_new_child_thread(thread_t *task, int64_t pid) {
 
         stack -= argc * 8;
         for (int i = 0; i < argc; i++) {
-            *(uint64_t *) (stack + (i * 8)) = task_item->regs.rsp - string_offsets[i]; // Point to the strings
+            *(uint64_t *) (stack + (i * 8)) = thread->regs.rsp - string_offsets[i]; // Point to the strings
         }
         uint64_t argv_offset = old_stack - stack; // rsi = Top of stack - argv_offset
 
-        task_item->regs.rdi = (uint64_t) argc;
-        task_item->regs.rsi = task_item->regs.rsp - argv_offset;
-        task_item->regs.rdx = task_item->regs.rsp - auxv_offset;
-        task_item->regs.rsp -= (old_stack - stack);
+        thread->regs.rdi = (uint64_t) argc;
+        thread->regs.rsi = thread->regs.rsp - argv_offset;
+        thread->regs.rdx = thread->regs.rsp - auxv_offset;
+        thread->regs.rsp -= (old_stack - stack);
     }
 done:
-
-    dynarray_unref(&tasks, new_tid);
-    kfree(task);
-
     /* Add the TID to it's parent's threads list */
-    dynarray_add(&new_parent->threads, &new_tid, sizeof(int64_t));
+    for (uint64_t i = 0; i < new_parent->threads_size; i++) {
+        if (!new_parent->threads[i]) {
+            index = i;
+            break;
+        }
+    }
+    if (new_tid == -1) {
+        threads = krealloc(new_parent->threads, (new_parent->threads_size + 10) * sizeof(int64_t));
+        index = new_parent->threads_size;
+        new_parent->threads_size += 10;
+    }
+    new_parent->threads[index] = thread->tid;
 
     interrupt_safe_unlock(sched_lock);
     return new_tid;
@@ -321,17 +342,24 @@ process_t *create_process(char *name, void *new_cr3) {
 }
 
 
-/* Add a process to the dynarray, this will free process, so it will not be usable anymore
-    Params:
-        process: The pointer to the process struct, gets freed on return. */
+/* Add a process to the process list */
 int64_t add_process(process_t *process) {
     interrupt_safe_lock(sched_lock);
 
     /* Add element to the dynarray and save the PID */
-    int64_t pid = dynarray_add(&processes, (void *) process, sizeof(process_t));
-    process_t *process_item = dynarray_getelem(&processes, pid);
-    process_item->pid = pid;
-    dynarray_unref(&processes, pid);
+    int64_t pid = -1;
+    for (uint64_t i = 0; i < process_list_size; i++) {
+        if (!processes[i]) {
+            pid = i;
+            break;
+        }
+    }
+    if (pid == -1) {
+        processes = krealloc(processes, (process_list_size + 10) * sizeof(process_t *));
+        pid = process_list_size;
+        process_list_size += 10;
+    }
+    processes[pid] = process;
 
     interrupt_safe_unlock(sched_lock);
 
@@ -341,7 +369,6 @@ int64_t add_process(process_t *process) {
     open_remote_fd("/dev/tty1", 0, pid); // stderr
 
     process_count++;
-    kfree(process);
     return pid;
 }
 
@@ -367,13 +394,12 @@ int64_t pick_task() {
     }
 
     /* Prioritze tasks right after the current task */
-    for (int64_t t = get_cpu_locals()->current_thread->tid + 1; t < tasks.array_size; t++) {
+    for (int64_t t = get_cpu_locals()->current_thread->tid + 1; (uint64_t) t < threads_list_size; t++) {
         //sprintf("Looking at t = %ld in first loop\n", t);
-        thread_t *task = dynarray_getelem(&tasks, t);
+        thread_t *task = threads[t];
         if (task) {
             if (task->state == READY || task->state == WAIT_EVENT || task->state == WAIT_EVENT_TIMEOUT) {
                 tid_ret = task->tid;
-                dynarray_unref(&tasks, t);
                 //sprintf("picked in first loop with state %u and event %lx\n", task->state, task->event);
                 return tid_ret;
             }
@@ -381,22 +407,19 @@ int64_t pick_task() {
                 //sprintf("Time left: %lu\n", task->sleep_node->time_left);
             }
         }
-        dynarray_unref(&tasks, t);
     }
 
     /* Then look at the rest of the tasks */
     for (int64_t t = 0; t < get_cpu_locals()->current_thread->tid + 1; t++) {
         //sprintf("Looking at t = %ld in second loop\n", t);
-        thread_t *task = dynarray_getelem(&tasks, t);
+        thread_t *task = threads[t];
         if (task) {
             if (task->state == READY || task->state == WAIT_EVENT || task->state == WAIT_EVENT_TIMEOUT) {
                 tid_ret = task->tid;
-                dynarray_unref(&tasks, t);
                 //sprintf("picked in second loop with state %u and event %lx\n", task->state, task->event);
                 return tid_ret;
             }
         }
-        dynarray_unref(&tasks, t);
     }
 
     return tid_ret; // Return -1 by default for idle
@@ -476,9 +499,6 @@ void schedule(int_reg_t *r) {
             running_task->state = READY;
             assert(running_task->state == READY);
         }
-
-        /* Unref the running task, so we can swap it out */
-        dynarray_unref(&tasks, running_task->tid);
     }
 
     int64_t tid_run;
@@ -489,7 +509,7 @@ repick_task:
 
     if (tid_run == -1) {
         /* Idle */
-        get_cpu_locals()->current_thread = dynarray_getelem(&tasks, get_cpu_locals()->idle_tid);
+        get_cpu_locals()->current_thread = threads[get_cpu_locals()->idle_tid];
         running_task = get_cpu_locals()->current_thread;
     } else {
         if (picked_first == -1) {
@@ -497,11 +517,11 @@ repick_task:
         } else if (picked_first == tid_run) {
             // welp
             tid_run = -1;
-            get_cpu_locals()->current_thread = dynarray_getelem(&tasks, get_cpu_locals()->idle_tid);
+            get_cpu_locals()->current_thread = threads[get_cpu_locals()->idle_tid];
             running_task = get_cpu_locals()->current_thread;
             goto picked;
         }
-        thread_t *to_run = dynarray_getelem(&tasks, tid_run);
+        thread_t *to_run = threads[tid_run];
         get_cpu_locals()->current_thread = to_run;
         running_task = get_cpu_locals()->current_thread;
         if (to_run->state == WAIT_EVENT) {
@@ -509,7 +529,6 @@ repick_task:
                 atomic_dec((uint32_t *) to_run->event);
                 to_run->state = READY;
             } else {
-                dynarray_unref(&tasks, tid_run); // welp, we are repicking :/
                 goto repick_task;
             }
         } else if (to_run->state == WAIT_EVENT_TIMEOUT) {
@@ -519,7 +538,6 @@ repick_task:
             } else if (to_run->event_wait_start - global_ticks >= to_run->event_timeout) {
                 to_run->state = READY;
             } else {
-                dynarray_unref(&tasks, tid_run); // welp, we are repicking :/
                 goto repick_task;
             }
         }
@@ -578,19 +596,22 @@ picked:
     interrupt_safe_unlock(sched_lock);
 }
 
+/* TODO: CREATE A THREAD TO KILL THREADS, THIS CODE IS BAD, WILL CAUSE DATA CORRUPTION [URGENT] */
+
 int kill_task(int64_t tid) {
     int ret = 0;
     interrupt_safe_lock(sched_lock);
 
-    thread_t *task = dynarray_getelem(&tasks, tid);
-    if (task) {
+    if ((uint64_t) tid >= threads_list_size) {
+        return 1;
+    }
+    thread_t *thread = threads[tid];
+    if (thread) {
         // If we are running this thread, unref it a first time because it is refed from running
-        if (task->tid == get_cpu_locals()->current_thread->tid) {
-            dynarray_unref(&tasks, tid);
+        if (thread->tid == get_cpu_locals()->current_thread->tid) {
             get_cpu_locals()->current_thread = (void *) 0;
         }
-        dynarray_remove(&tasks, tid);
-        dynarray_unref(&tasks, tid);
+        threads[tid] = (void *) 0;
     } else {
         ret = 1;
     }
@@ -600,65 +621,52 @@ int kill_task(int64_t tid) {
 }
 
 int kill_process(int64_t pid) {
-    process_t *proc = dynarray_getelem(&processes, pid);
+    if ((uint64_t) pid >= process_list_size) {
+        return 1;
+    }
+
+    process_t *proc = processes[pid];
     if (proc) {
-        for (int64_t t = 0; t < proc->threads.array_size; t++) {
-            int64_t *tid = dynarray_getelem(&proc->threads, t);
-            if (tid) {
-                kill_task(*tid);
+        for (int64_t t = 0; (uint64_t) t < proc->threads_size; t++) {
+            if (proc->threads[t]) {
+                kill_task(proc->threads[t]);
             }
         }
-
     }
-    dynarray_remove(&processes, pid);
-    dynarray_unref(&processes, pid);
+    processes[pid] = (void *) 0;
+    
     return 0;
 }
 
-process_t *reference_process(int64_t pid) {
-    interrupt_safe_lock(sched_lock);
-
-    process_t *ret = (process_t *) dynarray_getelem(&processes, pid);
-
-    interrupt_safe_unlock(sched_lock);
-    return ret;
-}
-
-void deref_process(int64_t pid) {
-    interrupt_safe_lock(sched_lock);
-
-    dynarray_unref(&processes, pid);
-
-    interrupt_safe_unlock(sched_lock);
-}
 
 int map_user_memory(int pid, void *phys, void *virt, uint64_t size, uint16_t perms) {
+    interrupt_safe_lock(sched_lock);
     size = ((size + 0x1000 - 1) / 0x1000);
-    process_t *process = reference_process(pid);
+    process_t *process = processes[pid];
     if (!process) return -1;
 
     void *cr3 = (void *) process->cr3;
     int ret = vmm_map_pages(phys, virt, cr3, size, perms | VMM_PRESENT | VMM_USER);
-    deref_process(pid);
-
+    interrupt_safe_unlock(sched_lock);
     return ret;
 }
 
 int unmap_user_memory(int pid, void *virt, uint64_t size) {
+    interrupt_safe_lock(sched_lock);
     size = ((size + 0x1000 - 1) / 0x1000);
-    process_t *process = reference_process(pid);
+    process_t *process = processes[pid];
     if (!process) return -1;
 
     void *cr3 = (void *) process->cr3;
     int ret = vmm_unmap_pages(virt, cr3, size);
-    deref_process(pid);
-
+    interrupt_safe_unlock(sched_lock);
     return ret;
 }
 
 void *psuedo_mmap(void *base, uint64_t len) {
+    interrupt_safe_lock(sched_lock);
     len = (len + 0x1000 - 1) / 0x1000;
-    process_t *process = reference_process(get_cpu_locals()->current_thread->parent_pid);
+    process_t *process = processes[get_cpu_locals()->current_thread->parent_pid];
     if (!process) { get_thread_locals()->errno = -ESRCH; return (void *) 0; } // bruh
 
     void *phys = pmm_alloc(len * 0x1000);
@@ -685,9 +693,13 @@ void *psuedo_mmap(void *base, uint64_t len) {
                     (void *) process->cr3, 1);
             }
             get_thread_locals()->errno = -ENOMEM;
+
+            interrupt_safe_unlock(sched_lock);
             return (void *) 0;
         } else {
             void *ret = (void *) base;
+
+            interrupt_safe_unlock(sched_lock);
             return ret;
         }
     } else {
@@ -715,12 +727,16 @@ void *psuedo_mmap(void *base, uint64_t len) {
             get_thread_locals()->errno = -ENOMEM;
 
             unlock(process->brk_lock);
+
+            interrupt_safe_unlock(sched_lock);
             return (void *) 0;
         } else {
             void *ret = (void *) process->current_brk;
             process->current_brk += len * 0x1000;
 
             unlock(process->brk_lock);
+
+            interrupt_safe_unlock(sched_lock);
             return ret;
         }
     }
@@ -728,7 +744,7 @@ void *psuedo_mmap(void *base, uint64_t len) {
 
 int munmap(char *addr, uint64_t len) {
     len = (len + 0x1000 - 1) / 0x1000;
-    process_t *process = reference_process(get_cpu_locals()->current_thread->parent_pid);
+    process_t *process = processes[get_cpu_locals()->current_thread->parent_pid];
     if (!process) { get_thread_locals()->errno = -ESRCH; return -1; } // bruh
 
     if ((uint64_t) addr != ((uint64_t) addr & ~(0xfff))) {
@@ -749,10 +765,15 @@ int munmap(char *addr, uint64_t len) {
 }
 
 int fork(syscall_reg_t *r) {
-    process_t *process = reference_process(get_cpu_locals()->current_thread->parent_pid); // Old process
+    interrupt_safe_lock(sched_lock);
+    process_t *process = processes[get_cpu_locals()->current_thread->parent_pid]; // Old process
     void *new_cr3 = vmm_fork((void *) process->cr3); // Fork address space
+    interrupt_safe_unlock(sched_lock);
     int64_t new_pid = new_process(process->name, new_cr3); // Create the new process
-    process_t *new_process = reference_process(new_pid); // Get the process struct
+
+    interrupt_safe_lock(sched_lock);
+    process_t *new_process = processes[new_pid]; // Get the process struct
+    interrupt_safe_unlock(sched_lock);
 
     /* Copy fds */
     clone_fds(process->pid, new_process->pid);
@@ -799,8 +820,6 @@ int fork(syscall_reg_t *r) {
     add_new_child_thread(thread, new_pid); // Add the thread
 
     /* Bye bye */
-    deref_process(new_pid);
-    deref_process(process->pid);
     yield();
     return new_pid;
 }

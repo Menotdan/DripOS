@@ -79,22 +79,26 @@ void debug_worker() {
             } else if (buffer[0] == 't') {
                 // Send a list of thread names
                 char *data = kcalloc(1);
-                for (uint64_t i = 0; i < get_thread_list_size(); i++) {
-                    if (get_thread_elem(i)) {
-                        thread_t *task = get_thread_elem(i);
+                interrupt_safe_lock(sched_lock);
+                for (uint64_t i = 0; i < threads_list_size; i++) {
+                    
+                    if (threads[i]) {
+                        thread_t *task = threads[i];
                         data = krealloc(data, strlen(data) + 3 + strlen(task->name));
                         strcat(data, "+=");
                         strcat(data, task->name);
                     }
                 }
+                interrupt_safe_unlock(sched_lock);
                 dripdbg_send(data);
                 kfree(data);
             } else if (buffer[0] == 'i') {
                 // Send a list of task ids
                 char *data = kcalloc(1);
-                for (uint64_t i = 0; i < get_thread_list_size(); i++) {
-                    if (get_thread_elem(i)) {
-                        thread_t *task = get_thread_elem(i);
+                interrupt_safe_lock(sched_lock);
+                for (uint64_t i = 0; i < threads_list_size; i++) {
+                    if (threads[i]) {
+                        thread_t *task = threads[i];
                         char id[30];
                         utoa(task->tid, id);
                         data = krealloc(data, strlen(data) + 3 + strlen(id));
@@ -102,6 +106,7 @@ void debug_worker() {
                         strcat(data, id);
                     }
                 }
+                interrupt_safe_unlock(sched_lock);
                 dripdbg_send(data);
                 kfree(data);
             } else if (buffer[0] == 'I') {
@@ -109,7 +114,8 @@ void debug_worker() {
                 char *data = kcalloc(1);
                 uint64_t cur_buf_size = 1;
                 uint64_t tid = atou(buffer + 1);
-                thread_t *task = get_thread_elem(tid);
+                interrupt_safe_lock(sched_lock);
+                thread_t *task = threads[tid];
 
                 // Get the data together
                 data = dripdbg_add_list_int(data, task->regs.rax, &cur_buf_size);
@@ -133,6 +139,7 @@ void debug_worker() {
                 data = dripdbg_add_list_int(data, task->regs.cs, &cur_buf_size);
                 data = dripdbg_add_list_int(data, task->regs.ss, &cur_buf_size);
                 data = dripdbg_add_list_int(data, task->regs.cr3, &cur_buf_size);
+                interrupt_safe_unlock(sched_lock);
 
                 dripdbg_send(data);
                 kfree(data);
@@ -141,11 +148,14 @@ void debug_worker() {
                 char *data = kcalloc(1);
                 uint64_t cur_buf_size = 1;
                 uint64_t tid = atou(buffer + 1);
-                thread_t *task = get_thread_elem(tid);
+
+                interrupt_safe_lock(sched_lock);
+                thread_t *task = threads[tid];
 
                 data = dripdbg_add_list_int(data, task->tsc_started, &cur_buf_size);
                 data = dripdbg_add_list_int(data, task->tsc_stopped, &cur_buf_size);
                 data = dripdbg_add_list_int(data, task->tsc_total, &cur_buf_size);
+                interrupt_safe_unlock(sched_lock);
 
                 dripdbg_send(data);
                 kfree(data);

@@ -74,13 +74,12 @@ void advance_time() {
                 UNCHAIN_LINKED_LIST(cur);
                 int64_t tid = cur->tid;
 
-                thread_t *thread = get_thread_elem(tid);
+                thread_t *thread = threads[tid];
                 if (thread) { // In case the thread was killed in it's sleep
                     assert(thread->state == SLEEP);
                     thread->state = READY;
                     thread->running = 0;
                 }
-                unref_thread_elem(tid);
 
                 cur = next;
             }

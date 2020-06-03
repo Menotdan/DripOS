@@ -140,14 +140,17 @@ void vmm_remap_to_4k(pt_t *p2, uint16_t offset) {
 
 /* Check if an address is mapped */
 uint8_t is_mapped(void *data) {
+    interrupt_state_t state = interrupt_lock();
     lock(vmm_spinlock);
     uint64_t phys_addr = (uint64_t) virt_to_phys(data, (void *) vmm_get_pml4t());
 
     if (phys_addr == 0xFFFFFFFFFFFFFFFF) {
         unlock(vmm_spinlock);
+        interrupt_unlock(state);
         return 0;
     } else {
         unlock(vmm_spinlock);
+        interrupt_unlock(state);
         return 1;
     }
 }
@@ -203,6 +206,7 @@ pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4) {
 
 /* Map pages */
 int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t perms) {
+    interrupt_state_t state = interrupt_lock();
     lock(vmm_spinlock);
 
     int ret = 0;
@@ -228,11 +232,13 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
         vmm_invlpg((uint64_t) cur_virt - 0x1000);
     }
     unlock(vmm_spinlock);
+    interrupt_unlock(state);
     return ret;
 }
 
 /* Remap pages */
 int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t perms) {
+    interrupt_state_t state = interrupt_lock();
     lock(vmm_spinlock);
 
     int ret = 0;
@@ -252,11 +258,13 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
     }
 
     unlock(vmm_spinlock);
+    interrupt_unlock(state);
     return ret;
 }
 
 /* Unmap pages */
 int vmm_unmap_pages(void *virt, void *p4, uint64_t count) {
+    interrupt_state_t state = interrupt_lock();
     lock(vmm_spinlock);
 
     int ret = 0;
@@ -276,11 +284,13 @@ int vmm_unmap_pages(void *virt, void *p4, uint64_t count) {
     }
 
     unlock(vmm_spinlock);
+    interrupt_unlock(state);
     return ret;
 }
 
 /* Set the PAT entries */
 void vmm_set_pat_pages(void *virt, void *p4, uint64_t count, uint8_t pat_entry) {
+    interrupt_state_t state = interrupt_lock();
     lock(vmm_spinlock);
 
     uint64_t cur_virt = (uint64_t) virt;
@@ -311,9 +321,11 @@ void vmm_set_pat_pages(void *virt, void *p4, uint64_t count, uint8_t pat_entry) 
     }
 
     unlock(vmm_spinlock);
+    interrupt_unlock(state);
 }
 
 void *vmm_fork_higher_half(void *old) {
+    interrupt_state_t state = interrupt_lock();
     lock(vmm_spinlock);
     pt_t *old_p4 = GET_HIGHER_HALF(pt_t *, old);
     void *ret = pmm_alloc(0x1000);
@@ -326,12 +338,14 @@ void *vmm_fork_higher_half(void *old) {
     }
 
     unlock(vmm_spinlock);
+    interrupt_unlock(state);
     return ret;
 }
 
 void *vmm_fork(void *old) {
     void *ret = vmm_fork_higher_half(old);
     pt_t *table = GET_HIGHER_HALF(pt_t *, old);
+    interrupt_state_t state = interrupt_lock();
     lock(vmm_spinlock);
     for (uint64_t w = 0; w < 256; w++) {
         /* P4 */
@@ -367,8 +381,9 @@ void *vmm_fork(void *old) {
                 }
             }
         }
-    }
+    } 
     unlock(vmm_spinlock);
+    interrupt_unlock(state);
     return ret;
 }
 

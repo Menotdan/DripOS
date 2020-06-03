@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include "sleep_queue.h"
 #include "sys/int/isr.h"
-#include "klibc/dynarray.h"
 #include "klibc/rangemap.h"
 #include "klibc/lock.h"
 #include "fs/fd.h"
@@ -86,7 +85,9 @@ typedef struct {
 
     uint64_t cr3; // The cr3 this process has
 
-    dynarray_t threads; // The threads this process has
+    int64_t *threads;
+    uint64_t threads_size;
+
     int64_t pid; // Process ID
 
     fd_entry_t **fd_table;
@@ -146,18 +147,6 @@ int kill_task(int64_t tid);
 
 void start_test_user_task(); // bruh
 
-/* Cringe functions for DripDBG */
-void *get_thread_elem(uint64_t elem);
-void ref_thread_elem(uint64_t elem);
-void unref_thread_elem(uint64_t elem);
-void lock_scheduler();
-void unlock_scheduler();
-uint64_t get_thread_list_size();
-
-/* Process interface things */
-process_t *reference_process(int64_t pid);
-void deref_process(int64_t pid);
-
 /* Process virtual memory management */
 void *allocate_process_mem(int pid, uint64_t size);
 int free_process_mem(int pid, uint64_t address);
@@ -175,5 +164,10 @@ extern uint8_t scheduler_enabled;
 extern lock_t scheduler_lock;
 extern interrupt_safe_lock_t sched_lock;
 extern uint64_t process_count;
+
+extern uint64_t threads_list_size;
+extern uint64_t process_list_size;
+extern thread_t **threads;
+extern process_t **processes;
 
 #endif

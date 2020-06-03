@@ -97,7 +97,9 @@ int fd_seek(int fd, uint64_t offset, int whence) {
 }
 
 int fd_new(vfs_node_t *node, int mode, int pid) {
-    process_t *current_process = reference_process(pid);
+    interrupt_safe_lock(sched_lock);
+    process_t *current_process = processes[pid];
+    interrupt_safe_unlock(sched_lock);
 
     lock(fd_lock);
     fd_entry_t **fd_table = current_process->fd_table;
@@ -122,12 +124,13 @@ fnd:
     fd_table[i] = new_entry;
     unlock(fd_lock);
 
-    deref_process(pid);
     return i;
 }
 
 void fd_remove(int fd) {
-    process_t *current_process = reference_process(get_cpu_locals()->current_thread->parent_pid);
+    interrupt_safe_lock(sched_lock);
+    process_t *current_process = processes[get_cpu_locals()->current_thread->parent_pid];
+    interrupt_safe_unlock(sched_lock);
 
     lock(fd_lock);
     fd_entry_t **fd_table = current_process->fd_table;
@@ -139,12 +142,14 @@ void fd_remove(int fd) {
     }
 
     unlock(fd_lock);
-    deref_process(get_cpu_locals()->current_thread->parent_pid);
 }
 
 fd_entry_t *fd_lookup(int fd) {
     fd_entry_t *ret;
-    process_t *current_process = reference_process(get_cpu_locals()->current_thread->parent_pid);
+
+    interrupt_safe_lock(sched_lock);
+    process_t *current_process = processes[get_cpu_locals()->current_thread->parent_pid];
+    interrupt_safe_unlock(sched_lock);
 
     lock(fd_lock);
     fd_entry_t **fd_table = current_process->fd_table;
@@ -157,13 +162,14 @@ fd_entry_t *fd_lookup(int fd) {
     }
     unlock(fd_lock);
 
-    deref_process(get_cpu_locals()->current_thread->parent_pid);
     return ret;
 }
 
 void clone_fds(int64_t old_pid, int64_t new_pid) {
-    process_t *old = reference_process(old_pid);
-    process_t *new = reference_process(new_pid);
+    interrupt_safe_lock(sched_lock);
+    process_t *old = processes[old_pid];
+    process_t *new = processes[new_pid];
+    interrupt_safe_unlock(sched_lock);
 
     lock(fd_lock);
     for (int i = 0; i < old->fd_table_size; i++) {
@@ -188,7 +194,4 @@ void clone_fds(int64_t old_pid, int64_t new_pid) {
         }
     }
     unlock(fd_lock);
-
-    deref_process(new_pid);
-    deref_process(old_pid);
 }
