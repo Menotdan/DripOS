@@ -87,13 +87,9 @@ void kernel_process(int argc, char **argv) {
     //kprintf("[DripOS] Loading init from disk.\n");
     //launch_binary("/echfs_mount/programs/fork_bomb3.bin"); // This is init :meme:
 
-    //load_elf("/echfs_mount/elf_test.elf");
+    load_elf("/echfs_mount/programs/fork_bomb_speed.elf");
 
     sprintf("done kernel work\n");
-    new_kernel_process("lul", event_system_test);
-    sleep_ms(10000);
-    trigger_event(&event);
-    sprintf("Triggered event\n");
 
 #ifdef DBGPROTO
     setup_drip_dgb();
