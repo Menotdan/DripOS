@@ -123,6 +123,7 @@ void kernel_task() {
 // Kernel main function, execution starts here :D
 void kmain(stivale_info_t *bootloader_info) {
     init_serial(COM1);
+    sprintf("\e[34mHello from DripOS!\e[0m\n");
 
     char *kernel_options = (char *) ((uint64_t) bootloader_info->cmdline + 0xFFFF800000000000);
     sprintf("Kernel Options: %s\n", kernel_options);

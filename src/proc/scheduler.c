@@ -761,15 +761,28 @@ int fork(syscall_reg_t *r) {
     interrupt_safe_lock(sched_lock);
     process_t *process = processes[get_cpu_locals()->current_thread->parent_pid]; // Old process
     void *new_cr3 = vmm_fork((void *) process->cr3); // Fork address space
-    interrupt_safe_unlock(sched_lock);
-    int64_t new_pid = new_process(process->name, new_cr3); // Create the new process
 
-    interrupt_safe_lock(sched_lock);
+    process_t *forked_process = create_process(process->name, new_cr3);
+    int64_t new_pid = -1;
+    for (uint64_t i = 0; i < process_list_size; i++) {
+        if (!processes[i]) {
+            new_pid = i;
+            break;
+        }
+    }
+    if (new_pid == -1) {
+        processes = krealloc(processes, (process_list_size + 10) * sizeof(process_t *));
+        new_pid = process_list_size;
+        process_list_size += 10;
+    }
+    processes[new_pid] = forked_process;
+
     process_t *new_process = processes[new_pid]; // Get the process struct
+    int64_t old_pid = process->pid;
     interrupt_safe_unlock(sched_lock);
 
     /* Copy fds */
-    clone_fds(process->pid, new_process->pid);
+    clone_fds(old_pid, new_pid);
 
     interrupt_safe_lock(sched_lock);
 
@@ -813,6 +826,5 @@ int fork(syscall_reg_t *r) {
     add_new_child_thread(thread, new_pid); // Add the thread
 
     /* Bye bye */
-    yield();
     return new_pid;
 }

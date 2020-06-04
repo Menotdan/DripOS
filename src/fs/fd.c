@@ -166,12 +166,16 @@ fd_entry_t *fd_lookup(int fd) {
 }
 
 void clone_fds(int64_t old_pid, int64_t new_pid) {
+    sprintf("cloning fds from %ld to %ld\n", old_pid, new_pid);
     interrupt_safe_lock(sched_lock);
     process_t *old = processes[old_pid];
     process_t *new = processes[new_pid];
     interrupt_safe_unlock(sched_lock);
 
+    sprintf("got old and new\n");
+
     lock(fd_lock);
+    sprintf("copying fds\n");
     for (int i = 0; i < old->fd_table_size; i++) {
         if (old->fd_table[i]) {
             fd_entry_t *new_fd = kcalloc(sizeof(fd_entry_t));
@@ -193,5 +197,7 @@ void clone_fds(int64_t old_pid, int64_t new_pid) {
             new->fd_table[i] = new_fd;
         }
     }
+    sprintf("done copying\n");
     unlock(fd_lock);
+    sprintf("dones\n");
 }
