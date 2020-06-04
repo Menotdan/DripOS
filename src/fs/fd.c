@@ -12,20 +12,20 @@
 lock_t fd_lock = {0, 0, 0, 0};
 
 int fd_open(char *name, int mode) {
-    char *string = kcalloc(4097);
-    int64_t ret = strcpy_from_userspace(name, string);
-    if (ret == -1) { // if err
+    char *kernel_string = check_and_copy_string(name);
+    if (!kernel_string) { // if err
         get_thread_locals()->errno = -EFAULT;
         return get_thread_locals()->errno;
     }
 
-    vfs_node_t *node = vfs_open(string, mode);
-    kfree(string);
+    vfs_node_t *node = vfs_open(kernel_string, mode);
+    kfree(kernel_string);
     if (!node) {
         return get_thread_locals()->errno;
     }
 
-    return fd_new(node, mode, get_cpu_locals()->current_thread->parent_pid);
+    int new_fd = fd_new(node, mode, get_cpu_locals()->current_thread->parent_pid);
+    return new_fd;
 }
 
 int open_remote_fd(char *name, int mode, int pid) {
@@ -166,16 +166,16 @@ fd_entry_t *fd_lookup(int fd) {
 }
 
 void clone_fds(int64_t old_pid, int64_t new_pid) {
-    sprintf("cloning fds from %ld to %ld\n", old_pid, new_pid);
     interrupt_safe_lock(sched_lock);
+    if ((uint64_t) old_pid >= process_list_size || (uint64_t) new_pid >= process_list_size) {
+        sprintf("BAD ERROR REEEEEEEEEEEEEEEEEEEEEE (go look in clone_fds) old_pid: %ld, new_pid: %ld\n", old_pid, new_pid);
+    }
     process_t *old = processes[old_pid];
     process_t *new = processes[new_pid];
     interrupt_safe_unlock(sched_lock);
 
-    sprintf("got old and new\n");
 
     lock(fd_lock);
-    sprintf("copying fds\n");
     for (int i = 0; i < old->fd_table_size; i++) {
         if (old->fd_table[i]) {
             fd_entry_t *new_fd = kcalloc(sizeof(fd_entry_t));
@@ -197,7 +197,5 @@ void clone_fds(int64_t old_pid, int64_t new_pid) {
             new->fd_table[i] = new_fd;
         }
     }
-    sprintf("done copying\n");
     unlock(fd_lock);
-    sprintf("dones\n");
 }

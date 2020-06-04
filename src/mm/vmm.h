@@ -58,6 +58,7 @@ void vmm_clflush(void *addr, uint64_t count);
 
 void *vmm_fork_higher_half(void *old);
 void *vmm_fork(void *old);
+void vmm_deconstruct_address_space(void *old);
 
 uint64_t get_entry(pt_t *cur_table, uint64_t offset);
 

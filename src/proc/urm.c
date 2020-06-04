@@ -1,5 +1,8 @@
 #include "urm.h"
 #include "scheduler.h"
+#include "exec_formats/elf.h"
+#include "mm/vmm.h"
+#include "mm/pmm.h"
 #include "sys/smp.h"
 #include "klibc/stdlib.h"
 #include "drivers/serial.h"
@@ -9,6 +12,7 @@ void *urm_data;
 lock_t urm_lock = {0, 0, 0, 0};
 event_t urm_request_event = 0;
 event_t urm_done_event = 0;
+int urm_return = 0;
 
 void kill_thread(int64_t tid) {
     sprintf("Killing thread\n");
@@ -44,6 +48,7 @@ void kill_thread(int64_t tid) {
 void urm_kill_thread(urm_kill_thread_data *data) {
     int64_t tid_to_kill = data->tid;
     kill_thread(tid_to_kill);
+    urm_return = 0;
 }
 
 void urm_kill_process(urm_kill_process_data *data) {
@@ -67,6 +72,28 @@ void urm_kill_process(urm_kill_process_data *data) {
     kfree(processes[data->pid]);
     processes[data->pid] = (void *) 0;
     interrupt_safe_unlock(sched_lock);
+    urm_return = 0;
+}
+
+void urm_execve(urm_execve_data *data) {
+    interrupt_safe_lock(sched_lock);
+    process_t *current_process = processes[data->pid];
+    for (uint64_t i = 0; i < current_process->threads_size; i++) {
+        kfree(threads[current_process->threads[i]]);
+        threads[current_process->threads[i]] = (void *) 0;
+    }
+    vmm_deconstruct_address_space((void *) current_process->cr3);
+    current_process->current_brk = 0x10000000000;
+    uint64_t entry_point = 0;
+    void *address_space = load_elf_addrspace(data->executable_path, &entry_point);
+
+    current_process->cr3 = (uint64_t) address_space;
+    thread_t *thread = create_thread(data->executable_path, (void *) entry_point, USER_STACK, 3);
+
+    interrupt_safe_unlock(sched_lock);
+
+    add_new_child_thread(thread, data->pid);
+    urm_return = 0;
 }
 
 /* Epic */
@@ -81,6 +108,9 @@ void urm_thread() {
             case URM_KILL_THREAD:
                 urm_kill_thread(urm_data);
                 break;
+            case URM_EXECVE:
+                urm_execve(urm_data);
+                break;
             default:
                 break;
         }
@@ -90,10 +120,11 @@ void urm_thread() {
     }
 }
 
-void send_urm_request(void *data, urm_type_t type) {
+int send_urm_request(void *data, urm_type_t type) {
     lock(urm_lock);
     urm_data = data;
     urm_type = type;
     trigger_event(&urm_request_event);
     await_event(&urm_done_event);
+    return urm_return;
 }

@@ -2,6 +2,6 @@
 #define SAFE_USERSPACE_H
 #include <stdint.h>
 
-int64_t strcpy_from_userspace(char *src, char *dst);
+char *check_and_copy_string(char *userspace_string);
 
 #endif

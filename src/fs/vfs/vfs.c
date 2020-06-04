@@ -369,6 +369,7 @@ vfs_node_t *vfs_open(char *name, int mode) {
         while (node && !node->node_handle) {
             node = node->parent;
             if (node == root_node) {
+                get_thread_locals()->errno = -ENOENT;
                 return (void *) 0; // Welp
             }
         }
@@ -389,6 +390,7 @@ vfs_node_t *vfs_open(char *name, int mode) {
             remove_children(missing_start);
             remove_node(missing_start);
             node = 0;
+            get_thread_locals()->errno = -ENOENT;
         }
     }
 

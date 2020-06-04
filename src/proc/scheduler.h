@@ -158,6 +158,7 @@ int munmap(char *addr, uint64_t len);
 
 /* Fork, exec, etc */
 int fork();
+int execve(char *executable_path, char **argv, char **envp);
 
 extern uint8_t scheduler_started;
 extern uint8_t scheduler_enabled;

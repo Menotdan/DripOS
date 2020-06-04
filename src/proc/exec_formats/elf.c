@@ -99,6 +99,9 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out) {
 int64_t load_elf(char *path) {
     uint64_t entry_point = 0;
     void *address_space = load_elf_addrspace(path, &entry_point);
+    if (!address_space) {
+        return -1;
+    }
     process_t *process = create_process(path, address_space);
     thread_t *thread = create_thread(path, (void *) entry_point, USER_STACK, 3);
     int64_t pid = add_process(process);

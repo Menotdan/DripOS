@@ -387,6 +387,39 @@ void *vmm_fork(void *old) {
     return ret;
 }
 
+void vmm_deconstruct_address_space(void *old) {
+    pt_t *table = GET_HIGHER_HALF(pt_t *, old);
+    interrupt_state_t state = interrupt_lock();
+    lock(vmm_spinlock);
+    for (uint64_t w = 0; w < 256; w++) {
+        /* P4 */
+        if (table->table[w] & VMM_PRESENT) {
+            pt_t *table_z = GET_HIGHER_HALF(pt_t *, table->table[w] & VMM_4K_PERM_MASK);
+            for (uint64_t z = 0; z < 512; z++) {
+                /* P3 */
+                if (table_z->table[z] & VMM_PRESENT) {
+                    pt_t *table_y = GET_HIGHER_HALF(pt_t *, table_z->table[z] & VMM_4K_PERM_MASK);
+                    for (uint64_t y = 0; y < 512; y++) {
+                        /* P2 */
+                        if (table_y->table[y] & VMM_PRESENT) {
+                            pt_t *table_x = GET_HIGHER_HALF(pt_t *, table_y->table[y] & VMM_4K_PERM_MASK);
+                            for (uint64_t x = 0; x < 512; x++) {
+                                /* P1 */
+                                if (table_x->table[x] & VMM_PRESENT) {
+                                    void *phys = (void *) (table_x->table[x] & VMM_4K_PERM_MASK);
+                                    pmm_unalloc(phys, 0x1000);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } 
+    unlock(vmm_spinlock);
+    interrupt_unlock(state);
+}
+
 int vmm_map(void *phys, void *virt, uint64_t count, uint16_t perms) {
     return vmm_map_pages(phys, virt, (void *) vmm_get_pml4t(), count, perms);
 }

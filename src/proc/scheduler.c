@@ -1,4 +1,5 @@
 #include "scheduler.h"
+#include "safe_userspace.h"
 #include "klibc/stdlib.h"
 #include "klibc/string.h"
 #include "klibc/queue.h"
@@ -827,4 +828,109 @@ int fork(syscall_reg_t *r) {
 
     /* Bye bye */
     return new_pid;
+}
+
+int execve(char *executable_path, char **argv, char **envp) {
+    uint64_t argc = 0;
+    uint64_t envc = 0;
+    int found_null_argv = 0;
+    int found_null_envp = 0;
+
+    for (uint64_t i = 0; i < 128; i++) {
+        if (!range_mapped((void *) ((uint64_t) argv + (sizeof(char *) * i)), sizeof(char *)) || ((uint64_t) argv + 8 + (sizeof(char *) * i)) > 0x7fffffffffff) {
+            return -EFAULT;
+        }
+        argc++;
+        if (!argv[i]) {
+            found_null_argv = 1;
+            break;
+        }
+    }
+
+    for (uint64_t i = 0; i < 128; i++) {
+        if (!range_mapped((void *) ((uint64_t) envp + (sizeof(char *) * i)), sizeof(char *)) || ((uint64_t) envp + 8 + (sizeof(char *) * i)) > 0x7fffffffffff) {
+            return -EFAULT;
+        }
+        envc++;
+        if (!envp[i]) {
+            found_null_envp = 1;
+            break;
+        }
+    }
+
+    if (!found_null_argv || !found_null_envp) {
+        return -EFAULT;
+    }
+
+    char **kernel_argv = kcalloc(sizeof(char *) * argc);
+    char **kernel_envp = kcalloc(sizeof(char *) * envc);
+    char *kernel_exec_path = (void *) 0;
+
+    for (uint64_t i = 0; i < argc - 1; i++) {
+        char *string = argv[i];
+        void *kernel_string = check_and_copy_string(string);
+        if (!kernel_string) {
+            goto fault_return;
+        }
+
+        kernel_envp[i] = kernel_string;
+    }
+
+    for (uint64_t i = 0; i < envc - 1; i++) {
+        char *string = envp[i];
+        void *kernel_string = check_and_copy_string(string);
+        if (!kernel_string) {
+            goto fault_return;
+        }
+
+        kernel_envp[i] = kernel_string;
+    }
+
+    kernel_exec_path = check_and_copy_string(executable_path);
+    if (!kernel_exec_path) {
+        goto fault_return;
+    }
+    urm_execve_data data;
+    data.argv = kernel_argv;
+    data.envp = kernel_envp;
+    data.executable_path = kernel_exec_path;
+    data.pid = get_cpu_locals()->current_thread->parent_pid;
+    data.tid = get_cpu_locals()->current_thread->tid;
+    int ret = send_urm_request(&data, URM_EXECVE);
+    goto done;
+
+fault_return:
+    for (uint64_t x = 0; x < argc; x++) {
+        if (kernel_argv[x]) {
+            kfree(kernel_argv[x]);
+        }
+    }
+    kfree(kernel_argv);
+    for (uint64_t x = 0; x < envc; x++) {
+        if (kernel_envp[x]) {
+            kfree(kernel_envp[x]);
+        }
+    }
+    kfree(kernel_envp);
+    if (kernel_exec_path) {
+        kfree(kernel_exec_path);
+    }
+    return -EFAULT;
+done:
+    for (uint64_t x = 0; x < argc; x++) {
+        if (kernel_argv[x]) {
+            kfree(kernel_argv[x]);
+        }
+    }
+    kfree(kernel_argv);
+    for (uint64_t x = 0; x < envc; x++) {
+        if (kernel_envp[x]) {
+            kfree(kernel_envp[x]);
+        }
+    }
+    kfree(kernel_envp);
+    if (kernel_exec_path) {
+        kfree(kernel_exec_path);
+    }
+    return ret;
 }

@@ -37,6 +37,7 @@ void init_syscalls() {
     register_syscall(24, syscall_yield);
     register_syscall(35, syscall_nanosleep);
     register_syscall(57, syscall_fork);
+    register_syscall(59, syscall_execve);
 
     /* Memes */
     register_syscall(123, syscall_print_num);
@@ -89,6 +90,10 @@ void syscall_yield(syscall_reg_t *r) {
 void syscall_fork(syscall_reg_t *r) {
     (void) r;
     fork();
+}
+
+void syscall_execve(syscall_reg_t *r) {
+    r->rax = (uint64_t) execve((char *) r->rdi, (char **) r->rsi, (char **) r->rdx);
 }
 
 void syscall_print_num(syscall_reg_t *r) {
