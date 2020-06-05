@@ -28,5 +28,6 @@ typedef struct {
 
 void urm_thread();
 int send_urm_request(void *data, urm_type_t type);
+void send_urm_request_isr(void *data, urm_type_t type);
 
 #endif

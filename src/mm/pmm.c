@@ -57,6 +57,10 @@ void pmm_memory_setup(stivale_info_t *bootloader_info) {
     uint64_t mem_length = ROUND_UP((end.addr + end.len) - start.addr, 0x1000);
     uint64_t bitmap_bytes = ((mem_length / 0x1000) + 8 - 1) / 8;
 
+    for (uint64_t i = 0; i < bootloader_info->memory_map_entries; i++) {
+        sprintf("%lx - %lx (type %u)\n", mmap[i].addr, mmap[i].addr + mmap[i].len, mmap[i].type);
+    }
+
     // Set bitmap as ones
     memset(bitmap, 0xFF, bitmap_bytes);
 
@@ -65,7 +69,6 @@ void pmm_memory_setup(stivale_info_t *bootloader_info) {
         uint64_t rounded_block_end = ROUND_UP((mmap[i].addr + mmap[i].len), 0x1000);
         uint64_t rounded_block_len = rounded_block_end - rounded_block_start;
 
-        sprintf("%lx - %lx\n", mmap[i].addr, mmap[i].addr + mmap[i].len);
         if (mmap[i].type == STIVALE_MEMORY_AVAILABLE && mmap[i].addr >= 0x100000) { // Ignore low 640K so we dont use it
             for (uint64_t i = 0; i < rounded_block_len / 0x1000; i++) {
                 pmm_clear_bit(i + (rounded_block_start / 0x1000)); // set the memory as avaiable
@@ -91,15 +94,10 @@ void pmm_memory_setup(stivale_info_t *bootloader_info) {
     void *new_cr3 = pmm_alloc(0x1000);
     memset(GET_HIGHER_HALF(uint8_t *, new_cr3), 0, 0x1000);
 
-    for (uint64_t i = 0; i < bootloader_info->memory_map_entries; i++) {
-        uint64_t rounded_block_start = ROUND_UP(mmap[i].addr, 0x1000);
-        uint64_t rounded_block_end = ROUND_UP((mmap[i].addr + mmap[i].len), 0x1000);
-        uint64_t rounded_block_len = rounded_block_end - rounded_block_start;
-
-        vmm_map_pages((void *) rounded_block_start, GET_HIGHER_HALF(void *, rounded_block_start), new_cr3, 
-            (rounded_block_len + 0x1000 - 1) / 0x1000,
-            VMM_PRESENT | VMM_WRITE);
-    }
+    uint64_t page_count = mmap[bootloader_info->memory_map_entries - 1].addr + mmap[bootloader_info->memory_map_entries - 1].len;
+    page_count = (page_count + 0x1000 - 1) / 0x1000;
+    vmm_map_pages((void *) 0, (void *) 0xFFFF800000000000, new_cr3, page_count,
+        VMM_PRESENT | VMM_WRITE);
 
     pt_t *cr3 = GET_HIGHER_HALF(pt_t *, new_cr3);
     pt_t *cur = GET_HIGHER_HALF(pt_t *, vmm_get_pml4t());

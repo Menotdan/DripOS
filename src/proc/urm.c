@@ -5,6 +5,7 @@
 #include "mm/pmm.h"
 #include "sys/smp.h"
 #include "klibc/stdlib.h"
+#include "klibc/errno.h"
 #include "drivers/serial.h"
 
 urm_type_t urm_type;
@@ -12,37 +13,38 @@ void *urm_data;
 lock_t urm_lock = {0, 0, 0, 0};
 event_t urm_request_event = 0;
 event_t urm_done_event = 0;
+int urm_trigger_done = 1;
 int urm_return = 0;
 
 void kill_thread(int64_t tid) {
-    sprintf("Killing thread\n");
+    //sprintf("Killing thread\n");
     interrupt_safe_lock(sched_lock);
     thread_t *thread = threads[tid];
     thread->state = BLOCKED;
-    sprintf("Blocked thread\n");
+    //sprintf("Blocked thread\n");
 
     if (thread->cpu != -1) {
         uint8_t cpu = (uint8_t) thread->cpu;
         interrupt_safe_unlock(sched_lock);
-        sprintf("Rescheduling CPU\n");
+        //sprintf("Rescheduling CPU\n");
         send_ipi(cpu, (1 << 14) | 253); // Reschedule, in case the cpu is still running the thread
-        sprintf("Sent IPI, waiting...\n");
+        //sprintf("Sent IPI, waiting...\n");
         while (thread->cpu != -1) { asm("pause"); }
-        sprintf("Done waiting\n");
+        //sprintf("Done waiting\n");
         interrupt_safe_lock(sched_lock);
     }
-    sprintf("Removing threads.\n");
+    //sprintf("Removing threads.\n");
 
     /* TODO: do proper cleanup */
     if (!threads[tid]) {
-        sprintf("thread is null\n");
+        //sprintf("thread is null\n");
     }
-    sprintf("thread = %lx\n", threads[tid]);
+    //sprintf("thread = %lx\n", threads[tid]);
     kfree(threads[tid]);
     threads[tid] = (void *) 0;
-    sprintf("Removed threads.\n");
+    //sprintf("Removed threads.\n");
     interrupt_safe_unlock(sched_lock);
-    sprintf("Returning.\n");
+    //sprintf("Returning.\n");
 }
 
 void urm_kill_thread(urm_kill_thread_data *data) {
@@ -54,6 +56,7 @@ void urm_kill_thread(urm_kill_thread_data *data) {
 void urm_kill_process(urm_kill_process_data *data) {
     interrupt_safe_lock(sched_lock);
     process_t *process = processes[data->pid];
+    sprintf("killing process %ld with struct address %lx\n", data->pid, process);
 
     uint64_t size = process->threads_size;
     int64_t *tids = kmalloc(sizeof(int64_t) * process->threads_size);
@@ -76,6 +79,13 @@ void urm_kill_process(urm_kill_process_data *data) {
 }
 
 void urm_execve(urm_execve_data *data) {
+    uint64_t entry_point = 0;
+    void *address_space = load_elf_addrspace(data->executable_path, &entry_point);
+    if (!address_space) {
+        urm_return = -ENOENT;
+        return;
+    }
+
     interrupt_safe_lock(sched_lock);
     process_t *current_process = processes[data->pid];
     for (uint64_t i = 0; i < current_process->threads_size; i++) {
@@ -84,8 +94,6 @@ void urm_execve(urm_execve_data *data) {
     }
     vmm_deconstruct_address_space((void *) current_process->cr3);
     current_process->current_brk = 0x10000000000;
-    uint64_t entry_point = 0;
-    void *address_space = load_elf_addrspace(data->executable_path, &entry_point);
 
     current_process->cr3 = (uint64_t) address_space;
     thread_t *thread = create_thread(data->executable_path, (void *) entry_point, USER_STACK, 3);
@@ -100,7 +108,7 @@ void urm_execve(urm_execve_data *data) {
 void urm_thread() {
     while (1) {
         await_event(&urm_request_event); // Wait for a URM request
-        sprintf("Got URM request with type %lu.\n", urm_type);
+        sprintf("Got URM request with type %lu, %s.\n", urm_type, urm_trigger_done == 0 ? "from isr" : "from thread");
         switch (urm_type) {
             case URM_KILL_PROCESS:
                 urm_kill_process(urm_data);
@@ -114,17 +122,31 @@ void urm_thread() {
             default:
                 break;
         }
-        trigger_event(&urm_done_event);
-        unlock(urm_lock);
         sprintf("URM finished request with type %lu.\n", urm_type);
+        if (urm_trigger_done) {
+            trigger_event(&urm_done_event);
+        }
+        unlock(urm_lock);
     }
 }
 
 int send_urm_request(void *data, urm_type_t type) {
+    interrupt_state_t state = interrupt_lock();
     lock(urm_lock);
+    urm_trigger_done = 1;
     urm_data = data;
     urm_type = type;
     trigger_event(&urm_request_event);
     await_event(&urm_done_event);
+    interrupt_unlock(state);
+    sprintf("URM done event fired.\n");
     return urm_return;
+}
+
+void send_urm_request_isr(void *data, urm_type_t type) {
+    lock(urm_lock);
+    urm_trigger_done = 0;
+    urm_data = data;
+    urm_type = type;
+    trigger_event(&urm_request_event);
 }

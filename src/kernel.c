@@ -37,6 +37,7 @@
 #include "fs/filesystems/echfs.h"
 #include "proc/exec_formats/elf.h"
 #include "proc/event.h"
+#include "proc/urm.h"
 
 #define TODO_LIST_SIZE 7
 char *todo_list[TODO_LIST_SIZE] = {"Better syscall error handling", "Filesystem driver", "ELF Loading", "userspace libc", "minor: Sync TLB across CPUs", "minor: Add MMIO PCI", "minor: Retry AHCI commands"};
@@ -87,7 +88,7 @@ void kernel_process(int argc, char **argv) {
     //kprintf("[DripOS] Loading init from disk.\n");
     //launch_binary("/echfs_mount/programs/fork_bomb3.bin"); // This is init :meme:
 
-    sprintf("Elf PID: %ld\n", load_elf("/echfs_mount/programs/fork_bomb_speed.elf"));
+    sprintf("Elf PID: %ld\n", load_elf("/echfs_mount/programs/execve_test2.elf"));
 
     sprintf("done kernel work\n");
 
@@ -95,7 +96,7 @@ void kernel_process(int argc, char **argv) {
     setup_drip_dgb();
 #endif
 
-    kill_process(get_cpu_locals()->current_thread->parent_pid); // suicide
+    kill_task(get_cpu_locals()->current_thread->tid); // suicide
     sprintf("WHY DID THIS RETURN!?\n");
 }
 
@@ -115,6 +116,9 @@ void kernel_task() {
 
     kprintf("Setting up PID 0...\n");
     new_kernel_process("Kernel process", kernel_process);
+    kprintf("Starting URM...\n");
+    thread_t *urm = create_thread("URM", urm_thread, (uint64_t) kcalloc(TASK_STACK_SIZE) - TASK_STACK_SIZE, 0);
+    add_new_child_thread(urm, 0);
 
     kill_task(get_cpu_locals()->current_thread->tid); // suicide
     sprintf("WHY DID THIS RETURN 2!?\n");

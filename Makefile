@@ -71,7 +71,6 @@ update_qloader2:
 	- rm -rf qloader2
 	mkdir qloader2
 	git clone https://github.com/qword-os/qloader2
-	cd qloader2 && make CC=i386-elf-gcc all
 
 # Generic rules for wildcards
 # To make an object, always compile from its .c

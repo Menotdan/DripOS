@@ -98,6 +98,9 @@ int fd_seek(int fd, uint64_t offset, int whence) {
 
 int fd_new(vfs_node_t *node, int mode, int pid) {
     interrupt_safe_lock(sched_lock);
+    if ((uint64_t) pid >= process_list_size) {
+        sprintf("ERRRRRRRRRRRRRROR in fd_new: pid bad: %d\n", pid);
+    }
     process_t *current_process = processes[pid];
     interrupt_safe_unlock(sched_lock);
 

@@ -47,22 +47,11 @@ uint8_t check_interrupts();
 
 
 #define interrupt_safe_lock(lock_) ({ \
-    int ret = 0; \
+    int ret = 1; \
     lock_.attempting_to_get = __FUNCTION__; \
     lock_.lock_name = #lock_; \
-    if (!check_interrupts()) { \
-        if (spinlock_check_and_lock(&lock_.lock_dat)) { \
-            ret = 0; \
-        } else { \
-            ret = 1; \
-            lock_.cpu_holding_lock = get_cpu_index(); \
-            lock_.current_holder = __FUNCTION__; \
-        } \
-    } else { \
-        spinlock_lock(&lock_.lock_dat); \
-        lock_.cpu_holding_lock = get_cpu_index(); \
-        lock_.current_holder = __FUNCTION__; \
-    } \
+    spinlock_lock(&lock_.lock_dat); \
+    lock_.current_holder = __FUNCTION__; \
     ret; \
 })
 

@@ -96,9 +96,6 @@ void scheduler_init_bsp() {
     new_idle->state = BLOCKED; // Idle thread will *not* run unless provoked
     int64_t idle_tid = start_thread(new_idle);
 
-    thread_t *urm = create_thread("URM", urm_thread, ((uint64_t) kcalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE), 0);
-    start_thread(urm);
-
     get_cpu_locals()->idle_tid = idle_tid;
     sprintf("Idle task: %ld\n", get_cpu_locals()->idle_tid);
 }
@@ -543,6 +540,7 @@ repick_task:
         running_task = get_cpu_locals()->current_thread;
         if (to_run->state == WAIT_EVENT) {
             if (*to_run->event) {
+                sprintf("event on tid: %ld done\n", tid_run);
                 atomic_dec((uint32_t *) to_run->event);
                 to_run->state = READY;
             } else {
@@ -737,8 +735,10 @@ void *psuedo_mmap(void *base, uint64_t len) {
 }
 
 int munmap(char *addr, uint64_t len) {
+    interrupt_safe_lock(sched_lock);
     len = (len + 0x1000 - 1) / 0x1000;
     process_t *process = processes[get_cpu_locals()->current_thread->parent_pid];
+    interrupt_safe_unlock(sched_lock);
     if (!process) { get_thread_locals()->errno = -ESRCH; return -1; } // bruh
 
     if ((uint64_t) addr != ((uint64_t) addr & ~(0xfff))) {
