@@ -542,6 +542,7 @@ repick_task:
             if (*to_run->event) {
                 sprintf("event on tid: %ld done\n", tid_run);
                 atomic_dec((uint32_t *) to_run->event);
+                sprintf("event value: %u", *to_run->event);
                 to_run->state = READY;
             } else {
                 goto repick_task;
@@ -616,16 +617,24 @@ picked:
 int kill_task(int64_t tid) {
     urm_kill_thread_data data;
     data.tid = tid;
-    send_urm_request(&data, URM_KILL_THREAD);
+    if (tid == get_cpu_locals()->current_thread->tid) {
+        send_urm_request_async(&data, URM_KILL_THREAD); // blah
+        while (1) { asm("hlt"); } // wait for death
+    } else {
+        send_urm_request(&data, URM_KILL_THREAD);
+    }
+    
     return 0;
 }
 
 int kill_process(int64_t pid) {
     urm_kill_process_data data;
     data.pid = pid;
-    send_urm_request(&data, URM_KILL_PROCESS);
     if (pid == get_cpu_locals()->current_thread->parent_pid) {
+        send_urm_request_async(&data, URM_KILL_PROCESS);
         while (1) { asm("hlt"); }
+    } else {
+        send_urm_request(&data, URM_KILL_PROCESS);
     }
     return 0;
 }

@@ -42,7 +42,8 @@ void kill_thread(int64_t tid) {
     //sprintf("thread = %lx\n", threads[tid]);
     kfree(threads[tid]);
     threads[tid] = (void *) 0;
-    //sprintf("Removed threads.\n");
+    //sprintf("Removed threads.\n");s
+
     interrupt_safe_unlock(sched_lock);
     //sprintf("Returning.\n");
 }
@@ -108,7 +109,7 @@ void urm_execve(urm_execve_data *data) {
 void urm_thread() {
     while (1) {
         await_event(&urm_request_event); // Wait for a URM request
-        sprintf("Got URM request with type %lu, %s.\n", urm_type, urm_trigger_done == 0 ? "from isr" : "from thread");
+        sprintf("Got URM request with type %lu.\n", urm_type);
         switch (urm_type) {
             case URM_KILL_PROCESS:
                 urm_kill_process(urm_data);
@@ -131,19 +132,28 @@ void urm_thread() {
 }
 
 int send_urm_request(void *data, urm_type_t type) {
-    interrupt_state_t state = interrupt_lock();
     lock(urm_lock);
     urm_trigger_done = 1;
     urm_data = data;
     urm_type = type;
     trigger_event(&urm_request_event);
+    if (urm_done_event) {
+        sprintf("REEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\n");
+    }
     await_event(&urm_done_event);
-    interrupt_unlock(state);
     sprintf("URM done event fired.\n");
     return urm_return;
 }
 
 void send_urm_request_isr(void *data, urm_type_t type) {
+    lock(urm_lock);
+    urm_trigger_done = 0;
+    urm_data = data;
+    urm_type = type;
+    trigger_event(&urm_request_event);
+}
+
+void send_urm_request_async(void *data, urm_type_t type) {
     lock(urm_lock);
     urm_trigger_done = 0;
     urm_data = data;

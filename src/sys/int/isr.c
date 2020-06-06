@@ -67,15 +67,29 @@ void isr_handler(int_reg_t *r) {
                 sprintf("CR2: %lx RIP %lx\n", cr2, r->rip);
                 if (get_cpu_locals()->current_thread->parent_pid) {
                     //sprintf("Killed process %ld\n", get_cpu_locals()->current_thread->parent_pid);
-                    urm_kill_process_data data;
-                    data.pid = get_cpu_locals()->current_thread->parent_pid;
-                    send_urm_request_isr(&data, URM_KILL_PROCESS);
+                    interrupt_safe_lock(sched_lock);
+                    process_t *process = processes[get_cpu_locals()->current_thread->parent_pid];
+                    sprintf("killing process %ld with struct address %lx from ISR\n", get_cpu_locals()->current_thread->parent_pid, process);
+
+                    uint64_t size = process->threads_size;
+                    int64_t *tids = kmalloc(sizeof(int64_t) * process->threads_size);
+                    for (uint64_t i = 0; i < process->threads_size; i++) {
+                        tids[i] = process->threads[i];
+                    }
+                    interrupt_safe_unlock(sched_lock);
+
+                    for (uint64_t i = 0; i < size; i++) {
+                        if (tids[i]) {
+                            kill_thread(tids[i]);
+                        }
+                    }
+
+                    interrupt_safe_lock(sched_lock);
+                    kfree(processes[get_cpu_locals()->current_thread->parent_pid]);
+                    processes[get_cpu_locals()->current_thread->parent_pid] = (void *) 0;
+                    interrupt_safe_unlock(sched_lock);
                 } else {
-                    //sprintf("Killed task %ld\n", get_cpu_locals()->current_thread->tid);
-                    //kill_task(get_cpu_locals()->current_thread->tid);
-                    urm_kill_thread_data data;
-                    data.tid = get_cpu_locals()->current_thread->tid;
-                    send_urm_request_isr(&data, URM_KILL_THREAD);
+                    kill_thread(get_cpu_locals()->current_thread->tid);
                 }
                 get_cpu_locals()->current_thread = (thread_t *) 0;
                 schedule(r); // Schedule for this CPU
