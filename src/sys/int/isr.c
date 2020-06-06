@@ -68,6 +68,10 @@ void isr_handler(int_reg_t *r) {
                 if (get_cpu_locals()->current_thread->parent_pid) {
                     //sprintf("Killed process %ld\n", get_cpu_locals()->current_thread->parent_pid);
                     interrupt_safe_lock(sched_lock);
+                    thread_t *thread = threads[get_cpu_locals()->current_thread->tid];
+                    thread->state = BLOCKED;
+                    thread->cpu = -1;
+                    sprintf("tid = %ld\n", thread->tid);
                     process_t *process = processes[get_cpu_locals()->current_thread->parent_pid];
                     sprintf("killing process %ld with struct address %lx from ISR\n", get_cpu_locals()->current_thread->parent_pid, process);
 
@@ -91,6 +95,7 @@ void isr_handler(int_reg_t *r) {
                 } else {
                     kill_thread(get_cpu_locals()->current_thread->tid);
                 }
+                sprintf("Thread is dead\n");
                 get_cpu_locals()->current_thread = (thread_t *) 0;
                 schedule(r); // Schedule for this CPU
             }
@@ -135,7 +140,7 @@ void isr_panic_idle(int_reg_t *r) {
     (void) r;
     unlock(base_tty.tty_lock);
     unlock(vesa_lock);
-    kprintf_yieldless("CPU %u, Thread %ld\n", (uint32_t) get_cpu_locals()->cpu_index, get_cpu_locals()->current_thread->tid);
+    //kprintf_yieldless("CPU %u, Thread %ld\n", (uint32_t) get_cpu_locals()->cpu_index, get_cpu_locals()->current_thread->tid);
     while (1) { asm volatile("hlt"); }
 }
 

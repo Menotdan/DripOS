@@ -83,6 +83,7 @@ void urm_execve(urm_execve_data *data) {
     uint64_t entry_point = 0;
     void *address_space = load_elf_addrspace(data->executable_path, &entry_point);
     if (!address_space) {
+        sprintf("bruh momento [execve]\n");
         urm_return = -ENOENT;
         return;
     }
@@ -103,6 +104,7 @@ void urm_execve(urm_execve_data *data) {
 
     add_new_child_thread(thread, data->pid);
     urm_return = 0;
+    urm_trigger_done = 0;
 }
 
 /* Epic */
