@@ -163,7 +163,6 @@ thread_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) 
     new_task->sleep_node = kcalloc(sizeof(sleep_queue_t));
     vmm_remap(GET_LOWER_HALF(void *, new_task->regs.fs), (void *) new_task->regs.fs,
         1, VMM_PRESENT | VMM_WRITE | VMM_USER);
-    ((thread_info_block_t *) new_task->regs.fs)->meta_pointer = new_task->regs.fs;
     new_task->state = READY;
     strcpy(name, new_task->name);
 
@@ -686,6 +685,7 @@ void *psuedo_mmap(void *base, uint64_t len, syscall_reg_t *r) {
                     (void *) process->cr3, 1);
             }
             r->rdx = ENOMEM;
+            pmm_unalloc(phys, len * 0x1000);
 
             interrupt_safe_unlock(sched_lock);
             return (void *) 0;
@@ -718,6 +718,7 @@ void *psuedo_mmap(void *base, uint64_t len, syscall_reg_t *r) {
                     (void *) process->cr3, 1);
             }
             r->rdx = ENOMEM;
+            pmm_unalloc(phys, len * 0x1000);
 
             unlock(process->brk_lock);
 
@@ -751,7 +752,11 @@ int munmap(char *addr, uint64_t len) {
     }
 
     for (uint64_t i = 0; i < len; i++) {
+        void *phys = virt_to_phys(addr, (void *) vmm_get_pml4t());
         vmm_unmap(addr, 1);
+        if ((uint64_t) phys != 0xffffffffffffffff) {
+            pmm_unalloc(phys, 0x1000);
+        }
         addr += 0x1000;
     }
     return 0;
@@ -830,6 +835,7 @@ int fork(syscall_reg_t *r) {
 }
 
 void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r) {
+    r->rdx = 0;
     uint64_t argc = 0;
     uint64_t envc = 0;
     int found_null_argv = 0;

@@ -410,12 +410,16 @@ void vmm_deconstruct_address_space(void *old) {
                                     pmm_unalloc(phys, 0x1000);
                                 }
                             }
+                            pmm_unalloc(GET_LOWER_HALF(void *, table_x), 0x1000);
                         }
                     }
+                    pmm_unalloc(GET_LOWER_HALF(void *, table_y), 0x1000);
                 }
             }
+            pmm_unalloc(GET_LOWER_HALF(void *, table_z), 0x1000);
         }
-    } 
+    }
+    pmm_unalloc(old, 0x1000);
     unlock(vmm_spinlock);
     interrupt_unlock(state);
 }

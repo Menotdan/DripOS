@@ -1,6 +1,8 @@
 #include "syscalls.h"
 #include "fs/fd.h"
 #include "proc/sleep_queue.h"
+#include "proc/scheduler.h"
+#include "sys/smp.h"
 #include "klibc/errno.h"
 #include "klibc/stdlib.h"
 
@@ -31,9 +33,13 @@ void init_syscalls() {
     register_syscall(1, syscall_write);
     register_syscall(2, syscall_open);
     register_syscall(3, syscall_close);
+    register_syscall(5, syscall_getpid);
+    register_syscall(6, syscall_sleepms);
     register_syscall(8, syscall_seek);
     register_syscall(9, syscall_mmap);
     register_syscall(11, syscall_munmap);
+    register_syscall(12, syscall_exit);
+    register_syscall(14, syscall_getppid);
     register_syscall(24, syscall_yield);
     register_syscall(35, syscall_nanosleep);
     register_syscall(57, syscall_fork);
@@ -108,6 +114,7 @@ void syscall_munmap(syscall_reg_t *r) {
     if (ret == 0) {
         r->rax = ret;
     } else {
+        r->rax = 1;
         r->rdx = -ret;
     }
 }
@@ -133,6 +140,28 @@ void syscall_print_num(syscall_reg_t *r) {
 
 void syscall_set_fs(syscall_reg_t *r) {
     set_fs_base_syscall(r->rdi);
+}
+
+void syscall_getpid(syscall_reg_t *r) {
+    (void) r;
+    r->rax = get_cpu_locals()->current_thread->parent_pid;
+}
+
+void syscall_getppid(syscall_reg_t *r) {
+    (void) r;
+    interrupt_safe_lock(sched_lock);
+    process_t *process = processes[get_cpu_locals()->current_thread->parent_pid];
+    interrupt_safe_unlock(sched_lock);
+    r->rax = process->ppid;
+}
+
+void syscall_sleepms(syscall_reg_t *r) {
+    sleep_ms(r->rdi);
+}
+
+void syscall_exit(syscall_reg_t *r) {
+    (void) r;
+    kill_process(get_cpu_locals()->current_thread->parent_pid); // yeet
 }
 
 void syscall_empty(syscall_reg_t *r) {

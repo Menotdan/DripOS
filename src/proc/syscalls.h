@@ -8,9 +8,13 @@ void syscall_read(syscall_reg_t *r);      // 0
 void syscall_write(syscall_reg_t *r);     // 1
 void syscall_open(syscall_reg_t *r);      // 2
 void syscall_close(syscall_reg_t *r);     // 3
+void syscall_getpid(syscall_reg_t *r);    // 5
+void syscall_sleepms(syscall_reg_t *r);   // 6
 void syscall_seek(syscall_reg_t *r);      // 8
 void syscall_mmap(syscall_reg_t *r);      // 9
 void syscall_munmap(syscall_reg_t *r);    // 11
+void syscall_exit(syscall_reg_t *r);      // 12
+void syscall_getppid(syscall_reg_t *r);   // 14
 void syscall_yield(syscall_reg_t *r);     // 24
 void syscall_nanosleep(syscall_reg_t *r); // 35
 void syscall_fork(syscall_reg_t *r);      // 57
