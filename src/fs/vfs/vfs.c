@@ -22,38 +22,33 @@ vfs_ops_t null_vfs_ops = {0, 0, 0, 0, 0};
 int dummy_open(char *_1, int _2) {
     (void) _1;
     (void) _2;
-    get_thread_locals()->errno = -ENOSYS;
-    return -1;
+    return -ENOSYS;;
 }
 
 int dummy_close(int _) {
     (void) _;
-    get_thread_locals()->errno = -ENOSYS;
-    return -1;
+    return -ENOSYS;;
 }
 
 int dummy_read(int _1, void *_2, uint64_t _3) {
     (void) _1;
     (void) _2;
     (void) _3;
-    get_thread_locals()->errno = -ENOSYS;
-    return -1;
+    return -ENOSYS;;
 }
 
 int dummy_write(int _1, void *_2, uint64_t _3) {
     (void) _1;
     (void) _2;
     (void) _3;
-    get_thread_locals()->errno = -ENOSYS;
-    return -1;
+    return -ENOSYS;;
 }
 
 int dummy_seek(int _1, uint64_t _2, int _3) {
     (void) _1;
     (void) _2;
     (void) _3;
-    get_thread_locals()->errno = -ENOSYS;
-    return -1;
+    return -ENOSYS;;
 }
 
 vfs_ops_t dummy_ops = {dummy_open, dummy_close, dummy_read, dummy_write, dummy_seek};
@@ -357,7 +352,7 @@ char *get_full_path(vfs_node_t *node) {
     return path;
 }
 
-vfs_node_t *vfs_open(char *name, int mode) {
+vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
     vfs_node_t *node = get_node_from_path(name);
     if (!node) {
         sprintf("[VFS] Handling mountpoint for %s\n", name);
@@ -369,7 +364,7 @@ vfs_node_t *vfs_open(char *name, int mode) {
         while (node && !node->node_handle) {
             node = node->parent;
             if (node == root_node) {
-                get_thread_locals()->errno = -ENOENT;
+                *err = ENOENT;
                 return (void *) 0; // Welp
             }
         }
@@ -390,7 +385,7 @@ vfs_node_t *vfs_open(char *name, int mode) {
             remove_children(missing_start);
             remove_node(missing_start);
             node = 0;
-            get_thread_locals()->errno = -ENOENT;
+            *err = ENOENT;
         }
     }
 

@@ -142,6 +142,9 @@ int ahci_seek(int fd_no, uint64_t offset, int whence) {
 }
 
 int ahci_read(int fd_no, void *buf, uint64_t count) {
+    if (!count) {
+        return 0;
+    }
     fd_entry_t *fd_data = fd_lookup(fd_no);
     vfs_node_t *node = fd_data->node;
 
@@ -150,18 +153,14 @@ int ahci_read(int fd_no, void *buf, uint64_t count) {
         int err = ahci_read_sata_bytes(port_data_for_device, buf, count, fd_data->seek);
 
         if (err) {
-            get_thread_locals()->errno = -EIO;
+            return -EIO;
         } else {
-            get_thread_locals()->errno = 0;
             fd_data->seek += count;
         }
-        return 0;
+        return count;
     } else {
-        get_thread_locals()->errno = -EIO;
-        return 0;
+        return -EIO;
     }
-
-    return 0;
 }
 
 int ahci_write(int fd_no, void *buf, uint64_t count) {
@@ -173,18 +172,14 @@ int ahci_write(int fd_no, void *buf, uint64_t count) {
         int err = ahci_write_sata_bytes(port_data_for_device, buf, count, fd_data->seek);
 
         if (err) {
-            get_thread_locals()->errno = -EIO;
+            return -EIO;
         } else {
-            get_thread_locals()->errno = 0;
             fd_data->seek += count;
         }
-        return 0;
+        return count;
     } else {
-        get_thread_locals()->errno = -EIO;
-        return 0;
+        return -EIO;
     }
-
-    return 0;
 }
 
 static uint8_t port_present(ahci_controller_t controller, uint8_t port) {

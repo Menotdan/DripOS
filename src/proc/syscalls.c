@@ -45,7 +45,6 @@ void init_syscalls() {
 
 void syscall_handler(syscall_reg_t *r) {
     if (r->rax < (uint64_t) HANDLER_COUNT) {
-        get_thread_locals()->errno = 0; // Clear errno
         syscall_handlers[r->rax](r);
     }
 }
@@ -55,31 +54,61 @@ void syscall_nanosleep(syscall_reg_t *r) {
 }
 
 void syscall_read(syscall_reg_t *r) {
-    r->rax = fd_read((int) r->rdi, (void *) r->rsi, r->rdx);
+    int ret = fd_read((int) r->rdi, (void *) r->rsi, r->rdx);
+    if (ret >= 0) {
+        r->rax = ret;
+    } else {
+        r->rdx = -ret;
+    }
 }
 
 void syscall_write(syscall_reg_t *r) {
-    r->rax = fd_write((int) r->rdi, (void *) r->rsi, r->rdx);
+    int ret = fd_write((int) r->rdi, (void *) r->rsi, r->rdx);
+    if (ret >= 0) {
+        r->rax = ret;
+    } else {
+        r->rdx = -ret;
+    }
 }
 
 void syscall_open(syscall_reg_t *r) {
-    r->rax = fd_open((char *) r->rdi, (int) r->rsi);
+    int ret = fd_open((char *) r->rdi, (int) r->rsi);
+    if (ret >= 0) {
+        r->rax = ret;
+    } else {
+        r->rdx = -ret;
+    }
 }
 
 void syscall_close(syscall_reg_t *r) {
-    r->rax = fd_close((int) r->rdi);
+    int ret = fd_close((int) r->rdi);
+    if (ret >= 0) {
+        r->rax = ret;
+    } else {
+        r->rdx = -ret;
+    }
 }
 
 void syscall_seek(syscall_reg_t *r) {
-    r->rax = fd_seek((int) r->rdi, (uint64_t) r->rsi, (int) r->rdx);
+    int ret = fd_seek((int) r->rdi, (uint64_t) r->rsi, (int) r->rdx);
+    if (ret >= 0) {
+        r->rax = ret;
+    } else {
+        r->rdx = -ret;
+    }
 }
 
 void syscall_mmap(syscall_reg_t *r) {
-    r->rax = (uint64_t) psuedo_mmap((void *) r->rdi, r->rsi); 
+    r->rax = (uint64_t) psuedo_mmap((void *) r->rdi, r->rsi, r);
 }
 
 void syscall_munmap(syscall_reg_t *r) {
-    r->rax = (uint64_t) munmap((void *) r->rdi, r->rsi);
+    int ret = munmap((void *) r->rdi, r->rsi);
+    if (ret == 0) {
+        r->rax = ret;
+    } else {
+        r->rdx = -ret;
+    }
 }
 
 void syscall_yield(syscall_reg_t *r) {
@@ -93,7 +122,7 @@ void syscall_fork(syscall_reg_t *r) {
 }
 
 void syscall_execve(syscall_reg_t *r) {
-    r->rax = (uint64_t) execve((char *) r->rdi, (char **) r->rsi, (char **) r->rdx);
+    execve((char *) r->rdi, (char **) r->rsi, (char **) r->rdx, r);
 }
 
 void syscall_print_num(syscall_reg_t *r) {
@@ -103,6 +132,5 @@ void syscall_print_num(syscall_reg_t *r) {
 
 void syscall_empty(syscall_reg_t *r) {
     sprintf("[DripOS] Warning! Unimplemented syscall %lu!\n", r->rax);
-    r->rax = -ENOSYS;
-    get_thread_locals()->errno = -ENOSYS;
+    r->rdx = ENOSYS;
 }

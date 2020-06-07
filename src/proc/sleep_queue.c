@@ -104,18 +104,16 @@ void sleep_ms(uint64_t ms) {
 /* Nanosleep syscall */
 int nanosleep(struct timespec *req, struct timespec *rem) {
     if (!range_mapped(req, sizeof(struct timespec))) {
-        get_thread_locals()->errno = -EFAULT;
-        return 1;
+        return EFAULT;
     }
     
     if (!range_mapped(rem, sizeof(struct timespec)) && rem) {
-        get_thread_locals()->errno = -EFAULT;
-        return 1;
+        return EFAULT;
     }
 
     if (req->nanoseconds > 999999999) {
-        get_thread_locals()->errno = -EINVAL;
-        return 1;
+
+        return EINVAL;
     }
     sleep_ms((req->nanoseconds / 1000000) + (req->seconds * 1000));
 

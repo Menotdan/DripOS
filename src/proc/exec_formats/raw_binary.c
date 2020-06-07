@@ -33,6 +33,6 @@ void launch_binary(char *path) {
         sprintf("Loading binary of size %d for execution\n", read_bytes);
         new_binary_process(path, (void *) 0, data_buf, read_bytes);
     } else {
-        sprintf("Got error loading binary: %d\n", get_thread_locals()->errno);
+        sprintf("Got error loading binary: %d\n", fd);
     }
 }

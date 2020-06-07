@@ -47,7 +47,7 @@ void set_child_ops(vfs_node_t *node, vfs_ops_t ops);
 void set_child_fs_root(vfs_node_t *node, vfs_node_t *fs_root);
 
 /* VFS ops */
-vfs_node_t *vfs_open(char *name, int mode);
+vfs_node_t *vfs_open(char *name, int mode, uint64_t *err);
 int vfs_close(int fd);
 int vfs_read(int fd, void *buf, uint64_t count);
 int vfs_write(int fd, void *buf, uint64_t count);

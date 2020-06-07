@@ -331,10 +331,9 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
         echfs_dir_entry_t *entry = echfs_path_resolve(filesystem_info, path, &err);
         if (!entry) {
             sprintf("[EchFS] Read died somehow with entry getting\n");
-            get_thread_locals()->errno = -ENOENT;
 
             kfree(path);
-            return -1;
+            return -ENOENT;
         }
 
         uint64_t read_count = 0;
@@ -345,12 +344,10 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
         if (count_to_read == 0) count_to_read = read_count;
 
         if (count_to_read + fd->seek > read_count) {
-            get_thread_locals()->errno = -EINVAL;
-
             kfree(path);
             kfree(local_buf);
             kfree(entry);
-            return -1;
+            return -EINVAL;
         }
 
         memcpy(local_buf + fd->seek, buf, count_to_read); // Copy the data
@@ -361,10 +358,9 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
         return count_to_read; // Done
     } else {
         sprintf("[EchFS] Read died somehow\n");
-        get_thread_locals()->errno = -ENOENT;
 
         kfree(path);
-        return -1;
+        return -ENOENT;
     }
 }
 

@@ -148,12 +148,10 @@ int vesa_write(int fd, void *buf, uint64_t count) {
 
     /* Align args to 4 bytes */
     if (count & 0b11) {
-        get_thread_locals()->errno = -EINVAL;
-        return -1;
+        return -EINVAL;
     }
     if (fd_data->seek & 0b11 || fd_data->seek + count > vesa_display_info.framebuffer_size) {
-        get_thread_locals()->errno = -ESPIPE; // Bro seek must be 4 byte aligned
-        return -1;
+        return -ESPIPE;
     }
 
     lock(vesa_lock);
@@ -175,12 +173,11 @@ int vesa_read(int fd, void *buf, uint64_t count) {
 
     /* Align args to 4 bytes */
     if (count & 0b11) {
-        get_thread_locals()->errno = -EINVAL;
-        return -1;
+        
+        return -EINVAL;
     }
     if (fd_data->seek & 0b11 || fd_data->seek + count > vesa_display_info.framebuffer_size) {
-        get_thread_locals()->errno = -ESPIPE; // Bro seek must be 4 byte aligned
-        return -1;
+        return -ESPIPE;
     }
 
     lock(vesa_lock);

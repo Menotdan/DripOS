@@ -46,12 +46,6 @@ void unlock_scheduler() {
     interrupt_safe_unlock(sched_lock);
 }
 
-thread_info_block_t *get_thread_locals() {
-    thread_info_block_t *ret;
-    asm volatile("movq %%fs:(0), %0;" : "=r"(ret));
-    return ret;
-}
-
 void send_scheduler_ipis() {
     madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
     for (uint64_t i = 0; i < cpu_vector.items_count; i++) {
@@ -595,7 +589,6 @@ picked:
 
     write_msr(0xC0000100, running_task->regs.fs); // Set FS.base
 
-    get_thread_locals()->tid = running_task->tid;
     get_cpu_locals()->thread_kernel_stack = running_task->kernel_stack;
     get_cpu_locals()->thread_user_stack = running_task->user_stack;
 
@@ -664,11 +657,11 @@ int unmap_user_memory(int pid, void *virt, uint64_t size) {
     return ret;
 }
 
-void *psuedo_mmap(void *base, uint64_t len) {
+void *psuedo_mmap(void *base, uint64_t len, syscall_reg_t *r) {
     interrupt_safe_lock(sched_lock);
     len = (len + 0x1000 - 1) / 0x1000;
     process_t *process = processes[get_cpu_locals()->current_thread->parent_pid];
-    if (!process) { get_thread_locals()->errno = -ESRCH; return (void *) 0; } // bruh
+    if (!process) { r->rdx = ESRCH; interrupt_safe_unlock(sched_lock); return (void *) 0; } // bruh
 
     void *phys = pmm_alloc(len * 0x1000);
 
@@ -693,7 +686,7 @@ void *psuedo_mmap(void *base, uint64_t len) {
                 vmm_unmap_pages((void *) ((uint64_t) base + i * 0x1000), 
                     (void *) process->cr3, 1);
             }
-            get_thread_locals()->errno = -ENOMEM;
+            r->rdx = ENOMEM;
 
             interrupt_safe_unlock(sched_lock);
             return (void *) 0;
@@ -725,7 +718,7 @@ void *psuedo_mmap(void *base, uint64_t len) {
                 vmm_unmap_pages((void *) ((uint64_t) process->current_brk + i * 0x1000), 
                     (void *) process->cr3, 1);
             }
-            get_thread_locals()->errno = -ENOMEM;
+            r->rdx = ENOMEM;
 
             unlock(process->brk_lock);
 
@@ -748,16 +741,14 @@ int munmap(char *addr, uint64_t len) {
     len = (len + 0x1000 - 1) / 0x1000;
     process_t *process = processes[get_cpu_locals()->current_thread->parent_pid];
     interrupt_safe_unlock(sched_lock);
-    if (!process) { get_thread_locals()->errno = -ESRCH; return -1; } // bruh
+    if (!process) { return -ESRCH; } // bruh
 
     if ((uint64_t) addr != ((uint64_t) addr & ~(0xfff))) {
-        get_thread_locals()->errno = -EINVAL;
-        return -1;
+        return -EINVAL;
     }
     if ((uint64_t) addr > 0x7fffffffffff) {
         // Not user memory, stupid userspace
-        get_thread_locals()->errno = -EINVAL;
-        return -1;
+        return -EINVAL;
     }
 
     for (uint64_t i = 0; i < len; i++) {
@@ -839,7 +830,7 @@ int fork(syscall_reg_t *r) {
     return new_pid;
 }
 
-int execve(char *executable_path, char **argv, char **envp) {
+void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r) {
     uint64_t argc = 0;
     uint64_t envc = 0;
     int found_null_argv = 0;
@@ -847,7 +838,8 @@ int execve(char *executable_path, char **argv, char **envp) {
 
     for (uint64_t i = 0; i < 128; i++) {
         if (!range_mapped((void *) ((uint64_t) argv + (sizeof(char *) * i)), sizeof(char *)) || ((uint64_t) argv + 8 + (sizeof(char *) * i)) > 0x7fffffffffff) {
-            return -EFAULT;
+            r->rdx = EFAULT;
+            return;
         }
         argc++;
         if (!argv[i]) {
@@ -858,7 +850,8 @@ int execve(char *executable_path, char **argv, char **envp) {
 
     for (uint64_t i = 0; i < 128; i++) {
         if (!range_mapped((void *) ((uint64_t) envp + (sizeof(char *) * i)), sizeof(char *)) || ((uint64_t) envp + 8 + (sizeof(char *) * i)) > 0x7fffffffffff) {
-            return -EFAULT;
+            r->rdx = EFAULT;
+            return;
         }
         envc++;
         if (!envp[i]) {
@@ -868,7 +861,8 @@ int execve(char *executable_path, char **argv, char **envp) {
     }
 
     if (!found_null_argv || !found_null_envp) {
-        return -EFAULT;
+        r->rdx = EFAULT;
+        return;
     }
 
     char **kernel_argv = kcalloc(sizeof(char *) * argc);
@@ -924,7 +918,8 @@ fault_return:
     if (kernel_exec_path) {
         kfree(kernel_exec_path);
     }
-    return -EFAULT;
+    r->rdx = EFAULT;
+    return;
 done:
     for (uint64_t x = 0; x < argc; x++) {
         if (kernel_argv[x]) {
@@ -941,5 +936,10 @@ done:
     if (kernel_exec_path) {
         kfree(kernel_exec_path);
     }
-    return ret;
+    r->rdx = ret; // return error :(
+}
+
+void exit(int exit_code) {
+    exit_code = exit_code & 0xff;
+
 }

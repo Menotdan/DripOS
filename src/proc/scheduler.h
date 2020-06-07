@@ -125,7 +125,6 @@ void yield();
 void force_unlocked_schedule();
 
 /* "API" */
-thread_info_block_t *get_thread_locals();
 int64_t add_new_child_thread(thread_t *task, int64_t pid);
 thread_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring);
 int64_t start_thread(thread_t *thread);
@@ -153,12 +152,12 @@ int free_process_mem(int pid, uint64_t address);
 int mark_process_mem_used(int pid, uint64_t addr, uint64_t size);
 int map_user_memory(int pid, void *phys, void *virt, uint64_t size, uint16_t perms);
 
-void *psuedo_mmap(void *base, uint64_t len);
+void *psuedo_mmap(void *base, uint64_t len, syscall_reg_t *r);
 int munmap(char *addr, uint64_t len);
 
 /* Fork, exec, etc */
 int fork();
-int execve(char *executable_path, char **argv, char **envp);
+void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r);
 
 extern uint8_t scheduler_started;
 extern uint8_t scheduler_enabled;

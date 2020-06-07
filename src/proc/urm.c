@@ -84,7 +84,7 @@ void urm_execve(urm_execve_data *data) {
     void *address_space = load_elf_addrspace(data->executable_path, &entry_point);
     if (!address_space) {
         sprintf("bruh momento [execve]\n");
-        urm_return = -ENOENT;
+        urm_return = ENOENT;
         return;
     }
 

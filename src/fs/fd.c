@@ -14,14 +14,14 @@ lock_t fd_lock = {0, 0, 0, 0};
 int fd_open(char *name, int mode) {
     char *kernel_string = check_and_copy_string(name);
     if (!kernel_string) { // if err
-        get_thread_locals()->errno = -EFAULT;
-        return get_thread_locals()->errno;
+        return -EFAULT;
     }
 
-    vfs_node_t *node = vfs_open(kernel_string, mode);
+    uint64_t err;
+    vfs_node_t *node = vfs_open(kernel_string, mode, &err);
     kfree(kernel_string);
     if (!node) {
-        return get_thread_locals()->errno;
+        return -err;
     }
 
     int new_fd = fd_new(node, mode, get_cpu_locals()->current_thread->parent_pid);
@@ -29,9 +29,10 @@ int fd_open(char *name, int mode) {
 }
 
 int open_remote_fd(char *name, int mode, int pid) {
-    vfs_node_t *node = vfs_open(name, mode);
+    uint64_t err;
+    vfs_node_t *node = vfs_open(name, mode, &err);
     if (!node) {
-        return get_thread_locals()->errno;
+        return err;
     }
 
     return fd_new(node, mode, pid);
@@ -40,8 +41,7 @@ int open_remote_fd(char *name, int mode, int pid) {
 int fd_close(int fd) {
     fd_entry_t *node = fd_lookup(fd);
     if (!node) {
-        get_thread_locals()->errno = -EBADF;
-        return get_thread_locals()->errno;
+        return -EBADF;
     }
     int ret = vfs_close(fd);
     fd_remove(fd);
@@ -51,13 +51,11 @@ int fd_close(int fd) {
 int fd_read(int fd, void *buf, uint64_t count) {
     fd_entry_t *node = fd_lookup(fd);
     if (!node) {
-        get_thread_locals()->errno = -EBADF;
-        return get_thread_locals()->errno;
+        return -EBADF;
     }
 
     if (!range_mapped(buf, count)) {
-        get_thread_locals()->errno = -EFAULT;
-        return get_thread_locals()->errno;
+        return -EBADF;
     }
 
     return vfs_read(fd, buf, count);
@@ -66,13 +64,11 @@ int fd_read(int fd, void *buf, uint64_t count) {
 int fd_write(int fd, void *buf, uint64_t count) {
     fd_entry_t *node = fd_lookup(fd);
     if (!node) {
-        get_thread_locals()->errno = -EBADF;
-        return get_thread_locals()->errno;
+        return -EBADF;
     }
 
     if (!range_mapped(buf, count)) {
-        get_thread_locals()->errno = -EFAULT;
-        return get_thread_locals()->errno;
+        return -EFAULT;
     }
 
     return vfs_write(fd, buf, count);
@@ -81,8 +77,7 @@ int fd_write(int fd, void *buf, uint64_t count) {
 int fd_seek(int fd, uint64_t offset, int whence) {
     fd_entry_t *node = fd_lookup(fd);
     if (!node) {
-        get_thread_locals()->errno = -EBADF;
-        return get_thread_locals()->errno;
+        return -EBADF;
     }
 
     if (whence == 0) {
