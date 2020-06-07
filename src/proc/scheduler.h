@@ -158,6 +158,7 @@ int munmap(char *addr, uint64_t len);
 /* Fork, exec, etc */
 int fork();
 void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r);
+void set_fs_base_syscall(uint64_t base);
 
 extern uint8_t scheduler_started;
 extern uint8_t scheduler_enabled;

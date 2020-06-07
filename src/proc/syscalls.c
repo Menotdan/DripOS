@@ -38,6 +38,7 @@ void init_syscalls() {
     register_syscall(35, syscall_nanosleep);
     register_syscall(57, syscall_fork);
     register_syscall(59, syscall_execve);
+    register_syscall(300, syscall_set_fs);
 
     /* Memes */
     register_syscall(123, syscall_print_num);
@@ -128,6 +129,10 @@ void syscall_execve(syscall_reg_t *r) {
 void syscall_print_num(syscall_reg_t *r) {
     sprintf("PRINTING NUMBER FROM SYSCALL: %lu\n", r->rdi);
     r->rax = 0;
+}
+
+void syscall_set_fs(syscall_reg_t *r) {
+    set_fs_base_syscall(r->rdi);
 }
 
 void syscall_empty(syscall_reg_t *r) {

@@ -15,6 +15,7 @@ void syscall_yield(syscall_reg_t *r);     // 24
 void syscall_nanosleep(syscall_reg_t *r); // 35
 void syscall_fork(syscall_reg_t *r);      // 57
 void syscall_execve(syscall_reg_t *r);    // 59
+void syscall_set_fs(syscall_reg_t *r);    // 300 lol
 
 /* Meme syscalls (very temporary) */
 void syscall_print_num(syscall_reg_t *r);

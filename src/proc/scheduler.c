@@ -160,7 +160,6 @@ thread_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) 
     new_task->regs.rsp = rsp;
     new_task->ring = ring;
     new_task->regs.cr3 = base_kernel_cr3;
-    new_task->regs.fs = (uint64_t) kcalloc(sizeof(thread_info_block_t));
     new_task->sleep_node = kcalloc(sizeof(sleep_queue_t));
     vmm_remap(GET_LOWER_HALF(void *, new_task->regs.fs), (void *) new_task->regs.fs,
         1, VMM_PRESENT | VMM_WRITE | VMM_USER);
@@ -939,7 +938,7 @@ done:
     r->rdx = ret; // return error :(
 }
 
-void exit(int exit_code) {
-    exit_code = exit_code & 0xff;
-
+void set_fs_base_syscall(uint64_t base) {
+    get_cpu_locals()->current_thread->regs.fs = base;
+    write_msr(0xC0000100, get_cpu_locals()->current_thread->regs.fs); // Set the FS base in case the scheduler hasn't rescheduled
 }
