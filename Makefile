@@ -13,7 +13,7 @@ LINKER = x86_64-elf-ld
 incPath = ~/DripOS/src
 GDB = gdb
 MEM = 2G # Memory for qemu
-CORES = 1
+CORES = 2
 O_LEVEL = 0 # Optimization level
 # Options for GCC
 CFLAGS = -g -fno-pic               \
@@ -76,7 +76,7 @@ update_qloader2:
 # To make an object, always compile from its .c
 
 %.o: %.c
-	${CC} ${CFLAGS} -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -fno-omit-frame-pointer -ffunction-sections -fdata-sections -MD -c $< -o $@ -ffreestanding
+	${CC} ${CFLAGS} -D DEBUG -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -fno-omit-frame-pointer -ffunction-sections -fdata-sections -MD -c $< -o $@ -ffreestanding
 
 %.bin: %.real
 	nasm -f bin -o $@ $<

@@ -161,8 +161,6 @@ thread_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) 
     new_task->ring = ring;
     new_task->regs.cr3 = base_kernel_cr3;
     new_task->sleep_node = kcalloc(sizeof(sleep_queue_t));
-    vmm_remap(GET_LOWER_HALF(void *, new_task->regs.fs), (void *) new_task->regs.fs,
-        1, VMM_PRESENT | VMM_WRITE | VMM_USER);
     new_task->state = READY;
     strcpy(name, new_task->name);
 

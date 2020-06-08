@@ -53,7 +53,7 @@ void launch_cpus() {
     memset((uint8_t *) (0x500 + NORMAL_VMA_OFFSET), 0, 0xB00);
 
     vmm_map((void *) 0, (void *) 0, 1 + ((code_size + 0x1000 - 1) / 0x1000), VMM_WRITE | VMM_PRESENT);
-    vmm_map((void *) (GDT64 - KERNEL_VMA_OFFSET), (void *) (GDT64 - KERNEL_VMA_OFFSET), 1, VMM_WRITE | VMM_PRESENT);
+    vmm_remap((void *) (GDT64 - KERNEL_VMA_OFFSET), (void *) (GDT64 - KERNEL_VMA_OFFSET), 1, VMM_WRITE | VMM_PRESENT);
 
     /* Setup all the CPUs */
     madt_ent0_t *cpu;
