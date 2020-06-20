@@ -11,6 +11,7 @@
 #include "mm/pmm.h"
 #include "sys/smp.h"
 #include "sys/apic.h"
+#include <stddef.h>
 
 #include "drivers/pit.h"
 #include "urm.h"
@@ -170,6 +171,7 @@ thread_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) 
     new_task->vars.auxc = 0;
     new_task->vars.enviroment = kcalloc(sizeof(char *) * 1);
     new_task->vars.auxv = kcalloc(sizeof(auxv_t) * 1);
+    new_task->vars.argv = NULL;
 
     return new_task;
 }
@@ -298,6 +300,13 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
         thread->regs.rsi = thread->regs.rsp - argv_offset;
         thread->regs.rdx = thread->regs.rsp - auxv_offset;
         thread->regs.rsp -= (old_stack - stack);
+
+        // if (thread->vars.auxv)
+        //     kfree(thread->vars.auxv);
+        // if (thread->vars.argv)
+        //     kfree(thread->vars.argv);
+        // if (thread->vars.enviroment)
+        //     kfree(thread->vars.enviroment);
     }
 done:
     /* Add the TID to it's parent's threads list */
@@ -530,9 +539,7 @@ repick_task:
         running_task = get_cpu_locals()->current_thread;
         if (to_run->state == WAIT_EVENT) {
             if (*to_run->event) {
-                sprintf("event on tid: %ld done\n", tid_run);
                 atomic_dec((uint32_t *) to_run->event);
-                sprintf("event value: %u", *to_run->event);
                 to_run->state = READY;
             } else {
                 goto repick_task;

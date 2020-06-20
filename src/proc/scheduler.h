@@ -42,6 +42,11 @@ typedef struct {
 } auxv_t;
 
 typedef struct {
+    auxv_t *auxv;
+    int auxc;
+} auxv_auxc_group_t;
+
+typedef struct {
     char **argv;
     char **enviroment;
     auxv_t *auxv;

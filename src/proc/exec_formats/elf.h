@@ -4,6 +4,7 @@
 #include "proc/scheduler.h"
 
 #define PT_LOAD 1
+#define PT_INTERP 3
 
 typedef struct elf_ehdr {
     uint8_t iden_bytes[16];
@@ -47,6 +48,6 @@ typedef struct elf_shdr {
 } __attribute__((packed)) elf_shdr_t;
 
 int64_t load_elf(char *path);
-void *load_elf_addrspace(char *path, uint64_t *entry_out);
+void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *export_cr3, auxv_auxc_group_t *auxv_out);
 
 #endif

@@ -327,6 +327,10 @@ char *get_full_path(vfs_node_t *node) {
     vfs_node_t *cur_node = node;
     char *path = (char *) 0;
     uint64_t path_index = 0;
+    if (cur_node == root_node) {
+        path = kcalloc(2);
+        path[0] = '/';
+    }
     while (cur_node != root_node) {
         assert(cur_node);
         assert(cur_node->name);
@@ -362,11 +366,11 @@ vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
 
         node = get_node_from_path(name);
         while (node && !node->node_handle) {
-            node = node->parent;
             if (node == root_node) {
                 *err = ENOENT;
                 return (void *) 0; // Welp
             }
+            node = node->parent;
         }
 
         char *temp_name = name;

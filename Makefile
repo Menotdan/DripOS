@@ -13,8 +13,12 @@ LINKER = x86_64-elf-ld
 incPath = ~/DripOS/src
 GDB = gdb
 MEM = 2G # Memory for qemu
-CORES = 2
-O_LEVEL = 0 # Optimization level
+CORES = 8
+O_LEVEL = 2 # Optimization level
+
+IMG_MB=100
+DRIPOS_SYSROOT_ON_HOST=/var/dripos-sysroot
+
 # Options for GCC
 CFLAGS = -g -fno-pic               \
     -z max-page-size=0x1000        \
@@ -25,7 +29,6 @@ CFLAGS = -g -fno-pic               \
     -mno-red-zone                  \
     -mcmodel=kernel                \
     -ffreestanding                 \
-    -fno-stack-protector           \
     -fno-omit-frame-pointer        \
 	-fstack-protector-all          \
 
@@ -45,6 +48,17 @@ DripOS.img: kernel.elf
 
 	# Install qloader2
 	cd qloader2 && ./qloader2-install qloader2.bin ../DripOS.img
+
+disk_image:
+	- rm dripdisk.img
+	dd if=/dev/zero of=dripdisk.img bs=1M count=$(IMG_MB)
+	echfs-utils dripdisk.img quick-format 512
+	- rm -rf mountpoint
+	mkdir mountpoint
+	echfs-fuse dripdisk.img mountpoint
+	cp -R $(DRIPOS_SYSROOT_ON_HOST)/* mountpoint
+	fusermount -u mountpoint
+	- rm -rf mountpoint
 
 kernel.elf: ${NASM_SOURCES:.real=.bin} ${OBJ}
 	${CC} -Wl,-z,max-page-size=0x1000,--gc-sections -nostdlib -Werror -Wall -Wextra -Wpedantic -Wunused-function -o $@ -T linker.ld ${OBJ}

@@ -7,6 +7,7 @@
 #include "klibc/stdlib.h"
 #include "klibc/errno.h"
 #include "drivers/serial.h"
+#include <stddef.h>
 
 urm_type_t urm_type;
 void *urm_data;
@@ -57,7 +58,6 @@ void urm_kill_thread(urm_kill_thread_data *data) {
 void urm_kill_process(urm_kill_process_data *data) {
     interrupt_safe_lock(sched_lock);
     process_t *process = processes[data->pid];
-    sprintf("killing process %ld with struct address %lx\n", data->pid, process);
 
     uint64_t size = process->threads_size;
     int64_t *tids = kmalloc(sizeof(int64_t) * process->threads_size);
@@ -81,7 +81,8 @@ void urm_kill_process(urm_kill_process_data *data) {
 
 void urm_execve(urm_execve_data *data) {
     uint64_t entry_point = 0;
-    void *address_space = load_elf_addrspace(data->executable_path, &entry_point);
+    auxv_auxc_group_t auxv_info;
+    void *address_space = load_elf_addrspace(data->executable_path, &entry_point, 0, NULL, &auxv_info);
     if (!address_space) {
         sprintf("bruh momento [execve]\n");
         urm_return = ENOENT;
@@ -99,6 +100,10 @@ void urm_execve(urm_execve_data *data) {
 
     current_process->cr3 = (uint64_t) address_space;
     thread_t *thread = create_thread(data->executable_path, (void *) entry_point, USER_STACK, 3);
+    if (auxv_info.auxv) {
+        thread->vars.auxc = auxv_info.auxc;
+        thread->vars.auxv = auxv_info.auxv;
+    }
 
     interrupt_safe_unlock(sched_lock);
 
@@ -111,7 +116,6 @@ void urm_execve(urm_execve_data *data) {
 void urm_thread() {
     while (1) {
         await_event(&urm_request_event); // Wait for a URM request
-        sprintf("Got URM request with type %lu.\n", urm_type);
         switch (urm_type) {
             case URM_KILL_PROCESS:
                 urm_kill_process(urm_data);
@@ -125,7 +129,6 @@ void urm_thread() {
             default:
                 break;
         }
-        sprintf("URM finished request with type %lu.\n", urm_type);
         if (urm_trigger_done) {
             trigger_event(&urm_done_event);
         }
@@ -139,11 +142,7 @@ int send_urm_request(void *data, urm_type_t type) {
     urm_data = data;
     urm_type = type;
     trigger_event(&urm_request_event);
-    if (urm_done_event) {
-        sprintf("REEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\n");
-    }
     await_event(&urm_done_event);
-    sprintf("URM done event fired.\n");
     return urm_return;
 }
 

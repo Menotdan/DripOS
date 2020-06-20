@@ -400,24 +400,16 @@ void echfs_test(char *device) {
 
         kfree(entry0);
 
-        char *mountpoint_lol = "/echfs_mount";
-        char *mountpoint_name_lol = "echfs_mount";
-
+        char *mountpoint_lol = "/";
         filesystem->mountpoint_path = kcalloc(strlen(mountpoint_lol) + 1);
-
         strcpy(mountpoint_lol, filesystem->mountpoint_path);
 
+        filesystem->mountpoint = root_node;
 
-        vfs_node_t *echfs_mountpoint = vfs_new_node(mountpoint_name_lol, dummy_ops);
-        filesystem->mountpoint = echfs_mountpoint;
-        
-        sprintf("UNID for mountpoint: %lu\n", echfs_mountpoint->unid);
-        vfs_add_child(root_node, echfs_mountpoint);
+        register_unid(root_node->unid, filesystem);
+        root_node->node_handle = echfs_node_gen;
 
-        register_unid(echfs_mountpoint->unid, filesystem);
-        echfs_mountpoint->node_handle = echfs_node_gen;
-
-        int hello_fd = fd_open("/echfs_mount/hello/README.md", 0);
+        int hello_fd = fd_open("/test.c", 0);
         sprintf("[EchFS] FD: %d\n", hello_fd);
 
         char *buf = kcalloc(100);

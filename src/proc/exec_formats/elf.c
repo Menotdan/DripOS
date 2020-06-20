@@ -5,8 +5,12 @@
 #include "drivers/serial.h"
 #include "klibc/string.h"
 #include "klibc/stdlib.h"
+#include <stddef.h>
 
-void *load_elf_addrspace(char *path, uint64_t *entry_out) {
+void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *export_cr3, auxv_auxc_group_t *auxv_out) {
+    auxv_t *auxv = kcalloc(sizeof(auxv_t)); // null entry
+    int auxc = 0;
+
     sprintf("[ELF] Attempting to load %s\n", path);
     int fd = fd_open(path, 0);
     if (fd < 0) {
@@ -63,14 +67,22 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out) {
 
     sprintf("Elf loaded correctly!\n");
 
-    void *elf_address_space = vmm_fork_higher_half((void *) base_kernel_cr3);
+    int loaded_dynamic_linker = 0;
+    uint64_t dynamic_linker_entry = 0;
+
+    void *elf_address_space;
+    if (!export_cr3) {
+        elf_address_space = vmm_fork_higher_half((void *) base_kernel_cr3);
+    } else {
+        elf_address_space = export_cr3;
+    }
     for (uint64_t i = 0; i < ehdr->e_phnum; i++) {
         sprintf("phdr_type = %u, phdr_size = %lu, phdr_addr = %lx, phdr_phys = %lx, phdr_offset = %lu, phdr_filesize = %lu\n", phdrs[i].p_type, phdrs[i].p_memsz, phdrs[i].p_vaddr, phdrs[i].p_paddr, phdrs[i].p_offset, phdrs[i].p_filesz);
         if (phdrs[i].p_type == PT_LOAD) {
             if (phdrs[i].p_memsz == 0) continue; // Empty phdr :/
             uint64_t pages = (phdrs[i].p_memsz + 0x1000 - 1) / 0x1000;
 
-            void *virt = (void *) phdrs[i].p_vaddr;
+            void *virt = (void *) phdrs[i].p_vaddr + base;
             void *region_phys = pmm_alloc(phdrs[i].p_memsz);
             void *region_virt = GET_HIGHER_HALF(void *, region_phys);
             memset(region_virt, 0, phdrs[i].p_memsz);
@@ -79,6 +91,16 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out) {
             fd_read(fd, region_virt, phdrs[i].p_filesz);
 
             vmm_map_pages(region_phys, virt, elf_address_space, pages, VMM_PRESENT | VMM_USER | VMM_WRITE);
+        } else if (phdrs[i].p_type == PT_INTERP) {
+            sprintf("Program wants a dynamic linker loaded\n");
+            char *ld_path = kcalloc(phdrs[i].p_filesz + 1);
+            fd_seek(fd, phdrs[i].p_offset, 0);
+            fd_read(fd, ld_path, phdrs[i].p_filesz);
+            sprintf("Dynamic linker path: %s\n", ld_path);
+            sprintf("Loading the dynamic linker...\n");
+            load_elf_addrspace(ld_path, &dynamic_linker_entry, 0x800000000, elf_address_space, NULL);
+            loaded_dynamic_linker = 1;
+            sprintf("Entry: %lx\n", dynamic_linker_entry);
         }
     }
 
@@ -90,7 +112,16 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out) {
     vmm_map_pages(phys_stack_region, virt_stack, elf_address_space, TASK_STACK_PAGES, 
         VMM_PRESENT | VMM_USER | VMM_WRITE);
 
-    *entry_out = ehdr->e_entry;
+    if (loaded_dynamic_linker) {
+        *entry_out = dynamic_linker_entry;
+    } else {
+        *entry_out = ehdr->e_entry + base;
+    }
+
+    if (auxv_out) {
+        auxv_out->auxv = auxv;
+        auxv_out->auxc = auxc;
+    }
 
     fd_close(fd);
     return elf_address_space;
@@ -98,13 +129,18 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out) {
 
 int64_t load_elf(char *path) {
     uint64_t entry_point = 0;
-    void *address_space = load_elf_addrspace(path, &entry_point);
+    auxv_auxc_group_t auxv_info;
+    void *address_space = load_elf_addrspace(path, &entry_point, 0, NULL, &auxv_info);
     if (!address_space) {
         return -1;
     }
     process_t *process = create_process(path, address_space);
     thread_t *thread = create_thread(path, (void *) entry_point, USER_STACK, 3);
     int64_t pid = add_process(process);
+    if (auxv_info.auxv) {
+        thread->vars.auxc = auxv_info.auxc;
+        thread->vars.auxv = auxv_info.auxv;
+    }
     add_new_child_thread(thread, pid);
 
     return pid;

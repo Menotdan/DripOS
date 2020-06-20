@@ -9,7 +9,6 @@ void await_event(event_t *e) {
     thread_t *current_thread = get_cpu_locals()->current_thread;
     current_thread->event = e;
     current_thread->state = WAIT_EVENT;
-    sprintf("rescheduling to wait for event, tid: %ld\n", get_cpu_locals()->current_thread->tid);
     force_unlocked_schedule();
 }
 
