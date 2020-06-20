@@ -65,9 +65,10 @@ void event_system_test() {
 
 extern void sanity_thread_start();
 
-void kernel_process(int argc, char **argv) {
+void kernel_process(int argc, char **argv, auxv_t *auxv) {
     fd_write(0, "Hello from stdout!\n", 19);
     kprintf("argc: %d, argv: %lx\n", argc, argv);
+    kprintf("auxv = %lx\n", auxv);
     if (argv) {
         for (int i = 0; i < argc; i++) {
             kprintf("argv: %s\n", argv[i]);

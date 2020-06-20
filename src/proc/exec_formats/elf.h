@@ -5,6 +5,7 @@
 
 #define PT_LOAD 1
 #define PT_INTERP 3
+#define PT_PHDR 6
 
 typedef struct elf_ehdr {
     uint8_t iden_bytes[16];

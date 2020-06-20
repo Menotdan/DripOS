@@ -17,6 +17,7 @@ void syscall_exit(syscall_reg_t *r);      // 12
 void syscall_getppid(syscall_reg_t *r);   // 14
 void syscall_yield(syscall_reg_t *r);     // 24
 void syscall_nanosleep(syscall_reg_t *r); // 35
+void syscall_sprint(syscall_reg_t *r);    // 50
 void syscall_fork(syscall_reg_t *r);      // 57
 void syscall_execve(syscall_reg_t *r);    // 59
 void syscall_set_fs(syscall_reg_t *r);    // 300 lol

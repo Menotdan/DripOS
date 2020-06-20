@@ -2,6 +2,7 @@
 #include "fs/fd.h"
 #include "proc/sleep_queue.h"
 #include "proc/scheduler.h"
+#include "proc/safe_userspace.h"
 #include "sys/smp.h"
 #include "klibc/errno.h"
 #include "klibc/stdlib.h"
@@ -42,6 +43,7 @@ void init_syscalls() {
     register_syscall(14, syscall_getppid);
     register_syscall(24, syscall_yield);
     register_syscall(35, syscall_nanosleep);
+    register_syscall(50, syscall_sprint);
     register_syscall(57, syscall_fork);
     register_syscall(59, syscall_execve);
     register_syscall(300, syscall_set_fs);
@@ -52,7 +54,6 @@ void init_syscalls() {
 
 void syscall_handler(syscall_reg_t *r) {
     if (r->rax < (uint64_t) HANDLER_COUNT) {
-        sprintf("Handling syscall %lu\n", r->rax);
         syscall_handlers[r->rax](r);
     }
 }
@@ -163,6 +164,13 @@ void syscall_sleepms(syscall_reg_t *r) {
 void syscall_exit(syscall_reg_t *r) {
     (void) r;
     kill_process(get_cpu_locals()->current_thread->parent_pid); // yeet
+}
+
+void syscall_sprint(syscall_reg_t *r) {
+    char *string = check_and_copy_string((void *) r->rdi);
+    sprint(string);
+    sprint("\n");
+    kfree(string);
 }
 
 void syscall_empty(syscall_reg_t *r) {

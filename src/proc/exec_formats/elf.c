@@ -5,12 +5,10 @@
 #include "drivers/serial.h"
 #include "klibc/string.h"
 #include "klibc/stdlib.h"
+#include "klibc/auxv.h"
 #include <stddef.h>
 
 void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *export_cr3, auxv_auxc_group_t *auxv_out) {
-    auxv_t *auxv = kcalloc(sizeof(auxv_t)); // null entry
-    int auxc = 0;
-
     sprintf("[ELF] Attempting to load %s\n", path);
     int fd = fd_open(path, 0);
     if (fd < 0) {
@@ -69,6 +67,8 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
 
     int loaded_dynamic_linker = 0;
     uint64_t dynamic_linker_entry = 0;
+    auxv_t *auxv = kcalloc(sizeof(auxv_t)); // null entry
+    int auxc = 0;
 
     void *elf_address_space;
     if (!export_cr3) {
@@ -101,6 +101,27 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
             load_elf_addrspace(ld_path, &dynamic_linker_entry, 0x800000000, elf_address_space, NULL);
             loaded_dynamic_linker = 1;
             sprintf("Entry: %lx\n", dynamic_linker_entry);
+            auxv_t new_auxv;
+            new_auxv.a_type = AT_ENTRY;
+            new_auxv.a_un.a_ptr = (void *) (ehdr->e_entry + base);
+            auxv = krealloc(auxv, (auxc + 1) * sizeof(auxv_t));
+            auxv[auxc++] = new_auxv;
+
+            new_auxv.a_type = AT_PHNUM;
+            new_auxv.a_un.a_val = (long) ehdr->e_phnum;
+            auxv = krealloc(auxv, (auxc + 1) * sizeof(auxv_t));
+            auxv[auxc++] = new_auxv;
+
+            new_auxv.a_type = AT_PHENT;
+            new_auxv.a_un.a_val = sizeof(elf_phdr_t);
+            auxv = krealloc(auxv, (auxc + 1) * sizeof(auxv_t));
+            auxv[auxc++] = new_auxv;
+        } else if (phdrs[i].p_type == PT_PHDR) {
+            auxv_t new_auxv;
+            new_auxv.a_type = AT_PHDR;
+            new_auxv.a_un.a_ptr = (void *) phdrs[i].p_vaddr + base;
+            auxv = krealloc(auxv, (auxc + 1) * sizeof(auxv_t));
+            auxv[auxc++] = new_auxv;
         }
     }
 
@@ -121,6 +142,8 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
     if (auxv_out) {
         auxv_out->auxv = auxv;
         auxv_out->auxc = auxc;
+    } else {
+        kfree(auxv);
     }
 
     fd_close(fd);

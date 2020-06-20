@@ -301,8 +301,13 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
         thread->regs.rdx = thread->regs.rsp - auxv_offset;
         thread->regs.rsp -= (old_stack - stack);
 
-        // if (thread->vars.auxv)
-        //     kfree(thread->vars.auxv);
+        if (thread->vars.auxv) {
+            sprintf("Created a thread with the following auxv\n");
+            for (uint64_t i = 0; i < auxv_count; i++) {
+                sprintf("auxv type %lu, value %lx\n", auxv[i].a_type, auxv[i].a_un.a_ptr);
+            }
+            sprintf("auxv addr = %lx\n", thread->regs.rdx);
+        }
         // if (thread->vars.argv)
         //     kfree(thread->vars.argv);
         // if (thread->vars.enviroment)
