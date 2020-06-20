@@ -150,6 +150,8 @@ void *pmm_alloc(uint64_t size) {
     available_memory -= pages * 0x1000;
     used_memory += pages * 0x1000;
 
+    //sprintf("+mem %lu %lu %lx\n", (free_page * 0x1000), size, __builtin_return_address(0));
+
     unlock(pmm_lock);
     interrupt_unlock(state);
     return (void *) (free_page * 0x1000);
@@ -158,6 +160,8 @@ void *pmm_alloc(uint64_t size) {
 void pmm_unalloc(void *addr, uint64_t size) {
     interrupt_state_t state = interrupt_lock();
     lock(pmm_lock);
+
+    //sprintf("-mem %lu %lu %lx\n", addr, size, __builtin_return_address(0));
 
     uint64_t page = ((uint64_t) addr & ~(0xfff)) / 0x1000;
     uint64_t pages = (size + 0x1000 - 1) / 0x1000;

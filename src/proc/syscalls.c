@@ -54,6 +54,7 @@ void init_syscalls() {
 
 void syscall_handler(syscall_reg_t *r) {
     if (r->rax < (uint64_t) HANDLER_COUNT) {
+        sprintf("Handling syscall: %lu\n", r->rax);
         syscall_handlers[r->rax](r);
     }
 }

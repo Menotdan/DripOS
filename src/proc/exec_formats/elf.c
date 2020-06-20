@@ -86,11 +86,23 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
             void *region_phys = pmm_alloc(phdrs[i].p_memsz);
             void *region_virt = GET_HIGHER_HALF(void *, region_phys);
             memset(region_virt, 0, phdrs[i].p_memsz);
+            sprintf("Cleared from %lx to %lx\n", (uint64_t) virt, (uint64_t) virt + phdrs[i].p_memsz);
 
             fd_seek(fd, phdrs[i].p_offset, 0);
             fd_read(fd, region_virt, phdrs[i].p_filesz);
+            sprintf("Loaded from %lx to %lx\n", (uint64_t) virt, (uint64_t) virt + phdrs[i].p_filesz);
 
             vmm_map_pages(region_phys, virt, elf_address_space, pages, VMM_PRESENT | VMM_USER | VMM_WRITE);
+            memset((void *) ((uint64_t) region_virt + phdrs[i].p_filesz), 0, phdrs[i].p_memsz - phdrs[i].p_filesz);
+            sprintf("cleared %lx for %lu bytes\n", (uint64_t) region_virt + phdrs[i].p_filesz, phdrs[i].p_memsz - phdrs[i].p_filesz);
+            uint64_t *test = (void *) ((uint64_t) region_virt + phdrs[i].p_filesz);
+            uint64_t count = ((phdrs[i].p_memsz - phdrs[i].p_filesz) / 8);
+            sprintf("Count: %lu\n", count);
+            for (uint64_t i = 0; i < count; i++) {
+                sprintf("Data right after clearing: %lx\n", test[i]);
+            }
+            sprintf("bruh: %d\n", vmm_unmap(region_virt, pages));
+            sprintf("aaaaaaaa: %lx\n", virt_to_phys(region_virt, (void *) base_kernel_cr3));
         } else if (phdrs[i].p_type == PT_INTERP) {
             sprintf("Program wants a dynamic linker loaded\n");
             char *ld_path = kcalloc(phdrs[i].p_filesz + 1);
@@ -122,6 +134,8 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
             new_auxv.a_un.a_ptr = (void *) phdrs[i].p_vaddr + base;
             auxv = krealloc(auxv, (auxc + 1) * sizeof(auxv_t));
             auxv[auxc++] = new_auxv;
+        } else {
+            continue;
         }
     }
 
@@ -144,6 +158,14 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
         auxv_out->auxc = auxc;
     } else {
         kfree(auxv);
+    }
+
+    if (base) {
+        uint64_t *phys = virt_to_phys((void *) 0x8002194D8, elf_address_space);
+        vmm_map(phys, phys, 1, VMM_PRESENT | VMM_WRITE);
+        for (uint64_t i = 0; i < 119; i++) {
+            sprintf("Data at the end %lx\n", phys[i]);
+        }
     }
 
     fd_close(fd);
