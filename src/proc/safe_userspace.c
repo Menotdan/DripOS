@@ -5,16 +5,17 @@
 #include "sys/smp.h"
 
 char *check_and_copy_string(char *userspace_string) {
+    // sprintf("string address addr: %lx\n", userspace_string);
     uint64_t string_length = 0;
     int found_string_null = 0;
     for (uint64_t i = 0; i < 4096; i++) {
-        if (!range_mapped((void *) ((uint64_t) userspace_string + i), sizeof(char)) || ((uint64_t) userspace_string + 1 + i > 0x7fffffffffff && get_cpu_locals()->current_thread->ring == 3)) {
+        if (!range_mapped((void *) ((uint64_t) userspace_string + i), sizeof(char)) || ((uint64_t) userspace_string + 1 + i > 0x7fffffffffff && get_cpu_locals()->current_thread->ring == 3 && (!get_cpu_locals()->ignore_ring))) {
             sprintf("mapping error\n");
             if (!range_mapped((void *) ((uint64_t) userspace_string + i), sizeof(char))) {
                 sprintf("range_mapped check failed (addr: %lx)\n", ((uint64_t) userspace_string + i));
             }
-            if (((uint64_t) userspace_string + 1 + i > 0x7fffffffffff && get_cpu_locals()->current_thread->ring == 3)) {
-                sprintf("userspace check failed (current ring: %u)\n", get_cpu_locals()->current_thread->ring);
+            if ((((uint64_t) userspace_string + 1 + i) > 0x7fffffffffff && get_cpu_locals()->current_thread->ring == 3 && (!get_cpu_locals()->ignore_ring))) {
+                sprintf("userspace check failed (current ring: %u) address: %lx\n", get_cpu_locals()->current_thread->ring, (uint64_t) userspace_string + 1 + i);
             }
             return (void *) 0;
         }

@@ -27,6 +27,8 @@ typedef struct {
 
     idt_gate_t idt[IDT_ENTRIES];
     tss_64_t tss;
+
+    uint8_t ignore_ring;
 } __attribute__((packed)) cpu_locals_t;
 
 void launch_cpus();

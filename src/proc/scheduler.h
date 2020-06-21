@@ -83,6 +83,8 @@ typedef struct {
     int *event;
     uint64_t event_timeout;
     uint64_t event_wait_start;
+
+    char sse_region[512] __attribute__((aligned(16))); // SSE region (aligned)
 } thread_t;
 
 typedef struct {

@@ -23,7 +23,7 @@ int mbr_read(int fd_no, void *buf, uint64_t count) {
     mbr_part_offset_t *data = get_device_data(fd_dat->node);
     int fd = fd_open(data->drive, 0);
 
-    fd_seek(fd, fd_dat->seek + data->offset, 0);
+    fd_seek(fd, fd_dat->seek + data->offset, SEEK_SET);
     int ret = fd_read(fd, buf, count);
     fd_close(fd);
 
@@ -35,7 +35,7 @@ int mbr_write(int fd_no, void *buf, uint64_t count) {
     mbr_part_offset_t *data = get_device_data(fd_dat->node);
     int fd = fd_open(data->drive, 0);
 
-    fd_seek(fd, fd_dat->seek + data->offset, 0);
+    fd_seek(fd, fd_dat->seek + data->offset, SEEK_SET);
     int ret = fd_write(fd, buf, count);
     fd_close(fd);
 
@@ -55,7 +55,7 @@ void read_mbr(char *drive_name, uint64_t sector_size) {
 
     int fd = fd_open(drive_name, 0);
     mbr_bootsect_t *data = kcalloc(sizeof(mbr_bootsect_t));
-    fd_seek(fd, 0, 0);
+    fd_seek(fd, 0, SEEK_SET);
     fd_read(fd, data, sizeof(mbr_bootsect_t));
 
     kprintf("Partitions on drive %s:\n", drive_name);

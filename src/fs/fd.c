@@ -11,20 +11,30 @@
 
 lock_t fd_lock = {0, 0, 0, 0};
 
-int fd_open(char *name, int mode) {
-    char *kernel_string = check_and_copy_string(name);
+int fd_open(char *filepath, int mode) {
+    char *kernel_string = check_and_copy_string(filepath);
     if (!kernel_string) { // if err
         return -EFAULT;
+    }
+
+    int set_ignore = 0;
+    if (get_cpu_locals()->current_thread->ring == 3 && !get_cpu_locals()->ignore_ring) {
+        get_cpu_locals()->ignore_ring = 1;
+        set_ignore = 1;
     }
 
     uint64_t err;
     vfs_node_t *node = vfs_open(kernel_string, mode, &err);
     kfree(kernel_string);
     if (!node) {
+        if (set_ignore)
+            get_cpu_locals()->ignore_ring = 0;
         return -err;
     }
 
     int new_fd = fd_new(node, mode, get_cpu_locals()->current_thread->parent_pid);
+    if (set_ignore)
+        get_cpu_locals()->ignore_ring = 0;
     return new_fd;
 }
 
@@ -49,46 +59,86 @@ int fd_close(int fd) {
 }
 
 int fd_read(int fd, void *buf, uint64_t count) {
+    int set_ignore = 0;
+    if (get_cpu_locals()->current_thread->ring == 3 && !get_cpu_locals()->ignore_ring) {
+        get_cpu_locals()->ignore_ring = 1;
+        set_ignore = 1;
+    }
+
     fd_entry_t *node = fd_lookup(fd);
     if (!node) {
+        if (set_ignore)
+            get_cpu_locals()->ignore_ring = 0;
         return -EBADF;
     }
 
     if (!range_mapped(buf, count)) {
+        if (set_ignore)
+            get_cpu_locals()->ignore_ring = 0;
         return -EBADF;
     }
 
-    return vfs_read(fd, buf, count);
+    int read = vfs_read(fd, buf, count);
+    if (set_ignore)
+        get_cpu_locals()->ignore_ring = 0;
+    return read;
 }
 
 int fd_write(int fd, void *buf, uint64_t count) {
+    int set_ignore = 0;
+    if (get_cpu_locals()->current_thread->ring == 3 && !get_cpu_locals()->ignore_ring) {
+        get_cpu_locals()->ignore_ring = 1;
+        set_ignore = 1;
+    }
+
     fd_entry_t *node = fd_lookup(fd);
     if (!node) {
+        if (set_ignore)
+            get_cpu_locals()->ignore_ring = 0;
         return -EBADF;
     }
 
     if (!range_mapped(buf, count)) {
+        if (set_ignore)
+            get_cpu_locals()->ignore_ring = 0;
         return -EFAULT;
     }
 
-    return vfs_write(fd, buf, count);
+    int ret = vfs_write(fd, buf, count);
+    if (set_ignore)
+        get_cpu_locals()->ignore_ring = 0;
+    return ret;
 }
 
 int fd_seek(int fd, uint64_t offset, int whence) {
+    int set_ignore = 0;
+    if (get_cpu_locals()->current_thread->ring == 3 && !get_cpu_locals()->ignore_ring) {
+        get_cpu_locals()->ignore_ring = 1;
+        set_ignore = 1;
+    }
+
     fd_entry_t *node = fd_lookup(fd);
     if (!node) {
+        if (set_ignore)
+            get_cpu_locals()->ignore_ring = 0;
         return -EBADF;
     }
 
-    if (whence == 0) {
-        node->seek  = offset;
-    } else if (whence == 1) {
+    if (whence == SEEK_SET) {
+        node->seek = offset;
+    } else if (whence == SEEK_CUR) {
         node->seek += offset;
-    } else if (whence == 2) {
-        node->seek -= offset;
+    } else if (whence == SEEK_END) {
+    } else {
+        if (set_ignore)
+            get_cpu_locals()->ignore_ring = 0;
+        return -EINVAL;
     }
 
-    return vfs_seek(fd, offset, whence);
+    int ret = vfs_seek(fd, offset, whence);
+    if (set_ignore)
+            get_cpu_locals()->ignore_ring = 0;
+    return ret;
 }
 
 int fd_new(vfs_node_t *node, int mode, int pid) {

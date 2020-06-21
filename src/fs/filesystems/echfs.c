@@ -30,7 +30,7 @@ int echfs_read_block0(char *device, echfs_filesystem_t *output) {
     }
 
     fd_read(device_fd, block0, sizeof(echfs_block0_t));
-    fd_seek(device_fd, 0, 0);
+    fd_seek(device_fd, 0, SEEK_SET);
 
     if (block0->sig[0] == '_' && block0->sig[1] == 'E' && block0->sig[2] == 'C' && block0->sig[3] == 'H' &&
         block0->sig[4] == '_' && block0->sig[5] == 'F' && block0->sig[6] == 'S' && block0->sig[7] == '_') {
@@ -87,7 +87,7 @@ void *echfs_read_block(echfs_filesystem_t *filesystem, uint64_t block) {
     int device_fd = fd_open(filesystem->device_name, 0);
 
     // Read data
-    fd_seek(device_fd, block * filesystem->block_size, 0);
+    fd_seek(device_fd, block * filesystem->block_size, SEEK_SET);
     fd_read(device_fd, data_area, filesystem->block_size);
 
     lock(echfs_cache_lock);
@@ -106,7 +106,7 @@ void echfs_write_block(echfs_filesystem_t *filesystem, uint64_t block, void *dat
     int device_fd = fd_open(filesystem->device_name, 0);
 
     // Read data
-    fd_seek(device_fd, block * filesystem->block_size, 0);
+    fd_seek(device_fd, block * filesystem->block_size, SEEK_SET);
     fd_write(device_fd, data, filesystem->block_size);
 
     lock(echfs_cache_lock);
@@ -126,7 +126,7 @@ echfs_dir_entry_t *echfs_read_dir_entry(echfs_filesystem_t *filesystem, uint64_t
     int device_fd = fd_open(filesystem->device_name, 0);
 
     uint64_t main_dir_start_byte = filesystem->main_dir_block * filesystem->block_size;
-    fd_seek(device_fd, main_dir_start_byte + (entry * sizeof(echfs_dir_entry_t)), 0);
+    fd_seek(device_fd, main_dir_start_byte + (entry * sizeof(echfs_dir_entry_t)), SEEK_SET);
     fd_read(device_fd, data_area, sizeof(echfs_dir_entry_t));
 
     fd_close(device_fd);
@@ -138,7 +138,7 @@ void echfs_write_dir_entry(echfs_filesystem_t *filesystem, uint64_t entry, echfs
     int device_fd = fd_open(filesystem->device_name, 0);
 
     uint64_t main_dir_start_byte = filesystem->main_dir_block * filesystem->block_size;
-    fd_seek(device_fd, main_dir_start_byte + (entry * sizeof(echfs_dir_entry_t)), 0);
+    fd_seek(device_fd, main_dir_start_byte + (entry * sizeof(echfs_dir_entry_t)), SEEK_SET);
     fd_write(device_fd, data, sizeof(echfs_dir_entry_t));
 
     fd_close(device_fd);
@@ -413,7 +413,7 @@ void echfs_test(char *device) {
         sprintf("[EchFS] FD: %d\n", hello_fd);
 
         char *buf = kcalloc(100);
-        fd_seek(hello_fd, 0, 0);
+        fd_seek(hello_fd, 0, SEEK_SET);
         sprintf("Errno: %d\n", fd_read(hello_fd, buf, 0));
         sprintf("[EchFS] Read data: \n");
         sprintf("%s\n", buf);

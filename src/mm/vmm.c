@@ -231,6 +231,7 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
         }
         vmm_invlpg((uint64_t) cur_virt - 0x1000);
     }
+    //sprintf("+mapping %lu %lu %lu\n", phys, virt, count);
     unlock(vmm_spinlock);
     interrupt_unlock(state);
     return ret;
@@ -246,6 +247,8 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
     uint8_t *cur_virt = (uint8_t *) (((uint64_t) virt) & VMM_4K_PERM_MASK);
     uint64_t cur_phys = ((uint64_t) phys) & VMM_4K_PERM_MASK;
 
+    //sprintf("-mapping %lu %lu %lu\n", virt_to_phys(virt, p4), virt, count);
+
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
         pt_ptr_t ptrs = vmm_get_table(&offs, p4);
@@ -256,6 +259,8 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
         cur_virt += 0x1000;
         vmm_invlpg((uint64_t) cur_virt - 0x1000);
     }
+    //sprintf("+mapping %lu %lu %lu\n", phys, virt, count);
+
 
     unlock(vmm_spinlock);
     interrupt_unlock(state);
@@ -270,6 +275,7 @@ int vmm_unmap_pages(void *virt, void *p4, uint64_t count) {
     int ret = 0;
     uint64_t cur_virt = (uint64_t) virt;
 
+    //sprintf("-mapping %lu %lu %lu\n", virt_to_phys(virt, p4), virt, count);
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
         pt_ptr_t ptrs = vmm_get_table(&offs, p4);

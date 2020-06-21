@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include "vfs/vfs.h"
 
+#define SEEK_CUR 1
+#define SEEK_END 2
+#define SEEK_SET 3
+
 typedef struct fd_entry {
     vfs_node_t *node;
     uint64_t seek;

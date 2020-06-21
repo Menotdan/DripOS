@@ -137,7 +137,7 @@ int vesa_seek(int fd, uint64_t offset, int whence) {
     (void) offset;
 
     fd_entry_t *fd_data = fd_lookup(fd);
-    if (whence == 3) {
+    if (whence == SEEK_END) {
         fd_data->seek = vesa_display_info.framebuffer_size;
     }
     return fd_data->seek;

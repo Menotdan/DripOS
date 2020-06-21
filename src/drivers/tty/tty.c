@@ -24,7 +24,7 @@ int tty_dev_write(int fd_no, void *buf, uint64_t count) {
     flip_buffers();
 
     unlock(base_tty.tty_lock);
-    return 0;
+    return count;
 }
 
 int tty_dev_read(int fd_no, void *buf, uint64_t count) {

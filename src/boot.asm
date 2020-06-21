@@ -1,4 +1,5 @@
 ; Header
+[bits 64]
 %define KERNEL_VMA 0xFFFFFFFF80000000
 
 section .stivalehdr
@@ -99,5 +100,14 @@ loaded_cs:
     mov ax, 0x20
     mov gs, ax
     mov fs, ax
+
+    ; Enable SSE
+    mov rax, cr0
+    and ax, 0xFFFB
+    or ax, 0x2
+    mov cr0, rax
+    mov rax, cr4
+    or ax, 3 << 9
+    mov cr4, rax
 
     call kmain

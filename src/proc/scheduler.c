@@ -261,7 +261,7 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
             total_string_len += (strlen(argv[i]) + 1);
             string_offsets[i] = total_string_len;
 
-            char *new_string = (char *) (stack - string_offsets[i]);
+            char *new_string = (char *) (old_stack - string_offsets[i]);
             sprintf("String: %lx, string offset: %lu\n", new_string, string_offsets[i]);
             strcpy(argv[i], new_string);
         }
@@ -269,15 +269,19 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
             total_string_len += (strlen(thread->vars.enviroment[i]) + 1);
             string_offsets[i] = total_string_len;
 
-            char *new_string = (char *) (stack - string_offsets[i]);
+            char *new_string = (char *) (old_stack - string_offsets[i]);
             sprintf("String: %lx, string offset: %lu\n", new_string, string_offsets[i]);
             strcpy(thread->vars.enviroment[i], new_string);
         }
         stack -= total_string_len;
         stack = stack & ~(0b1111); // align the stack
 
-        push_thread_stack(&stack, 0); // Null auxv
+        //                       argc sz    auxv sz                  enviroment pointers     extra nulls
+        uint64_t size_of_items = argc * 8 + thread->vars.auxc * 16 + thread->vars.envc * 8 + 16;
         push_thread_stack(&stack, 0);
+        if (size_of_items & 15) {
+            push_thread_stack(&stack, 0); // realign the stack
+        }
         uint64_t auxv_count = thread->vars.auxc;
         if (auxv_count) {
             for (uint64_t i = auxv_count - 1;; i--) {
@@ -294,7 +298,7 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
         uint64_t enviroment_count = thread->vars.envc;
         if (enviroment_count) {
             for (uint64_t i = enviroment_count - 1;; i--) {
-                push_thread_stack(&stack, (uint64_t) string_offsets[i + argc]);
+                push_thread_stack(&stack, thread->regs.rsp - string_offsets[i + argc]);
                 if (i == 0) {
                     break;
                 }
@@ -304,7 +308,7 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
         push_thread_stack(&stack, 0);
         if (argc) {
             for (uint64_t i = argc - 1;; i--) {
-                push_thread_stack(&stack, (uint64_t) string_offsets[i]);
+                push_thread_stack(&stack, thread->regs.rsp - string_offsets[i]);
                 if (i == 0) {
                     break;
                 }
@@ -319,6 +323,8 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
         thread->regs.rsi = thread->regs.rsp - argv_offset;
         thread->regs.rdx = thread->regs.rsp - auxv_offset;
         thread->regs.rsp -= (old_stack - stack);
+
+        assert(!(stack & 15));
     }
 done:
     /* Add the TID to it's parent's threads list */
@@ -510,6 +516,8 @@ void schedule(int_reg_t *r) {
 
         running_task->regs.cr3 = vmm_get_pml4t();
 
+        asm volatile("fxsave %0;"::"m"(running_task->sse_region)); // save sse
+
         running_task->tsc_stopped = read_tsc();
         running_task->tsc_total += running_task->tsc_stopped - running_task->tsc_started;
         
@@ -599,6 +607,8 @@ picked:
     r->rip = running_task->regs.rip;
     r->rsp = running_task->regs.rsp;
 
+    asm volatile("fxrstor %0;"::"m"(running_task->sse_region)); // restore sse
+
     r->cs = running_task->regs.cs;
     r->ss = running_task->regs.ss;
 
@@ -679,6 +689,7 @@ void *psuedo_mmap(void *base, uint64_t len, syscall_reg_t *r) {
     if (!process) { r->rdx = ESRCH; interrupt_safe_unlock(sched_lock); return (void *) 0; } // bruh
 
     void *phys = pmm_alloc(len * 0x1000);
+    memset(GET_HIGHER_HALF(void *, phys), 0, len * 0x1000);
 
     if (base) {
         uint64_t mapped = 0;
@@ -687,6 +698,7 @@ void *psuedo_mmap(void *base, uint64_t len, syscall_reg_t *r) {
             int err = vmm_map_pages(phys, (void *) ((uint64_t) base + i * 0x1000), 
                 (void *) process->cr3, 1, 
                 VMM_WRITE | VMM_USER | VMM_PRESENT);
+            phys = (void *) ((uint64_t) phys + 0x1000);
             
             if (err) {
                 mapped = i;
@@ -701,6 +713,7 @@ void *psuedo_mmap(void *base, uint64_t len, syscall_reg_t *r) {
                 vmm_unmap_pages((void *) ((uint64_t) base + i * 0x1000), 
                     (void *) process->cr3, 1);
             }
+            phys = (void *) ((uint64_t) phys - (0x1000 * mapped));
             r->rdx = ENOMEM;
             pmm_unalloc(phys, len * 0x1000);
 
@@ -721,6 +734,8 @@ void *psuedo_mmap(void *base, uint64_t len, syscall_reg_t *r) {
                 (void *) process->cr3, 1, 
                 VMM_WRITE | VMM_USER | VMM_PRESENT);
             
+            phys = (void *) ((uint64_t) phys + 0x1000);
+            
             if (err) {
                 mapped = i;
                 map_err = 1;
@@ -735,6 +750,7 @@ void *psuedo_mmap(void *base, uint64_t len, syscall_reg_t *r) {
                     (void *) process->cr3, 1);
             }
             r->rdx = ENOMEM;
+            phys = (void *) ((uint64_t) phys - (0x1000 * mapped));
             pmm_unalloc(phys, len * 0x1000);
 
             unlock(process->brk_lock);

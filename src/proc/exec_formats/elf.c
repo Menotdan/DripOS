@@ -16,7 +16,7 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
         return (void *) 0;
     }
     char elf_magic[4];
-    fd_seek(fd, 0, 0);
+    fd_seek(fd, 0, SEEK_SET);
     fd_read(fd, elf_magic, 4);
 
     if (strncmp("\x7f""ELF", elf_magic, 4)) {
@@ -26,7 +26,7 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
     }
 
     elf_ehdr_t *ehdr = kmalloc(sizeof(elf_ehdr_t));
-    fd_seek(fd, 0, 0);
+    fd_seek(fd, 0, SEEK_SET);
     fd_read(fd, ehdr, sizeof(elf_ehdr_t));
     if (ehdr->iden_bytes[4] != 2) {
         sprintf("32-bit ELF! (iden_bytes[4] == %u) Not loading.\n", ehdr->iden_bytes[4]);
@@ -36,13 +36,13 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
     /* Read the phdrs and shdrs */
     elf_phdr_t *phdrs = kmalloc(sizeof(elf_phdr_t) * ehdr->e_phnum);
     elf_shdr_t *shdrs = kmalloc(sizeof(elf_shdr_t) * ehdr->e_shnum);
-    fd_seek(fd, ehdr->e_shoff, 0);
+    fd_seek(fd, ehdr->e_shoff, SEEK_SET);
     for (uint64_t i = 0; i < ehdr->e_shnum; i++) {
         fd_read(fd, (void *) ((uint64_t) shdrs + (i * sizeof(elf_shdr_t))), sizeof(elf_shdr_t));
         sprintf("Loaded an shdr.\n");
     }
 
-    fd_seek(fd, ehdr->e_phoff, 0);
+    fd_seek(fd, ehdr->e_phoff, SEEK_SET);
     for (uint64_t i = 0; i < ehdr->e_phnum; i++) {
         fd_read(fd, (void *) ((uint64_t) phdrs + (i * sizeof(elf_phdr_t))), sizeof(elf_phdr_t));
         sprintf("Loaded a phdr.\n");
@@ -55,7 +55,7 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
         sprintf("[ELF] Error! The shstr size is 0!\n");
     }
     void *shstr_data = kmalloc(shdrs[shstr_index].sh_size);
-    fd_seek(fd, shdrs[shstr_index].sh_offset, 0);
+    fd_seek(fd, shdrs[shstr_index].sh_offset, SEEK_SET);
     fd_read(fd, shstr_data, shdrs[shstr_index].sh_size);
 
     sprintf("Sections:\n");
@@ -89,7 +89,7 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
             region_virt = (void *) ((uint64_t) region_virt + ((phdrs[i].p_vaddr + base) & 0xfff));
             memset(region_virt, 0, phdrs[i].p_memsz);
 
-            fd_seek(fd, phdrs[i].p_offset, 0);
+            fd_seek(fd, phdrs[i].p_offset, SEEK_SET);
             fd_read(fd, region_virt, phdrs[i].p_filesz);
             sprintf("Loaded from %lx to %lx\n", (uint64_t) virt, (uint64_t) virt + phdrs[i].p_filesz);
 
@@ -97,7 +97,7 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
         } else if (phdrs[i].p_type == PT_INTERP) {
             sprintf("Program wants a dynamic linker loaded\n");
             char *ld_path = kcalloc(phdrs[i].p_filesz + 1);
-            fd_seek(fd, phdrs[i].p_offset, 0);
+            fd_seek(fd, phdrs[i].p_offset, SEEK_SET);
             fd_read(fd, ld_path, phdrs[i].p_filesz);
             sprintf("Dynamic linker path: %s\n", ld_path);
             sprintf("Loading the dynamic linker...\n");

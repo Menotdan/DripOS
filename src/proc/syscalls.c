@@ -54,7 +54,7 @@ void init_syscalls() {
 
 void syscall_handler(syscall_reg_t *r) {
     if (r->rax < (uint64_t) HANDLER_COUNT) {
-        sprintf("Handling syscall: %lu\n", r->rax);
+        //sprintf("Handling syscall: %lu\n", r->rax);
         syscall_handlers[r->rax](r);
     }
 }
@@ -68,6 +68,7 @@ void syscall_read(syscall_reg_t *r) {
     if (ret >= 0) {
         r->rax = ret;
     } else {
+        r->rax = -1;
         r->rdx = -ret;
     }
 }
@@ -77,6 +78,7 @@ void syscall_write(syscall_reg_t *r) {
     if (ret >= 0) {
         r->rax = ret;
     } else {
+        r->rax = -1;
         r->rdx = -ret;
     }
 }
@@ -86,8 +88,10 @@ void syscall_open(syscall_reg_t *r) {
     if (ret >= 0) {
         r->rax = ret;
     } else {
+        r->rax = -1;
         r->rdx = -ret;
     }
+    //sprintf("ret: %d\n", ret);
 }
 
 void syscall_close(syscall_reg_t *r) {
@@ -95,21 +99,26 @@ void syscall_close(syscall_reg_t *r) {
     if (ret >= 0) {
         r->rax = ret;
     } else {
+        r->rax = -1;
         r->rdx = -ret;
     }
 }
 
 void syscall_seek(syscall_reg_t *r) {
+    //sprintf("seek: %lu, whence: %d\n", r->rsi, (int) r->rdx);
     int ret = fd_seek((int) r->rdi, (uint64_t) r->rsi, (int) r->rdx);
     if (ret >= 0) {
         r->rax = ret;
     } else {
+        r->rax = -1;
         r->rdx = -ret;
     }
 }
 
 void syscall_mmap(syscall_reg_t *r) {
+    //sprintf("Base: %lx, Size: %lx.\n", r->rdi, r->rsi);
     r->rax = (uint64_t) psuedo_mmap((void *) r->rdi, r->rsi, r);
+    //sprintf("Returning %lx\n", r->rax);
 }
 
 void syscall_munmap(syscall_reg_t *r) {
@@ -143,6 +152,7 @@ void syscall_print_num(syscall_reg_t *r) {
 
 void syscall_set_fs(syscall_reg_t *r) {
     set_fs_base_syscall(r->rdi);
+    r->rax = 0;
 }
 
 void syscall_getpid(syscall_reg_t *r) {
