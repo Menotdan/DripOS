@@ -169,8 +169,8 @@ thread_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) 
     new_task->vars.envc = 0;
     new_task->vars.argc = 0;
     new_task->vars.auxc = 0;
-    new_task->vars.enviroment = kcalloc(sizeof(char *) * 1);
-    new_task->vars.auxv = kcalloc(sizeof(auxv_t) * 1);
+    new_task->vars.enviroment = NULL;
+    new_task->vars.auxv = NULL;
     new_task->vars.argv = NULL;
 
     return new_task;
@@ -195,6 +195,12 @@ void add_env(main_thread_vars_t *vars, char *string) {
     vars->enviroment = krealloc(vars->enviroment, (vars->envc + 2) * sizeof(char *));
     vars->enviroment[vars->envc + 1] = string;
     vars->envc++;
+}
+
+void push_thread_stack(uint64_t *stack_addr, uint64_t value) {
+    *stack_addr -= 8;
+    uint64_t *stack = (void *) *stack_addr;
+    *stack = value;
 }
 
 /* Add a new thread to the dynarray and as a child of a process */
@@ -249,7 +255,7 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
         /* Add argc, argv, and auxv */
 
         // Actual data
-        uint64_t *string_offsets = kcalloc(sizeof(uint64_t) * argc);
+        uint64_t *string_offsets = kcalloc(sizeof(uint64_t) * argc + sizeof(uint64_t) * thread->vars.envc);
         uint64_t total_string_len = 0;
         for (int i = 0; i < argc; i++) {
             total_string_len += (strlen(argv[i]) + 1);
@@ -259,59 +265,60 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
             sprintf("String: %lx, string offset: %lu\n", new_string, string_offsets[i]);
             strcpy(argv[i], new_string);
         }
+        for (int i = argc; i < argc + thread->vars.envc; i++) {
+            total_string_len += (strlen(thread->vars.enviroment[i]) + 1);
+            string_offsets[i] = total_string_len;
+
+            char *new_string = (char *) (stack - string_offsets[i]);
+            sprintf("String: %lx, string offset: %lu\n", new_string, string_offsets[i]);
+            strcpy(thread->vars.enviroment[i], new_string);
+        }
         stack -= total_string_len;
         stack = stack & ~(0b1111); // align the stack
 
-        uint64_t auxv_count = thread->vars.auxc + 1;
-        auxv_t *input_auxv = thread->vars.auxv;
-        auxv_t *auxv = (auxv_t *) stack - (auxv_count * 16);
-        for (uint64_t i = 0; i < auxv_count; i++) { // Include the null auxv
-            auxv[i].a_un.a_val = input_auxv[i].a_un.a_val;
-            auxv[i].a_type = input_auxv[i].a_type;
+        push_thread_stack(&stack, 0); // Null auxv
+        push_thread_stack(&stack, 0);
+        uint64_t auxv_count = thread->vars.auxc;
+        if (auxv_count) {
+            for (uint64_t i = auxv_count - 1;; i--) {
+                push_thread_stack(&stack, (uint64_t) thread->vars.auxv[i].a_un.a_ptr);
+                push_thread_stack(&stack, (uint64_t) thread->vars.auxv[i].a_type);
+                if (i == 0) {
+                    break;
+                }
+            }
         }
-        stack -= (auxv_count * 16);
-        uint64_t auxv_offset = old_stack - stack; // rdx = Top of stack - auxv_offset
+        uint64_t auxv_offset = old_stack - stack;
 
-        *(uint64_t *) (stack - 8) = 0;
-        stack -= 8;
-
-        uint64_t enviroment_count = thread->vars.envc + 1;
-        stack -= enviroment_count * 8;
-        char **enviroment = (char **) stack;
-        for (uint64_t i = 0; i < enviroment_count; i++) {
-            if (thread->vars.enviroment[i]) {
-                enviroment[i] = kcalloc(strlen(thread->vars.enviroment[i]));
-                strcpy(thread->vars.enviroment[i], enviroment[i]);
-            } else {
-                enviroment[i] = 0;
+        push_thread_stack(&stack, 0);
+        uint64_t enviroment_count = thread->vars.envc;
+        if (enviroment_count) {
+            for (uint64_t i = enviroment_count - 1;; i--) {
+                push_thread_stack(&stack, (uint64_t) string_offsets[i + argc]);
+                if (i == 0) {
+                    break;
+                }
             }
         }
 
-        stack -= 8;
-        *(uint64_t *) (stack) = 0;
-
-        stack -= argc * 8;
-        for (int i = 0; i < argc; i++) {
-            *(uint64_t *) (stack + (i * 8)) = thread->regs.rsp - string_offsets[i]; // Point to the strings
+        push_thread_stack(&stack, 0);
+        if (argc) {
+            for (uint64_t i = argc - 1;; i--) {
+                push_thread_stack(&stack, (uint64_t) string_offsets[i]);
+                if (i == 0) {
+                    break;
+                }
+            }
         }
-        uint64_t argv_offset = old_stack - stack; // rsi = Top of stack - argv_offset
+        uint64_t argv_offset = old_stack - stack;
+
+        push_thread_stack(&stack, argc);
+
 
         thread->regs.rdi = (uint64_t) argc;
         thread->regs.rsi = thread->regs.rsp - argv_offset;
         thread->regs.rdx = thread->regs.rsp - auxv_offset;
         thread->regs.rsp -= (old_stack - stack);
-
-        if (thread->vars.auxv) {
-            sprintf("Created a thread with the following auxv\n");
-            for (uint64_t i = 0; i < auxv_count; i++) {
-                sprintf("auxv type %lu, value %lx\n", auxv[i].a_type, auxv[i].a_un.a_ptr);
-            }
-            sprintf("auxv addr = %lx\n", thread->regs.rdx);
-        }
-        // if (thread->vars.argv)
-        //     kfree(thread->vars.argv);
-        // if (thread->vars.enviroment)
-        //     kfree(thread->vars.enviroment);
     }
 done:
     /* Add the TID to it's parent's threads list */

@@ -170,7 +170,7 @@ void syscall_exit(syscall_reg_t *r) {
 void syscall_sprint(syscall_reg_t *r) {
     char *string = check_and_copy_string((void *) r->rdi);
     sprint(string);
-    sprint("\n");
+    sprint("\e[0m\n");
     kfree(string);
 }
 
