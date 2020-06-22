@@ -203,6 +203,56 @@ void push_thread_stack(uint64_t *stack_addr, uint64_t value) {
     *stack = value;
 }
 
+int64_t add_new_child_thread_no_stack_init(thread_t *thread, int64_t pid) {
+    interrupt_safe_lock(sched_lock);
+
+    int64_t index = -1;
+
+    /* Find the parent process */
+    process_t *new_parent = (void *) 0;
+    if ((uint64_t) pid < process_list_size) {
+        new_parent = processes[pid];
+    }
+    if (!new_parent) { sprintf("[Scheduler] Couldn't find parent\n"); return -1; }
+
+    /* Store the new task and save its TID */
+
+    int64_t new_tid = -1;
+    for (uint64_t i = 0; i < threads_list_size; i++) {
+        if (!threads[i]) {
+            new_tid = i;
+            break;
+        }
+    }
+    if (new_tid == -1) {
+        threads = krealloc(threads, (threads_list_size + 10) * sizeof(thread_t *));
+        new_tid = threads_list_size;
+        threads_list_size += 10;
+    }
+    threads[new_tid] = thread;
+
+    thread->tid = new_tid;
+    thread->regs.cr3 = new_parent->cr3; // Inherit parent's cr3
+    thread->parent_pid = pid;
+
+    /* Add the TID to it's parent's threads list */
+    for (uint64_t i = 0; i < new_parent->threads_size; i++) {
+        if (!new_parent->threads[i]) {
+            index = i;
+            break;
+        }
+    }
+    if (new_tid == -1) {
+        threads = krealloc(new_parent->threads, (new_parent->threads_size + 10) * sizeof(int64_t));
+        index = new_parent->threads_size;
+        new_parent->threads_size += 10;
+    }
+    new_parent->threads[index] = thread->tid;
+
+    interrupt_safe_unlock(sched_lock);
+    return new_tid;
+}
+
 /* Add a new thread to the dynarray and as a child of a process */
 int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
     interrupt_safe_lock(sched_lock);
@@ -257,21 +307,26 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
         // Actual data
         uint64_t *string_offsets = kcalloc(sizeof(uint64_t) * argc + sizeof(uint64_t) * thread->vars.envc);
         uint64_t total_string_len = 0;
+        sprintf("argc: %d\n", argc);
         for (int i = 0; i < argc; i++) {
+            sprintf("i = %d with argv[i] = %lx\n", i, argv[i]);
+
             total_string_len += (strlen(argv[i]) + 1);
             string_offsets[i] = total_string_len;
 
             char *new_string = (char *) (old_stack - string_offsets[i]);
-            sprintf("String: %lx, string offset: %lu\n", new_string, string_offsets[i]);
+            sprintf("String Data: %s, String: %lx, string offset: %lu\n", argv[i], new_string, string_offsets[i]);
             strcpy(argv[i], new_string);
         }
+        asm("hlt");
         for (int i = argc; i < argc + thread->vars.envc; i++) {
-            total_string_len += (strlen(thread->vars.enviroment[i]) + 1);
+            sprintf("i = %d with envp[i] = %lx\n", i, thread->vars.enviroment[i - argc]);
+            total_string_len += (strlen(thread->vars.enviroment[i - argc]) + 1);
             string_offsets[i] = total_string_len;
 
             char *new_string = (char *) (old_stack - string_offsets[i]);
-            sprintf("String: %lx, string offset: %lu\n", new_string, string_offsets[i]);
-            strcpy(thread->vars.enviroment[i], new_string);
+            sprintf("String Data: %s, String: %lx, string offset: %lu\n", thread->vars.enviroment[i - argc], new_string, string_offsets[i]);
+            strcpy(thread->vars.enviroment[i - argc], new_string);
         }
         stack -= total_string_len;
         stack = stack & ~(0b1111); // align the stack
@@ -796,6 +851,7 @@ int munmap(char *addr, uint64_t len) {
 }
 
 int fork(syscall_reg_t *r) {
+    sprintf("got fork call with r = %lx\n", r);
     interrupt_safe_lock(sched_lock);
     process_t *process = processes[get_cpu_locals()->current_thread->parent_pid]; // Old process
     void *new_cr3 = vmm_fork((void *) process->cr3); // Fork address space
@@ -858,10 +914,11 @@ int fork(syscall_reg_t *r) {
     thread->regs.rsp = get_cpu_locals()->thread_user_stack;
     thread->regs.rip = r->rcx;
     thread->regs.rflags = r->r11;
+    memcpy((uint8_t *) old_thread->sse_region, (uint8_t *) thread->sse_region, 512);
 
     interrupt_safe_unlock(sched_lock);
 
-    add_new_child_thread(thread, new_pid); // Add the thread
+    add_new_child_thread_no_stack_init(thread, new_pid); // Add the thread
 
     /* Bye bye */
     return new_pid;
@@ -879,11 +936,11 @@ void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r) {
             r->rdx = EFAULT;
             return;
         }
-        argc++;
         if (!argv[i]) {
             found_null_argv = 1;
             break;
         }
+        argc++;
     }
 
     for (uint64_t i = 0; i < 128; i++) {
@@ -891,11 +948,11 @@ void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r) {
             r->rdx = EFAULT;
             return;
         }
-        envc++;
         if (!envp[i]) {
             found_null_envp = 1;
             break;
         }
+        envc++;
     }
 
     if (!found_null_argv || !found_null_envp) {
@@ -907,17 +964,17 @@ void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r) {
     char **kernel_envp = kcalloc(sizeof(char *) * envc);
     char *kernel_exec_path = (void *) 0;
 
-    for (uint64_t i = 0; i < argc - 1; i++) {
+    for (uint64_t i = 0; i < argc; i++) {
         char *string = argv[i];
         void *kernel_string = check_and_copy_string(string);
         if (!kernel_string) {
             goto fault_return;
         }
 
-        kernel_envp[i] = kernel_string;
+        kernel_argv[i] = kernel_string;
     }
 
-    for (uint64_t i = 0; i < envc - 1; i++) {
+    for (uint64_t i = 0; i < envc; i++) {
         char *string = envp[i];
         void *kernel_string = check_and_copy_string(string);
         if (!kernel_string) {
@@ -935,6 +992,8 @@ void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r) {
     data.argv = kernel_argv;
     data.envp = kernel_envp;
     data.executable_path = kernel_exec_path;
+    data.envc = envc;
+    data.argc = argc;
     data.pid = get_cpu_locals()->current_thread->parent_pid;
     data.tid = get_cpu_locals()->current_thread->tid;
     int ret = send_urm_request(&data, URM_EXECVE);
@@ -959,6 +1018,7 @@ fault_return:
     r->rdx = EFAULT;
     return;
 done:
+    sprintf("returning\n");
     for (uint64_t x = 0; x < argc; x++) {
         if (kernel_argv[x]) {
             kfree(kernel_argv[x]);

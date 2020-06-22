@@ -133,6 +133,7 @@ void force_unlocked_schedule();
 
 /* "API" */
 int64_t add_new_child_thread(thread_t *task, int64_t pid);
+int64_t add_new_child_thread_no_stack_init(thread_t *thread, int64_t pid);
 thread_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring);
 int64_t start_thread(thread_t *thread);
 int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_t ring);
@@ -163,7 +164,7 @@ void *psuedo_mmap(void *base, uint64_t len, syscall_reg_t *r);
 int munmap(char *addr, uint64_t len);
 
 /* Fork, exec, etc */
-int fork();
+int fork(syscall_reg_t *r);
 void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r);
 void set_fs_base_syscall(uint64_t base);
 

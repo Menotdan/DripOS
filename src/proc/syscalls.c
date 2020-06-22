@@ -54,7 +54,7 @@ void init_syscalls() {
 
 void syscall_handler(syscall_reg_t *r) {
     if (r->rax < (uint64_t) HANDLER_COUNT) {
-        //sprintf("Handling syscall: %lu\n", r->rax);
+        sprintf("Handling syscall: %lu\n", r->rax);
         syscall_handlers[r->rax](r);
     }
 }
@@ -137,8 +137,7 @@ void syscall_yield(syscall_reg_t *r) {
 }
 
 void syscall_fork(syscall_reg_t *r) {
-    (void) r;
-    fork();
+    r->rax = fork(r);
 }
 
 void syscall_execve(syscall_reg_t *r) {

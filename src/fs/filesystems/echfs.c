@@ -412,7 +412,7 @@ void echfs_test(char *device) {
         int hello_fd = fd_open("/test.c", 0);
         sprintf("[EchFS] FD: %d\n", hello_fd);
 
-        char *buf = kcalloc(100);
+        char *buf = kcalloc(200);
         fd_seek(hello_fd, 0, SEEK_SET);
         sprintf("Errno: %d\n", fd_read(hello_fd, buf, 0));
         sprintf("[EchFS] Read data: \n");

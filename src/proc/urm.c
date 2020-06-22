@@ -104,6 +104,10 @@ void urm_execve(urm_execve_data *data) {
         thread->vars.auxc = auxv_info.auxc;
         thread->vars.auxv = auxv_info.auxv;
     }
+    thread->vars.envc = data->envc;
+    thread->vars.argc = data->argc;
+    thread->vars.enviroment = data->envp;
+    thread->vars.argv = data->argv;
 
     interrupt_safe_unlock(sched_lock);
 

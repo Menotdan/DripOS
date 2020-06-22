@@ -64,7 +64,7 @@ void isr_handler(int_reg_t *r) {
 
                 // Userspace exception
                 sprintf("Got userspace exception %lu with error %lu\n", r->int_num, r->int_err);
-                sprintf("CR2: %lx RIP %lx\n", cr2, r->rip);
+                sprintf("CR2: %lx RIP %lx RBP %lx RSP %lx\n", cr2, r->rip, r->rbp, r->rsp);
                 if (get_cpu_locals()->current_thread->parent_pid) {
                     //sprintf("Killed process %ld\n", get_cpu_locals()->current_thread->parent_pid);
                     interrupt_safe_lock(sched_lock);

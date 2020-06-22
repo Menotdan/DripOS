@@ -21,6 +21,8 @@ typedef struct {
 typedef struct {
     char **argv;
     char **envp;
+    int envc;
+    int argc;
     char *executable_path;
     int64_t pid;
     int64_t tid;

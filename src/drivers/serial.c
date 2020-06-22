@@ -51,6 +51,9 @@ void serial_write_buf(uint8_t *buffer, uint64_t count) {
 // Print, but you can select a port
 void sprint_com_port(char *s, uint16_t com_port) {
     while (*s != '\0') {
+        if ((uint8_t) *s == 0xff) {
+            sprintf("error in string: %lx\n", s);
+        }
         write_serial(*s, com_port);
         s++;
     }

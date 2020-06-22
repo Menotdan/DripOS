@@ -89,7 +89,7 @@ void kernel_process(int argc, char **argv, auxv_t *auxv) {
     //kprintf("[DripOS] Loading init from disk.\n");
     //launch_binary("/echfs_mount/programs/fork_bomb3.bin"); // This is init :meme:
 
-    sprintf("Elf PID: %ld\n", load_elf("/bin/test"));
+    sprintf("Elf PID: %ld\n", load_elf("/bin/init"));
 
     sprintf("done kernel work\n");
 
