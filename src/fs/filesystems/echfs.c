@@ -188,53 +188,7 @@ void *echfs_read_file(echfs_filesystem_t *filesystem, echfs_dir_entry_t *file, u
             return (void *) data;
         }
     }
-}
-
-void *echfs_read_file_offset_blocks(echfs_filesystem_t *filesystem, echfs_dir_entry_t *file, uint64_t start_byte, uint64_t read_count) {
-    uint64_t current_block = file->starting_block;
-    uint64_t blocks_to_read = ((read_count) + filesystem->block_size - 1) / filesystem->block_size;
-    uint8_t *block_buf = kcalloc(blocks_to_read * filesystem->block_size);
-    uint8_t *cur_block_buf = block_buf;
-    uint64_t start_block = start_byte / filesystem->block_size;
     
-    for (uint64_t i = 0; i < start_block; i++) {
-        current_block = echfs_get_entry_for_block(filesystem, current_block);
-        if (current_block == ECHFS_END_OF_CHAIN) {
-            kfree(block_buf);
-            sprintf("error, end of chain\n");
-            return (void *) 0;
-        }
-    }
-
-    sprintf("blocks_to_read: %lu\n", blocks_to_read);
-    for (uint64_t i = 0; i < blocks_to_read; i++) {
-        uint8_t *block_dat = echfs_read_block(filesystem, current_block);
-        memcpy(block_dat, cur_block_buf, filesystem->block_size);
-        sprintf("eeee: %lx\n", cur_block_buf);
-        cur_block_buf += filesystem->block_size;
-
-        current_block = echfs_get_entry_for_block(filesystem, current_block);
-        if (current_block == ECHFS_END_OF_CHAIN && i < blocks_to_read - 1) {
-            kfree(block_buf);
-            sprintf("error, end of chain 2\n");
-            return (void *) 0;
-        }
-        kfree(block_dat);
-    }
-
-    return block_buf;
-}
-
-void *echfs_read_file_offset(echfs_filesystem_t *filesystem, echfs_dir_entry_t *file, uint64_t start_byte, uint64_t read_count) {
-    uint8_t *blocks = echfs_read_file_offset_blocks(filesystem, file, start_byte, read_count);
-    uint8_t *output = kcalloc(read_count);
-    sprintf("blocks1: %lx\n", blocks);
-    blocks += start_byte % filesystem->block_size;
-    sprintf("blocks2: %lx\n", blocks);
-    memcpy(blocks, output, read_count);
-    blocks -= start_byte % filesystem->block_size;
-    kfree(blocks);
-    return output;
 }
 
 uint64_t echfs_find_entry_name_parent(echfs_filesystem_t *filesystem, char *name, uint64_t parent_id) {
@@ -382,25 +336,23 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
             return -ENOENT;
         }
 
-        if (fd->seek + count >= entry->file_size_bytes) {
-            kfree(entry);
+        uint64_t read_count = 0;
+        uint8_t *local_buf = echfs_read_file(filesystem_info, entry, &read_count);
+
+        uint64_t count_to_read = count;
+
+        if (count_to_read == 0) count_to_read = read_count;
+
+        if (count_to_read + fd->seek > read_count) {
             kfree(path);
+            kfree(local_buf);
+            kfree(entry);
             return -EINVAL;
         }
 
-        uint64_t count_to_read = count;
-        uint8_t *local_buf;
-        if (count_to_read) {
-            local_buf = echfs_read_file_offset(filesystem_info, entry, fd->seek, count_to_read);
-        } else {
-            local_buf = echfs_read_file_offset(filesystem_info, entry, fd->seek, entry->file_size_bytes - 1 - fd->seek);
-        }
-        sprintf("done, local_buf: %lx\n", local_buf);
-
-        memcpy(local_buf, buf, count_to_read); // Copy the data
+        memcpy(local_buf + fd->seek, buf, count_to_read); // Copy the data
         kfree(local_buf);
         kfree(entry);
-        kfree(path);
         fd->seek += count_to_read;
         //sprintf("[EchFS] Read data successfully!\n");
         return count_to_read; // Done
