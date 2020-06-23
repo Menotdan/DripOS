@@ -27,28 +27,28 @@ int dummy_open(char *_1, int _2) {
 
 int dummy_close(int _) {
     (void) _;
-    return -ENOSYS;;
+    return -ENOSYS;
 }
 
 int dummy_read(int _1, void *_2, uint64_t _3) {
     (void) _1;
     (void) _2;
     (void) _3;
-    return -ENOSYS;;
+    return -ENOSYS;
 }
 
 int dummy_write(int _1, void *_2, uint64_t _3) {
     (void) _1;
     (void) _2;
     (void) _3;
-    return -ENOSYS;;
+    return -ENOSYS;
 }
 
-int dummy_seek(int _1, uint64_t _2, int _3) {
+uint64_t dummy_seek(int _1, uint64_t _2, int _3) {
     (void) _1;
     (void) _2;
     (void) _3;
-    return -ENOSYS;;
+    return -ENOSYS;
 }
 
 vfs_ops_t dummy_ops = {dummy_open, dummy_close, dummy_read, dummy_write, dummy_seek};
@@ -415,7 +415,7 @@ int vfs_close(int fd) {
     return node->ops.close(fd);
 }
 
-int vfs_seek(int fd, uint64_t offset, int whence) {
+uint64_t vfs_seek(int fd, uint64_t offset, int whence) {
     vfs_node_t *node = fd_lookup(fd)->node;
     return node->ops.seek(fd, offset, whence);
 }

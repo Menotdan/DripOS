@@ -42,7 +42,7 @@ int mbr_write(int fd_no, void *buf, uint64_t count) {
     return ret;
 }
 
-int mbr_seek(int fd_no, uint64_t offset, int whence) {
+uint64_t mbr_seek(int fd_no, uint64_t offset, int whence) {
     (void) fd_no;
     (void) offset;
     (void) whence;

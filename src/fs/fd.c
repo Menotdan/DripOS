@@ -110,7 +110,7 @@ int fd_write(int fd, void *buf, uint64_t count) {
     return ret;
 }
 
-int fd_seek(int fd, uint64_t offset, int whence) {
+uint64_t fd_seek(int fd, uint64_t offset, int whence) {
     int set_ignore = 0;
     if (get_cpu_locals()->current_thread->ring == 3 && !get_cpu_locals()->ignore_ring) {
         get_cpu_locals()->ignore_ring = 1;
@@ -135,9 +135,13 @@ int fd_seek(int fd, uint64_t offset, int whence) {
         return -EINVAL;
     }
 
-    int ret = vfs_seek(fd, offset, whence);
+    uint64_t ret = vfs_seek(fd, offset, whence);
     if (set_ignore)
             get_cpu_locals()->ignore_ring = 0;
+
+    if (!ret) {
+        return node->seek;
+    }
     return ret;
 }
 

@@ -106,7 +106,7 @@ void syscall_close(syscall_reg_t *r) {
 
 void syscall_seek(syscall_reg_t *r) {
     //sprintf("seek: %lu, whence: %d\n", r->rsi, (int) r->rdx);
-    int ret = fd_seek((int) r->rdi, (uint64_t) r->rsi, (int) r->rdx);
+    int64_t ret = fd_seek((int) r->rdi, (uint64_t) r->rsi, (int) r->rdx);
     if (ret >= 0) {
         r->rax = ret;
     } else {

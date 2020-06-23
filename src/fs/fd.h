@@ -25,7 +25,7 @@ int fd_open(char *name, int mode);
 int fd_close(int fd);
 int fd_read(int fd, void *buf, uint64_t count);
 int fd_write(int fd, void *buf, uint64_t count);
-int fd_seek(int fd, uint64_t offset, int whence);
+uint64_t fd_seek(int fd, uint64_t offset, int whence);
 
 int open_remote_fd(char *name, int mode, int pid);
 

@@ -306,7 +306,7 @@ int echfs_close(int fd_no) {
     return 0;
 }
 
-int echfs_seek(int fd_no, uint64_t offset, int whence) {
+uint64_t echfs_seek(int fd_no, uint64_t offset, int whence) {
     (void) fd_no;
     (void) offset;
     (void) whence;
@@ -385,11 +385,14 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
 
         uint64_t count_to_read = count;
         if (!count_to_read) {
+            sprintf("count_to_read is null\n");
             kfree(path);
             kfree(entry);
             return 0;
         }
-        if (count_to_read + fd->seek >= entry->file_size_bytes) {
+        if (count_to_read + fd->seek > entry->file_size_bytes) {
+            sprintf("count_to_read bad\n");
+            sprintf("count_to_read: %lu, fd->seek: %lu, entry->file_size_bytes: %lu\n", count_to_read, fd->seek, entry->file_size_bytes);
             kfree(path);
             kfree(entry);
             return -EINVAL;
@@ -402,6 +405,7 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
         kfree(path);
         fd->seek += count_to_read;
         //sprintf("[EchFS] Read data successfully!\n");
+        sprintf("fd->seek = %lu\n", fd->seek);
         return count_to_read; // Done
     } else {
         sprintf("[EchFS] Read died somehow\n");
@@ -456,12 +460,12 @@ void echfs_test(char *device) {
         register_unid(root_node->unid, filesystem);
         root_node->node_handle = echfs_node_gen;
 
-        int hello_fd = fd_open("/test.c", 0);
+        int hello_fd = fd_open("/file_read_test", 0);
         sprintf("[EchFS] FD: %d\n", hello_fd);
 
-        char *buf = kcalloc(500);
-        fd_seek(hello_fd, 0, SEEK_SET);
-        sprintf("Errno: %d\n", fd_read(hello_fd, buf, 0));
+        char *buf = kcalloc(0x10000);
+        fd_seek(hello_fd, 3600, SEEK_SET);
+        sprintf("Errno: %d\n", fd_read(hello_fd, buf, 100));
         sprintf("[EchFS] Read data: \n");
         sprintf("%s\n", buf);
         fd_close(hello_fd);

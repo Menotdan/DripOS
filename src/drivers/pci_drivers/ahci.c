@@ -134,7 +134,7 @@ int ahci_close(int fd_no) {
     return 0;
 }
 
-int ahci_seek(int fd_no, uint64_t offset, int whence) {
+uint64_t ahci_seek(int fd_no, uint64_t offset, int whence) {
     (void) fd_no;
     (void) offset;
     (void) whence;

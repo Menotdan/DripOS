@@ -133,7 +133,7 @@ void fill_screen(color_t color) {
     unlock(vesa_lock);
 }
 
-int vesa_seek(int fd, uint64_t offset, int whence) {
+uint64_t vesa_seek(int fd, uint64_t offset, int whence) {
     (void) offset;
 
     fd_entry_t *fd_data = fd_lookup(fd);

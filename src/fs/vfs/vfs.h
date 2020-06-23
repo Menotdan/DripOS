@@ -11,7 +11,7 @@ typedef int (*vfs_open_t)(char *, int);
 typedef int (*vfs_close_t)(int);;
 typedef int (*vfs_read_t)(int, void *, uint64_t);
 typedef int (*vfs_write_t)(int, void *, uint64_t);
-typedef int (*vfs_seek_t)(int, uint64_t, int);
+typedef uint64_t (*vfs_seek_t)(int, uint64_t, int);
 
 typedef struct {
     vfs_open_t open;
@@ -51,7 +51,7 @@ vfs_node_t *vfs_open(char *name, int mode, uint64_t *err);
 int vfs_close(int fd);
 int vfs_read(int fd, void *buf, uint64_t count);
 int vfs_write(int fd, void *buf, uint64_t count);
-int vfs_seek(int fd, uint64_t offset, int whence);
+uint64_t vfs_seek(int fd, uint64_t offset, int whence);
 
 extern vfs_node_t *root_node;
 extern vfs_ops_t dummy_ops;
