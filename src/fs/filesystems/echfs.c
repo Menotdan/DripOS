@@ -307,9 +307,29 @@ int echfs_close(int fd_no) {
 }
 
 uint64_t echfs_seek(int fd_no, uint64_t offset, int whence) {
-    (void) fd_no;
     (void) offset;
-    (void) whence;
+
+    if (whence == SEEK_END) {
+        fd_entry_t *fd = fd_lookup(fd_no);
+        echfs_filesystem_t *filesystem_info = get_unid_fs_data(fd->node->fs_root->unid);
+        if (!filesystem_info) {
+            return -ENOENT; // idk lol
+        }
+
+        char *path = get_full_path(fd->node);
+        path += strlen(filesystem_info->mountpoint_path);
+
+        uint8_t err;
+        echfs_dir_entry_t *entry = echfs_path_resolve(filesystem_info, path, &err);
+        if (!entry) {
+            kfree(path);
+            return -ENOENT; // somehow
+        }
+
+        fd->seek = entry->file_size_bytes - 1; // ok done lol
+        kfree(entry);
+        kfree(path);
+    }
 
     return 0;
 }
