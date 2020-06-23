@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #define ROUND_UP(N, S) ((((N) + (S) - 1) / (S)) * (S))
+#define ROUND_DOWN(N, S) (((N) / (S)) * (S))
 
 int64_t abs(int64_t in);
 uint64_t random(uint64_t max);

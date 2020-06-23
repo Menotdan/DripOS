@@ -335,14 +335,18 @@ uint64_t echfs_seek(int fd_no, uint64_t offset, int whence) {
 }
 
 void *read_blocks_for_range(echfs_filesystem_t *filesystem, echfs_dir_entry_t *file, uint64_t read_start, uint64_t read_count) {
-    uint64_t blocks_to_read = (read_count + filesystem->block_size - 1) / filesystem->block_size;
-    uint64_t start_block = read_start / filesystem->block_size;
+    uint64_t start = ROUND_DOWN(read_start, filesystem->block_size);
+    uint64_t end = ROUND_UP(read_start + read_count, filesystem->block_size);
+
+    uint64_t blocks_to_read = (end - start) / filesystem->block_size;
+    uint64_t start_block = start / filesystem->block_size;
     uint64_t current_block = file->starting_block;
     uint8_t *block_buffer = kcalloc(blocks_to_read * filesystem->block_size);
     uint8_t *current_blockbuf_pointer = block_buffer;
 
     for (uint64_t i = 0; i < start_block; i++) {
         current_block = echfs_get_entry_for_block(filesystem, current_block);
+        //sprintf("skipping to block: %lx\n", current_block);
         if (current_block == ECHFS_END_OF_CHAIN) {
             kfree(block_buffer);
             sprintf("failed to get to the correct start block\n");
