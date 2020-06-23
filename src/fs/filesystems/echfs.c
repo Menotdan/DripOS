@@ -381,6 +381,7 @@ void *read_for_range(echfs_filesystem_t *filesystem, echfs_dir_entry_t *file, ui
     block_buffer += read_start % filesystem->block_size;
 
     memcpy(block_buffer, output_buffer, read_count);
+    block_buffer -= read_start % filesystem->block_size;
     kfree(block_buffer);
     return output_buffer;
 }
@@ -390,6 +391,7 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
     vfs_node_t *node = fd->node;
     assert(node);
     char *path = get_full_path(node);
+    char *original_path_addr = path;
     //sprintf("[EchFS] Full path: %s\n", path);
 
     echfs_filesystem_t *filesystem_info = get_unid_fs_data(node->fs_root->unid);
@@ -403,21 +405,21 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
         if (!entry) {
             sprintf("[EchFS] Read died somehow with entry getting\n");
 
-            kfree(path);
+            kfree(original_path_addr);
             return -ENOENT;
         }
 
         uint64_t count_to_read = count;
         if (!count_to_read) {
             sprintf("count_to_read is null\n");
-            kfree(path);
+            kfree(original_path_addr);
             kfree(entry);
             return 0;
         }
         if (count_to_read + fd->seek > entry->file_size_bytes) {
             sprintf("count_to_read bad\n");
             sprintf("count_to_read: %lu, fd->seek: %lu, entry->file_size_bytes: %lu\n", count_to_read, fd->seek, entry->file_size_bytes);
-            kfree(path);
+            kfree(original_path_addr);
             kfree(entry);
             return -EINVAL;
         }
@@ -426,10 +428,9 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
         memcpy(local_buf, buf, count_to_read); // Copy the data
         kfree(local_buf);
         kfree(entry);
-        kfree(path);
+        kfree(original_path_addr);
         fd->seek += count_to_read;
         //sprintf("[EchFS] Read data successfully!\n");
-        sprintf("fd->seek = %lu\n", fd->seek);
         return count_to_read; // Done
     } else {
         sprintf("[EchFS] Read died somehow\n");

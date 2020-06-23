@@ -17,6 +17,7 @@ void *kmalloc(uint64_t size) {
     /* Unmap top for high bounds reads/writes */
     vmm_unmap((void *) last_page, 1);
     *(uint64_t *) size_data = size + 0x2000;
+    *(uint64_t *) (size_data + 8) = MALLOC_SIGNATURE;
 
     /* Unmap size data for lower bounds reads/writes */
     //sprintf("+mem %lu %lu %lx\n", size_data, *(uint64_t *) size_data, __builtin_return_address(0));
@@ -31,11 +32,16 @@ void kfree(void *addr) {
     /* Map size */
     vmm_map(GET_LOWER_HALF(void *, (uint64_t) addr - 0x1000), (void *) ((uint64_t) addr - 0x1000), 1, VMM_PRESENT | VMM_WRITE);
     uint64_t *size_data = (uint64_t *) ((uint64_t) addr - 0x1000);
+    uint64_t *signature = (uint64_t *) ((uint64_t) addr - 0x0ff8);
     uint64_t page_count = ((*size_data - 0x1000) + 0x1000 - 1) / 0x1000;
     uint64_t last_page = (uint64_t) addr + (page_count * 0x1000) - 1;
 
     /* Map last page */
     vmm_map(GET_LOWER_HALF(void *, last_page), (void *) last_page, 1, VMM_PRESENT | VMM_WRITE);
+    if (*signature != MALLOC_SIGNATURE) {
+        sprintf("signature check failed in kfree()! addr: %lx, caller: %lx\n", addr, __builtin_return_address(0));
+    }
+
     void *phys = virt_to_phys((void *) size_data, (pt_t *) vmm_get_pml4t());
     if ((uint64_t) phys != 0xFFFFFFFFFFFFFFFF) {
         pmm_unalloc(phys, *size_data);

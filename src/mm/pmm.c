@@ -166,6 +166,14 @@ void pmm_unalloc(void *addr, uint64_t size) {
     uint64_t page = ((uint64_t) addr & ~(0xfff)) / 0x1000;
     uint64_t pages = (size + 0x1000 - 1) / 0x1000;
 
+    if (page + pages > bitmap_max_page) {
+        sprintf("REEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\n");
+        sprintf("trying to free bad memory: %lx. Size: %lx\n", addr, size);
+        while (1) {
+            asm volatile("hlt");
+        }
+    }
+
     for (uint64_t i = 0; i < pages; i++) {
         pmm_clear_bit(page + i);
     }
