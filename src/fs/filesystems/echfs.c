@@ -314,6 +314,53 @@ int echfs_seek(int fd_no, uint64_t offset, int whence) {
     return 0;
 }
 
+void *read_blocks_for_range(echfs_filesystem_t *filesystem, echfs_dir_entry_t *file, uint64_t read_start, uint64_t read_count) {
+    uint64_t blocks_to_read = (read_count + filesystem->block_size - 1) / filesystem->block_size;
+    uint64_t start_block = read_start / filesystem->block_size;
+    uint64_t current_block = file->starting_block;
+    uint8_t *block_buffer = kcalloc(blocks_to_read * filesystem->block_size);
+    uint8_t *current_blockbuf_pointer = block_buffer;
+
+    for (uint64_t i = 0; i < start_block; i++) {
+        current_block = echfs_get_entry_for_block(filesystem, current_block);
+        if (current_block == ECHFS_END_OF_CHAIN) {
+            kfree(block_buffer);
+            sprintf("failed to get to the correct start block\n");
+            return (void *) 0;
+        }
+    }
+
+    for (uint64_t i = 0; i < blocks_to_read; i++) {
+        void *block = echfs_read_block(filesystem, current_block);
+        memcpy(block, current_blockbuf_pointer, filesystem->block_size);
+        current_blockbuf_pointer += filesystem->block_size;
+        kfree(block);
+
+        if (i == blocks_to_read - 1) {
+            break;
+        }
+
+        current_block = echfs_get_entry_for_block(filesystem, current_block);
+        if (current_block == ECHFS_END_OF_CHAIN) {
+            kfree(block_buffer);
+            sprintf("failed to get to the next block\n");
+            return (void *) 0;
+        }
+    }
+
+    return block_buffer;
+}
+
+void *read_for_range(echfs_filesystem_t *filesystem, echfs_dir_entry_t *file, uint64_t read_start, uint64_t read_count) {
+    uint8_t *block_buffer = read_blocks_for_range(filesystem, file, read_start, read_count);
+    uint8_t *output_buffer = kcalloc(read_count);
+    block_buffer += read_start % filesystem->block_size;
+
+    memcpy(block_buffer, output_buffer, read_count);
+    kfree(block_buffer);
+    return output_buffer;
+}
+
 int echfs_read(int fd_no, void *buf, uint64_t count) {
     fd_entry_t *fd = fd_lookup(fd_no);
     vfs_node_t *node = fd->node;
@@ -336,23 +383,23 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
             return -ENOENT;
         }
 
-        uint64_t read_count = 0;
-        uint8_t *local_buf = echfs_read_file(filesystem_info, entry, &read_count);
-
         uint64_t count_to_read = count;
-
-        if (count_to_read == 0) count_to_read = read_count;
-
-        if (count_to_read + fd->seek > read_count) {
+        if (!count_to_read) {
             kfree(path);
-            kfree(local_buf);
+            kfree(entry);
+            return 0;
+        }
+        if (count_to_read + fd->seek >= entry->file_size_bytes) {
+            kfree(path);
             kfree(entry);
             return -EINVAL;
         }
+        uint8_t *local_buf = read_for_range(filesystem_info, entry, fd->seek, count_to_read);
 
-        memcpy(local_buf + fd->seek, buf, count_to_read); // Copy the data
+        memcpy(local_buf, buf, count_to_read); // Copy the data
         kfree(local_buf);
         kfree(entry);
+        kfree(path);
         fd->seek += count_to_read;
         //sprintf("[EchFS] Read data successfully!\n");
         return count_to_read; // Done
@@ -412,7 +459,7 @@ void echfs_test(char *device) {
         int hello_fd = fd_open("/test.c", 0);
         sprintf("[EchFS] FD: %d\n", hello_fd);
 
-        char *buf = kcalloc(200);
+        char *buf = kcalloc(500);
         fd_seek(hello_fd, 0, SEEK_SET);
         sprintf("Errno: %d\n", fd_read(hello_fd, buf, 0));
         sprintf("[EchFS] Read data: \n");
