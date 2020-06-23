@@ -26,7 +26,7 @@ You can run this in qemu (x86_64 variant) with the recommended command `sudo qem
 ## NOTE: I am not responsible for any damage to any system you choose to run this on, but this should be mostly safe
 To run this on real hardware, take a USB drive and write `DripOS.img` to the drive. (NOT as a file, using some image burning tool like `dd` on linux) Then you can plug it into a computer and boot from it.
 
-[a screenshot of dripos][dripos_screenshot1.png]
+![a screenshot of dripos](dripos_screenshot1.png)
 
 [discord_image]:https://img.shields.io/badge/discord-DripOS-738bd7.svg?style=square
 [discord_link]:https://discord.gg/E9ZXZWn
