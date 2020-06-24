@@ -3,6 +3,7 @@
 #include "mm/vmm.h"
 #include "mm/pmm.h"
 #include "drivers/serial.h"
+#include "drivers/tty/tty.h"
 #include "klibc/string.h"
 #include "klibc/stdlib.h"
 #include "klibc/auxv.h"
@@ -148,7 +149,9 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
         auxv_out->auxv = auxv;
         auxv_out->auxc = auxc;
     } else {
-        kfree(auxv);
+        if (auxv) {
+            kfree(auxv);
+        }
     }
 
     fd_close(fd);

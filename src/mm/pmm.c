@@ -4,6 +4,7 @@
 #include "klibc/string.h"
 #include "klibc/lock.h"
 #include "drivers/serial.h"
+#include "drivers/tty/tty.h"
 
 uint8_t *bitmap;
 uint64_t bitmap_max_page;
@@ -167,8 +168,8 @@ void pmm_unalloc(void *addr, uint64_t size) {
     uint64_t pages = (size + 0x1000 - 1) / 0x1000;
 
     if (page + pages > bitmap_max_page) {
-        sprintf("REEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\n");
-        sprintf("trying to free bad memory: %lx. Size: %lx\n", addr, size);
+        kprintf("REEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\n");
+        kprintf("trying to free bad memory: %lx. Size: %lx\n", addr, size);
         while (1) {
             asm volatile("hlt");
         }

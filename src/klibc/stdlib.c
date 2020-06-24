@@ -39,7 +39,10 @@ void kfree(void *addr) {
     /* Map last page */
     vmm_map(GET_LOWER_HALF(void *, last_page), (void *) last_page, 1, VMM_PRESENT | VMM_WRITE);
     if (*signature != MALLOC_SIGNATURE) {
-        sprintf("signature check failed in kfree()! addr: %lx, caller: %lx\n", addr, __builtin_return_address(0));
+        kprintf("signature check failed in kfree()! addr: %lx, caller: %lx\n", addr, __builtin_return_address(0));
+        while (1) {
+            asm volatile("hlt");
+        }
     }
 
     void *phys = virt_to_phys((void *) size_data, (pt_t *) vmm_get_pml4t());

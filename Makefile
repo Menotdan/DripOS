@@ -16,8 +16,13 @@ MEM = 2G # Memory for qemu
 CORES = 1
 O_LEVEL = 2 # Optimization level
 
+BOOT_IMAGE_MB=10
+BOOT_IMAGE_OUTPUT=/dev/null # safety
+
 IMG_MB=100
 DRIPOS_SYSROOT_ON_HOST=/var/dripos-sysroot
+IMG_OUTPUT=dripdisk.img
+
 
 # Options for GCC
 CFLAGS = -g -fno-pic               \
@@ -35,7 +40,7 @@ CFLAGS = -g -fno-pic               \
 # First rule is run by default
 DripOS.img: kernel.elf
 	# Create blank image
-	dd if=/dev/zero of=DripOS.img bs=1M count=7
+	dd if=/dev/zero of=DripOS.img bs=1M count=$(BOOT_IMAGE_MB)
 
 	# Create partition tables
 	parted -s DripOS.img mklabel msdos
@@ -49,16 +54,22 @@ DripOS.img: kernel.elf
 	# Install qloader2
 	cd qloader2 && ./qloader2-install qloader2.bin ../DripOS.img
 
+export_dripos_img: DripOS.img
+	sudo dd if=DripOS.img of=$(BOOT_IMAGE_OUTPUT) bs=1M count=$(BOOT_IMAGE_MB)
+
 disk_image:
-	- rm dripdisk.img
-	dd if=/dev/zero of=dripdisk.img bs=1M count=$(IMG_MB)
-	echfs-utils dripdisk.img quick-format 512
+	echo "Are you sure you want to write to $(IMG_OUTPUT)?"
+	read test
+	dd if=/dev/zero of=temp-image bs=1M count=$(IMG_MB)
+	echfs-utils temp-image quick-format 512
 	- rm -rf mountpoint
 	mkdir mountpoint
-	echfs-fuse dripdisk.img mountpoint
+	echfs-fuse temp-image mountpoint
 	cp -R $(DRIPOS_SYSROOT_ON_HOST)/* mountpoint
 	fusermount -u mountpoint
 	- rm -rf mountpoint
+	sudo dd if=temp-image of=$(IMG_OUTPUT) bs=1M count=$(IMG_MB)
+	rm -rf temp-image
 
 kernel.elf: ${NASM_SOURCES:.real=.bin} ${OBJ}
 	${CC} -Wl,-z,max-page-size=0x1000,--gc-sections -nostdlib -Werror -Wall -Wextra -Wpedantic -Wunused-function -o $@ -T linker.ld ${OBJ}
@@ -90,7 +101,7 @@ update_qloader2:
 # To make an object, always compile from its .c
 
 %.o: %.c
-	${CC} ${CFLAGS} -D DEBUG -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -fno-omit-frame-pointer -ffunction-sections -fdata-sections -MD -c $< -o $@ -ffreestanding
+	${CC} ${CFLAGS} -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -fno-omit-frame-pointer -ffunction-sections -fdata-sections -MD -c $< -o $@ -ffreestanding
 
 %.bin: %.real
 	nasm -f bin -o $@ $<
