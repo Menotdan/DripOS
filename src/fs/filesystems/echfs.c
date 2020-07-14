@@ -7,6 +7,7 @@
 #include "klibc/math.h"
 #include "klibc/hashmap.h"
 #include "klibc/strhashmap.h"
+#include "klibc/open_flags.h"
 #include "fs/filesystems/filesystems.h"
 
 #include "mm/pmm.h"
@@ -144,6 +145,21 @@ void echfs_write_dir_entry(echfs_filesystem_t *filesystem, uint64_t entry, echfs
     fd_close(device_fd);
 }
 
+uint64_t get_free_directory_entry(echfs_filesystem_t *filesystem) {
+    for (uint64_t i = 0; i < (filesystem->main_dir_blocks * filesystem->block_size) / sizeof(echfs_dir_entry_t); i++) {
+        echfs_dir_entry_t *dir_entry = echfs_read_dir_entry(filesystem, i);
+
+        uint64_t id = dir_entry->parent_id;
+        kfree(dir_entry);
+
+        if (id == 0 || id == ECHFS_DELETED_ENTRY) {
+            return i;
+        }
+    }
+    
+    return 0;
+}
+
 /* Get the entry in the allocation table for a block */
 uint64_t echfs_get_entry_for_block(echfs_filesystem_t *filesystem, uint64_t block) {
     uint64_t alloc_table_block = ((block * 8) / filesystem->block_size) + 16;
@@ -155,7 +171,7 @@ uint64_t echfs_get_entry_for_block(echfs_filesystem_t *filesystem, uint64_t bloc
     return entry;
 }
 
-/* Get the entry in the allocation table for a block */
+/* Set the entry in the allocation table for a block */
 void echfs_set_entry_for_block(echfs_filesystem_t *filesystem, uint64_t block, uint64_t data) {
     uint64_t alloc_table_block = ((block * 8) / filesystem->block_size) + 16;
 
@@ -164,6 +180,16 @@ void echfs_set_entry_for_block(echfs_filesystem_t *filesystem, uint64_t block, u
     echfs_write_block(filesystem, alloc_table_block, alloc_table_data);
 
     kfree(alloc_table_data);
+}
+
+uint64_t find_free_block(echfs_filesystem_t *filesystem) {
+    for (uint64_t i = 0; i < filesystem->blocks; i++) {
+        if (!echfs_get_entry_for_block(filesystem, i)) {
+            return i;
+        }
+    }
+
+    return 0;
 }
 
 /* Read a file */
@@ -199,9 +225,12 @@ uint64_t echfs_find_entry_name_parent(echfs_filesystem_t *filesystem, char *name
         if (entry->parent_id == parent_id && strcmp(name, entry->name) == 0) {
             kfree(entry);
             return entry_n - 1;
+        } else {
+            sprintf("entry %lu failed with its id being %lu and the target being %lu, and with the its name being %s and the target name being %s\n", entry_n - 1, entry->parent_id, parent_id, entry->name, name);
         }
 
         if (entry->parent_id == 0) {
+            sprintf("failed on entry index %lu\n", entry_n - 1);
             kfree(entry);
             return ECHFS_SEARCH_FAIL; // ERR
         }
@@ -223,6 +252,7 @@ echfs_dir_entry_t *echfs_path_resolve(echfs_filesystem_t *filesystem, char *file
 
     if (strcmp(filename, "/") == 0) {
         *err_code |= (1<<0); // Root entry
+        sprintf("found root entry ;-; $s\n", filename);
         return (echfs_dir_entry_t *) 0; // Fail
     }
 
@@ -244,6 +274,7 @@ next_elem:
         if (i == 201 && *(filename + 1) != '\0') {
             if (cur_entry) kfree(cur_entry);
             *err_code |= (1<<1); // Name too long
+            sprintf("name too long, name %s\n", current_name);
             return (echfs_dir_entry_t *) 0;
         }
     }
@@ -261,8 +292,9 @@ next_elem:
             if (!cur_entry) sprintf("[DripOS] ok then\n");
 
             // Found file in path, before last entry
-            if (cur_entry->entry_type != 1) {
-                //sprintf("%s\n", cur_entry->name);
+            if (cur_entry->entry_type != ECHFS_TYPE_DIR) {
+                sprintf("found file %s in area where a directory is supposed to be\n", cur_entry->name);
+
                 if (cur_entry) kfree(cur_entry);
                 *err_code |= (1<<2); // Search failed
                 return (echfs_dir_entry_t *) 0;
@@ -270,6 +302,7 @@ next_elem:
             current_parent = cur_entry->starting_block;
         } else {
             if (cur_entry) kfree(cur_entry);
+            sprintf("search for %s parent failed\n", current_name);
             *err_code |= (1<<2); // Search failed
             return (echfs_dir_entry_t *) 0;
         }
@@ -284,6 +317,7 @@ next_elem:
             return cur_entry;
         } else {
             if (cur_entry) kfree(cur_entry);
+            sprintf("search for %s parent failed\n", current_name);
             *err_code |= (1<<2); // Search failed
             return (echfs_dir_entry_t *) 0;
         }
@@ -387,6 +421,7 @@ void *read_for_range(echfs_filesystem_t *filesystem, echfs_dir_entry_t *file, ui
 }
 
 int echfs_read(int fd_no, void *buf, uint64_t count) {
+    sprintf("got echfs_read call...\n");
     fd_entry_t *fd = fd_lookup(fd_no);
     vfs_node_t *node = fd->node;
     assert(node);
@@ -444,12 +479,12 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
 void echfs_node_gen(vfs_node_t *fs_node, vfs_node_t *target_node, char *path) {
     echfs_filesystem_t *fs_data = get_unid_fs_data(fs_node->unid);
 
-    //sprintf("[EchFS] Searching for path %s\n", path);
+    sprintf("[EchFS] Searching for path %s\n", path);
 
     uint8_t err;
     echfs_dir_entry_t *entry = echfs_path_resolve(fs_data, path, &err);
     if (!entry) return;
-    //sprintf("[EchFS] Got entry for path %s\n", path);
+    sprintf("[EchFS] Got entry for path %s\n", path);
     kfree(entry);
 
     vfs_ops_t echfs_ops = {echfs_open, echfs_close, echfs_read, 0, echfs_seek};
@@ -459,6 +494,78 @@ void echfs_node_gen(vfs_node_t *fs_node, vfs_node_t *target_node, char *path) {
     target_node->ops = echfs_ops;
     set_child_fs_root(target_node, fs_node);
     target_node->fs_root = fs_node;
+}
+
+int echfs_create_handler(vfs_node_t *self, char *name, int mode) {
+    sprintf("trying to create a file with name %s and mode %d\n", name, mode);
+    echfs_filesystem_t *fs_data = get_unid_fs_data(self->unid);
+
+    uint8_t resolve_error1;
+    echfs_dir_entry_t *file = echfs_path_resolve(fs_data, name, &resolve_error1);
+    if (file) {
+        kfree(file);
+        return -EEXIST;
+    }
+
+    uint64_t parent_id = 0;
+
+    char *editable_path = kcalloc(strlen(name) + 1);
+    strcpy(name, editable_path);
+    sprintf("unedited path: %s\n", editable_path);
+    path_remove_elem(editable_path);
+
+    sprintf("checking for parent %s\n", editable_path);
+    if (strcmp(editable_path, "/")) {
+        echfs_dir_entry_t *parent_dir = echfs_path_resolve(fs_data, editable_path, &resolve_error1);
+        if (!parent_dir) {
+            sprintf("parent not found (%s)\n", editable_path);
+            kfree(editable_path);
+            return -ENOENT;
+        }
+        
+        if (parent_dir->entry_type != ECHFS_TYPE_DIR) {
+            sprintf("parent is not a directory (%s)\n", editable_path);
+            kfree(editable_path);
+            kfree(parent_dir);
+            return -ENOTDIR;
+        }
+
+        parent_id = parent_dir->starting_block;
+        kfree(parent_dir);
+    } else {
+        parent_id = ECHFS_ROOT_DIR_ID;
+    }
+
+    sprintf("got parent id %lu\n", parent_id);
+    echfs_dir_entry_t new_file;
+    strcpy(editable_path + strlen(editable_path) + 1, new_file.name);
+    new_file.parent_id = parent_id;
+    new_file.group_id = 0;
+    new_file.owner_id = 0;
+    new_file.file_size_bytes = fs_data->block_size;
+    new_file.permissions = 0;
+    new_file.unix_create_time = 0x123456789;
+    new_file.unix_modify_time = 0;
+    new_file.unix_access_time = 0;
+    new_file.starting_block = find_free_block(fs_data);
+    echfs_set_entry_for_block(fs_data, new_file.starting_block, ECHFS_END_OF_CHAIN);
+    new_file.entry_type = ECHFS_TYPE_FILE;
+
+    void *block_data = kcalloc(fs_data->block_size);
+    memset(block_data, 'a', fs_data->block_size);
+    echfs_write_block(fs_data, new_file.starting_block, block_data);
+    kfree(block_data);
+
+    uint64_t free_id = get_free_directory_entry(fs_data);
+    sprintf("entry: %lu\n", free_id);
+    echfs_write_dir_entry(fs_data, free_id, &new_file);
+
+    kfree(editable_path);
+    vfs_node_t *missing_start = create_missing_nodes_from_path(name, null_vfs_ops);
+    assert(missing_start);
+    echfs_node_gen(self, missing_start, name);
+
+    return 0;
 }
 
 void echfs_test(char *device) {
@@ -484,6 +591,8 @@ void echfs_test(char *device) {
 
         register_unid(root_node->unid, filesystem);
         root_node->node_handle = echfs_node_gen;
+        root_node->create_handle = echfs_create_handler;
+
 
         int hello_fd = fd_open("/file_read_test", 0);
         sprintf("[EchFS] FD: %d\n", hello_fd);
@@ -494,5 +603,15 @@ void echfs_test(char *device) {
         sprintf("[EchFS] Read data: \n");
         sprintf("%s\n", buf);
         fd_close(hello_fd);
+
+        int lol_fd = fd_open("/usr/lol.txt", O_CREAT);
+        sprintf("opening and creating /usr/lol.txt: %d\n", lol_fd);
+        if (lol_fd >= 0) {
+            char *lol_dat = kcalloc(4096);
+            sprintf("trying to read data\n");
+            fd_read(lol_fd, lol_dat, 512);
+            sprintf("done\n");
+            sprintf("lol.txt data: %s\n", lol_dat);
+        }
     }
 }

@@ -11,6 +11,9 @@
 #define ECHFS_SEARCH_FAIL 0xFFFFFFFFFFFFFFFF
 #define ECHFS_DELETED_ENTRY 0xFFFFFFFFFFFFFFFE
 
+#define ECHFS_TYPE_DIR 1
+#define ECHFS_TYPE_FILE 0
+
 typedef struct {
     uint8_t jmp[4]; // Jump instruction
     char sig[8]; // Echfs signature

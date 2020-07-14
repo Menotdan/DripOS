@@ -26,6 +26,7 @@ typedef struct vfs_node {
     vfs_ops_t ops;
 
     void (*node_handle)(struct vfs_node *, struct vfs_node *, char *);
+    int (*create_handle)(struct vfs_node *, char *, int);
 
     struct vfs_node *parent; // Parent
     struct vfs_node *fs_root; // Filesystem root
@@ -55,5 +56,6 @@ uint64_t vfs_seek(int fd, uint64_t offset, int whence);
 
 extern vfs_node_t *root_node;
 extern vfs_ops_t dummy_ops;
+extern vfs_ops_t null_vfs_ops;
 
 #endif

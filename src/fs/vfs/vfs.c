@@ -7,6 +7,7 @@
 #include "klibc/dynarray.h"
 #include "klibc/lock.h"
 #include "klibc/errno.h"
+#include "klibc/open_flags.h"
 #include "drivers/tty/tty.h"
 #include "drivers/serial.h"
 #include "mm/vmm.h"
@@ -328,8 +329,7 @@ char *get_full_path(vfs_node_t *node) {
     char *path = (char *) 0;
     uint64_t path_index = 0;
     if (cur_node == root_node) {
-        path = kcalloc(2);
-        path[0] = '/';
+        path = kcalloc(1);
     }
     while (cur_node != root_node) {
         assert(cur_node);
@@ -357,30 +357,50 @@ char *get_full_path(vfs_node_t *node) {
 }
 
 vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
+    /* The first missing node, where the generator should start generating */
     vfs_node_t *node = get_node_from_path(name);
     if (!node) {
-        sprintf("[VFS] Handling mountpoint for %s\n", name);
-        /* The first missing node, where the generator should start generating */
         vfs_node_t *missing_start = create_missing_nodes_from_path(name, null_vfs_ops);
         assert(missing_start);
 
+        sprintf("[VFS] Handling mountpoint for %s\n", name);
         node = get_node_from_path(name);
         while (node && !node->node_handle) {
             if (node == root_node) {
+                remove_children(missing_start);
+                remove_node(missing_start);
                 *err = ENOENT;
                 return (void *) 0; // Welp
             }
             node = node->parent;
         }
 
-        char *temp_name = name;
         assert(node);
+        char *temp_name = name;
         char *full_path = get_full_path(node);
         sprintf("[VFS] Mountpoint at %s\n", full_path);
         temp_name += strlen(full_path);
         kfree(full_path);
 
         sprintf("[VFS] Temp name: %s\n", temp_name);
+
+        if (mode & O_CREAT) {
+            /* The FS will create nodes for us */
+            remove_children(missing_start);
+            remove_node(missing_start);
+            int create_err = node->create_handle(node, temp_name, mode);
+
+            if (create_err != 0) {
+                *err = -create_err;
+                return NULL;
+            } else {
+                vfs_node_t *created_file = get_node_from_path(name);
+                if (!created_file) {
+                    assert(!"vfs go bruh");
+                }
+                return created_file;
+            }
+        }
 
         node->node_handle(node, missing_start, temp_name);
         node = get_node_from_path(name);
@@ -402,6 +422,7 @@ vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
 
 int vfs_read(int fd, void *buf, uint64_t count) {
     vfs_node_t *node = fd_lookup(fd)->node;
+    // sprintf("got node %lx with read at %lx and name %s\n", node, node->ops.read, node->name);
     return node->ops.read(fd, buf, count);
 }
 

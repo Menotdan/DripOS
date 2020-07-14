@@ -39,31 +39,8 @@
 #include "proc/event.h"
 #include "proc/urm.h"
 
-#define TODO_LIST_SIZE 7
-char *todo_list[TODO_LIST_SIZE] = {"Better syscall error handling", "Filesystem driver", "ELF Loading", "userspace libc", "minor: Sync TLB across CPUs", "minor: Add MMIO PCI", "minor: Retry AHCI commands"};
-
-
-// Testing sleep
-uint64_t delay = 5000;
-uint64_t y = 300;
-
-void video_thread() {
-    while (1) {
-        sleep_ms(1);
-        flip_buffers();
-    }
-}
-
-event_t event = 0;
-
-void event_system_test() {
-    sprintf("waiting for event\n");
-    await_event(&event);
-    sprintf("event fired\n");
-    while (1) { asm("pause"); }
-}
-
-extern void sanity_thread_start();
+#define TODO_LIST_SIZE 1
+char *todo_list[TODO_LIST_SIZE] = {"git gud"};
 
 void kernel_process(int argc, char **argv, auxv_t *auxv) {
     fd_write(0, "Hello from stdout!\n", 19);

@@ -1,20 +1,21 @@
-# Cleaned and fixed by StackOverflow user Michael Petch
 C_SOURCES = $(shell find src/ -type f -name '*.c')
 NASM_SOURCES = $(shell find src/ -type f -name '*.asm')
 REAL_SOURCES = $(shell find src/ -type f -name '*.real')
+
 # Nice syntax for file extension replacement
 OBJ = ${C_SOURCES:.c=.o} ${NASM_SOURCES:.asm=.o}
- 
-# Change this if your cross-compiler is somewhere else
 
+# Change this if your cross-compiler is somewhere else
 CC = x86_64-elf-gcc
 LINKER = x86_64-elf-ld
 
 incPath = ~/DripOS/src
 GDB = gdb
+
 MEM = 2G # Memory for qemu
-CORES = 1
-O_LEVEL = 2 # Optimization level
+CORES = 3 # Core count for qemu
+
+O_LEVEL = 2 # Optimization level for build
 
 BOOT_IMAGE_MB=10
 BOOT_IMAGE_OUTPUT=/dev/null # safety
@@ -101,7 +102,7 @@ update_qloader2:
 # To make an object, always compile from its .c
 
 %.o: %.c
-	${CC} ${CFLAGS} -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -fno-omit-frame-pointer -ffunction-sections -fdata-sections -MD -c $< -o $@ -ffreestanding
+	${CC} ${CFLAGS} -D DEBUG -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -fno-omit-frame-pointer -ffunction-sections -fdata-sections -MD -c $< -o $@ -ffreestanding
 
 %.bin: %.real
 	nasm -f bin -o $@ $<

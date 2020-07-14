@@ -39,6 +39,7 @@ void reverse(char str[]) {
         end_index = strlen(str) - 1;
     }
     char temp_buffer = 0;
+
     // Two indexes, one starts at 0, the other starts at strlen - 1
     // On each iteration, store the char at start_index in temp_buffer,
     // Store the char at end_index in the space at start_index,

@@ -15,6 +15,7 @@ tty_t base_tty;
 int tty_dev_write(int fd_no, void *buf, uint64_t count) {
     (void) fd_no;
     lock(base_tty.tty_lock);
+    sprintf("writing to tty\n");
 
     char *char_buf = buf;
     for (uint64_t i = 0; i < count; i++) {
@@ -23,6 +24,7 @@ int tty_dev_write(int fd_no, void *buf, uint64_t count) {
 
     flip_buffers();
 
+    sprintf("done writing to tty\n");
     unlock(base_tty.tty_lock);
     return count;
 }
