@@ -226,7 +226,7 @@ uint64_t echfs_find_entry_name_parent(echfs_filesystem_t *filesystem, char *name
             kfree(entry);
             return entry_n - 1;
         } else {
-            sprintf("entry %lu failed with its id being %lu and the target being %lu, and with the its name being %s and the target name being %s\n", entry_n - 1, entry->parent_id, parent_id, entry->name, name);
+            //sprintf("entry %lu failed with its id being %lu and the target being %lu, and with the its name being %s and the target name being %s\n", entry_n - 1, entry->parent_id, parent_id, entry->name, name);
         }
 
         if (entry->parent_id == 0) {
@@ -421,7 +421,6 @@ void *read_for_range(echfs_filesystem_t *filesystem, echfs_dir_entry_t *file, ui
 }
 
 int echfs_read(int fd_no, void *buf, uint64_t count) {
-    sprintf("got echfs_read call...\n");
     fd_entry_t *fd = fd_lookup(fd_no);
     vfs_node_t *node = fd->node;
     assert(node);
@@ -549,6 +548,7 @@ int echfs_create_handler(vfs_node_t *self, char *name, int mode) {
     new_file.unix_access_time = 0;
     new_file.starting_block = find_free_block(fs_data);
     echfs_set_entry_for_block(fs_data, new_file.starting_block, ECHFS_END_OF_CHAIN);
+    sprintf("Starting block: %lu\n", new_file.starting_block);
     new_file.entry_type = ECHFS_TYPE_FILE;
 
     void *block_data = kcalloc(fs_data->block_size);
@@ -559,6 +559,9 @@ int echfs_create_handler(vfs_node_t *self, char *name, int mode) {
     uint64_t free_id = get_free_directory_entry(fs_data);
     sprintf("entry: %lu\n", free_id);
     echfs_write_dir_entry(fs_data, free_id, &new_file);
+    echfs_dir_entry_t *entry_dat = echfs_read_dir_entry(fs_data, free_id);
+    sprintf("name: %s\n", entry_dat->name);
+    sprintf("og name: %s\n", new_file.name);
 
     kfree(editable_path);
     vfs_node_t *missing_start = create_missing_nodes_from_path(name, null_vfs_ops);

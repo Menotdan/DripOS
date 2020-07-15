@@ -642,7 +642,7 @@ int ahci_write_sata_bytes(ahci_port_data_t *port, void *buf, uint64_t count, uin
         return err; 
     }
 
-    memcpy(buf + sector_start_offset, GET_HIGHER_HALF(uint8_t *, data_buf_temp + sector_start_offset), count);
+    memcpy(buf, GET_HIGHER_HALF(uint8_t *, data_buf_temp + sector_start_offset), count);
 
     err = ahci_io_sata_sectors(port, data_buf_temp, sector_count, sector_start, 1);
     if (err) { 
