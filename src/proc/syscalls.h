@@ -20,6 +20,8 @@ void syscall_nanosleep(syscall_reg_t *r); // 35
 void syscall_sprint(syscall_reg_t *r);    // 50
 void syscall_fork(syscall_reg_t *r);      // 57
 void syscall_execve(syscall_reg_t *r);    // 59
+void syscall_ipc_read(syscall_reg_t *r);  // 60
+void syscall_ipc_write(syscall_reg_t *r); // 61
 void syscall_set_fs(syscall_reg_t *r);    // 300 lol
 
 /* Meme syscalls (very temporary) */

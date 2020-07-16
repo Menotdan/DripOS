@@ -1,8 +1,10 @@
 #include "syscalls.h"
+#include "mm/vmm.h"
 #include "fs/fd.h"
 #include "proc/sleep_queue.h"
 #include "proc/scheduler.h"
 #include "proc/safe_userspace.h"
+#include "proc/ipc.h"
 #include "sys/smp.h"
 #include "klibc/errno.h"
 #include "klibc/stdlib.h"
@@ -46,6 +48,8 @@ void init_syscalls() {
     register_syscall(50, syscall_sprint);
     register_syscall(57, syscall_fork);
     register_syscall(59, syscall_execve);
+    register_syscall(60, syscall_ipc_read);
+    register_syscall(61, syscall_ipc_write);
     register_syscall(300, syscall_set_fs);
 
     /* Memes */
@@ -181,6 +185,38 @@ void syscall_sprint(syscall_reg_t *r) {
     sprint(string);
     sprint("\e[0m\n");
     kfree(string);
+}
+
+void syscall_ipc_read(syscall_reg_t *r) {
+    int size = (int) r->rbx;
+    if (!range_mapped(r->rdx, size)) {
+        union ipc_err err;
+        err.parts.err = IPC_BUFFER_INVALID;
+        r->rdx = err.real_err;
+        return;
+    }
+
+    void *buffer = kcalloc(size);
+    void *userspace_addr = (void *) r->rdx;
+    r->rdx = read_ipc_server((int) r->rdi, (int) r->rsi, buffer, size).real_err; // Set err
+    memcpy(buffer, userspace_addr, size); // Copy the buffer in case anything was read
+    kfree(buffer);
+}
+
+void syscall_ipc_write(syscall_reg_t *r) {
+    int size = (int) r->rbx;
+    if (!range_mapped(r->rdx, size)) {
+        union ipc_err err;
+        err.parts.err = IPC_BUFFER_INVALID;
+        r->rdx = err.real_err;
+        return;
+    }
+
+    void *buffer = kcalloc(size);
+    void *userspace_addr = (void *) r->rdx;
+    memcpy(userspace_addr, buffer, size); // Copy the buffer for writing
+    r->rdx = write_ipc_server((int) r->rdi, (int) r->rsi, buffer, size).real_err; // Set err
+    kfree(buffer);
 }
 
 void syscall_empty(syscall_reg_t *r) {
