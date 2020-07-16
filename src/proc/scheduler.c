@@ -413,6 +413,7 @@ process_t *create_process(char *name, void *new_cr3) {
     new_process->fd_table = kcalloc(10 * sizeof(fd_entry_t));
     new_process->fd_table_size = 10;
     new_process->current_brk = 0x10000000000;
+    new_process->ipc_handles = init_hashmap();
     strcpy(name, new_process->name);
 
     return new_process;

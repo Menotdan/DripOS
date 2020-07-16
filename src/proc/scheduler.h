@@ -4,6 +4,7 @@
 #include "sleep_queue.h"
 #include "sys/int/isr.h"
 #include "klibc/rangemap.h"
+#include "klibc/hashmap.h"
 #include "klibc/lock.h"
 #include "fs/fd.h"
 
@@ -102,6 +103,9 @@ typedef struct {
 
     uint64_t current_brk;
     lock_t brk_lock;
+
+    lock_t ipc_create_handle_lock;
+    hashmap_t *ipc_handles;
 
     int64_t uid; // User id of the user runnning this process
     int64_t gid; // Group id of the user running this process

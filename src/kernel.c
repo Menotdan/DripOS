@@ -39,6 +39,7 @@
 #include "proc/exec_formats/elf.h"
 #include "proc/event.h"
 #include "proc/urm.h"
+#include "proc/ipc.h"
 
 #define TODO_LIST_SIZE 1
 char *todo_list[TODO_LIST_SIZE] = {"git gud"};
@@ -102,7 +103,7 @@ void kernel_task() {
     kprintf("Setting up PID 0...\n");
     new_kernel_process("Kernel process", kernel_process);
     kprintf("Starting URM...\n");
-    thread_t *urm = create_thread("URM", urm_thread, (uint64_t) kcalloc(TASK_STACK_SIZE) - TASK_STACK_SIZE, 0);
+    thread_t *urm = create_thread("URM", urm_thread, (uint64_t) kcalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE, 0);
     add_new_child_thread(urm, 0);
 
     kill_task(get_cpu_locals()->current_thread->tid); // suicide
