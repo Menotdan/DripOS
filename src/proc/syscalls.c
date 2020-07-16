@@ -189,7 +189,7 @@ void syscall_sprint(syscall_reg_t *r) {
 
 void syscall_ipc_read(syscall_reg_t *r) {
     int size = (int) r->rbx;
-    if (!range_mapped(r->rdx, size)) {
+    if (!range_mapped((void *) r->rdx, size)) {
         union ipc_err err;
         err.parts.err = IPC_BUFFER_INVALID;
         r->rdx = err.real_err;
@@ -205,7 +205,7 @@ void syscall_ipc_read(syscall_reg_t *r) {
 
 void syscall_ipc_write(syscall_reg_t *r) {
     int size = (int) r->rbx;
-    if (!range_mapped(r->rdx, size)) {
+    if (!range_mapped((void *) r->rdx, size)) {
         union ipc_err err;
         err.parts.err = IPC_BUFFER_INVALID;
         r->rdx = err.real_err;
