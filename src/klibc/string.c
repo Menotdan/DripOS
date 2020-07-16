@@ -173,6 +173,15 @@ void path_remove_elem(char *path) {
     }
 }
 
+char *ptr_to_end_path_elem(char *path) {
+    // Temp pointer
+    char *tmp = path + strlen(path) - 1;
+
+    // Find the first "/"
+    while (*tmp != '/') tmp--;
+    return tmp + 1;
+}
+
 char *get_path_elem(char *path, char *output) {
     // Temp pointer
     char *tmp = path + strlen(path) - 1;

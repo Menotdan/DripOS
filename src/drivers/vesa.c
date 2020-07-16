@@ -191,6 +191,6 @@ int vesa_read(int fd, void *buf, uint64_t count) {
 }
 
 void setup_vesa_device() {
-    vfs_ops_t ops = {devfs_open, devfs_close, vesa_read, vesa_write, vesa_seek};
+    vfs_ops_t ops = {devfs_open, 0, devfs_close, vesa_read, vesa_write, vesa_seek};
     register_device("vesafb", ops, (void *) 0);
 }

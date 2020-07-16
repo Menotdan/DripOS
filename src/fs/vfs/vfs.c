@@ -17,13 +17,19 @@ vfs_node_t *root_node;
 lock_t vfs_lock = {0, 0, 0, 0};
 uint64_t current_unid = 0; // Current unique node ID
 
-vfs_ops_t null_vfs_ops = {0, 0, 0, 0, 0};
+vfs_ops_t null_vfs_ops = {0, 0, 0, 0, 0, 0};
 
 /* Dummy ops */
 int dummy_open(char *_1, int _2) {
     (void) _1;
     (void) _2;
-    return -ENOSYS;;
+    return -ENOSYS;
+}
+
+int dummy_post_open(int _1, int _2) {
+    (void) _1;
+    (void) _2;
+    return -ENOSYS;
 }
 
 int dummy_close(int _) {
@@ -52,7 +58,7 @@ uint64_t dummy_seek(int _1, uint64_t _2, int _3) {
     return -ENOSYS;
 }
 
-vfs_ops_t dummy_ops = {dummy_open, dummy_close, dummy_read, dummy_write, dummy_seek};
+vfs_ops_t dummy_ops = {dummy_open, dummy_post_open, dummy_close, dummy_read, dummy_write, dummy_seek};
 
 static uint8_t search_node_name(vfs_node_t *node, char *name) {
     lock(vfs_lock);

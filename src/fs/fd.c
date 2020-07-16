@@ -33,6 +33,12 @@ int fd_open(char *filepath, int mode) {
     }
 
     int new_fd = fd_new(node, mode, get_cpu_locals()->current_thread->parent_pid);
+
+    if (node->ops.post_open) {
+        /* Post open logic for filesystems */
+        node->ops.post_open(new_fd, mode);
+    }
+
     if (set_ignore)
         get_cpu_locals()->ignore_ring = 0;
     return new_fd;

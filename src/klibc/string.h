@@ -19,6 +19,7 @@ uint64_t strlen(char str[]);
 /* Path string operations */
 void path_join(char *dst, char *src);
 char *get_path_elem(char *path, char *output);
+char *ptr_to_end_path_elem(char *path);
 void path_remove_elem(char *path);
 
 /* Integer functions */

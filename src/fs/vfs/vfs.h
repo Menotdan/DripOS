@@ -8,6 +8,7 @@ typedef struct vfs_node vfs_node_t;
 
 /* VFS op types */
 typedef int (*vfs_open_t)(char *, int);
+typedef int (*vfs_post_open_t)(int, int);
 typedef int (*vfs_close_t)(int);;
 typedef int (*vfs_read_t)(int, void *, uint64_t);
 typedef int (*vfs_write_t)(int, void *, uint64_t);
@@ -15,6 +16,7 @@ typedef uint64_t (*vfs_seek_t)(int, uint64_t, int);
 
 typedef struct {
     vfs_open_t open;
+    vfs_post_open_t post_open;
     vfs_close_t close;
     vfs_read_t read;
     vfs_write_t write;

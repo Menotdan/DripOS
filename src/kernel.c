@@ -67,7 +67,7 @@ void kernel_process(int argc, char **argv, auxv_t *auxv) {
     //launch_binary("/echfs_mount/programs/fork_bomb3.bin"); // This is init :meme:
 
     kprintf("Loading DripOS init!\n");
-    int64_t init_pid = load_elf("/bin/init");
+    int64_t init_pid = load_elf("/bin/file_write");
     sprintf("Elf PID: %ld\n", init_pid);
     
     if (init_pid == -1) {

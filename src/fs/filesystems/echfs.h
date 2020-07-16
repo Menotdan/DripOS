@@ -53,6 +53,9 @@ typedef struct {
 
     uint64_t starting_block; // Or directory id if it's a directory
     uint64_t file_size_bytes;
+
+    // added for usefulness, not actually in the entry
+    uint64_t entry_number;
 } __attribute__((packed)) echfs_dir_entry_t;
 
 int echfs_read_block0(char *device, echfs_filesystem_t *output);
