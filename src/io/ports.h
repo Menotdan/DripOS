@@ -12,4 +12,6 @@ void port_outb(uint16_t port, uint8_t data);
 void port_outw(uint16_t port, uint16_t data);
 void port_outd(uint16_t port, uint32_t data);
 
+void io_wait();
+
 #endif

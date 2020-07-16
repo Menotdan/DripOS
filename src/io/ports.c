@@ -29,3 +29,10 @@ void port_outw(uint16_t port, uint16_t data) {
 void port_outd(uint16_t port, uint32_t data) {
     asm("outl %%eax, %%dx" : : "a"(data), "d"(port));
 }
+
+void io_wait() {
+    port_inb(0x80);
+    port_inb(0x80);
+    port_inb(0x80);
+    port_inb(0x80);
+}

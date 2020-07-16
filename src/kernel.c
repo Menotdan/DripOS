@@ -18,6 +18,7 @@
 #include "drivers/tty/tty.h"
 #include "drivers/pci.h"
 #include "drivers/ps2.h"
+#include "drivers/rtc.h"
 
 #include "dripdbg/debug.h"
 

@@ -13,6 +13,7 @@
 #include "mm/pmm.h"
 
 #include "drivers/pit.h"
+#include "drivers/rtc.h"
 
 #include "drivers/serial.h"
 #include "proc/scheduler.h"
@@ -597,6 +598,7 @@ int echfs_write(int fd_no, void *buf, uint64_t count) {
             return -EIO;
         }
         entry->file_size_bytes = allocated_bytes_needed;
+        entry->unix_modify_time = get_time_since_epoch();
         echfs_write_dir_entry(filesystem_info, entry->entry_number, entry);
         kfree(original_path_addr);
         kfree(entry);
@@ -628,6 +630,9 @@ int echfs_post_open(int fd, int mode) {
             return -ENOENT;
         }
         
+        entry->unix_access_time = get_time_since_epoch();
+        echfs_write_dir_entry(filesystem_info, entry->entry_number, entry);
+
         if (mode & O_TRUNC) {
             sprintf("file cleared!\n");
             entry->file_size_bytes = 0;
@@ -714,9 +719,9 @@ int echfs_create_handler(vfs_node_t *self, char *name, int mode) {
     new_file.owner_id = 0;
     new_file.file_size_bytes = 0;
     new_file.permissions = 0;
-    new_file.unix_create_time = 0x123456789;
-    new_file.unix_modify_time = 0;
-    new_file.unix_access_time = 0;
+    new_file.unix_create_time = get_time_since_epoch();
+    new_file.unix_modify_time = get_time_since_epoch();
+    new_file.unix_access_time = get_time_since_epoch();
     new_file.starting_block = find_free_block(fs_data);
     echfs_set_entry_for_block(fs_data, new_file.starting_block, ECHFS_END_OF_CHAIN);
     new_file.entry_type = ECHFS_TYPE_FILE;
