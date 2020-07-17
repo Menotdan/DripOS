@@ -1,4 +1,6 @@
 #include "scheduler.h"
+#include "mxcsr.h"
+#include "x87_control.h"
 #include "safe_userspace.h"
 #include "klibc/stdlib.h"
 #include "klibc/string.h"
@@ -30,8 +32,8 @@ uint8_t scheduler_enabled = 0;
 lock_t scheduler_lock = {0, 0, 0, 0};
 interrupt_safe_lock_t sched_lock = {0, 0, 0, 0, -1};
 
-task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0};
-task_regs_t default_user_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x23,0x1B,0,0x202,0};
+task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0,0x1F80,0x33f};
+task_regs_t default_user_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x23,0x1B,0,0x202,0,0x1F80,0x33f};
 
 int scheduler_ran = 0;
 
@@ -61,13 +63,24 @@ void send_scheduler_ipis() {
 }
 
 void start_idle() {
-    get_cpu_locals()->idle_start_tsc = read_tsc();
+    if (!get_cpu_locals()->currently_idle) {
+        get_cpu_locals()->idle_start_tsc = read_tsc();
+        get_cpu_locals()->active_end_tsc = read_tsc();
+        get_cpu_locals()->active_tsc_count += get_cpu_locals()->active_end_tsc - get_cpu_locals()->active_start_tsc;
+        get_cpu_locals()->total_tsc = read_tsc();
+        get_cpu_locals()->currently_idle = 1;
+    }
 }
 
 void end_idle() {
-    cpu_locals_t *cpu_locals = get_cpu_locals();
-    cpu_locals->idle_end_tsc = read_tsc();
-    cpu_locals->idle_tsc_count += (cpu_locals->idle_end_tsc - cpu_locals->idle_start_tsc);
+    if (get_cpu_locals()->currently_idle) {
+        cpu_locals_t *cpu_locals = get_cpu_locals();
+        cpu_locals->idle_end_tsc = read_tsc();
+        cpu_locals->idle_tsc_count += (cpu_locals->idle_end_tsc - cpu_locals->idle_start_tsc);
+        get_cpu_locals()->active_start_tsc = read_tsc();
+        get_cpu_locals()->currently_idle = 0;
+    }
+    get_cpu_locals()->total_tsc = read_tsc();
 }
 
 void _idle() {
@@ -75,6 +88,8 @@ void _idle() {
         asm volatile("hlt");
     }
 }
+
+char default_sse_state[512] __attribute__((aligned(16)));
 
 /* Initialize the BSP for scheduling */
 void scheduler_init_bsp() {
@@ -85,6 +100,8 @@ void scheduler_init_bsp() {
     write_msr(0xC0000084, 0); // Mask nothing
     write_msr(0xC0000080, read_msr(0xC0000080) | 1); // Set the syscall enable bit
 
+    asm volatile("fxsave %0;"::"m"(default_sse_state));
+
     /* Setup the idle thread */
     uint64_t idle_rsp = (uint64_t) kcalloc(0x1000) + 0x1000;
     thread_t *new_idle = create_thread("Idle thread", _idle, idle_rsp, 0);
@@ -93,6 +110,9 @@ void scheduler_init_bsp() {
 
     get_cpu_locals()->idle_tid = idle_tid;
     sprintf("Idle task: %ld\n", get_cpu_locals()->idle_tid);
+    get_cpu_locals()->idle_start_tsc = read_tsc();
+    get_cpu_locals()->currently_idle = 1;
+    get_cpu_locals()->total_tsc = read_tsc();
 }
 
 /* Initilialize an AP for scheduling */
@@ -112,6 +132,9 @@ void scheduler_init_ap() {
 
     get_cpu_locals()->idle_tid = idle_tid;
     sprintf("Idle task: %ld\n", get_cpu_locals()->idle_tid);
+    get_cpu_locals()->idle_start_tsc = read_tsc();
+    get_cpu_locals()->currently_idle = 1;
+    get_cpu_locals()->total_tsc = read_tsc();
 }
 
 /* Create a new thread *and* add it to the dynarray */
@@ -164,6 +187,7 @@ thread_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) 
     new_task->sleep_node = kcalloc(sizeof(sleep_queue_t));
     new_task->state = READY;
     strcpy(name, new_task->name);
+    memcpy((uint8_t *) default_sse_state, (uint8_t *) new_task->sse_region, 512);
 
     /* Create null argv, enviroment, and auxv */
     new_task->vars.envc = 0;
@@ -523,7 +547,13 @@ void schedule_bsp(int_reg_t *r) {
         sched_lock.current_holder = __FUNCTION__;
         schedule(r);
     } else {
-        //sprintf("Scheduler was locked~! By %s.\n", sched_lock.current_holder);
+        if (get_cpu_locals()->currently_idle) {
+            get_cpu_locals()->idle_tsc_count += read_tsc() - get_cpu_locals()->idle_start_tsc;
+            get_cpu_locals()->idle_start_tsc = read_tsc();
+        }  else {
+            get_cpu_locals()->active_tsc_count += read_tsc() - get_cpu_locals()->active_start_tsc;
+            get_cpu_locals()->active_start_tsc = read_tsc();
+        }
     }
 }
 
@@ -532,18 +562,23 @@ void schedule_ap(int_reg_t *r) {
         sched_lock.current_holder = __FUNCTION__;
         schedule(r);
     } else {
-        //sprintf("Scheduler was locked~! By %s.\n", sched_lock.current_holder);
+        if (get_cpu_locals()->currently_idle) {
+            get_cpu_locals()->idle_tsc_count += read_tsc() - get_cpu_locals()->idle_start_tsc;
+            get_cpu_locals()->idle_start_tsc = read_tsc();
+        }  else {
+            get_cpu_locals()->active_tsc_count += read_tsc() - get_cpu_locals()->active_start_tsc;
+            get_cpu_locals()->active_start_tsc = read_tsc();
+        }
     }
     scheduler_ran = 1;
 }
 
 void schedule(int_reg_t *r) {
+    int used_to_be_idle = 0;
+    int used_to_be_active = 0;
+
     thread_t *running_task = get_cpu_locals()->current_thread;
     if (running_task) {
-        if (running_task->tid == get_cpu_locals()->idle_tid) {
-            end_idle(); // End idling timer for this CPU
-        }
-
         running_task->regs.rax = r->rax;
         running_task->regs.rbx = r->rbx;
         running_task->regs.rcx = r->rcx;
@@ -572,7 +607,12 @@ void schedule(int_reg_t *r) {
 
         running_task->regs.cr3 = vmm_get_pml4t();
 
+        running_task->ignore_ring = get_cpu_locals()->ignore_ring;
+
         asm volatile("fxsave %0;"::"m"(running_task->sse_region)); // save sse
+
+        running_task->regs.mxcsr = get_mxcsr();
+        running_task->regs.fcw = get_fcw();
 
         running_task->tsc_stopped = read_tsc();
         running_task->tsc_total += running_task->tsc_stopped - running_task->tsc_started;
@@ -600,6 +640,7 @@ repick_task:
         /* Idle */
         get_cpu_locals()->current_thread = threads[get_cpu_locals()->idle_tid];
         running_task = get_cpu_locals()->current_thread;
+        goto picked;
     } else {
         if (picked_first == -1) {
             picked_first = tid_run;
@@ -617,6 +658,7 @@ repick_task:
             if (*to_run->event) {
                 atomic_dec((uint32_t *) to_run->event);
                 to_run->state = READY;
+                goto picked;
             } else {
                 goto repick_task;
             }
@@ -624,8 +666,10 @@ repick_task:
             if (*to_run->event) {
                 atomic_dec((uint32_t *) to_run->event);
                 to_run->state = READY;
+                goto picked;
             } else if (to_run->event_wait_start - global_ticks >= to_run->event_timeout) {
                 to_run->state = READY;
+                goto picked;
             } else {
                 goto repick_task;
             }
@@ -639,6 +683,17 @@ picked:
         running_task->running = 1;
         running_task->state = RUNNING;
         assert(running_task->state == RUNNING);
+        if (get_cpu_locals()->currently_idle) {
+            get_cpu_locals()->idle_tsc_count += read_tsc() - get_cpu_locals()->idle_start_tsc;
+            used_to_be_idle = 1;
+        }
+        get_cpu_locals()->currently_idle = 0;
+    } else {
+        if (!get_cpu_locals()->currently_idle) {
+            get_cpu_locals()->active_tsc_count += read_tsc() - get_cpu_locals()->active_start_tsc;
+            used_to_be_active = 1;
+        }
+        get_cpu_locals()->currently_idle = 1;
     }
 
     running_task->cpu = (int) get_cpu_locals()->cpu_index;
@@ -663,7 +718,11 @@ picked:
     r->rip = running_task->regs.rip;
     r->rsp = running_task->regs.rsp;
 
+    get_cpu_locals()->ignore_ring = running_task->ignore_ring;
+
     asm volatile("fxrstor %0;"::"m"(running_task->sse_region)); // restore sse
+    set_mxcsr(running_task->regs.mxcsr);
+    set_fcw(running_task->regs.fcw);
 
     r->cs = running_task->regs.cs;
     r->ss = running_task->regs.ss;
@@ -677,11 +736,19 @@ picked:
         vmm_set_pml4t(running_task->regs.cr3);
     }
 
-    running_task->tsc_started = read_tsc();
-
-    if (tid_run == -1) {
-        start_idle(); // Start idling timer
+    if (get_cpu_locals()->currently_idle) {
+        if (!used_to_be_active) {
+            get_cpu_locals()->idle_tsc_count += read_tsc() - get_cpu_locals()->idle_start_tsc;
+        }
+        get_cpu_locals()->idle_start_tsc = read_tsc();
+    } else {
+        if (!used_to_be_idle) {
+            get_cpu_locals()->active_tsc_count += read_tsc() - get_cpu_locals()->active_start_tsc;
+        }
+        get_cpu_locals()->active_start_tsc = read_tsc();
     }
+
+    running_task->tsc_started = read_tsc();
 
     get_cpu_locals()->total_tsc = read_tsc();
 

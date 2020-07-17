@@ -2,6 +2,7 @@
 #include "idt.h"
 #include "proc/scheduler.h"
 #include "proc/urm.h"
+#include "proc/mxcsr.h"
 #include "drivers/tty/tty.h"
 #include "drivers/serial.h"
 #include "drivers/pit.h"
@@ -65,6 +66,11 @@ void isr_handler(int_reg_t *r) {
                 // Userspace exception
                 sprintf("Got userspace exception %lu with error %lu\n", r->int_num, r->int_err);
                 sprintf("CR2: %lx RIP %lx RBP %lx RSP %lx\n", cr2, r->rip, r->rbp, r->rsp);
+                if (r->int_num == 19) {
+                    uint32_t mxcsr_val = get_mxcsr();
+                    sprintf("mxcsr: %lx\n", mxcsr_val);
+                }
+
                 if (get_cpu_locals()->current_thread->parent_pid) {
                     //sprintf("Killed process %ld\n", get_cpu_locals()->current_thread->parent_pid);
                     interrupt_safe_lock(sched_lock);

@@ -31,6 +31,8 @@ typedef struct {
     uint64_t ss, cs, fs;
     uint64_t rflags;
     uint64_t cr3;
+    uint32_t mxcsr;
+    uint16_t fcw;
 } task_regs_t;
 
 typedef struct {
@@ -84,6 +86,8 @@ typedef struct {
     int *event;
     uint64_t event_timeout;
     uint64_t event_wait_start;
+
+    uint8_t ignore_ring; // for error checking
 
     char sse_region[512] __attribute__((aligned(16))); // SSE region (aligned)
 } thread_t;
@@ -171,6 +175,9 @@ int munmap(char *addr, uint64_t len);
 int fork(syscall_reg_t *r);
 void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r);
 void set_fs_base_syscall(uint64_t base);
+
+void start_idle();
+void end_idle();
 
 extern uint8_t scheduler_started;
 extern uint8_t scheduler_enabled;

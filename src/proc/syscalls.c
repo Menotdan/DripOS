@@ -6,6 +6,7 @@
 #include "proc/safe_userspace.h"
 #include "proc/ipc.h"
 #include "sys/smp.h"
+#include "sys/apic.h"
 #include "klibc/errno.h"
 #include "klibc/stdlib.h"
 
@@ -37,7 +38,6 @@ void init_syscalls() {
     register_syscall(2, syscall_open);
     register_syscall(3, syscall_close);
     register_syscall(5, syscall_getpid);
-    register_syscall(6, syscall_sleepms);
     register_syscall(8, syscall_seek);
     register_syscall(9, syscall_mmap);
     register_syscall(11, syscall_munmap);
@@ -50,6 +50,9 @@ void init_syscalls() {
     register_syscall(59, syscall_execve);
     register_syscall(60, syscall_ipc_read);
     register_syscall(61, syscall_ipc_write);
+    register_syscall(70, syscall_core_count);
+    register_syscall(71, syscall_get_core_performance);
+    register_syscall(72, syscall_ms_sleep);
     register_syscall(300, syscall_set_fs);
 
     /* Memes */
@@ -171,10 +174,6 @@ void syscall_getppid(syscall_reg_t *r) {
     r->rax = process->ppid;
 }
 
-void syscall_sleepms(syscall_reg_t *r) {
-    sleep_ms(r->rdi);
-}
-
 void syscall_exit(syscall_reg_t *r) {
     (void) r;
     kill_process(get_cpu_locals()->current_thread->parent_pid); // yeet
@@ -221,6 +220,42 @@ void syscall_ipc_write(syscall_reg_t *r) {
     memcpy(userspace_addr, buffer, size); // Copy the buffer for writing
     r->rdx = write_ipc_server((int) r->rdi, (int) r->rsi, buffer, size).real_err; // Set err
     kfree(buffer);
+}
+
+void syscall_core_count(syscall_reg_t *r) {
+    r->rdx = 0;
+    r->rax = cpu_vector.items_count;
+}
+
+typedef struct {
+    uint64_t time_active;
+    uint64_t time_idle;
+} __attribute__((packed)) cpu_performance_t;
+
+void syscall_get_core_performance(syscall_reg_t *r) {
+    if (!range_mapped((void *) r->rdi, sizeof(cpu_performance_t))) {
+        r->rdx = EFAULT;
+        return;
+    }
+
+    if ((uint8_t) r->rsi > cpu_vector.items_count - 1) {
+        r->rdx = EINVAL;
+        return;
+    }
+
+    r->rdx = 0;
+
+    cpu_performance_t performace;
+    cpu_locals_t *locals = hashmap_get_elem(cpu_locals_list, (uint8_t) r->rsi);
+
+    performace.time_active = locals->active_tsc_count;
+    performace.time_idle = locals->idle_tsc_count;
+
+    memcpy((uint8_t *) &performace, (uint8_t *) r->rdi, sizeof(cpu_performance_t));
+}
+
+void syscall_ms_sleep(syscall_reg_t *r) {
+    sleep_ms(r->rdi);
 }
 
 void syscall_empty(syscall_reg_t *r) {

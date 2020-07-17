@@ -22,6 +22,11 @@ typedef struct {
     uint64_t idle_tsc_count;
     uint64_t idle_start_tsc;
     uint64_t idle_end_tsc;
+    uint64_t currently_idle;
+
+    uint64_t active_tsc_count;
+    uint64_t active_start_tsc;
+    uint64_t active_end_tsc;
 
     uint64_t total_tsc;
 
@@ -30,6 +35,8 @@ typedef struct {
 
     uint8_t ignore_ring;
 } __attribute__((packed)) cpu_locals_t;
+
+hashmap_t *cpu_locals_list;
 
 void launch_cpus();
 void send_ipi(uint8_t ap, uint32_t ipi_number);

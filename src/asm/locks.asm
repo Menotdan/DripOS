@@ -66,3 +66,29 @@ spinlock_check_and_lock:
     lock bts dword [rdi], 0
     setc al
     ret
+
+global spinlock_with_timeout
+spinlock_with_timeout:
+    xor rax, rax ; counter
+spin_timeout:
+    inc rax
+
+    lock bts dword [rdi], 0
+
+    setc bl
+    cmp bl, 0
+    je got_lock
+
+    cmp rax, rsi
+    je timed_out
+
+    pause
+    jmp spin_timeout
+got_lock:
+    ; we got the lock
+    mov rax, 1
+    ret
+timed_out:
+    ; didn't get the lock
+    xor rax, rax
+    ret

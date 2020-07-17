@@ -27,7 +27,6 @@ void new_cpu_locals() {
     cpu_locals_t *new_locals = kcalloc(sizeof(cpu_locals_t));
     new_locals->meta_pointer = (uint64_t) new_locals;
     write_msr(0xC0000101, (uint64_t) new_locals);
-    hashmap_set_elem(cpu_locals_list, get_lapic_id(), new_locals);
 }
 
 cpu_locals_t *get_cpu_locals() {
@@ -114,6 +113,7 @@ void smp_entry_point() {
     cpu_locals_t *cpu_locals = get_cpu_locals();
     cpu_locals->apic_id = get_lapic_id();
     cpu_locals->cpu_index = *(uint8_t *) (0x560 + NORMAL_VMA_OFFSET);
+    hashmap_set_elem(cpu_locals_list, get_cpu_index(), cpu_locals);
 
     load_tss();
     set_panic_stack((uint64_t) kmalloc(0x1000) + 0x1000);

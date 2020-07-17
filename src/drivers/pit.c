@@ -1,5 +1,6 @@
 #include "pit.h"
 #include "io/ports.h"
+#include "sys/smp.h"
 #include "drivers/serial.h"
 #include "drivers/tty/tty.h"
 #include "klibc/stdlib.h"

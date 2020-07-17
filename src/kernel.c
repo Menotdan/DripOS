@@ -135,6 +135,10 @@ void kmain(stivale_info_t *bootloader_info) {
     configure_apic();
 
     new_cpu_locals(); // Setup CPU locals for our CPU
+    get_cpu_locals()->apic_id = get_lapic_id();
+    get_cpu_locals()->cpu_index = 0;
+    hashmap_set_elem(cpu_locals_list, 0, get_cpu_locals());
+
     load_tss();
     set_panic_stack((uint64_t) kmalloc(0x1000) + 0x1000);
     set_kernel_stack((uint64_t) kmalloc(0x1000) + 0x1000);

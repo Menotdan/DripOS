@@ -25,6 +25,7 @@ typedef volatile struct {
 extern void spinlock_lock(volatile uint32_t *lock);
 extern void spinlock_unlock(volatile uint32_t *lock);
 extern uint64_t spinlock_check_and_lock(volatile uint32_t *lock);
+extern uint64_t spinlock_with_timeout(volatile uint32_t *lock, uint64_t iterations);
 extern uint32_t atomic_inc(volatile uint32_t *data);
 extern uint32_t atomic_dec(volatile uint32_t *data);
 
