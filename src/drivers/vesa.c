@@ -164,8 +164,9 @@ int vesa_write(int fd, void *buf, uint64_t count) {
     memcpy32(buf, fb_seeked, count / 4);
     memcpy32(buf, realfb_seeked, count / 4);
     unlock(vesa_lock);
+    fd_data->seek += count;
 
-    return 0;
+    return count;
 }
 
 int vesa_read(int fd, void *buf, uint64_t count) {
@@ -173,7 +174,6 @@ int vesa_read(int fd, void *buf, uint64_t count) {
 
     /* Align args to 4 bytes */
     if (count & 0b11) {
-        
         return -EINVAL;
     }
     if (fd_data->seek & 0b11 || fd_data->seek + count > vesa_display_info.framebuffer_size) {
@@ -186,8 +186,9 @@ int vesa_read(int fd, void *buf, uint64_t count) {
 
     memcpy32(fb_seeked, buf, count / 4);
     unlock(vesa_lock);
+    fd_data->seek += count;
 
-    return 0;
+    return count;
 }
 
 void setup_vesa_device() {

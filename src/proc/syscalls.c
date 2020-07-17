@@ -58,7 +58,7 @@ void init_syscalls() {
 
 void syscall_handler(syscall_reg_t *r) {
     if (r->rax < (uint64_t) HANDLER_COUNT) {
-        sprintf("Handling syscall: %lu\n", r->rax);
+        //sprintf("Handling syscall: %lu\n", r->rax);
         syscall_handlers[r->rax](r);
     }
 }
@@ -181,10 +181,14 @@ void syscall_exit(syscall_reg_t *r) {
 }
 
 void syscall_sprint(syscall_reg_t *r) {
+#ifdef DEBUG
     char *string = check_and_copy_string((void *) r->rdi);
     sprint(string);
     sprint("\e[0m\n");
     kfree(string);
+#else
+    (void) r;
+#endif
 }
 
 void syscall_ipc_read(syscall_reg_t *r) {
