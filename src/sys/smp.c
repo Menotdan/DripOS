@@ -4,6 +4,7 @@
 #include "sys/apic.h"
 #include "klibc/stdlib.h"
 #include "klibc/string.h"
+#include "klibc/hashmap.h"
 #include "drivers/pit.h"
 #include "drivers/serial.h"
 #include "drivers/tty/tty.h"
@@ -17,10 +18,16 @@ extern char long_smp_loaded[];
 
 uint8_t cores_booted = 1;
 
+hashmap_t *cpu_locals_list = (void *) 0;
+
 void new_cpu_locals() {
+    if (!cpu_locals_list) {
+        cpu_locals_list = init_hashmap();
+    }
     cpu_locals_t *new_locals = kcalloc(sizeof(cpu_locals_t));
     new_locals->meta_pointer = (uint64_t) new_locals;
     write_msr(0xC0000101, (uint64_t) new_locals);
+    hashmap_set_elem(cpu_locals_list, get_lapic_id(), new_locals);
 }
 
 cpu_locals_t *get_cpu_locals() {

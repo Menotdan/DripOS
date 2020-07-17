@@ -17,10 +17,10 @@ CORES = 3 # Core count for qemu
 
 O_LEVEL = 2 # Optimization level for build
 
-BOOT_IMAGE_MB=10
+BOOT_IMAGE_MB=7
 BOOT_IMAGE_OUTPUT=/dev/null # safety
 
-IMG_MB=100
+IMG_MB=10
 DRIPOS_SYSROOT_ON_HOST=/var/dripos-sysroot
 IMG_OUTPUT=dripdisk.img
 
