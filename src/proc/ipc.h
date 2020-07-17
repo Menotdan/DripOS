@@ -8,6 +8,7 @@
 
 #define IPC_CONNECT_TIMEOUT_MS 50
 
+#define IPC_OPERATION_NOT_SUPPORTED 5
 #define IPC_BUFFER_INVALID 4
 #define IPC_BUFFER_TOO_SMALL 3
 #define IPC_CONNECTION_TIMEOUT 2
@@ -40,5 +41,6 @@ union ipc_err write_ipc_server(int pid, int port, void *buf, int size);
 int register_ipc_handle(int port);
 ipc_handle_t *wait_ipc(int port);
 
+void setup_ipc_servers();
 
 #endif

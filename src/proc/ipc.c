@@ -5,6 +5,9 @@
 #include "klibc/stdlib.h"
 #include "drivers/pit.h"
 
+/* IPC server init includes */
+#include "drivers/vesa.h"
+
 int register_ipc_handle(int port) {
     interrupt_safe_lock(sched_lock);
     process_t *cur_process = processes[get_cpu_locals()->current_thread->parent_pid];
@@ -165,4 +168,10 @@ union ipc_err read_ipc_server(int pid, int port, void *buf, int size) {
         err.parts.size = handle->size;
         return err;
     }
+}
+
+void setup_ipc_servers() {
+    /* VESA IPC server */
+    thread_t *vesa_ipc = create_thread("VESA IPC server", vesa_ipc_server, (uint64_t) kcalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE, 0);
+    add_new_child_thread(vesa_ipc, 0);
 }

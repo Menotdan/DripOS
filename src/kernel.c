@@ -44,19 +44,6 @@
 #define TODO_LIST_SIZE 1
 char *todo_list[TODO_LIST_SIZE] = {"git gud"};
 
-void kernel_ipc_server() {
-    int err = register_ipc_handle(1234);
-    if (err) {
-        kprintf("bruh 1\n");
-    }
-
-    while (1) {
-        ipc_handle_t *handle = wait_ipc(1234);
-        kprintf("Got IPC request from pid %d\n", handle->pid);
-        trigger_event(handle->ipc_completed);
-    }
-}
-
 void kernel_process(int argc, char **argv, auxv_t *auxv) {
     fd_write(0, "Hello from stdout!\n", 19);
     kprintf("argc: %d, argv: %lx\n", argc, argv);
@@ -78,14 +65,10 @@ void kernel_process(int argc, char **argv, auxv_t *auxv) {
     kprintf("Memory used: %lu bytes\n", pmm_get_used_mem());
     mouse_setup();
 
-    thread_t *ipc = create_thread("IPC", kernel_ipc_server, (uint64_t) kcalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE, 0);
-    add_new_child_thread(ipc, 0);
-
-    //kprintf("[DripOS] Loading init from disk.\n");
-    //launch_binary("/echfs_mount/programs/fork_bomb3.bin"); // This is init :meme:
+    setup_ipc_servers();
 
     kprintf("Loading DripOS init!\n");
-    int64_t init_pid = load_elf("/bin/ipc_client");
+    int64_t init_pid = load_elf("/bin/init");
     sprintf("Elf PID: %ld\n", init_pid);
     
     if (init_pid == -1) {

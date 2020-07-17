@@ -4,6 +4,7 @@
 #include "klibc/string.h"
 #include "klibc/lock.h"
 #include "drivers/serial.h"
+#include "proc/ipc.h" // IPC server for VESA
 
 /* Setup vfs driver */
 #include "fs/vfs/vfs.h"
@@ -194,4 +195,50 @@ int vesa_read(int fd, void *buf, uint64_t count) {
 void setup_vesa_device() {
     vfs_ops_t ops = {devfs_open, 0, devfs_close, vesa_read, vesa_write, vesa_seek};
     register_device("vesafb", ops, (void *) 0);
+}
+
+void vesa_ipc_server() {
+    int err = register_ipc_handle(1);
+    if (err) {
+        sprintf("[VESA] Failed to register IPC server on port 1!\n");
+    }
+
+    while (1) {
+        ipc_handle_t *handle = wait_ipc(1);
+        sprintf("[VESA] Got IPC request from pid %d\n", handle->pid);
+        if (handle->operation_type == IPC_OPERATION_READ) {
+            if ((long unsigned int) handle->size < sizeof(vesa_ipc_data_area_t)) {
+                handle->err = IPC_BUFFER_TOO_SMALL;
+                handle->size = sizeof(vesa_ipc_data_area_t);
+                trigger_event(handle->ipc_completed);
+                continue; // wait for a new event
+            }
+
+            interrupt_safe_lock(sched_lock);
+            process_t *target_process = processes[handle->pid];
+            interrupt_safe_unlock(sched_lock);
+
+            /* Map framebuffer into the process */
+            lock(target_process->brk_lock);
+            void *map_framebuffer_addr = (void *) target_process->current_brk;
+            target_process->current_brk += vesa_display_info.framebuffer_size;
+            unlock(target_process->brk_lock);
+
+            vmm_map_pages(GET_LOWER_HALF(void *, vesa_display_info.actual_framebuffer), map_framebuffer_addr, 
+                (void *) target_process->cr3,
+                (vesa_display_info.framebuffer_size + 0x1000 - 1) / 0x1000, 
+                 VMM_PRESENT | VMM_WRITE | VMM_USER);
+            vmm_set_pat_pages(map_framebuffer_addr, (void *) target_process->cr3,
+                (vesa_display_info.framebuffer_size + 0x1000 - 1) / 0x1000, 1);
+
+            vesa_ipc_data_area_t info = {map_framebuffer_addr, vesa_display_info.width, vesa_display_info.height, vesa_display_info.pitch};
+            memcpy((uint8_t *) &info, handle->buffer, sizeof(vesa_ipc_data_area_t));
+
+        } else {
+            handle->err = IPC_OPERATION_NOT_SUPPORTED;
+            trigger_event(handle->ipc_completed);
+            continue; // wait for a new event
+        }
+        trigger_event(handle->ipc_completed);
+    }
 }
