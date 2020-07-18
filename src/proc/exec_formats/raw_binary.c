@@ -6,7 +6,7 @@
 #include "drivers/serial.h"
 
 static void new_binary_process(char *process_name, void *exec_ptr, void *code, uint64_t program_size) {
-    void *rsp = kcalloc(TASK_STACK_SIZE);
+    void *rsp = kcalloc(USER_STACK_SIZE);
     void *rsp_phys = GET_LOWER_HALF(void *, rsp);
 
     thread_t *new_thread = create_thread(process_name, exec_ptr, USER_STACK, 3);
@@ -18,7 +18,7 @@ static void new_binary_process(char *process_name, void *exec_ptr, void *code, u
 
     /* Map memory and mark it as used in the process's address space */
     map_user_memory(pid, code_phys, exec_ptr, program_size, VMM_WRITE);
-    map_user_memory(pid, rsp_phys, (void *) USER_STACK_START, TASK_STACK_SIZE, VMM_WRITE);
+    map_user_memory(pid, rsp_phys, (void *) USER_STACK_START, USER_STACK_SIZE, VMM_WRITE);
     
     add_new_child_thread(new_thread, pid);
 }

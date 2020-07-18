@@ -221,7 +221,7 @@ void vesa_ipc_server() {
             /* Map framebuffer into the process */
             lock(target_process->brk_lock);
             void *map_framebuffer_addr = (void *) target_process->current_brk;
-            target_process->current_brk += vesa_display_info.framebuffer_size;
+            target_process->current_brk += ((vesa_display_info.framebuffer_size + 0x1000 - 1) / 0x1000) * 0x1000;
             unlock(target_process->brk_lock);
 
             vmm_map_pages(GET_LOWER_HALF(void *, vesa_display_info.actual_framebuffer), map_framebuffer_addr, 

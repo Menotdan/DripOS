@@ -50,6 +50,13 @@ void init_syscalls() {
     register_syscall(59, syscall_execve);
     register_syscall(60, syscall_ipc_read);
     register_syscall(61, syscall_ipc_write);
+    register_syscall(62, syscall_ipc_register);
+    register_syscall(63, syscall_ipc_wait);
+    register_syscall(64, syscall_ipc_handling_complete);
+    register_syscall(65, syscall_futex_wake);
+    register_syscall(66, syscall_futex_wait);
+    register_syscall(67, syscall_start_thread);
+    register_syscall(68, syscall_exit_thread);
     register_syscall(70, syscall_core_count);
     register_syscall(71, syscall_get_core_performance);
     register_syscall(72, syscall_ms_sleep);
@@ -222,6 +229,51 @@ void syscall_ipc_write(syscall_reg_t *r) {
     kfree(buffer);
 }
 
+void syscall_ipc_wait(syscall_reg_t *r) {
+    r->rdx = 0;
+    if (!range_mapped((void *) r->rsi, sizeof(ipc_handle_t))) {
+        r->rdx = EFAULT;
+        return;
+    }
+
+    ipc_handle_t *handle = wait_ipc((int) r->rdi);
+    if (!handle) {
+        r->rdx = EINVAL;
+    }
+
+    interrupt_safe_lock(sched_lock);
+    process_t *target_process = processes[get_cpu_locals()->current_thread->parent_pid];
+    interrupt_safe_unlock(sched_lock);
+
+    /* Map IPC buffer into the process */
+    lock(target_process->brk_lock);
+    void *map_buffer_addr = (void *) target_process->current_brk;
+    target_process->current_brk += ((handle->size + 0x1000 - 1) / 0x1000) * 0x1000;
+    unlock(target_process->brk_lock);
+
+    vmm_map(GET_LOWER_HALF(void *, handle->buffer), map_buffer_addr, (handle->size + 0x1000 - 1) / 0x1000, 
+        VMM_PRESENT | VMM_WRITE | VMM_USER);
+
+    handle->buffer = map_buffer_addr;
+    memcpy((uint8_t *) handle, (void *) r->rsi, sizeof(ipc_handle_t));
+}
+
+void syscall_ipc_handling_complete(syscall_reg_t *r) {
+    r->rdx = 0;
+    if (!range_mapped((void *) r->rdi, sizeof(ipc_handle_t))) {
+        r->rdx = EFAULT;
+        return;
+    }
+    ipc_handle_t handle;
+    memcpy((void *) r->rdi, (void *) &handle, sizeof(ipc_handle_t));
+
+    trigger_event(handle.ipc_completed); // this should be safer but alas, no
+}
+
+void syscall_ipc_register(syscall_reg_t *r) {
+    r->rdx = register_ipc_handle((int) r->rdi);
+}
+
 void syscall_core_count(syscall_reg_t *r) {
     r->rdx = 0;
     r->rax = cpu_vector.items_count;
@@ -256,6 +308,39 @@ void syscall_get_core_performance(syscall_reg_t *r) {
 
 void syscall_ms_sleep(syscall_reg_t *r) {
     sleep_ms(r->rdi);
+}
+
+void syscall_futex_wake(syscall_reg_t *r) {
+    r->rdx = 0;
+
+    void *futex_phys = virt_to_phys((void *) r->rdi, (pt_t *) get_cpu_locals()->current_thread->regs.cr3);
+    if ((uint64_t) futex_phys == 0xFFFFFFFFFFFFFFFF) {
+        r->rdx = EFAULT;
+    }
+
+    r->rdx = futex_wake(futex_phys);
+}
+
+void syscall_futex_wait(syscall_reg_t *r) {
+    r->rdx = 0;
+
+    void *futex_phys = virt_to_phys((void *) r->rdi, (pt_t *) get_cpu_locals()->current_thread->regs.cr3);
+    if ((uint64_t) futex_phys == 0xFFFFFFFFFFFFFFFF) {
+        r->rdx = EFAULT;
+    }
+
+    r->rdx = futex_wait(futex_phys, (uint32_t) r->rsi);
+}
+
+void syscall_start_thread(syscall_reg_t *r) {
+    thread_t *new_thread = create_thread(get_cpu_locals()->current_thread->name, (void *) r->rdi, r->rsi, 3);
+    new_thread->regs.fs = r->rdx;
+    r->rax = add_new_child_thread_no_stack_init(new_thread, get_cpu_locals()->current_thread->parent_pid);
+}
+
+void syscall_exit_thread(syscall_reg_t *r) {
+    (void) r;
+    kill_task(get_cpu_locals()->current_thread->tid);
 }
 
 void syscall_empty(syscall_reg_t *r) {

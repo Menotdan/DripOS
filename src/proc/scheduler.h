@@ -18,8 +18,11 @@
 #define TASK_STACK_SIZE 0x4000
 #define TASK_STACK_PAGES (TASK_STACK_SIZE + 0x1000 - 1) / 0x1000
 #define VM_OFFSET 0xFFFF800000000000
+
+#define USER_STACK_SIZE 0x200000
+#define USER_STACK_PAGES (USER_STACK_SIZE + 0x1000 - 1) / 0x1000
 #define USER_STACK 0x7FFFFFFFFFF0 // Alignment
-#define USER_STACK_START (USER_STACK - TASK_STACK_SIZE + 16)
+#define USER_STACK_START (USER_STACK - USER_STACK_SIZE + 16)
 
 typedef struct {
     uint64_t r15, r14, r13, r12, r11, r10, r9, r8, rsi, rdi, rbp, rdx, rcx, rbx, rax;
@@ -109,7 +112,7 @@ typedef struct {
     lock_t brk_lock;
 
     lock_t ipc_create_handle_lock;
-    hashmap_t *ipc_handles;
+    hashmap_t *ipc_handles; // a hashmap of port no -> ipc_handle_t *
 
     int64_t uid; // User id of the user runnning this process
     int64_t gid; // Group id of the user running this process
@@ -174,6 +177,8 @@ int munmap(char *addr, uint64_t len);
 /* Fork, exec, etc */
 int fork(syscall_reg_t *r);
 void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r);
+int futex_wake(uint32_t *futex);
+int futex_wait(uint32_t *futex, uint32_t expected_value);
 void set_fs_base_syscall(uint64_t base);
 
 void start_idle();

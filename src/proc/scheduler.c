@@ -25,6 +25,12 @@ uint64_t process_list_size = 0;
 thread_t **threads;
 process_t **processes;
 
+typedef struct {
+    thread_t **waiting;
+    uint32_t count;
+} futex_wait_list_t;
+hashmap_t *futex_waiters = (void *) 0; // a hashmap of futex address -> thread **
+lock_t futex_lock = {0, 0, 0, 0};
 
 uint64_t process_count = 0;
 
@@ -60,27 +66,6 @@ void send_scheduler_ipis() {
             }
         }
     }
-}
-
-void start_idle() {
-    if (!get_cpu_locals()->currently_idle) {
-        get_cpu_locals()->idle_start_tsc = read_tsc();
-        get_cpu_locals()->active_end_tsc = read_tsc();
-        get_cpu_locals()->active_tsc_count += get_cpu_locals()->active_end_tsc - get_cpu_locals()->active_start_tsc;
-        get_cpu_locals()->total_tsc = read_tsc();
-        get_cpu_locals()->currently_idle = 1;
-    }
-}
-
-void end_idle() {
-    if (get_cpu_locals()->currently_idle) {
-        cpu_locals_t *cpu_locals = get_cpu_locals();
-        cpu_locals->idle_end_tsc = read_tsc();
-        cpu_locals->idle_tsc_count += (cpu_locals->idle_end_tsc - cpu_locals->idle_start_tsc);
-        get_cpu_locals()->active_start_tsc = read_tsc();
-        get_cpu_locals()->currently_idle = 0;
-    }
-    get_cpu_locals()->total_tsc = read_tsc();
 }
 
 void _idle() {
@@ -1108,4 +1093,74 @@ done:
 void set_fs_base_syscall(uint64_t base) {
     get_cpu_locals()->current_thread->regs.fs = base;
     write_msr(0xC0000100, get_cpu_locals()->current_thread->regs.fs); // Set the FS base in case the scheduler hasn't rescheduled
+}
+
+/* Wake a single thread that is waiting on the futex */
+int futex_wake(uint32_t *futex) {
+    lock(futex_lock);
+    if (!futex_waiters) {
+        unlock(futex_lock);
+        return 0;
+    }
+
+    futex_wait_list_t *waiting_threads = hashmap_get_elem(futex_waiters, (uint64_t) futex);
+    if (!waiting_threads) { // no one is waiting
+        unlock(futex_lock);
+        return 0;
+    }
+
+    for (uint32_t i = 0; i < waiting_threads->count; i++) {
+        if (waiting_threads->waiting[i]) {
+            interrupt_safe_lock(sched_lock);
+            waiting_threads->waiting[i]->state = READY;
+            interrupt_safe_unlock(sched_lock);
+
+            waiting_threads->waiting[i] = NULL;
+            break;
+        }
+    }
+
+    unlock(futex_lock);
+    return 0;
+}
+
+int futex_wait(uint32_t *futex, uint32_t expected_value) {
+    uint32_t *higher_half_futex = GET_HIGHER_HALF(void *, futex);
+    lock(futex_lock);
+    if (*higher_half_futex != expected_value) {
+        unlock(futex_lock);
+        return 1;
+    }
+
+    if (!futex_waiters) {
+        futex_waiters = init_hashmap();
+    }
+    
+    futex_wait_list_t *waiting_threads = hashmap_get_elem(futex_waiters, (uint64_t) futex);
+    if (!waiting_threads) {
+        waiting_threads = kcalloc(sizeof(futex_wait_list_t));
+        hashmap_set_elem(futex_waiters, (uint64_t) futex, waiting_threads);
+    }
+
+    interrupt_safe_lock(sched_lock);
+    thread_t *cur_thread = get_cpu_locals()->current_thread;
+    int64_t index = -1;
+    for (uint32_t i = 0; i < waiting_threads->count; i++) {
+        if (!waiting_threads->waiting[i]) {
+            index = i;
+            break;
+        }
+    }
+
+    if (index == -1) {
+        index = waiting_threads->count++;
+        waiting_threads->waiting = krealloc(waiting_threads->waiting, waiting_threads->count * sizeof(thread_t *));
+    }
+
+    waiting_threads->waiting[index] = cur_thread;
+    cur_thread->state = BLOCKED;
+    
+    unlock(futex_lock);
+    force_unlocked_schedule();
+    return 0;
 }

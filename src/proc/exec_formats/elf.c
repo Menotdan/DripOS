@@ -131,12 +131,12 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
     }
 
     void *virt_stack = (void *) USER_STACK_START;
-    void *phys_stack_region = pmm_alloc(TASK_STACK_SIZE);
+    void *phys_stack_region = pmm_alloc(USER_STACK_SIZE);
     void *virt_stack_region = GET_HIGHER_HALF(void *, phys_stack_region);
     sprintf("stack clearing: %lx\n", virt_stack_region);
-    memset(virt_stack_region, 0, TASK_STACK_SIZE);
+    memset(virt_stack_region, 0, USER_STACK_SIZE);
 
-    vmm_map_pages(phys_stack_region, virt_stack, elf_address_space, TASK_STACK_PAGES, 
+    vmm_map_pages(phys_stack_region, virt_stack, elf_address_space, USER_STACK_PAGES, 
         VMM_PRESENT | VMM_USER | VMM_WRITE);
 
     if (loaded_dynamic_linker) {
