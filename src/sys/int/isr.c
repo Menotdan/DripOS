@@ -10,6 +10,7 @@
 #include "klibc/stdlib.h"
 #include "sys/apic.h"
 #include "io/ports.h"
+#include "io/msr.h"
 #include "mm/vmm.h"
 
 #include "sys/smp.h"
@@ -30,6 +31,18 @@ static void send_panic_ipis() {
 }
 
 void isr_handler(int_reg_t *r) {
+    uint64_t start_tsc = read_tsc();
+    uint8_t was_idle = 0;
+    if (r->int_num != 32 && r->int_num != 253 && r->int_num != 254) {
+        if (get_cpu_locals()->currently_idle) {
+            get_cpu_locals()->idle_tsc_count += read_tsc() - get_cpu_locals()->idle_start_tsc;
+            get_cpu_locals()->currently_idle = 0;
+            was_idle = 1;
+        } else {
+            start_tsc = get_cpu_locals()->active_start_tsc;
+        }
+    }
+
     /* If the int number is in range */
     if (r->int_num < IDT_ENTRIES) {
         if (r->int_num < 32) {
@@ -117,6 +130,16 @@ void isr_handler(int_reg_t *r) {
         sprintf("Bad int no %lu\n", r->int_num);
         sprintf("RAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx\n", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2);
         while (1) { asm volatile("hlt"); }
+    }
+
+    if (r->int_num != 32 && r->int_num != 253 && r->int_num != 254) {
+        get_cpu_locals()->active_tsc_count += read_tsc() - start_tsc;
+        if (was_idle) {
+            get_cpu_locals()->idle_start_tsc = read_tsc();
+            get_cpu_locals()->currently_idle = 1;
+        } else {
+            get_cpu_locals()->active_start_tsc = read_tsc();
+        }
     }
 
     // If we make it here, send an EOI to our LAPIC
