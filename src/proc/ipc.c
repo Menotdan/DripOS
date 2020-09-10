@@ -35,6 +35,7 @@ ipc_handle_t *wait_ipc(int port) {
     if (!handle) {
         return (void *) 0;
     }
+
     handle->listening = 1;
 
     event_t ipc_await_event = 0;
@@ -59,9 +60,20 @@ union ipc_err write_ipc_server(int pid, int port, void *buf, int size) {
     }
 
     if (!handle->listening) {
-        union ipc_err err;
-        err.parts.err = IPC_NOT_LISTENING;
-        return err; // Server hasn't setup yet
+        uint64_t start_tick = global_ticks;
+        uint64_t listening = 1;
+        while (!handle->listening) {
+            if (start_tick + IPC_CONNECT_TIMEOUT_MS > global_ticks) {
+                listening = 0;
+                break;
+            }
+        }
+
+        if (!listening) {
+            union ipc_err err;
+            err.parts.err = IPC_NOT_LISTENING;
+            return err; // Server hasn't setup yet
+        }
     }
 
     if (spinlock_check_and_lock(&handle->connect_lock.lock_dat)) { // Was locked
@@ -122,9 +134,20 @@ union ipc_err read_ipc_server(int pid, int port, void *buf, int size) {
     }
 
     if (!handle->listening) {
-        union ipc_err err;
-        err.parts.err = IPC_NOT_LISTENING;
-        return err; // Server hasn't setup yet
+        uint64_t start_tick = global_ticks;
+        uint64_t listening = 1;
+        while (!handle->listening) {
+            if (start_tick + IPC_CONNECT_TIMEOUT_MS <= global_ticks) {
+                listening = 0;
+                break;
+            }
+        }
+
+        if (!listening) {
+            union ipc_err err;
+            err.parts.err = IPC_NOT_LISTENING;
+            return err; // Server hasn't setup yet
+        }
     }
 
     if (spinlock_check_and_lock(&handle->connect_lock.lock_dat)) { // Was locked

@@ -8,9 +8,13 @@
 #define SEEK_SET 3
 
 typedef struct fd_entry {
+    uint64_t fd_cookie1;
     vfs_node_t *node;
+    uint64_t fd_cookie2;
     uint64_t seek;
+    uint64_t fd_cookie3;
     int mode;
+    uint64_t fd_cookie4;
 } fd_entry_t;
 
 struct vfs_node;

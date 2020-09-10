@@ -2,6 +2,7 @@
 #include "klibc/lock.h"
 #include "klibc/stdlib.h"
 #include "klibc/errno.h"
+#include "klibc/debug.h"
 #include "mm/vmm.h"
 #include "sys/smp.h"
 #include "proc/scheduler.h"
@@ -154,6 +155,8 @@ uint64_t fd_seek(int fd, uint64_t offset, int whence) {
 }
 
 int fd_new(vfs_node_t *node, int mode, int pid) {
+    assert(node);
+
     interrupt_safe_lock(sched_lock);
     if ((uint64_t) pid >= process_list_size) {
         sprintf("ERRRRRRRRRRRRRROR in fd_new: pid bad: %d\n", pid);
@@ -181,8 +184,21 @@ int fd_new(vfs_node_t *node, int mode, int pid) {
     *fd_table_size += 10;
     fd_table = krealloc(fd_table, *fd_table_size * sizeof(fd_entry_t *));
 fnd:
+    new_entry->fd_cookie1 = 0x1234567812345678;
+    new_entry->fd_cookie2 = 0x1234567812345678;
+    new_entry->fd_cookie3 = 0x1234567812345678;
+    new_entry->fd_cookie4 = 0x1234567812345678;
     fd_table[i] = new_entry;
+    assert(fd_table[i]->node);
+    assert(fd_table[i]->fd_cookie1);
+    assert(fd_table[i]->fd_cookie2);
+    assert(fd_table[i]->fd_cookie3);
+    assert(fd_table[i]->fd_cookie4);
     unlock(fd_lock);
+
+    if (pid == 3 && strcmp("satadeva", node->name)) {
+        sprintf("Opened fd %d on pid 3 with node name %s, fd addr %lx\n", i, node->name, new_entry);
+    }
 
     return i;
 }

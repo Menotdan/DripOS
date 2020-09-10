@@ -1,5 +1,6 @@
 #include "syscalls.h"
 #include "mm/vmm.h"
+#include "mm/pmm.h"
 #include "fs/fd.h"
 #include "proc/sleep_queue.h"
 #include "proc/scheduler.h"
@@ -47,6 +48,7 @@ void init_syscalls() {
     register_syscall(35, syscall_nanosleep);
     register_syscall(50, syscall_sprint);
     register_syscall(57, syscall_fork);
+    register_syscall(58, syscall_map_from_us_to_process);
     register_syscall(59, syscall_execve);
     register_syscall(60, syscall_ipc_read);
     register_syscall(61, syscall_ipc_write);
@@ -57,6 +59,7 @@ void init_syscalls() {
     register_syscall(66, syscall_futex_wait);
     register_syscall(67, syscall_start_thread);
     register_syscall(68, syscall_exit_thread);
+    register_syscall(69, syscall_map_to_process);
     register_syscall(70, syscall_core_count);
     register_syscall(71, syscall_get_core_performance);
     register_syscall(72, syscall_ms_sleep);
@@ -231,7 +234,7 @@ void syscall_ipc_write(syscall_reg_t *r) {
 
 void syscall_ipc_wait(syscall_reg_t *r) {
     r->rdx = 0;
-    if (!range_mapped((void *) r->rsi, sizeof(ipc_handle_t))) {
+    if (!range_mapped((void *) r->rsi, sizeof(syscall_ipc_handle_t))) {
         r->rdx = EFAULT;
         return;
     }
@@ -254,20 +257,24 @@ void syscall_ipc_wait(syscall_reg_t *r) {
     vmm_map(GET_LOWER_HALF(void *, handle->buffer), map_buffer_addr, (handle->size + 0x1000 - 1) / 0x1000, 
         VMM_PRESENT | VMM_WRITE | VMM_USER);
 
-    handle->buffer = map_buffer_addr;
-    memcpy((uint8_t *) handle, (void *) r->rsi, sizeof(ipc_handle_t));
+    syscall_ipc_handle_t *userspace_handle_buf = (void *) r->rsi;
+    userspace_handle_buf->original_buffer = handle;
+    userspace_handle_buf->operation_type = handle->operation_type;
+    userspace_handle_buf->pid = handle->pid;
+    userspace_handle_buf->size = handle->size;
+    userspace_handle_buf->buffer = map_buffer_addr;
 }
 
 void syscall_ipc_handling_complete(syscall_reg_t *r) {
     r->rdx = 0;
-    if (!range_mapped((void *) r->rdi, sizeof(ipc_handle_t))) {
+    if (!range_mapped((void *) r->rdi, sizeof(syscall_ipc_handle_t))) {
         r->rdx = EFAULT;
         return;
     }
-    ipc_handle_t handle;
-    memcpy((void *) r->rdi, (void *) &handle, sizeof(ipc_handle_t));
-
-    trigger_event(handle.ipc_completed); // this should be safer but alas, no
+    syscall_ipc_handle_t *handle = (void *) r->rdi;
+    handle->original_buffer->err = handle->err;
+    handle->original_buffer->size = handle->size;
+    trigger_event(handle->original_buffer->ipc_completed); // this should be safer but alas, no
 }
 
 void syscall_ipc_register(syscall_reg_t *r) {
@@ -341,6 +348,66 @@ void syscall_start_thread(syscall_reg_t *r) {
 void syscall_exit_thread(syscall_reg_t *r) {
     (void) r;
     kill_task(get_cpu_locals()->current_thread->tid);
+}
+
+void syscall_map_to_process(syscall_reg_t *r) {
+    interrupt_safe_lock(sched_lock);
+    if (r->rdi >= process_count) {
+        interrupt_safe_unlock(sched_lock);
+        r->rdx = 0;
+        return;
+    }
+    process_t *process = processes[r->rdi];
+    interrupt_safe_unlock(sched_lock);
+
+    uint64_t pages = (r->rsi + 0x1000 - 1) / 0x1000;
+
+    lock(process->brk_lock);
+    void *mapped_addr = (void *) process->current_brk;
+    process->current_brk += pages * 0x1000;
+    unlock(process->brk_lock);
+
+    void *phys = pmm_alloc(pages * 0x1000);
+    memset(GET_HIGHER_HALF(void *, phys), 0, pages * 0x1000);
+
+    vmm_map_pages(phys, mapped_addr, (void *) process->cr3, pages,
+        VMM_PRESENT | VMM_USER | VMM_WRITE);
+    
+    r->rdx = (uint64_t) mapped_addr;
+    return;
+}
+
+void syscall_map_from_us_to_process(syscall_reg_t *r) {
+    if (!range_mapped((void *) r->rsi, r->rdx)) {
+        r->rdx = 0;
+        return;
+    }
+    void *phys = virt_to_phys((void *) (r->rsi & ~(0xfff)), (pt_t *) get_cpu_locals()->current_thread->regs.cr3);
+
+    uint64_t start = r->rsi & ~(0xfff);
+    uint64_t end = start + (((r->rdx + 0x1000 - 1) / 0x1000) * 0x1000);
+
+    interrupt_safe_lock(sched_lock);
+    if (r->rdi >= process_list_size) {
+        interrupt_safe_unlock(sched_lock);
+        r->rdx = 0;
+        return;
+    }
+    process_t *process = processes[r->rdi];
+    interrupt_safe_unlock(sched_lock);
+
+    uint64_t pages = (end - start) / 0x1000;
+
+    lock(process->brk_lock);
+    void *mapped_addr = (void *) process->current_brk;
+    process->current_brk += pages * 0x1000;
+    unlock(process->brk_lock);
+
+    vmm_map_pages(phys, mapped_addr, (void *) process->cr3, pages,
+        VMM_PRESENT | VMM_USER | VMM_WRITE);
+    
+    r->rdx = (uint64_t) mapped_addr + (r->rsi & 0xfff);
+    return;
 }
 
 void syscall_empty(syscall_reg_t *r) {

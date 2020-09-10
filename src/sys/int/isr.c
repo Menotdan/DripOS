@@ -8,6 +8,7 @@
 #include "drivers/pit.h"
 #include "drivers/ps2.h"
 #include "klibc/stdlib.h"
+#include "klibc/debug.h"
 #include "sys/apic.h"
 #include "io/ports.h"
 #include "io/msr.h"
@@ -48,30 +49,34 @@ void isr_handler(int_reg_t *r) {
         if (r->int_num < 32) {
             vmm_set_pml4t(base_kernel_cr3); // Use base kernel CR3 in case the alternate CR3 is corrupted
             if (r->cs != 0x1B) {
-                /* Exception */
-                uint64_t cr2;
-                asm volatile("movq %%cr2, %0;" : "=r"(cr2));
-                /* Ensure the display is not locked when we crash */
-                unlock(base_tty.tty_lock);
-                unlock(vesa_lock);
-
-                send_panic_ipis(); // Halt all other CPUs
-
-                if (scheduler_enabled) {
-                    safe_kprintf("Exception on core %u with apic id %u! (cur task %s with TID %ld)\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid);
+                if (r->int_num == 0x3) { // Debug Trap
+                    debug_handler();
                 } else {
-                    safe_kprintf("Exception on core %u with apic id %u!\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id);
-                }
-                safe_kprintf("RAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx CS: %lx\nSS: %lx RFLAGS: %lx\n", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2, r->cs, r->ss, r->rflags);
-                if (r->int_num == 14) {
-                    safe_kprintf("ERR Code: ");
-                    if (r->int_err & (1<<0)) { safe_kprintf("P "); } else { safe_kprintf("NP "); }
-                    if (r->int_err & (1<<1)) { safe_kprintf("W "); } else { safe_kprintf("R "); }
-                    if (r->int_err & (1<<2)) { safe_kprintf("U "); } else { safe_kprintf("S "); }
-                    if (r->int_err & (1<<3)) { safe_kprintf("RES "); }
-                }
+                    /* Exception */
+                    uint64_t cr2;
+                    asm volatile("movq %%cr2, %0;" : "=r"(cr2));
+                    /* Ensure the display is not locked when we crash */
+                    unlock(base_tty.tty_lock);
+                    unlock(vesa_lock);
 
-                while (1) { asm volatile("hlt"); }
+                    send_panic_ipis(); // Halt all other CPUs
+
+                    if (scheduler_enabled) {
+                        safe_kprintf("Exception on core %u with apic id %u! (cur task %s with TID %ld)\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid);
+                    } else {
+                        safe_kprintf("Exception on core %u with apic id %u!\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id);
+                    }
+                    safe_kprintf("RAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx CS: %lx\nSS: %lx RFLAGS: %lx\n", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2, r->cs, r->ss, r->rflags);
+                    if (r->int_num == 14) {
+                        safe_kprintf("ERR Code: ");
+                        if (r->int_err & (1<<0)) { safe_kprintf("P "); } else { safe_kprintf("NP "); }
+                        if (r->int_err & (1<<1)) { safe_kprintf("W "); } else { safe_kprintf("R "); }
+                        if (r->int_err & (1<<2)) { safe_kprintf("U "); } else { safe_kprintf("S "); }
+                        if (r->int_err & (1<<3)) { safe_kprintf("RES "); }
+                    }
+
+                    while (1) { asm volatile("hlt"); }
+                }
             } else {
                 uint64_t cr2;
                 asm volatile("movq %%cr2, %0;" : "=r"(cr2));
@@ -474,6 +479,7 @@ void configure_idt() {
     set_ist(33, 1);
     set_ist(254, 1);
     set_ist(253, 1);
+    set_ist(250, 1);
 
     load_idt(); // Point to the IDT
     register_int_handler(32, timer_handler);
@@ -483,5 +489,6 @@ void configure_idt() {
     register_int_handler(253, schedule_ap);
     register_int_handler(252, isr_panic_idle);
     register_int_handler(251, panic_handler);
+    register_int_handler(250, set_debug_state);
     asm volatile("sti"); // Enable interrupts and hope we dont die lmao
 }

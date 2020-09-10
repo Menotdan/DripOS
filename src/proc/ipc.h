@@ -8,6 +8,7 @@
 
 #define IPC_CONNECT_TIMEOUT_MS 50
 
+#define IPC_INVALID_PARAM 6
 #define IPC_OPERATION_NOT_SUPPORTED 5
 #define IPC_BUFFER_INVALID 4
 #define IPC_BUFFER_TOO_SMALL 3
@@ -25,6 +26,15 @@ typedef struct {
     event_t *ipc_event; // This event is what IPC clients should trigger to signal ready to transfer
     event_t *ipc_completed; // This event will be triggered when the IPC server is done its work
 } ipc_handle_t;
+
+typedef struct {
+    ipc_handle_t *original_buffer;
+    int pid;
+    void *buffer;
+    int size;
+    int operation_type; // Read vs Write
+    int err; // error for the server to return
+} __attribute__((packed)) syscall_ipc_handle_t;
 
 typedef struct {
     uint32_t err;

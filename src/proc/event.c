@@ -5,6 +5,11 @@
 #include "drivers/pit.h"
 
 void await_event(event_t *e) {
+    if (*e) {
+        atomic_dec((uint32_t *) e);
+        return;
+    }
+
     interrupt_safe_lock(sched_lock);
     thread_t *current_thread = get_cpu_locals()->current_thread;
     current_thread->event = e;
