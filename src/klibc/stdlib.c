@@ -4,6 +4,7 @@
 #include "mm/vmm.h"
 #include "proc/scheduler.h"
 #include "klibc/lock.h"
+#include "klibc/logger.h"
 
 #include "drivers/tty/tty.h"
 #include "drivers/serial.h"
@@ -19,8 +20,9 @@ void *kmalloc(uint64_t size) {
     *(uint64_t *) size_data = size + 0x2000;
     *(uint64_t *) (size_data + 8) = MALLOC_SIGNATURE;
 
+    log_alloc("+mem %lu %lu %lx\n", size_data, *(uint64_t *) size_data, __builtin_return_address(0));
+
     /* Unmap size data for lower bounds reads/writes */
-    //sprintf("+mem %lu %lu %lx\n", size_data, *(uint64_t *) size_data, __builtin_return_address(0));
     vmm_unmap((void *) size_data, 1);
     interrupt_unlock(state);
     return (void *) (size_data + 0x1000);
@@ -49,7 +51,8 @@ void kfree(void *addr) {
     if ((uint64_t) phys != 0xFFFFFFFFFFFFFFFF) {
         pmm_unalloc(phys, *size_data);
     }
-    //sprintf("-mem %lu %lu %lx\n", size_data, *size_data, __builtin_return_address(0));
+    
+    log_alloc("-mem %lu %lu %lx\n", size_data, *size_data, __builtin_return_address(0));
     interrupt_unlock(state);
 }
 

@@ -4,5 +4,6 @@
 #include "klibc/string.h"
 
 void log(char *message, ...);
+void log_alloc(char *message, ...);
 
 #endif

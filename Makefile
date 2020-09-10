@@ -84,7 +84,7 @@ run-dripdbg: DripOS.img
 	make clean
 
 run-kvm: DripOS.img
-	- sudo qemu-system-x86_64 -machine q35 -enable-kvm -smp ${CORES} -cpu host -d cpu_reset -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -hdb DripOS.img -hda dripdisk.img
+	- sudo qemu-system-x86_64 -machine q35 -enable-kvm -smp ${CORES} -cpu host -d cpu_reset -no-shutdown -no-reboot -serial stdio -soundhw hda -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -hdb DripOS.img -hda dripdisk.img
 	make clean
 
 # Open the connection to qemu and load our kernel-object file with symbols
