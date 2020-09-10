@@ -383,7 +383,12 @@ void syscall_map_from_us_to_process(syscall_reg_t *r) {
         r->rdx = 0;
         return;
     }
+
     void *phys = virt_to_phys((void *) (r->rsi & ~(0xfff)), (pt_t *) get_cpu_locals()->current_thread->regs.cr3);
+    if (!range_mapped_in_userspace(phys, r->rdx)) {
+        r->rdx = 0;
+        return;
+    }
 
     uint64_t start = r->rsi & ~(0xfff);
     uint64_t end = start + (((r->rdx + 0x1000 - 1) / 0x1000) * 0x1000);

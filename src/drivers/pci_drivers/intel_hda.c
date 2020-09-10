@@ -32,4 +32,5 @@ void init_hda_controller(pci_device_t device) {
     hda_audio_controller_t new_controller;
     new_controller.register_address = GET_HIGHER_HALF(hda_audio_register_t *, pci_get_mmio_bar(device, 0));
     add_controller(new_controller);
+    log("{-HDA-} DMA buffer: %lx", ((uint64_t) new_controller.register_address->dma_position_lower_addr + ((uint64_t) new_controller.register_address->dma_position_higher_addr << 32)));
 }

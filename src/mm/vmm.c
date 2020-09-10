@@ -393,6 +393,64 @@ void *vmm_fork(void *old) {
     return ret;
 }
 
+uint8_t is_mapped_in_userspace(void *phys_address) {
+    pt_t *table = GET_HIGHER_HALF(pt_t *, vmm_get_pml4t());
+    uint8_t ret = 0;
+    interrupt_state_t state = interrupt_lock();
+    lock(vmm_spinlock);
+    for (uint64_t w = 0; w < 256; w++) {
+        /* P4 */
+        if (table->table[w] & VMM_PRESENT) {
+            pt_t *table_z = GET_HIGHER_HALF(pt_t *, table->table[w] & VMM_4K_PERM_MASK);
+            for (uint64_t z = 0; z < 512; z++) {
+                /* P3 */
+                if (table_z->table[z] & VMM_PRESENT) {
+                    pt_t *table_y = GET_HIGHER_HALF(pt_t *, table_z->table[z] & VMM_4K_PERM_MASK);
+                    for (uint64_t y = 0; y < 512; y++) {
+                        /* P2 */
+                        if (table_y->table[y] & VMM_PRESENT) {
+                            pt_t *table_x = GET_HIGHER_HALF(pt_t *, table_y->table[y] & VMM_4K_PERM_MASK);
+                            for (uint64_t x = 0; x < 512; x++) {
+                                /* P1 */
+                                if (table_x->table[x] & VMM_PRESENT) {
+                                    pt_off_t offs = {w, z, y, x};
+                                    void *virt = vmm_offs_to_virt(offs);
+                                    void *phys = virt_to_phys(virt, GET_LOWER_HALF(pt_t *, table));
+                                    if (phys == phys_address && table_x->table[x] & VMM_USER) {
+                                        unlock(vmm_spinlock);
+                                        ret = 1;
+                                        return ret;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } 
+    unlock(vmm_spinlock);
+    interrupt_unlock(state);
+    return ret;
+}
+
+uint8_t range_mapped_in_userspace(void *data, uint64_t size) {
+    uint64_t cur_addr = (uint64_t) data & ~(0xfff);
+    uint64_t addr_not_rounded = (uint64_t) data;
+    uint64_t end_addr = (addr_not_rounded + size) & ~(0xfff);
+    uint64_t rounded_size = end_addr - cur_addr;
+    uint64_t pages = ((rounded_size + 0x1000 - 1) / 0x1000);
+
+    for (uint64_t i = 0; i < pages; i++) {
+        if (!is_mapped_in_userspace((void *) cur_addr)) {
+            return 0;
+        }
+        cur_addr += 0x1000;
+    }
+
+    return 1;
+}
+
 void vmm_deconstruct_address_space(void *old) {
     pt_t *table = GET_HIGHER_HALF(pt_t *, old);
     interrupt_state_t state = interrupt_lock();
