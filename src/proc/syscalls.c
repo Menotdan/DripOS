@@ -4,6 +4,7 @@
 #include "fs/fd.h"
 #include "proc/sleep_queue.h"
 #include "proc/scheduler.h"
+#include "proc/sched_syscalls.h"
 #include "proc/safe_userspace.h"
 #include "proc/ipc.h"
 #include "sys/smp.h"
