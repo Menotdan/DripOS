@@ -2,7 +2,7 @@
 #define PCI_HDA_INTEL_H
 #include "drivers/pci.h"
 
-typedef struct {
+typedef volatile struct {
     uint16_t hda_gcap;
     uint8_t min_ver;
     uint8_t maj_ver;
@@ -50,6 +50,8 @@ typedef struct {
 
 typedef struct {
     hda_audio_register_t *register_address;
+    uint16_t corb_entries;
+    uint16_t rirb_entries;
 } hda_audio_controller_t;
 
 void init_hda_controller(pci_device_t device);
