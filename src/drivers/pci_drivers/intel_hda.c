@@ -26,6 +26,7 @@ void reset_rirb(uint64_t controller_id) {
     controller.register_address->rirb_control = controller.register_address->rirb_control & ~(1<<1);
     controller.register_address->rirb_write_ptr = controller.register_address->rirb_write_ptr | (1<<15);
     controller.register_address->rirb_control = controller.register_address->rirb_control | (1<<1);
+    controller.register_address->response_int_count = 32;
 }
 
 void write_corb(uint64_t controller_id, uint32_t data) {
@@ -36,15 +37,13 @@ void write_corb(uint64_t controller_id, uint32_t data) {
 
     hda_audio_controller_t controller = hda_controller_list[controller_id];
     volatile uint32_t *corb_address = GET_HIGHER_HALF(void *, ((uint64_t) controller.register_address->corb_lower_addr | ((uint64_t) controller.register_address->corb_higher_addr << 32)));
-    corb_address[controller.register_address->corb_write_ptr & 255] = 0;
-    controller.register_address->corb_write_ptr++;
-    corb_address[controller.register_address->corb_write_ptr & 255] = data;
+
+    log("{-HDA-} Writing verb %x to corb_address %lx", data, &(corb_address[(controller.register_address->corb_write_ptr + 1) & 255]));
+    corb_address[(controller.register_address->corb_write_ptr + 1) & 255] = data;
     controller.register_address->corb_write_ptr++;
 
-    log("{-HDA-} Waiting for read pointer to equal write pointer...");
     while ((controller.register_address->corb_read_ptr & 0b11111111) != (controller.register_address->corb_write_ptr & 0b11111111)) {
         log("{-HDA-} Read ptr: %lu, Write ptr: %lu", (controller.register_address->corb_read_ptr & 0b11111111), (controller.register_address->corb_write_ptr & 0b11111111));
-        sleep_ms(500);
         asm("pause");
 
         if ((controller.register_address->corb_status & 0x1)) {
@@ -56,7 +55,6 @@ void write_corb(uint64_t controller_id, uint32_t data) {
         }
     }
 
-    log("{-HDA-} Waiting for 1 ms...");
     for (uint64_t i = 0; i < 2500; i++) { // Wait 1 ms
         io_wait();
     }
@@ -73,10 +71,15 @@ uint64_t *read_rirb(uint64_t controller_id, uint64_t *responses) {
 
     uint64_t *buffer = (void *) 0;
     uint64_t response_count = 0;
-    for (uint64_t i = 0; i < (controller.register_address->rirb_write_ptr & 0b11111111); i++) {
+    for (uint64_t i = 1; i < ((controller.register_address->rirb_write_ptr + 1) & 0b11111111); i++) {
         buffer = krealloc(buffer, (response_count + 1) * 8);
         buffer[response_count++] = rirb_address[i];
+        log("{-HDA-} RIRB address: %lx", &(rirb_address[i]));
     }
+
+    // for (uint64_t i = 0; i < controller.rirb_entries; i++) {
+    //     log("{-HDA-} RIRB %lu: %lx", i, rirb_address[i]);
+    // }
 
     reset_rirb(controller_id);
 
@@ -100,7 +103,7 @@ void init_hda_controller(pci_device_t device) {
     }
 
     hda_audio_controller_t new_controller;
-    new_controller.register_address = GET_HIGHER_HALF(hda_audio_register_t *, pci_get_mmio_bar(device, 0));
+    new_controller.register_address = GET_HIGHER_HALF(hda_audio_register_t *, (pci_get_mmio_bar(device, 0) & 0xfffffff0));
     vmm_set_pat((void *) new_controller.register_address, 1, 7);
 
     add_controller(new_controller);
@@ -123,6 +126,14 @@ void init_hda_controller(pci_device_t device) {
             log("{-HDA-} Codec at address %u is present.", i);
         }
     }
+
+    new_controller.register_address->corb_control = (new_controller.register_address->corb_control & ~(1<<1));
+    io_wait();
+    if ((new_controller.register_address->corb_control & (1<<1))) {
+        warn("{-HDA-} CORB DMA engine failed to stop.");
+        return;
+    }
+    log("{-HDA-} CORB DMA engine disabled.");
 
     uint8_t supported_sizes = (new_controller.register_address->corb_size >> 4);
     uint8_t corb_size = 0b00;
@@ -156,17 +167,11 @@ void init_hda_controller(pci_device_t device) {
         new_controller.register_address->corb_size |= corb_size;
     }
 
-    new_controller.register_address->corb_control = (new_controller.register_address->corb_control & ~(1<<1));
-    io_wait();
-    if ((new_controller.register_address->corb_control & (1<<1))) {
-        warn("{-HDA-} CORB DMA engine failed to stop.");
-        return;
-    }
-    log("{-HDA-} CORB DMA engine disabled.");
-
     void *corb_phys = pmm_alloc(0x1000);
     void *corb_virt = GET_HIGHER_HALF(void *, corb_phys);
     vmm_set_pat(corb_virt, 1, 7);
+
+    memset(corb_virt, 0x12, 0x1000);
 
     if ((uint64_t) corb_phys > 0x100000000 && !(new_controller.register_address->hda_gcap & 0x1)) {
         warn("{-HDA-} Controller does not support 64 bit address, but a 64 bit address was allocated.");
@@ -205,7 +210,9 @@ void init_hda_controller(pci_device_t device) {
     }
     log("{-HDA-} CORB DMA engine enabled.");
 
-
+    new_controller.register_address->rirb_control = (new_controller.register_address->rirb_control & ~(1<<1));
+    io_wait();
+    log("{-HDA-} RIRB DMA engine disabled.");
 
     uint8_t supported_rirb_sizes = (new_controller.register_address->rirb_size >> 4);
     uint8_t rirb_size = 0b00;
@@ -224,7 +231,7 @@ void init_hda_controller(pci_device_t device) {
     }
 
     if (new_controller.register_address->rirb_size & 0b11) {
-        log("{-HDA-} Controller already set RIRB size: %u.", new_controller.register_address->corb_size & 0b11);
+        log("{-HDA-} Controller already set RIRB size: %u.", new_controller.register_address->rirb_size & 0b11);
         switch (new_controller.register_address->rirb_size & 0b11) {
             case 0b10:
                 hda_controller_list[hda_controller_count - 1].rirb_entries = 256;
@@ -239,13 +246,13 @@ void init_hda_controller(pci_device_t device) {
         new_controller.register_address->rirb_size |= rirb_size;
     }
 
-    new_controller.register_address->rirb_control = (new_controller.register_address->rirb_control & ~(1<<1));
-    io_wait();
-    log("{-HDA-} RIRB DMA engine disabled.");
+    new_controller.register_address->response_int_count = 32; // idk
 
     void *rirb_phys = pmm_alloc(0x1000);
     void *rirb_virt = GET_HIGHER_HALF(void *, rirb_phys);
     vmm_set_pat(rirb_virt, 1, 7);
+
+    memset(rirb_virt, 0x14, 0x1000);
 
     if ((uint64_t) rirb_phys > 0x100000000 && !(new_controller.register_address->hda_gcap & 0x1)) {
         warn("{-HDA-} Controller does not support 64 bit address, but a 64 bit address was allocated.");
