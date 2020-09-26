@@ -159,9 +159,8 @@ void set_local_watchpoint(void *address, uint8_t watchpoint_index) {
     set_debug_state();
 }
 
-void debug_handler() {
+void debug_handler(int_reg_t *r) {
     log("DR6: %lx", read_debug_register('6'));
-    while (1) {
-        asm volatile("pause");
-    }
+    log("RIP: %lx", r->rip);
+    
 }
