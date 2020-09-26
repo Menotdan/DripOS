@@ -48,7 +48,7 @@ void isr_handler(int_reg_t *r) {
     /* If the int number is in range */
     if (r->int_num < IDT_ENTRIES) {
         if (r->int_num == 1) {
-            debug_handler();
+            debug_handler(r);
         } else {
             if (r->int_num < 32) {
                 vmm_set_pml4t(base_kernel_cr3); // Use base kernel CR3 in case the alternate CR3 is corrupted

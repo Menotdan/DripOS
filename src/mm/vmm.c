@@ -112,6 +112,14 @@ void *virt_to_phys(void *virt, pt_t *p4) {
     return (void *) 0xFFFFFFFFFFFFFFFF;
 }
 
+void *kernel_address(void *virt) {
+    void *phys = virt_to_phys(virt, (pt_t *) vmm_get_pml4t());
+    if ((uint64_t) phys != 0xFFFFFFFFFFFFFFFF) {
+        return GET_HIGHER_HALF(void *, phys);
+    }
+    return (void *) 0;
+}
+
 void vmm_ensure_table(pt_t *table, uint16_t offset) {
     if (!(table->table[offset] & VMM_PRESENT)) {
         uint64_t new_table = (uint64_t) pmm_alloc(0x1000);

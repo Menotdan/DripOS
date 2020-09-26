@@ -2,6 +2,7 @@
 #include "logger.h"
 #include "sys/smp.h"
 #include "sys/apic.h"
+#include "mm/vmm.h"
 
 uint64_t dr0 = 0;
 uint64_t dr1 = 0;
@@ -68,7 +69,7 @@ void write_debug_register(char reg, uint64_t data) {
             asm volatile("mov %0, %%dr6" :: "r"(data));
             break;
         case '7':
-            asm volatile("mov %0, %%dr7" :: "r"(data));
+            asm volatile("mov %0, %%dr7" :: "r"(data & ~(0xFFFFFFFF00000000)));
             break;
         
         default:
@@ -87,12 +88,12 @@ uint64_t create_local_dr7(thread_t *t) {
 
     uint64_t ret = 0;
     if (t->parent->local_watchpoint1_active) {
-        ret |= 0b0111 << 24;
+        ret |= 0b1101 << 24;
         ret |= 1 << 5;
     }
 
     if (t->parent->local_watchpoint2_active) {
-        ret |= 0b0111 << 28;
+        ret |= 0b1101 << 28;
         ret |= 1 << 7;
     }
 
@@ -122,7 +123,7 @@ void set_watchpoint(void *address, uint8_t watchpoint_index) {
         return;
     }
 
-    dr7 |= (0b0111) << (16 + (watchpoint_index * 4));
+    dr7 |= (0b1101) << (16 + (watchpoint_index * 4));
     dr7 |= 2 << (watchpoint_index * 2);
 
     madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
@@ -159,8 +160,39 @@ void set_local_watchpoint(void *address, uint8_t watchpoint_index) {
     set_debug_state();
 }
 
+void stack_trace(int_reg_t *r, uint64_t max_frames) {
+    log("");
+    log("{-Trace-} Stack trace begin.");
+    uint64_t frames_parsed = 0;
+
+    uint64_t rbp = (uint64_t) kernel_address((void *) r->rbp);
+    while (1) {
+        uint64_t *stack = (uint64_t *) (rbp);
+
+        /* Read the rbp and rsp from the stack */
+        if (!stack[0]) {
+            log("{-Trace-} Stack trace end.");
+            log("");
+            break;
+        }
+
+        rbp = (uint64_t) kernel_address((void *) stack[0]);
+        log("{-Trace-} RIP: %lx", stack[1]);
+
+        frames_parsed++;
+        if (frames_parsed == max_frames) {
+            log("{-Trace-} Stack trace end. (Max frames)");
+            log("");
+            break;
+        }
+    }
+}
+
 void debug_handler(int_reg_t *r) {
-    log("DR6: %lx", read_debug_register('6'));
-    log("RIP: %lx", r->rip);
-    
+    log("{-Debug-} Debug triggered.");
+    log("{-Debug-} DR6: %lx", read_debug_register('6'));
+    log("{-Debug-} DR7: %lx", read_debug_register('7'));
+    log("{-Debug-} RIP: %lx", r->rip);
+    log("{-Debug-} PID: %ld", get_cpu_locals()->current_thread->parent_pid);
+    stack_trace(r, 10);
 }

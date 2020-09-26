@@ -50,6 +50,7 @@ int vmm_unmap_pages(void *virt, void *p4, uint64_t count);
 void vmm_set_pat_pages(void *virt, void *p4, uint64_t count, uint8_t pat_entry);
 void vmm_set_pml4t(uint64_t new);
 void *virt_to_phys(void *virt, pt_t *p4);
+void *kernel_address(void *virt);
 uint8_t is_mapped(void *data);
 uint8_t is_mapped_in_userspace(void *phys_address);
 uint8_t range_mapped_in_userspace(void *data, uint64_t size);

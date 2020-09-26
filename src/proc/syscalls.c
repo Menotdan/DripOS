@@ -380,9 +380,7 @@ void syscall_map_to_process(syscall_reg_t *r) {
     return;
 }
 
-int times_called = 0;
 void syscall_map_from_us_to_process(syscall_reg_t *r) {
-    times_called++;
     if (!range_mapped((void *) r->rsi, r->rdx)) {
         r->rdx = 0;
         return;
@@ -419,13 +417,6 @@ void syscall_map_from_us_to_process(syscall_reg_t *r) {
         VMM_PRESENT | VMM_USER | VMM_WRITE);
     
     r->rdx = (uint64_t) mapped_addr + (r->rsi & 0xfff);
-
-    if (times_called == 2) {
-        set_local_watchpoint((void *) r->rsi, 0);
-
-        process->local_watchpoint1 = ((uint64_t) mapped_addr + (r->rsi & 0xfff));
-        process->local_watchpoint1_active = 1;
-    }
     return;
 }
 
