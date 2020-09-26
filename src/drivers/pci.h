@@ -25,5 +25,6 @@ uint32_t pci_get_mmio_bar_size(pci_device_t device, uint8_t bar);
 pci_id_t get_pci_ids(uint8_t bus, uint8_t device, uint8_t function);
 pci_device_t get_pci_device(uint64_t index);
 uint64_t pci_device_count();
+void pci_enable_busmastering(pci_device_t device);
 
 #endif

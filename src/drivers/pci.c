@@ -356,6 +356,12 @@ void scan_bus(uint8_t bus) {
     }
 }
 
+void pci_enable_busmastering(pci_device_t device) {
+    if (!(pci_read_dword(device.bus, device.device, device.function, 0x4) & (1 << 2))) {
+        pci_write_dword(device.bus, device.device, device.function, 0x4, pci_read_dword(device.bus, device.device, device.function, 0x4) | (1 << 2));
+    }
+}
+
 /* Set up the list, scan bus 0, and print all PCI devices */
 void pci_init() {
     pci_devices = kcalloc(sizeof(pci_device_t) * 10); // 10 pci devices by default

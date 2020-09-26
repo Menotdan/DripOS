@@ -9,6 +9,7 @@
 #include "drivers/ps2.h"
 #include "klibc/stdlib.h"
 #include "klibc/debug.h"
+#include "klibc/logger.h"
 #include "sys/apic.h"
 #include "io/ports.h"
 #include "io/msr.h"
@@ -46,12 +47,12 @@ void isr_handler(int_reg_t *r) {
 
     /* If the int number is in range */
     if (r->int_num < IDT_ENTRIES) {
-        if (r->int_num < 32) {
-            vmm_set_pml4t(base_kernel_cr3); // Use base kernel CR3 in case the alternate CR3 is corrupted
-            if (r->cs != 0x1B) {
-                if (r->int_num == 0x3) { // Debug Trap
-                    debug_handler();
-                } else {
+        if (r->int_num == 1) {
+            debug_handler();
+        } else {
+            if (r->int_num < 32) {
+                vmm_set_pml4t(base_kernel_cr3); // Use base kernel CR3 in case the alternate CR3 is corrupted
+                if (r->cs != 0x1B) {
                     /* Exception */
                     uint64_t cr2;
                     asm volatile("movq %%cr2, %0;" : "=r"(cr2));
@@ -76,58 +77,58 @@ void isr_handler(int_reg_t *r) {
                     }
 
                     while (1) { asm volatile("hlt"); }
-                }
-            } else {
-                uint64_t cr2;
-                asm volatile("movq %%cr2, %0;" : "=r"(cr2));
-
-                // Userspace exception
-                sprintf("Got userspace exception %lu with error %lu\n", r->int_num, r->int_err);
-                sprintf("CR2: %lx RIP %lx RBP %lx RSP %lx\n", cr2, r->rip, r->rbp, r->rsp);
-                if (r->int_num == 19) {
-                    uint32_t mxcsr_val = get_mxcsr();
-                    sprintf("mxcsr: %lx\n", mxcsr_val);
-                }
-
-                if (get_cpu_locals()->current_thread->parent_pid) {
-                    //sprintf("Killed process %ld\n", get_cpu_locals()->current_thread->parent_pid);
-                    interrupt_safe_lock(sched_lock);
-                    thread_t *thread = threads[get_cpu_locals()->current_thread->tid];
-                    thread->state = BLOCKED;
-                    thread->cpu = -1;
-                    sprintf("tid = %ld\n", thread->tid);
-                    process_t *process = processes[get_cpu_locals()->current_thread->parent_pid];
-                    sprintf("killing process %ld with struct address %lx from ISR\n", get_cpu_locals()->current_thread->parent_pid, process);
-
-                    uint64_t size = process->threads_size;
-                    int64_t *tids = kmalloc(sizeof(int64_t) * process->threads_size);
-                    for (uint64_t i = 0; i < process->threads_size; i++) {
-                        tids[i] = process->threads[i];
-                    }
-                    interrupt_safe_unlock(sched_lock);
-
-                    for (uint64_t i = 0; i < size; i++) {
-                        if (tids[i]) {
-                            kill_thread(tids[i]);
-                        }
-                    }
-
-                    interrupt_safe_lock(sched_lock);
-                    kfree(processes[get_cpu_locals()->current_thread->parent_pid]);
-                    processes[get_cpu_locals()->current_thread->parent_pid] = (void *) 0;
-                    interrupt_safe_unlock(sched_lock);
                 } else {
-                    kill_thread(get_cpu_locals()->current_thread->tid);
+                    uint64_t cr2;
+                    asm volatile("movq %%cr2, %0;" : "=r"(cr2));
+
+                    // Userspace exception
+                    log("Got userspace exception %lu with error %lu on pid %lu", r->int_num, r->int_err, get_cpu_locals()->current_thread->parent_pid);
+                    log("CR2: %lx RIP %lx RBP %lx RSP %lx", cr2, r->rip, r->rbp, r->rsp);
+                    if (r->int_num == 19) {
+                        uint32_t mxcsr_val = get_mxcsr();
+                        log("mxcsr: %lx", mxcsr_val);
+                    }
+
+                    if (get_cpu_locals()->current_thread->parent_pid) {
+                        //sprintf("Killed process %ld\n", get_cpu_locals()->current_thread->parent_pid);
+                        interrupt_safe_lock(sched_lock);
+                        thread_t *thread = threads[get_cpu_locals()->current_thread->tid];
+                        thread->state = BLOCKED;
+                        thread->cpu = -1;
+                        sprintf("tid = %ld\n", thread->tid);
+                        process_t *process = processes[get_cpu_locals()->current_thread->parent_pid];
+                        sprintf("killing process %ld with struct address %lx from ISR\n", get_cpu_locals()->current_thread->parent_pid, process);
+
+                        uint64_t size = process->threads_size;
+                        int64_t *tids = kmalloc(sizeof(int64_t) * process->threads_size);
+                        for (uint64_t i = 0; i < process->threads_size; i++) {
+                            tids[i] = process->threads[i];
+                        }
+                        interrupt_safe_unlock(sched_lock);
+
+                        for (uint64_t i = 0; i < size; i++) {
+                            if (tids[i]) {
+                                kill_thread(tids[i]);
+                            }
+                        }
+
+                        interrupt_safe_lock(sched_lock);
+                        kfree(processes[get_cpu_locals()->current_thread->parent_pid]);
+                        processes[get_cpu_locals()->current_thread->parent_pid] = (void *) 0;
+                        interrupt_safe_unlock(sched_lock);
+                    } else {
+                        kill_thread(get_cpu_locals()->current_thread->tid);
+                    }
+                    sprintf("Thread is dead\n");
+                    get_cpu_locals()->current_thread = (thread_t *) 0;
+                    schedule(r); // Schedule for this CPU
                 }
-                sprintf("Thread is dead\n");
-                get_cpu_locals()->current_thread = (thread_t *) 0;
-                schedule(r); // Schedule for this CPU
             }
-        }
-        /* If the entry is present */
-        if (handlers[r->int_num]) {
-            /* Call the handler */
-            handlers[r->int_num](r);
+            /* If the entry is present */
+            if (handlers[r->int_num]) {
+                /* Call the handler */
+                handlers[r->int_num](r);
+            }
         }
     } else {
         uint64_t cr2;

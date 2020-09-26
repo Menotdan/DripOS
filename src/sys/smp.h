@@ -6,11 +6,12 @@
 #include "sys/tss.h"
 
 typedef struct {
-    /* Needed. Do NOT remove */
+    /* Needed. Do NOT remove or change positions. */
     uint64_t meta_pointer;
     uint64_t thread_kernel_stack;
     uint64_t thread_user_stack;
     uint64_t in_irq;
+
     /* Change these ig lol */
     uint8_t apic_id;
     uint8_t cpu_index;
@@ -29,6 +30,8 @@ typedef struct {
     uint64_t active_end_tsc;
 
     uint64_t total_tsc;
+
+    uint64_t local_dr7;
 
     idt_gate_t idt[IDT_ENTRIES];
     tss_64_t tss;

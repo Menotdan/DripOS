@@ -4,6 +4,7 @@
 #include "safe_userspace.h"
 #include "klibc/stdlib.h"
 #include "klibc/string.h"
+#include "klibc/debug.h"
 #include "klibc/queue.h"
 #include "klibc/errno.h"
 #include "drivers/tty/tty.h"
@@ -174,6 +175,7 @@ thread_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring) 
     new_task->vars.enviroment = NULL;
     new_task->vars.auxv = NULL;
     new_task->vars.argv = NULL;
+    new_task->parent = NULL;
 
     return new_task;
 }
@@ -236,6 +238,7 @@ int64_t add_new_child_thread_no_stack_init(thread_t *thread, int64_t pid) {
     thread->tid = new_tid;
     thread->regs.cr3 = new_parent->cr3; // Inherit parent's cr3
     thread->parent_pid = pid;
+    thread->parent = new_parent;
 
     /* Add the TID to it's parent's threads list */
     for (uint64_t i = 0; i < new_parent->threads_size; i++) {
@@ -287,6 +290,7 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
     thread->tid = new_tid;
     thread->regs.cr3 = new_parent->cr3; // Inherit parent's cr3
     thread->parent_pid = pid;
+    thread->parent = new_parent;
 
     if (new_parent->threads_size == 0) { // No children
         // -1 because kmalloc creates boundaries so page might not be mapped :|
@@ -416,6 +420,12 @@ process_t *create_process(char *name, void *new_cr3) {
     new_process->fd_table_size = 10;
     new_process->current_brk = 0x10000000000;
     new_process->ipc_handles = init_hashmap();
+
+    new_process->local_watchpoint1_active = 0;
+    new_process->local_watchpoint2_active = 0;
+    new_process->local_watchpoint1 = 0;
+    new_process->local_watchpoint2 = 0;
+
     strcpy(name, new_process->name);
 
     return new_process;
@@ -673,6 +683,9 @@ picked:
         }
         get_cpu_locals()->currently_idle = 1;
     }
+
+    get_cpu_locals()->local_dr7 = create_local_dr7(get_cpu_locals()->current_thread);
+    set_debug_state();
 
     running_task->cpu = (int) get_cpu_locals()->cpu_index;
 

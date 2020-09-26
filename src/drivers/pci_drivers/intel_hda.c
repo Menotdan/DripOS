@@ -74,12 +74,7 @@ uint64_t *read_rirb(uint64_t controller_id, uint64_t *responses) {
     for (uint64_t i = 1; i < ((controller.register_address->rirb_write_ptr + 1) & 0b11111111); i++) {
         buffer = krealloc(buffer, (response_count + 1) * 8);
         buffer[response_count++] = rirb_address[i];
-        log("{-HDA-} RIRB address: %lx", &(rirb_address[i]));
     }
-
-    // for (uint64_t i = 0; i < controller.rirb_entries; i++) {
-    //     log("{-HDA-} RIRB %lu: %lx", i, rirb_address[i]);
-    // }
 
     reset_rirb(controller_id);
 
@@ -113,6 +108,7 @@ void init_hda_controller(pci_device_t device) {
     new_controller.register_address->global_control |= 0x1; // Set the link bit
 
     log("{-HDA-} Reset bit set, waiting for link to be up...");
+    pci_enable_busmastering(device); // Might as well do this while we wait
     while (!(new_controller.register_address->global_control & 0x1)) {
         asm("pause");
     }

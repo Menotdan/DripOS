@@ -762,6 +762,7 @@ void ahci_init_controller(pci_device_t device) {
     }
 
     /* Actual driver code (lol) */
+    pci_enable_busmastering(device);
     kprintf("[AHCI] Device %u:%u.%u is an AHCI controller\n", device.bus, device.device, device.function);
     uint32_t bar5 = pci_get_mmio_bar(device, 5) & ~(0xFFF);
     uint32_t bar_size = pci_get_mmio_bar_size(device, 5);

@@ -34,6 +34,7 @@
 
 #include "klibc/string.h"
 #include "klibc/math.h"
+#include "klibc/debug.h"
 #include "sys/smp.h"
 
 #include "fs/filesystems/echfs.h"

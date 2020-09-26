@@ -63,6 +63,36 @@ typedef struct {
 } main_thread_vars_t;
 
 typedef struct {
+    char name[50]; // The name of the process
+
+    uint64_t cr3; // The cr3 this process has
+
+    int64_t *threads;
+    uint64_t threads_size;
+
+    int64_t pid; // Process ID
+
+    fd_entry_t **fd_table;
+    int fd_table_size;
+
+    uint64_t current_brk;
+    lock_t brk_lock;
+
+    uint64_t local_watchpoint1; // DR2
+    uint64_t local_watchpoint2; // DR3
+    uint8_t local_watchpoint1_active;
+    uint8_t local_watchpoint2_active;
+
+    lock_t ipc_create_handle_lock;
+    hashmap_t *ipc_handles; // a hashmap of port no -> ipc_handle_t *
+
+    int64_t uid; // User id of the user runnning this process
+    int64_t gid; // Group id of the user running this process
+    int64_t ppid; // Parent process id
+    uint64_t permissions; // Misc permission flags
+} process_t;
+
+typedef struct {
     char name[50]; // The name of the task
 
     task_regs_t regs; // The task's registers
@@ -79,6 +109,7 @@ typedef struct {
 
     int64_t tid; // Task ID
     int64_t parent_pid; // The pid of the parent process
+    process_t *parent; // A pointer to the parent for some code to use
     uint8_t ring;
 
     uint8_t running;
@@ -94,31 +125,6 @@ typedef struct {
 
     char sse_region[512] __attribute__((aligned(16))); // SSE region (aligned)
 } thread_t;
-
-typedef struct {
-    char name[50]; // The name of the process
-
-    uint64_t cr3; // The cr3 this process has
-
-    int64_t *threads;
-    uint64_t threads_size;
-
-    int64_t pid; // Process ID
-
-    fd_entry_t **fd_table;
-    int fd_table_size;
-
-    uint64_t current_brk;
-    lock_t brk_lock;
-
-    lock_t ipc_create_handle_lock;
-    hashmap_t *ipc_handles; // a hashmap of port no -> ipc_handle_t *
-
-    int64_t uid; // User id of the user runnning this process
-    int64_t gid; // Group id of the user running this process
-    int64_t ppid; // Parent process id
-    uint64_t permissions; // Misc permission flags
-} process_t;
 
 typedef struct {
     /* Do NOT remove these */

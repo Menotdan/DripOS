@@ -1,4 +1,5 @@
 #include "debug.h"
+#include "logger.h"
 #include "sys/smp.h"
 #include "sys/apic.h"
 
@@ -79,12 +80,37 @@ void init_debugger() {
     dr7 = read_debug_register('7'); // Initial state of debug register
 }
 
+uint64_t create_local_dr7(thread_t *t) {
+    if (!t->parent) {
+        return 0; // nothing lol
+    }
+
+    uint64_t ret = 0;
+    if (t->parent->local_watchpoint1_active) {
+        ret |= 0b0111 << 24;
+        ret |= 1 << 5;
+    }
+
+    if (t->parent->local_watchpoint2_active) {
+        ret |= 0b0111 << 28;
+        ret |= 1 << 7;
+    }
+
+    return ret;
+}
+
 void set_debug_state() {
     write_debug_register('0', dr0);
     write_debug_register('1', dr1);
-    write_debug_register('2', dr2);
-    write_debug_register('3', dr3);
-    write_debug_register('7', dr7);
+    if (get_cpu_locals()->current_thread->parent) {
+        write_debug_register('2', get_cpu_locals()->current_thread->parent->local_watchpoint1);
+        write_debug_register('3', get_cpu_locals()->current_thread->parent->local_watchpoint2);
+    } else {
+        write_debug_register('2', dr2);
+        write_debug_register('3', dr3);
+    }
+    get_cpu_locals()->local_dr7 = create_local_dr7(get_cpu_locals()->current_thread);
+    write_debug_register('7', dr7 | get_cpu_locals()->local_dr7);
 }
 
 void set_watchpoint(void *address, uint8_t watchpoint_index) {
@@ -92,28 +118,50 @@ void set_watchpoint(void *address, uint8_t watchpoint_index) {
         dr0 = (uint64_t) address;
     } else if (watchpoint_index == 1) {
         dr1 = (uint64_t) address;
-    } else if (watchpoint_index == 2) {
-        dr2 = (uint64_t) address;
-    } else if (watchpoint_index == 3) {
-        dr3 = (uint64_t) address;
+    } else {
+        return;
     }
 
-    dr7 |= (0b0101) << (16 + (watchpoint_index * 4));
+    dr7 |= (0b0111) << (16 + (watchpoint_index * 4));
+    dr7 |= 2 << (watchpoint_index * 2);
 
     madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
     for (uint64_t i = 0; i < cpu_vector.items_count; i++) {
         if (i < cpu_vector.items_count) {
             if ((cpus[i]->cpu_flags & 1 || cpus[i]->cpu_flags & 2) && cpus[i]->apic_id != get_lapic_id()) {
-                send_ipi(cpus[i]->apic_id, (1 << 14) | 250); // Send interrupt 253
+                send_ipi(cpus[i]->apic_id, (1 << 14) | 250); // Send interrupt 250
             }
         }
     }
     set_debug_state();
 }
 
+void send_reload_debug() {
+    madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
+    for (uint64_t i = 0; i < cpu_vector.items_count; i++) {
+        if (i < cpu_vector.items_count) {
+            if ((cpus[i]->cpu_flags & 1 || cpus[i]->cpu_flags & 2) && cpus[i]->apic_id != get_lapic_id()) {
+                send_ipi(cpus[i]->apic_id, (1 << 14) | 250); // Send interrupt 250
+            }
+        }
+    }
+    set_debug_state();
+}
+
+void set_local_watchpoint(void *address, uint8_t watchpoint_index) {
+    if (watchpoint_index == 0) {
+        get_cpu_locals()->current_thread->parent->local_watchpoint1 = (uint64_t) address;
+        get_cpu_locals()->current_thread->parent->local_watchpoint1_active = 1;
+    } else if (watchpoint_index == 1) {
+        get_cpu_locals()->current_thread->parent->local_watchpoint2 = (uint64_t) address;
+        get_cpu_locals()->current_thread->parent->local_watchpoint2_active = 1;
+    }
+    set_debug_state();
+}
+
 void debug_handler() {
-    sprintf("DR6: %lx\n", read_debug_register('6'));
+    log("DR6: %lx", read_debug_register('6'));
     while (1) {
-        
+        asm volatile("pause");
     }
 }
