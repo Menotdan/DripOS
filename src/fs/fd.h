@@ -2,6 +2,7 @@
 #define FS_FD_H
 #include <stdint.h>
 #include "vfs/vfs.h"
+#include "klibc/lock.h"
 
 #define SEEK_CUR 1
 #define SEEK_END 2
@@ -17,11 +18,14 @@ typedef struct fd_entry {
     uint64_t fd_cookie4;
 } fd_entry_t;
 
+extern lock_t fd_lock;
+
 struct vfs_node;
 typedef struct vfs_node vfs_node_t;
 
 int fd_new(vfs_node_t *node, int mode, int pid);
 void fd_remove(int fd);
+void fd_remove_pid(int fd, int pid);
 fd_entry_t *fd_lookup(int fd);
 
 /* FD ops */

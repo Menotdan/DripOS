@@ -6,6 +6,7 @@
 #include "fs/vfs/vfs.h"
 #include "fs/devfs/devfs.h"
 #include "fs/fd.h"
+#include "fs/pipe.h"
 
 #include "sys/apic.h"
 #include "sys/int/isr.h"
@@ -81,6 +82,7 @@ void kernel_process() {
 void kernel_task() {
     vfs_init(); // Setup VFS
     devfs_init();
+    init_pipe();
     log("VFS loaded into memory and ready.");
 
     vfs_ops_t ops = dummy_ops;

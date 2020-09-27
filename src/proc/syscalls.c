@@ -2,6 +2,7 @@
 #include "mm/vmm.h"
 #include "mm/pmm.h"
 #include "fs/fd.h"
+#include "fs/pipe.h"
 #include "proc/sleep_queue.h"
 #include "proc/scheduler.h"
 #include "proc/sched_syscalls.h"
@@ -41,6 +42,7 @@ void init_syscalls() {
     register_syscall(1, syscall_write);
     register_syscall(2, syscall_open);
     register_syscall(3, syscall_close);
+    register_syscall(4, syscall_open_pipe);
     register_syscall(5, syscall_getpid);
     register_syscall(8, syscall_seek);
     register_syscall(9, syscall_mmap);
@@ -417,6 +419,53 @@ void syscall_map_from_us_to_process(syscall_reg_t *r) {
         VMM_PRESENT | VMM_USER | VMM_WRITE);
     
     r->rdx = (uint64_t) mapped_addr + (r->rsi & 0xfff);
+    return;
+}
+
+void syscall_open_pipe(syscall_reg_t *r) {
+    int pid = (int) r->rdi;
+    int remote_fd = (int) r->rsi;
+
+    interrupt_safe_lock(sched_lock);
+    if ((uint64_t) pid > process_list_size) {
+        interrupt_safe_unlock(sched_lock);
+        r->rdx = -EINVAL;
+        return;
+    }
+    process_t *process = processes[pid];
+    if (process->ppid != get_cpu_locals()->current_thread->parent_pid) {
+        r->rdx = -EPERM;
+    }
+    
+    interrupt_safe_lock(sched_lock);
+    process_t *current_process = processes[pid];
+    interrupt_safe_unlock(sched_lock);
+
+    lock(fd_lock);
+    fd_entry_t **fd_table = current_process->fd_table;
+    int *fd_table_size = &current_process->fd_table_size;
+    
+    if (remote_fd < *fd_table_size - 1) {
+        if (fd_table[remote_fd]) {
+            kfree(fd_table[remote_fd]);
+        }
+
+        fd_entry_t *new_entry = kcalloc(sizeof(fd_entry_t));
+        new_entry->node = &pipe_node;
+
+        fd_table[remote_fd] = new_entry;
+    } else {
+        unlock(fd_lock);
+        r->rdx = -EBADF;
+        return;
+    }
+
+    unlock(fd_lock);
+
+    int new_pipe_fd = fd_new(&pipe_node, 0, get_cpu_locals()->current_thread->parent_pid); // Open an FD on our side
+    create_pipe(new_pipe_fd, remote_fd, pid, r->rdx); // Create a new pipe
+
+    r->rdx = new_pipe_fd;
     return;
 }
 

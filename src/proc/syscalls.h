@@ -8,6 +8,7 @@ void syscall_read(syscall_reg_t *r);                   // 0     int fd, void *bu
 void syscall_write(syscall_reg_t *r);                  // 1     int fd, void *buf, uint64_t count
 void syscall_open(syscall_reg_t *r);                   // 2     char *path, int mode
 void syscall_close(syscall_reg_t *r);                  // 3     int fd
+void syscall_open_pipe(syscall_reg_t *r);              // 4     int target_pid, int target_fd, int direction
 void syscall_getpid(syscall_reg_t *r);                 // 5
 void syscall_seek(syscall_reg_t *r);                   // 8     int fd, uint64_t offset, int whence
 void syscall_mmap(syscall_reg_t *r);                   // 9     void *base_addr, uint64_t size

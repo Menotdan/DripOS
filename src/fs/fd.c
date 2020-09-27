@@ -196,10 +196,6 @@ fnd:
     assert(fd_table[i]->fd_cookie4);
     unlock(fd_lock);
 
-    if (pid == 3 && strcmp("satadeva", node->name)) {
-        sprintf("Opened fd %d on pid 3 with node name %s, fd addr %lx\n", i, node->name, new_entry);
-    }
-
     return i;
 }
 
@@ -218,6 +214,46 @@ void fd_remove(int fd) {
     }
 
     unlock(fd_lock);
+}
+
+void fd_remove_pid(int fd, int pid) {
+    interrupt_safe_lock(sched_lock);
+    process_t *current_process = processes[pid];
+    interrupt_safe_unlock(sched_lock);
+
+    lock(fd_lock);
+    fd_entry_t **fd_table = current_process->fd_table;
+    int *fd_table_size = &current_process->fd_table_size;
+    
+    if (fd < *fd_table_size - 1) {
+        if (fd_table[fd]) {
+            kfree(fd_table[fd]);
+        }
+        fd_table[fd] = (fd_entry_t *) 0;
+    }
+
+    unlock(fd_lock);
+}
+
+fd_entry_t *fd_lookup_pid(int fd, int pid) {
+    fd_entry_t *ret;
+
+    interrupt_safe_lock(sched_lock);
+    process_t *current_process = processes[pid];
+    interrupt_safe_unlock(sched_lock);
+
+    lock(fd_lock);
+    fd_entry_t **fd_table = current_process->fd_table;
+    int *fd_table_size = &current_process->fd_table_size;
+
+    if (fd < *fd_table_size - 1 && fd >= 0) {
+        ret = fd_table[fd];
+    } else {
+        ret = (fd_entry_t *) 0;
+    }
+    unlock(fd_lock);
+
+    return ret;
 }
 
 fd_entry_t *fd_lookup(int fd) {
