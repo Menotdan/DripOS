@@ -251,6 +251,14 @@ void syscall_ipc_wait(syscall_reg_t *r) {
 
     interrupt_safe_lock(sched_lock);
     process_t *target_process = processes[get_cpu_locals()->current_thread->parent_pid];
+    assert(get_cpu_locals()->current_thread->parent_pid);
+    if (get_cpu_locals()->current_thread->parent->pid != get_cpu_locals()->current_thread->parent_pid) {
+        log("parent->pid: %ld", get_cpu_locals()->current_thread->parent->pid);
+        log("parent_pid: %ld", get_cpu_locals()->current_thread->parent_pid);
+        assert(get_cpu_locals()->current_thread->parent->pid == get_cpu_locals()->current_thread->parent_pid);
+    }
+    assert(get_cpu_locals()->current_thread->parent == target_process);
+    assert(get_cpu_locals()->current_thread->parent);
     interrupt_safe_unlock(sched_lock);
 
     /* Map IPC buffer into the process */
@@ -436,9 +444,8 @@ void syscall_open_pipe(syscall_reg_t *r) {
     if (process->ppid != get_cpu_locals()->current_thread->parent_pid) {
         r->rdx = -EPERM;
     }
-    
-    interrupt_safe_lock(sched_lock);
-    process_t *current_process = processes[pid];
+
+    process_t *current_process = process;
     interrupt_safe_unlock(sched_lock);
 
     lock(fd_lock);

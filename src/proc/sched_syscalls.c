@@ -149,6 +149,7 @@ int fork(syscall_reg_t *r) {
         process_list_size += 10;
     }
     processes[new_pid] = forked_process;
+    forked_process->pid = new_pid;
 
     process_t *new_process = processes[new_pid]; // Get the process struct
     int64_t old_pid = process->pid;

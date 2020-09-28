@@ -63,7 +63,7 @@ void isr_handler(int_reg_t *r) {
                     send_panic_ipis(); // Halt all other CPUs
 
                     if (scheduler_enabled) {
-                        safe_kprintf("Exception on core %u with apic id %u! (cur task %s with TID %ld)\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid);
+                        safe_kprintf("Exception on core %u with apic id %u! (cur task %s with TID %ld and PID %ld)\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid, get_cpu_locals()->current_thread->parent_pid);
                     } else {
                         safe_kprintf("Exception on core %u with apic id %u!\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id);
                     }

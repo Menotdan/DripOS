@@ -1,6 +1,7 @@
 #include "pipe.h"
 #include "klibc/stdlib.h"
 #include "klibc/errno.h"
+#include "klibc/logger.h"
 #include "sys/smp.h"
 #include "fd.h"
 #include <stddef.h>
@@ -20,7 +21,7 @@ void create_pipe(int cur_fd, int remote_fd, int other_pid, int direction) {
     }
 
     if (index == -1) {
-        krealloc(pipes, sizeof(pipe_t *) * (pipes_size + 1));
+        pipes = krealloc(pipes, sizeof(pipe_t *) * (pipes_size + 1));
         index = pipes_size++;
     }
 

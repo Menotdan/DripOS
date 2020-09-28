@@ -7,6 +7,7 @@
 #include "klibc/debug.h"
 #include "klibc/queue.h"
 #include "klibc/errno.h"
+#include "klibc/logger.h"
 #include "drivers/tty/tty.h"
 #include "drivers/serial.h"
 #include "io/msr.h"
@@ -450,6 +451,7 @@ int64_t add_process(process_t *process) {
         process_list_size += 10;
     }
     processes[pid] = process;
+    processes[pid]->pid = pid;
 
     interrupt_safe_unlock(sched_lock);
 

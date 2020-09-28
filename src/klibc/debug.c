@@ -194,5 +194,5 @@ void debug_handler(int_reg_t *r) {
     log("{-Debug-} DR7: %lx", read_debug_register('7'));
     log("{-Debug-} RIP: %lx", r->rip);
     log("{-Debug-} PID: %ld", get_cpu_locals()->current_thread->parent_pid);
-    stack_trace(r, 10);
+    // stack_trace(r, 10);
 }
