@@ -47,4 +47,6 @@ cpu_locals_t *get_cpu_locals();
 void new_cpu_locals();
 uint8_t get_lapic_id();
 
+extern uint8_t cores_booted;
+
 #endif

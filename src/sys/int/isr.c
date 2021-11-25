@@ -56,6 +56,7 @@ void isr_handler(int_reg_t *r) {
                     /* Exception */
                     uint64_t cr2;
                     asm volatile("movq %%cr2, %0;" : "=r"(cr2));
+
                     /* Ensure the display is not locked when we crash */
                     unlock(base_tty.tty_lock);
                     unlock(vesa_lock);
@@ -75,6 +76,7 @@ void isr_handler(int_reg_t *r) {
                         if (r->int_err & (1<<2)) { safe_kprintf("U "); } else { safe_kprintf("S "); }
                         if (r->int_err & (1<<3)) { safe_kprintf("RES "); }
                     }
+                    stack_trace(r, 10);
 
                     while (1) { asm volatile("hlt"); }
                 } else {

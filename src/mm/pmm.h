@@ -20,4 +20,6 @@ uint64_t pmm_get_used_mem();
 uint64_t pmm_get_free_mem();
 uint64_t pmm_get_total_mem();
 
+extern uint64_t cur_pain;
+
 #endif

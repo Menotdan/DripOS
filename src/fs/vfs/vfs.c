@@ -8,13 +8,17 @@
 #include "klibc/lock.h"
 #include "klibc/errno.h"
 #include "klibc/open_flags.h"
+#include "klibc/logger.h"
+#include "klibc/debug.h"
 #include "drivers/tty/tty.h"
 #include "drivers/serial.h"
 #include "mm/vmm.h"
+#include "mm/pmm.h"
 
 vfs_node_t *root_node;
 
 lock_t vfs_lock = {0, 0, 0, 0};
+lock_t vfs_open_lock = {0, 0, 0, 0}; // Opening files can be a bit hectic on multicore
 uint64_t current_unid = 0; // Current unique node ID
 
 vfs_ops_t null_vfs_ops = {0, 0, 0, 0, 0, 0};
@@ -363,11 +367,14 @@ char *get_full_path(vfs_node_t *node) {
 }
 
 vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
+    lock(vfs_open_lock);
+
     vfs_node_t *node = get_node_from_path(name);
     if (!node) {
         /* The first missing node, where the generator should start generating */
         vfs_node_t *missing_start = create_missing_nodes_from_path(name, null_vfs_ops);
         assert(missing_start);
+        assert(get_node_from_path(name));
 
         sprintf("[VFS] Handling mountpoint for %s\n", name);
         node = get_node_from_path(name);
@@ -376,6 +383,8 @@ vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
                 remove_children(missing_start);
                 remove_node(missing_start);
                 *err = ENOENT;
+
+                unlock(vfs_open_lock);
                 return (void *) 0; // Welp
             }
             node = node->parent;
@@ -384,41 +393,76 @@ vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
         assert(node);
         char *temp_name = name;
         char *full_path = get_full_path(node);
-        sprintf("[VFS] Mountpoint at %s\n", full_path);
+        log("[VFS] Mountpoint at %s", full_path);
         temp_name += strlen(full_path);
         kfree(full_path);
 
-        sprintf("[VFS] Temp name: %s\n", temp_name);
+        log("[VFS] Temp name: %s", temp_name);
 
         if (mode & O_CREAT) {
             /* The FS will create nodes for us */
             remove_children(missing_start);
             remove_node(missing_start);
+
+            unlock(vfs_open_lock);
             int create_err = node->create_handle(node, temp_name, mode);
+            lock(vfs_open_lock);
 
             if (create_err != 0) {
                 *err = -create_err;
+
+                unlock(vfs_open_lock);
                 return NULL;
             } else {
                 vfs_node_t *created_file = get_node_from_path(name);
                 if (!created_file) {
                     assert(!"vfs go bruh");
                 }
+
+                unlock(vfs_open_lock);
                 return created_file;
             }
         }
 
-        node->node_handle(node, missing_start, temp_name);
+        vfs_node_t *ffff = get_node_from_path(name);
+        set_watchpoint(ffff, 0);
+        assert(get_node_from_path(name));
+
+        //log("Node name: %s", ffff->name);
+        //unmap_alloc(ffff);
+
+        cur_pain = GET_LOWER_HALF(uint64_t, get_node_from_path(name));
+
+        //remap_alloc(ffff);
+
+        unlock(vfs_open_lock);
+        node->node_handle(node, get_node_from_path(name), temp_name); // this might read from a device
+        lock(vfs_open_lock);
+        //remap_alloc(ffff); // ensure this is remapped
+
         node = get_node_from_path(name);
+
+        if (!node) {
+            log("name: %s", name);
+            log("name addr: %lx", ffff->name);
+            assert(!"node vanish O.o");
+        }
+
+        clear_global_watchpoint(0);
+        cur_pain = 0;
+
         if (!node->ops.open) {
             // No file or directory
             remove_children(missing_start);
             remove_node(missing_start);
             node = 0;
             *err = ENOENT;
+            unlock(vfs_open_lock);
+            return (void *) 0;
         }
     }
 
+    unlock(vfs_open_lock);
     if (node) {
         node->ops.open(name, mode);
     }
