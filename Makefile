@@ -20,9 +20,10 @@ O_LEVEL = 2 # Optimization level for build
 BOOT_IMAGE_MB=10
 BOOT_IMAGE_OUTPUT=/dev/null # safety
 
-IMG_MB=100
+IMG_MB=200
 DRIPOS_SYSROOT_ON_HOST=/var/dripos-sysroot
 IMG_OUTPUT=dripdisk.img
+OLD_WD = $(shell pwd)
 
 
 # Options for GCC
@@ -63,12 +64,13 @@ disk_image:
 	read test
 	dd if=/dev/zero of=temp-image bs=1M count=$(IMG_MB)
 	echfs-utils temp-image quick-format 512
+
 	- rm -rf mountpoint
-	mkdir mountpoint
-	echfs-fuse temp-image mountpoint
-	cp -R $(DRIPOS_SYSROOT_ON_HOST)/* mountpoint
-	fusermount -u mountpoint
+	./copy-echfs-fuse.sh
 	- rm -rf mountpoint
+
+	#./copy-sysroot-to-echfs-img.sh $(DRIPOS_SYSROOT_ON_HOST) temp-image
+
 	sudo dd if=temp-image of=$(IMG_OUTPUT) bs=1M count=$(IMG_MB)
 	rm -rf temp-image
 
@@ -76,7 +78,7 @@ kernel.elf: ${NASM_SOURCES:.real=.bin} ${OBJ}
 	${CC} -Wl,-z,max-page-size=0x1000,--gc-sections -nostdlib -Werror -Wall -Wextra -Wpedantic -Wunused-function -o $@ -T linker.ld ${OBJ}
 
 run: DripOS.img
-	- qemu-system-x86_64 -d guest_errors,int -smp ${CORES} -machine q35 -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -hdb DripOS.img -hda dripdisk.img
+	- qemu-system-x86_64 -smp ${CORES} -machine q35 -no-shutdown -no-reboot -serial stdio -soundhw pcspk -m ${MEM} -device isa-debug-exit,iobase=0xf4,iosize=0x04 -boot menu=on -hdb DripOS.img -hda dripdisk.img
 	make clean
 
 run-dripdbg: DripOS.img

@@ -1,5 +1,6 @@
 #include "debug.h"
 #include "logger.h"
+#include "lock.h"
 #include "sys/smp.h"
 #include "sys/apic.h"
 #include "mm/vmm.h"
@@ -9,6 +10,9 @@ uint64_t dr1 = 0;
 uint64_t dr2 = 0;
 uint64_t dr3 = 0;
 uint64_t dr7 = 0;
+
+lock_t watchpoint_lock = {0, 0, 0, 0};
+uint8_t watchpoint_cpu_count = 0;
 
 uint64_t read_debug_register(char reg) {
     uint64_t ret = 0;
@@ -101,6 +105,8 @@ uint64_t create_local_dr7(thread_t *t) {
 }
 
 void set_debug_state() {
+    lock(watchpoint_lock);
+
     write_debug_register('0', dr0);
     write_debug_register('1', dr1);
     if (get_cpu_locals()->current_thread->parent) {
@@ -112,6 +118,9 @@ void set_debug_state() {
     }
     get_cpu_locals()->local_dr7 = create_local_dr7(get_cpu_locals()->current_thread);
     write_debug_register('7', dr7 | get_cpu_locals()->local_dr7);
+    watchpoint_cpu_count++;
+
+    unlock(watchpoint_lock);
 }
 
 void set_watchpoint(void *address, uint8_t watchpoint_index) {
@@ -125,6 +134,27 @@ void set_watchpoint(void *address, uint8_t watchpoint_index) {
 
     dr7 |= (0b1101) << (16 + (watchpoint_index * 4));
     dr7 |= 2 << (watchpoint_index * 2);
+
+    lock(watchpoint_lock);
+    watchpoint_cpu_count = 0;
+    madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
+    for (uint64_t i = 0; i < cpu_vector.items_count; i++) {
+        if (i < cpu_vector.items_count) {
+            if ((cpus[i]->cpu_flags & 1 || cpus[i]->cpu_flags & 2) && cpus[i]->apic_id != get_lapic_id()) {
+                send_ipi(cpus[i]->apic_id, (1 << 14) | 250); // Send interrupt 250
+            }
+        }
+    }
+    unlock(watchpoint_lock);
+    set_debug_state();
+    while (watchpoint_cpu_count < cores_booted) {
+        asm volatile ("pause");
+    }
+}
+
+void clear_global_watchpoint(uint8_t watchpoint_index) {
+    dr7 &= ~((0b1101) << (16 + (watchpoint_index * 4)));
+    dr7 &= ~(2 << (watchpoint_index * 2));
 
     madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
     for (uint64_t i = 0; i < cpu_vector.items_count; i++) {
@@ -194,5 +224,5 @@ void debug_handler(int_reg_t *r) {
     log("{-Debug-} DR7: %lx", read_debug_register('7'));
     log("{-Debug-} RIP: %lx", r->rip);
     log("{-Debug-} PID: %ld", get_cpu_locals()->current_thread->parent_pid);
-    // stack_trace(r, 10);
+    stack_trace(r, 10);
 }
