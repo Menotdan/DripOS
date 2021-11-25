@@ -8,7 +8,6 @@
 #include "klibc/hashmap.h"
 #include "klibc/strhashmap.h"
 #include "klibc/open_flags.h"
-#include "klibc/logger.h"
 #include "fs/filesystems/filesystems.h"
 
 #include "mm/pmm.h"
@@ -658,7 +657,7 @@ void echfs_node_gen(vfs_node_t *fs_node, vfs_node_t *target_node, char *path) {
     uint8_t err;
     echfs_dir_entry_t *entry = echfs_path_resolve(fs_data, path, &err);
     if (!entry) return;
-    log("[EchFS] Got entry for path %s", path);
+    sprintf("[EchFS] Got entry for path %s\n", path);
     kfree(entry);
 
     vfs_ops_t echfs_ops = {echfs_open, echfs_post_open, echfs_close, echfs_read, echfs_write, echfs_seek};

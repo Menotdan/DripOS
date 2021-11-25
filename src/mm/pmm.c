@@ -155,24 +155,10 @@ void *pmm_alloc(uint64_t size) {
 
     unlock(pmm_lock);
     interrupt_unlock(state);
-
-    if ((free_page * 0x1000) <= cur_pain && cur_pain < (free_page * 0x1000) + size) {
-        kprintf("idot lmao, caller: %lx\n", __builtin_return_address(0));
-    }
-
     return (void *) (free_page * 0x1000);
 }
 
-uint64_t cur_pain = 0;
 void pmm_unalloc(void *addr, uint64_t size) {
-    if ((uint64_t) addr <= cur_pain && cur_pain < (uint64_t) addr + size) {
-        kprintf("idot lmao, caller: %lx\n", __builtin_return_address(0));
-    }
-
-    if ((uint64_t) addr % 0x1000 != 0) {
-        kprintf("pmm_unalloc freeing bad address, caller: %lx, addr: %lx\n", __builtin_return_address(0), addr);
-    }
-
     interrupt_state_t state = interrupt_lock();
     lock(pmm_lock);
 

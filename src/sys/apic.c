@@ -12,8 +12,6 @@ vector_t iso_vector;
 vector_t ioapic_vector;
 vector_t nmi_vector;
 
-uint8_t cpu_count = 0;
-
 void parse_madt() {
     madt_t *madt = (madt_t *) search_sdt_header("APIC");
 

@@ -184,16 +184,16 @@ int fd_new(vfs_node_t *node, int mode, int pid) {
     *fd_table_size += 10;
     fd_table = krealloc(fd_table, *fd_table_size * sizeof(fd_entry_t *));
 fnd:
-    new_entry->fd_cookie1 = FD_COOKIE_VAL;
-    new_entry->fd_cookie2 = FD_COOKIE_VAL;
-    new_entry->fd_cookie3 = FD_COOKIE_VAL;
-    new_entry->fd_cookie4 = FD_COOKIE_VAL;
+    new_entry->fd_cookie1 = 0x1234567812345678;
+    new_entry->fd_cookie2 = 0x1234567812345678;
+    new_entry->fd_cookie3 = 0x1234567812345678;
+    new_entry->fd_cookie4 = 0x1234567812345678;
     fd_table[i] = new_entry;
     assert(fd_table[i]->node);
-    assert(fd_table[i]->fd_cookie1 == FD_COOKIE_VAL);
-    assert(fd_table[i]->fd_cookie2 == FD_COOKIE_VAL);
-    assert(fd_table[i]->fd_cookie3 == FD_COOKIE_VAL);
-    assert(fd_table[i]->fd_cookie4 == FD_COOKIE_VAL);
+    assert(fd_table[i]->fd_cookie1);
+    assert(fd_table[i]->fd_cookie2);
+    assert(fd_table[i]->fd_cookie3);
+    assert(fd_table[i]->fd_cookie4);
     unlock(fd_lock);
 
     return i;

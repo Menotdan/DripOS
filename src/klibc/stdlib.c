@@ -25,23 +25,10 @@ void *kmalloc(uint64_t size) {
     /* Unmap size data for lower bounds reads/writes */
     vmm_unmap((void *) size_data, 1);
     interrupt_unlock(state);
-
-    if (size_data % 0x1000 != 0) {
-        log("{-kmalloc-} died, caller: %lx, size: %lu\n", __builtin_return_address(0), size);
-        assert(!"kmalloc bug");
-    }
     return (void *) (size_data + 0x1000);
 }
 
-//void *cur_pain = (void *) 0;
-
 void kfree(void *addr) {
-    if (((uint64_t) addr % 0x1000) != 0) {
-        log("{-kfree-} unaligned addr: %lx, caller: %lx", addr, __builtin_return_address(0));
-    }
-
-    assert(((uint64_t) addr % 0x1000) == 0); // is divisible by page size
-    assert(is_mapped(addr));
     interrupt_state_t state = interrupt_lock();
 
     /* Map size */
@@ -56,42 +43,16 @@ void kfree(void *addr) {
     if (*signature != MALLOC_SIGNATURE) {
         kprintf("signature check failed in kfree()! addr: %lx, caller: %lx\n", addr, __builtin_return_address(0));
         while (1) {
-            assert(!"h");
+            asm volatile("hlt");
         }
     }
 
     void *phys = virt_to_phys((void *) size_data, (pt_t *) vmm_get_pml4t());
     if ((uint64_t) phys != 0xFFFFFFFFFFFFFFFF) {
-        log_alloc("-mem %lu %lu %lx\n", size_data, *size_data, __builtin_return_address(0));
         pmm_unalloc(phys, *size_data);
     }
-
-    interrupt_unlock(state);
-}
-
-void unmap_alloc(void *addr) {
-    interrupt_state_t state = interrupt_lock();
-
-    /* Map size */
-    vmm_map(GET_LOWER_HALF(void *, (uint64_t) addr - 0x1000), (void *) ((uint64_t) addr - 0x1000), 1, VMM_PRESENT | VMM_WRITE);
-    uint64_t *size_data = (uint64_t *) ((uint64_t) addr - 0x1000);
-    uint64_t page_count = ((*size_data - 0x1000) + 0x1000 - 1) / 0x1000;
-
-    vmm_unmap(size_data, page_count);
-
-    interrupt_unlock(state);
-}
-
-void remap_alloc(void *addr) {
-    interrupt_state_t state = interrupt_lock();
-
-    /* Map size */
-    vmm_map(GET_LOWER_HALF(void *, (uint64_t) addr - 0x1000), (void *) ((uint64_t) addr - 0x1000), 1, VMM_PRESENT | VMM_WRITE);
-    uint64_t *size_data = (uint64_t *) ((uint64_t) addr - 0x1000);
-    uint64_t page_count = ((*size_data - 0x1000) + 0x1000 - 1) / 0x1000;
-
-    vmm_map(GET_LOWER_HALF(void *, addr), (void *) ((uint64_t) addr), page_count - 1, VMM_PRESENT | VMM_WRITE);
-
+    
+    log_alloc("-mem %lu %lu %lx\n", size_data, *size_data, __builtin_return_address(0));
     interrupt_unlock(state);
 }
 
