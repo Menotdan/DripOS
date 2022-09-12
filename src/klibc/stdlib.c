@@ -60,7 +60,7 @@ void kfree(void *addr) {
         }
     }
 
-    void *phys = virt_to_phys((void *) size_data, (pt_t *) vmm_get_pml4t());
+    void *phys = virt_to_phys((void *) size_data, (page_table_t *) vmm_get_base());
     if ((uint64_t) phys != 0xFFFFFFFFFFFFFFFF) {
         log_alloc("-mem %lu %lu %lx\n", size_data, *size_data, __builtin_return_address(0));
         pmm_unalloc(phys, *size_data);

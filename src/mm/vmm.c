@@ -13,14 +13,15 @@ lock_t vmm_spinlock = {0, 0, 0, 0}; // Spinlock for the VMM
 uint64_t base_kernel_cr3 = 0;
 
 uint64_t cache_line_size = 0;
+uint8_t vmm_complete = 0;
 
-uint64_t vmm_get_pml4t() {
+uint64_t vmm_get_base() {
     uint64_t ret;
     asm volatile("movq %%cr3, %0;" : "=r"(ret));
     return ret;
 }
 
-void vmm_set_pml4t(uint64_t new) {
+void vmm_set_base(uint64_t new) {
     asm volatile("movq %0, %%cr3;" ::"r"(new) : "memory");
 }
 
@@ -76,34 +77,34 @@ void *vmm_offs_to_virt(pt_off_t offs) {
     return (void *) addr;
 }
 
-uint64_t get_entry(pt_t *cur_table, uint64_t offset) {
-    return cur_table->table[offset];
+uint64_t get_entry(page_table_t *cur_table, uint64_t offset) {
+    return cur_table->entries[offset];
 }
 
-pt_t *traverse_page_table(pt_t *cur_table, uint64_t offset) {
-    return GET_HIGHER_HALF(pt_t *, (cur_table->table[offset] & VMM_4K_PERM_MASK));
+page_table_t *traverse_page_table(page_table_t *cur_table, uint64_t offset) {
+    return GET_HIGHER_HALF(page_table_t *, (cur_table->entries[offset] & VMM_4K_PERM_MASK));
 }
 
-void *virt_to_phys(void *virt, pt_t *p4) {
+void *virt_to_phys(void *virt, page_table_t *p4) {
     uint64_t page4k_offset = ((uint64_t) virt) & 0xfff;
     uint64_t page2m_offset = ((uint64_t) virt) & 0x1fffff;
     pt_off_t offs = vmm_virt_to_offs(virt);
 
-    p4 = GET_HIGHER_HALF(pt_t *, p4);
+    p4 = GET_HIGHER_HALF(page_table_t *, p4);
 
-    pt_t *p3 = traverse_page_table(p4, offs.p4_off);
+    page_table_t *p3 = traverse_page_table(p4, offs.p4_off);
     if ((uint64_t) p3 > NORMAL_VMA_OFFSET) {
-        pt_t *p2 = traverse_page_table(p3, offs.p3_off);
+        page_table_t *p2 = traverse_page_table(p3, offs.p3_off);
         if (get_entry(p2, offs.p2_off) & VMM_HUGE) {
-            return (void *) (p2->table[offs.p2_off] & VMM_4K_PERM_MASK) + page2m_offset;
+            return (void *) (p2->entries[offs.p2_off] & VMM_4K_PERM_MASK) + page2m_offset;
         }
 
         if ((uint64_t) p2 > NORMAL_VMA_OFFSET) {
-            pt_t *p1 = traverse_page_table(p2, offs.p2_off);
+            page_table_t *p1 = traverse_page_table(p2, offs.p2_off);
 
             if ((uint64_t) p1 > NORMAL_VMA_OFFSET) {
-                if (p1->table[offs.p1_off] & VMM_PRESENT) {
-                    return (void *) (p1->table[offs.p1_off] & VMM_4K_PERM_MASK) + page4k_offset;
+                if (p1->entries[offs.p1_off] & VMM_PRESENT) {
+                    return (void *) (p1->entries[offs.p1_off] & VMM_4K_PERM_MASK) + page4k_offset;
                 }
             }
         }
@@ -113,27 +114,27 @@ void *virt_to_phys(void *virt, pt_t *p4) {
 }
 
 void *kernel_address(void *virt) {
-    void *phys = virt_to_phys(virt, (pt_t *) vmm_get_pml4t());
+    void *phys = virt_to_phys(virt, (page_table_t *) vmm_get_base());
     if ((uint64_t) phys != 0xFFFFFFFFFFFFFFFF) {
         return GET_HIGHER_HALF(void *, phys);
     }
     return (void *) 0;
 }
 
-void vmm_ensure_table(pt_t *table, uint16_t offset) {
-    if (!(table->table[offset] & VMM_PRESENT)) {
+void vmm_ensure_table(page_table_t *table, uint16_t offset) {
+    if (!(table->entries[offset] & VMM_PRESENT)) {
         uint64_t new_table = (uint64_t) pmm_alloc(0x1000);
         memset(GET_HIGHER_HALF(uint8_t *, new_table), 0, 0x1000);
-        table->table[offset] = new_table | VMM_PRESENT | VMM_WRITE | VMM_USER;
+        table->entries[offset] = new_table | VMM_PRESENT | VMM_WRITE | VMM_USER;
     }
 }
 
-void vmm_remap_to_4k(pt_t *p2, uint16_t offset) {
+void vmm_remap_to_4k(page_table_t *p2, uint16_t offset) {
     uint64_t new_pml1 = (uint64_t) pmm_alloc(0x1000);
     uint64_t *new_pml1_virt = (void *) (new_pml1 + NORMAL_VMA_OFFSET);
 
-    uint64_t represented_range = p2->table[offset] & VMM_4K_PERM_MASK;
-    uint64_t perms = p2->table[offset] & 0xfff;
+    uint64_t represented_range = p2->entries[offset] & VMM_4K_PERM_MASK;
+    uint64_t perms = p2->entries[offset] & 0xfff;
     memset((uint8_t *) new_pml1_virt, 0, 0x1000); // Touch the address there in case our data is living there
 
     uint64_t cur_pos = represented_range;
@@ -142,7 +143,7 @@ void vmm_remap_to_4k(pt_t *p2, uint16_t offset) {
         cur_pos += 0x1000;
     }
 
-    p2->table[offset] = new_pml1 | VMM_PRESENT | VMM_WRITE | VMM_USER;
+    p2->entries[offset] = new_pml1 | VMM_PRESENT | VMM_WRITE | VMM_USER;
     vmm_invlpg(represented_range); // Invalidate any previous mappings
 }
 
@@ -150,7 +151,7 @@ void vmm_remap_to_4k(pt_t *p2, uint16_t offset) {
 uint8_t is_mapped(void *data) {
     interrupt_state_t state = interrupt_lock();
     lock(vmm_spinlock);
-    uint64_t phys_addr = (uint64_t) virt_to_phys(data, (void *) vmm_get_pml4t());
+    uint64_t phys_addr = (uint64_t) virt_to_phys(data, (void *) vmm_get_base());
 
     if (phys_addr == 0xFFFFFFFFFFFFFFFF) {
         unlock(vmm_spinlock);
@@ -183,16 +184,16 @@ uint8_t range_mapped(void *data, uint64_t size) {
 /* TODO: Sync page tables for any CPUs running with the same CR3 */
 
 /* Get a table for a set of offsets into the table */
-pt_ptr_t vmm_get_table(pt_off_t *offs, pt_t *p4) {
+pt_ptr_t vmm_get_table(pt_off_t *offs, page_table_t *p4) {
     pt_ptr_t ret;
-    p4 = GET_HIGHER_HALF(pt_t *, p4);
+    p4 = GET_HIGHER_HALF(page_table_t *, p4);
 
     vmm_ensure_table(p4, offs->p4_off);
-    pt_t *p3 = traverse_page_table(p4, offs->p4_off);
+    page_table_t *p3 = traverse_page_table(p4, offs->p4_off);
     ret.p3 = p3;
 
     vmm_ensure_table(p3, offs->p3_off);
-    pt_t *p2 = traverse_page_table(p3, offs->p3_off);
+    page_table_t *p2 = traverse_page_table(p3, offs->p3_off);
     ret.p2 = p2;
     
     uint64_t p2_entry = get_entry(p2, offs->p2_off);
@@ -227,8 +228,8 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
         pt_ptr_t ptrs = vmm_get_table(&offs, p4);
 
         /* Set the addresses */
-        if (!(ptrs.p1->table[offs.p1_off] & VMM_PRESENT)) {
-            ptrs.p1->table[offs.p1_off] = cur_phys | perms;
+        if (!(ptrs.p1->entries[offs.p1_off] & VMM_PRESENT)) {
+            ptrs.p1->entries[offs.p1_off] = cur_phys | perms;
             cur_phys += 0x1000;
             cur_virt += 0x1000;
         } else {
@@ -239,7 +240,10 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
         }
         vmm_invlpg((uint64_t) cur_virt - 0x1000);
     }
-    //sprintf("+mapping %lu %lu %lu\n", phys, virt, count);
+
+    if (vmm_complete) {
+        sprintf("+mapping %lu %lu %lu\n", phys, virt, count);
+    }
     unlock(vmm_spinlock);
     interrupt_unlock(state);
     return ret;
@@ -255,19 +259,23 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
     uint8_t *cur_virt = (uint8_t *) (((uint64_t) virt) & VMM_4K_PERM_MASK);
     uint64_t cur_phys = ((uint64_t) phys) & VMM_4K_PERM_MASK;
 
-    //sprintf("-mapping %lu %lu %lu\n", virt_to_phys(virt, p4), virt, count);
+    if (vmm_complete) {
+        sprintf("-mapping %lu %lu %lu\n", phys, virt, count);
+    }
 
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
         pt_ptr_t ptrs = vmm_get_table(&offs, p4);
 
         /* Set the addresses */
-        ptrs.p1->table[offs.p1_off] = cur_phys | (perms | VMM_PRESENT);
+        ptrs.p1->entries[offs.p1_off] = cur_phys | (perms | VMM_PRESENT);
         cur_phys += 0x1000;
         cur_virt += 0x1000;
         vmm_invlpg((uint64_t) cur_virt - 0x1000);
     }
-    //sprintf("+mapping %lu %lu %lu\n", phys, virt, count);
+    if (vmm_complete) {
+        sprintf("+mapping %lu %lu %lu\n", phys, virt, count);
+    }
 
 
     unlock(vmm_spinlock);
@@ -283,14 +291,16 @@ int vmm_unmap_pages(void *virt, void *p4, uint64_t count) {
     int ret = 0;
     uint64_t cur_virt = (uint64_t) virt;
 
-    //sprintf("-mapping %lu %lu %lu\n", virt_to_phys(virt, p4), virt, count);
+    if (vmm_complete) {
+        sprintf("-mapping %lu %lu %lu\n", virt_to_phys(virt, p4), virt, count);
+    }
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
         pt_ptr_t ptrs = vmm_get_table(&offs, p4);
 
         /* Set the addresses */
-        if ((ptrs.p1->table[offs.p1_off] & VMM_PRESENT)) {
-            ptrs.p1->table[offs.p1_off] = 0;
+        if ((ptrs.p1->entries[offs.p1_off] & VMM_PRESENT)) {
+            ptrs.p1->entries[offs.p1_off] = 0;
         } else {
             ret = 1;
         }
@@ -309,24 +319,24 @@ void vmm_set_pat_pages(void *virt, void *p4, uint64_t count, uint8_t pat_entry) 
 
     uint64_t cur_virt = (uint64_t) virt;
 
-    pt_t *p4_offset = GET_HIGHER_HALF(pt_t *, p4);
+    page_table_t *p4_offset = GET_HIGHER_HALF(page_table_t *, p4);
 
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
         
         if ((uint64_t) virt_to_phys(virt, p4) != 0xFFFFFFFFFFFFFFFF) {
-            pt_t *p3 = traverse_page_table(p4_offset, offs.p4_off);
+            page_table_t *p3 = traverse_page_table(p4_offset, offs.p4_off);
             if (p3) {
-                pt_t *p2 = traverse_page_table(p3, offs.p3_off);
+                page_table_t *p2 = traverse_page_table(p3, offs.p3_off);
                 if (p2) {
-                    pt_t *p1 = traverse_page_table(p2, offs.p2_off);
+                    page_table_t *p1 = traverse_page_table(p2, offs.p2_off);
                     uint64_t cur_data = get_entry(p1, offs.p1_off);
                     uint8_t bit1 = (pat_entry & (1<<0)) == (1<<0);
                     uint8_t bit2 = (pat_entry & (1<<1)) == (1<<1);
                     uint8_t bit3 = (pat_entry & (1<<2)) == (1<<2);
 
                     cur_data |= (bit1 << 3) | (bit2 << 4) | (bit3 << 7);
-                    p1->table[offs.p1_off] = cur_data;
+                    p1->entries[offs.p1_off] = cur_data;
                 }
             }
         }
@@ -341,14 +351,14 @@ void vmm_set_pat_pages(void *virt, void *p4, uint64_t count, uint8_t pat_entry) 
 void *vmm_fork_higher_half(void *old) {
     interrupt_state_t state = interrupt_lock();
     lock(vmm_spinlock);
-    pt_t *old_p4 = GET_HIGHER_HALF(pt_t *, old);
+    page_table_t *old_p4 = GET_HIGHER_HALF(page_table_t *, old);
     void *ret = pmm_alloc(0x1000);
-    pt_t *new_p4 = GET_HIGHER_HALF(pt_t *, ret);
+    page_table_t *new_p4 = GET_HIGHER_HALF(page_table_t *, ret);
 
     memset((uint8_t *) new_p4, 0, 0x1000);
 
     for (uint16_t i = 256; i < 512; i++) {
-        new_p4->table[i] = old_p4->table[i];
+        new_p4->entries[i] = old_p4->entries[i];
     }
 
     unlock(vmm_spinlock);
@@ -358,27 +368,27 @@ void *vmm_fork_higher_half(void *old) {
 
 void *vmm_fork(void *old) {
     void *ret = vmm_fork_higher_half(old);
-    pt_t *table = GET_HIGHER_HALF(pt_t *, old);
+    page_table_t *table = GET_HIGHER_HALF(page_table_t *, old);
     interrupt_state_t state = interrupt_lock();
     lock(vmm_spinlock);
     for (uint64_t w = 0; w < 256; w++) {
         /* P4 */
-        if (table->table[w] & VMM_PRESENT) {
-            pt_t *table_z = GET_HIGHER_HALF(pt_t *, table->table[w] & VMM_4K_PERM_MASK);
+        if (table->entries[w] & VMM_PRESENT) {
+            page_table_t *table_z = GET_HIGHER_HALF(page_table_t *, table->entries[w] & VMM_4K_PERM_MASK);
             for (uint64_t z = 0; z < 512; z++) {
                 /* P3 */
-                if (table_z->table[z] & VMM_PRESENT) {
-                    pt_t *table_y = GET_HIGHER_HALF(pt_t *, table_z->table[z] & VMM_4K_PERM_MASK);
+                if (table_z->entries[z] & VMM_PRESENT) {
+                    page_table_t *table_y = GET_HIGHER_HALF(page_table_t *, table_z->entries[z] & VMM_4K_PERM_MASK);
                     for (uint64_t y = 0; y < 512; y++) {
                         /* P2 */
-                        if (table_y->table[y] & VMM_PRESENT) {
-                            pt_t *table_x = GET_HIGHER_HALF(pt_t *, table_y->table[y] & VMM_4K_PERM_MASK);
+                        if (table_y->entries[y] & VMM_PRESENT) {
+                            page_table_t *table_x = GET_HIGHER_HALF(page_table_t *, table_y->entries[y] & VMM_4K_PERM_MASK);
                             for (uint64_t x = 0; x < 512; x++) {
                                 /* P1 */
-                                if (table_x->table[x] & VMM_PRESENT) {
+                                if (table_x->entries[x] & VMM_PRESENT) {
                                     pt_off_t offs = {w, z, y, x};
                                     void *virt = vmm_offs_to_virt(offs);
-                                    void *phys = virt_to_phys(virt, GET_LOWER_HALF(pt_t *, table));
+                                    void *phys = virt_to_phys(virt, GET_LOWER_HALF(page_table_t *, table));
                                     void *new_phys = pmm_alloc(0x1000);
 
                                     /* Copy the data */
@@ -386,7 +396,7 @@ void *vmm_fork(void *old) {
 
                                     /* Map new page */
                                     unlock(vmm_spinlock);
-                                    vmm_map_pages(new_phys, virt, ret, 1, table_x->table[x] & ~(VMM_4K_PERM_MASK));
+                                    vmm_map_pages(new_phys, virt, ret, 1, table_x->entries[x] & ~(VMM_4K_PERM_MASK));
                                     lock(vmm_spinlock);
                                 }
                             }
@@ -402,29 +412,29 @@ void *vmm_fork(void *old) {
 }
 
 uint8_t is_mapped_in_userspace(void *phys_address) {
-    pt_t *table = GET_HIGHER_HALF(pt_t *, vmm_get_pml4t());
+    page_table_t *table = GET_HIGHER_HALF(page_table_t *, vmm_get_base());
     uint8_t ret = 0;
     interrupt_state_t state = interrupt_lock();
     lock(vmm_spinlock);
     for (uint64_t w = 0; w < 256; w++) {
         /* P4 */
-        if (table->table[w] & VMM_PRESENT) {
-            pt_t *table_z = GET_HIGHER_HALF(pt_t *, table->table[w] & VMM_4K_PERM_MASK);
+        if (table->entries[w] & VMM_PRESENT) {
+            page_table_t *table_z = GET_HIGHER_HALF(page_table_t *, table->entries[w] & VMM_4K_PERM_MASK);
             for (uint64_t z = 0; z < 512; z++) {
                 /* P3 */
-                if (table_z->table[z] & VMM_PRESENT) {
-                    pt_t *table_y = GET_HIGHER_HALF(pt_t *, table_z->table[z] & VMM_4K_PERM_MASK);
+                if (table_z->entries[z] & VMM_PRESENT) {
+                    page_table_t *table_y = GET_HIGHER_HALF(page_table_t *, table_z->entries[z] & VMM_4K_PERM_MASK);
                     for (uint64_t y = 0; y < 512; y++) {
                         /* P2 */
-                        if (table_y->table[y] & VMM_PRESENT) {
-                            pt_t *table_x = GET_HIGHER_HALF(pt_t *, table_y->table[y] & VMM_4K_PERM_MASK);
+                        if (table_y->entries[y] & VMM_PRESENT) {
+                            page_table_t *table_x = GET_HIGHER_HALF(page_table_t *, table_y->entries[y] & VMM_4K_PERM_MASK);
                             for (uint64_t x = 0; x < 512; x++) {
                                 /* P1 */
-                                if (table_x->table[x] & VMM_PRESENT) {
+                                if (table_x->entries[x] & VMM_PRESENT) {
                                     pt_off_t offs = {w, z, y, x};
                                     void *virt = vmm_offs_to_virt(offs);
-                                    void *phys = virt_to_phys(virt, GET_LOWER_HALF(pt_t *, table));
-                                    if (phys == phys_address && table_x->table[x] & VMM_USER) {
+                                    void *phys = virt_to_phys(virt, GET_LOWER_HALF(page_table_t *, table));
+                                    if (phys == phys_address && table_x->entries[x] & VMM_USER) {
                                         unlock(vmm_spinlock);
                                         ret = 1;
                                         return ret;
@@ -460,25 +470,25 @@ uint8_t range_mapped_in_userspace(void *data, uint64_t size) {
 }
 
 void vmm_deconstruct_address_space(void *old) {
-    pt_t *table = GET_HIGHER_HALF(pt_t *, old);
+    page_table_t *table = GET_HIGHER_HALF(page_table_t *, old);
     interrupt_state_t state = interrupt_lock();
     lock(vmm_spinlock);
     for (uint64_t w = 0; w < 256; w++) {
         /* P4 */
-        if (table->table[w] & VMM_PRESENT) {
-            pt_t *table_z = GET_HIGHER_HALF(pt_t *, table->table[w] & VMM_4K_PERM_MASK);
+        if (table->entries[w] & VMM_PRESENT) {
+            page_table_t *table_z = GET_HIGHER_HALF(page_table_t *, table->entries[w] & VMM_4K_PERM_MASK);
             for (uint64_t z = 0; z < 512; z++) {
                 /* P3 */
-                if (table_z->table[z] & VMM_PRESENT) {
-                    pt_t *table_y = GET_HIGHER_HALF(pt_t *, table_z->table[z] & VMM_4K_PERM_MASK);
+                if (table_z->entries[z] & VMM_PRESENT) {
+                    page_table_t *table_y = GET_HIGHER_HALF(page_table_t *, table_z->entries[z] & VMM_4K_PERM_MASK);
                     for (uint64_t y = 0; y < 512; y++) {
                         /* P2 */
-                        if (table_y->table[y] & VMM_PRESENT) {
-                            pt_t *table_x = GET_HIGHER_HALF(pt_t *, table_y->table[y] & VMM_4K_PERM_MASK);
+                        if (table_y->entries[y] & VMM_PRESENT) {
+                            page_table_t *table_x = GET_HIGHER_HALF(page_table_t *, table_y->entries[y] & VMM_4K_PERM_MASK);
                             for (uint64_t x = 0; x < 512; x++) {
                                 /* P1 */
-                                if (table_x->table[x] & VMM_PRESENT) {
-                                    void *phys = (void *) (table_x->table[x] & VMM_4K_PERM_MASK);
+                                if (table_x->entries[x] & VMM_PRESENT) {
+                                    void *phys = (void *) (table_x->entries[x] & VMM_4K_PERM_MASK);
                                     pmm_unalloc(phys, 0x1000);
                                 }
                             }
@@ -497,17 +507,17 @@ void vmm_deconstruct_address_space(void *old) {
 }
 
 int vmm_map(void *phys, void *virt, uint64_t count, uint16_t perms) {
-    return vmm_map_pages(phys, virt, (void *) vmm_get_pml4t(), count, perms);
+    return vmm_map_pages(phys, virt, (void *) vmm_get_base(), count, perms);
 }
 
 int vmm_remap(void *phys, void *virt, uint64_t count, uint16_t perms) {
-    return vmm_remap_pages(phys, virt, (void *) vmm_get_pml4t(), count, perms);
+    return vmm_remap_pages(phys, virt, (void *) vmm_get_base(), count, perms);
 }
 
 int vmm_unmap(void *virt, uint64_t count) {
-    return vmm_unmap_pages(virt, (void *) vmm_get_pml4t(), count);
+    return vmm_unmap_pages(virt, (void *) vmm_get_base(), count);
 }
 
 void vmm_set_pat(void *virt, uint64_t count, uint8_t pat_entry) {
-    vmm_set_pat_pages(virt, (void *) vmm_get_pml4t(), count, pat_entry);
+    vmm_set_pat_pages(virt, (void *) vmm_get_base(), count, pat_entry);
 }

@@ -51,7 +51,7 @@ void isr_handler(int_reg_t *r) {
             debug_handler(r);
         } else {
             if (r->int_num < 32) {
-                vmm_set_pml4t(base_kernel_cr3); // Use base kernel CR3 in case the alternate CR3 is corrupted
+                vmm_set_base(base_kernel_cr3); // Use base kernel CR3 in case the alternate CR3 is corrupted
                 if (r->cs != 0x1B) {
                     /* Exception */
                     uint64_t cr2;
@@ -155,7 +155,7 @@ void isr_handler(int_reg_t *r) {
 }
 
 void panic_handler(int_reg_t *r) {
-    vmm_set_pml4t(base_kernel_cr3); // Use base kernel CR3 in case the alternate CR3 is corrupted
+    vmm_set_base(base_kernel_cr3); // Use base kernel CR3 in case the alternate CR3 is corrupted
 
     send_panic_ipis();
 

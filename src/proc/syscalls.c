@@ -333,7 +333,7 @@ void syscall_ms_sleep(syscall_reg_t *r) {
 void syscall_futex_wake(syscall_reg_t *r) {
     r->rdx = 0;
 
-    void *futex_phys = virt_to_phys((void *) r->rdi, (pt_t *) get_cpu_locals()->current_thread->regs.cr3);
+    void *futex_phys = virt_to_phys((void *) r->rdi, (page_table_t *) get_cpu_locals()->current_thread->regs.cr3);
     if ((uint64_t) futex_phys == 0xFFFFFFFFFFFFFFFF) {
         r->rdx = EFAULT;
     }
@@ -344,7 +344,7 @@ void syscall_futex_wake(syscall_reg_t *r) {
 void syscall_futex_wait(syscall_reg_t *r) {
     r->rdx = 0;
 
-    void *futex_phys = virt_to_phys((void *) r->rdi, (pt_t *) get_cpu_locals()->current_thread->regs.cr3);
+    void *futex_phys = virt_to_phys((void *) r->rdi, (page_table_t *) get_cpu_locals()->current_thread->regs.cr3);
     if ((uint64_t) futex_phys == 0xFFFFFFFFFFFFFFFF) {
         r->rdx = EFAULT;
     }
@@ -396,7 +396,7 @@ void syscall_map_from_us_to_process(syscall_reg_t *r) {
         return;
     }
 
-    void *phys = virt_to_phys((void *) (r->rsi & ~(0xfff)), (pt_t *) get_cpu_locals()->current_thread->regs.cr3);
+    void *phys = virt_to_phys((void *) (r->rsi & ~(0xfff)), (page_table_t *) get_cpu_locals()->current_thread->regs.cr3);
     if (!range_mapped_in_userspace(phys, r->rdx)) {
         r->rdx = 0;
         return;

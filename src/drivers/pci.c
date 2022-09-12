@@ -9,8 +9,8 @@
 #include "drivers/pci_drivers/ahci.h"
 #include "drivers/pci_drivers/intel_hda.h"
 
-const uint64_t driver_count = 2;
-pci_driver_t drivers[] = {ahci_init_controller, init_hda_controller};
+const uint64_t driver_count = 1;//2;
+pci_driver_t drivers[] = {ahci_init_controller};//, init_hda_controller};
 
 pci_device_t *pci_devices;
 uint64_t curent_position = 0;

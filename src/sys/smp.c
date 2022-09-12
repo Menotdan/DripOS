@@ -70,7 +70,7 @@ void launch_cpus() {
                 /* Clear flags */
                 memset((uint8_t *) (0x500 + NORMAL_VMA_OFFSET), 0, 0xB00);
 
-                write_cpu_data32(0x10, (uint32_t) vmm_get_pml4t()); // Set the cr3
+                write_cpu_data32(0x10, (uint32_t) vmm_get_base()); // Set the cr3
                 memcpy((uint8_t *) GDT_PTR_32, (uint8_t *) (0x520 + NORMAL_VMA_OFFSET), 6); // Copy the GDT pointer
                 memcpy((uint8_t *) GDT_PTR_64, (uint8_t *) (0x530 + NORMAL_VMA_OFFSET), 10); // Copy the 64 bit GDT pointer
                 write_cpu_data64(0x40, (uint64_t) kmalloc(0x4000) + 0x4000);

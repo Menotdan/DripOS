@@ -28,17 +28,18 @@ typedef struct {
 } pt_off_t;
 
 typedef struct {
-    uint64_t table[512];
-} pt_t;
+    uint64_t entries[512];
+} page_table_t;
 
 typedef struct {
-    pt_t *p4;
-    pt_t *p3;
-    pt_t *p2;
-    pt_t *p1;
+    page_table_t *p4;
+    page_table_t *p3;
+    page_table_t *p2;
+    page_table_t *p1;
 } pt_ptr_t;
 
 extern uint64_t base_kernel_cr3;
+extern uint8_t vmm_complete;
 
 int vmm_map(void *phys, void *virt, uint64_t count, uint16_t perms);
 int vmm_remap(void *phys, void *virt, uint64_t count, uint16_t perms);
@@ -48,14 +49,14 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
 int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t perms);
 int vmm_unmap_pages(void *virt, void *p4, uint64_t count);
 void vmm_set_pat_pages(void *virt, void *p4, uint64_t count, uint8_t pat_entry);
-void vmm_set_pml4t(uint64_t new);
-void *virt_to_phys(void *virt, pt_t *p4);
+void vmm_set_base(uint64_t new);
+void *virt_to_phys(void *virt, page_table_t *p4);
 void *kernel_address(void *virt);
 uint8_t is_mapped(void *data);
 uint8_t is_mapped_in_userspace(void *phys_address);
 uint8_t range_mapped_in_userspace(void *data, uint64_t size);
 uint8_t range_mapped(void *data, uint64_t size);
-uint64_t vmm_get_pml4t();
+uint64_t vmm_get_base();
 
 void vmm_clflush(void *addr, uint64_t count);
 
@@ -63,6 +64,6 @@ void *vmm_fork_higher_half(void *old);
 void *vmm_fork(void *old);
 void vmm_deconstruct_address_space(void *old);
 
-uint64_t get_entry(pt_t *cur_table, uint64_t offset);
+uint64_t get_entry(page_table_t *cur_table, uint64_t offset);
 
 #endif

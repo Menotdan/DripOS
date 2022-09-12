@@ -119,7 +119,7 @@ int munmap(char *addr, uint64_t len) {
     }
 
     for (uint64_t i = 0; i < len; i++) {
-        void *phys = virt_to_phys(addr, (void *) vmm_get_pml4t());
+        void *phys = virt_to_phys(addr, (void *) vmm_get_base());
         vmm_unmap(addr, 1);
         if ((uint64_t) phys != 0xffffffffffffffff) {
             pmm_unalloc(phys, 0x1000);

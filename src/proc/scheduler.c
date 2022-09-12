@@ -295,7 +295,7 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
 
     if (new_parent->threads_size == 0) { // No children
         // -1 because kmalloc creates boundaries so page might not be mapped :|
-        void *phys = virt_to_phys((void *) (thread->regs.rsp - 1), (pt_t *) thread->regs.cr3);
+        void *phys = virt_to_phys((void *) (thread->regs.rsp - 1), (page_table_t *) thread->regs.cr3);
         if ((uint64_t) phys == 0xFFFFFFFFFFFFFFFF) {
             sprintf("RSP not mapped :thonk:\n");
             goto done;
@@ -595,7 +595,7 @@ void schedule(int_reg_t *r) {
         running_task->kernel_stack = get_cpu_locals()->thread_kernel_stack;
         running_task->user_stack = get_cpu_locals()->thread_user_stack;
 
-        running_task->regs.cr3 = vmm_get_pml4t();
+        running_task->regs.cr3 = vmm_get_base();
 
         running_task->ignore_ring = get_cpu_locals()->ignore_ring;
 
@@ -725,8 +725,8 @@ picked:
     get_cpu_locals()->thread_kernel_stack = running_task->kernel_stack;
     get_cpu_locals()->thread_user_stack = running_task->user_stack;
 
-    if (vmm_get_pml4t() != running_task->regs.cr3) {
-        vmm_set_pml4t(running_task->regs.cr3);
+    if (vmm_get_base() != running_task->regs.cr3) {
+        vmm_set_base(running_task->regs.cr3);
     }
 
     if (get_cpu_locals()->currently_idle) {

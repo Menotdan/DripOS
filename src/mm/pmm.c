@@ -100,13 +100,14 @@ void pmm_memory_setup(stivale_info_t *bootloader_info) {
     vmm_map_pages((void *) 0, (void *) 0xFFFF800000000000, new_cr3, page_count,
         VMM_PRESENT | VMM_WRITE);
 
-    pt_t *cr3 = GET_HIGHER_HALF(pt_t *, new_cr3);
-    pt_t *cur = GET_HIGHER_HALF(pt_t *, vmm_get_pml4t());
-    cr3->table[511] = cur->table[511];
+    page_table_t *cr3 = GET_HIGHER_HALF(page_table_t *, new_cr3);
+    page_table_t *cur = GET_HIGHER_HALF(page_table_t *, vmm_get_base());
+    cr3->entries[511] = cur->entries[511];
 
-    vmm_set_pml4t((uint64_t) new_cr3);
+    vmm_set_base((uint64_t) new_cr3);
 
-    base_kernel_cr3 = vmm_get_pml4t();
+    base_kernel_cr3 = vmm_get_base();
+    vmm_complete = 1;
 }
 
 static uint64_t find_free_page(uint64_t pages) {
