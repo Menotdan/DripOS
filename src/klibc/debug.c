@@ -91,6 +91,9 @@ uint64_t create_local_dr7(thread_t *t) {
     }
 
     uint64_t ret = 0;
+    sprintf("t = %lx", &t);
+    sprintf("t->parent = %lx", &(t->parent));
+    sprintf("t->parent->local_watchpoint = %lx", &(t->parent->local_watchpoint1_active));
     if (t->parent->local_watchpoint1_active) {
         ret |= 0b1101 << 24;
         ret |= 1 << 5;
@@ -123,6 +126,12 @@ void set_debug_state() {
     unlock(watchpoint_lock);
 }
 
+void safe_set_debug_state() {
+    interrupt_state_t int_lock = interrupt_lock();
+    set_debug_state();
+    interrupt_unlock(int_lock);
+}
+
 void set_watchpoint(void *address, uint8_t watchpoint_index) {
     if (watchpoint_index == 0) {
         dr0 = (uint64_t) address;
@@ -135,6 +144,7 @@ void set_watchpoint(void *address, uint8_t watchpoint_index) {
     dr7 |= (0b1101) << (16 + (watchpoint_index * 4));
     dr7 |= 2 << (watchpoint_index * 2);
 
+    interrupt_state_t int_lock = interrupt_lock();
     lock(watchpoint_lock);
     watchpoint_cpu_count = 0;
     madt_ent0_t **cpus = (madt_ent0_t **) vector_items(&cpu_vector);
@@ -147,6 +157,8 @@ void set_watchpoint(void *address, uint8_t watchpoint_index) {
     }
     unlock(watchpoint_lock);
     set_debug_state();
+    interrupt_unlock(int_lock);
+
     while (watchpoint_cpu_count < cores_booted) {
         asm volatile ("pause");
     }
@@ -164,7 +176,8 @@ void clear_global_watchpoint(uint8_t watchpoint_index) {
             }
         }
     }
-    set_debug_state();
+
+    safe_set_debug_state();
 }
 
 void send_reload_debug() {
@@ -176,7 +189,8 @@ void send_reload_debug() {
             }
         }
     }
-    set_debug_state();
+
+    safe_set_debug_state();
 }
 
 void set_local_watchpoint(void *address, uint8_t watchpoint_index) {
@@ -187,7 +201,8 @@ void set_local_watchpoint(void *address, uint8_t watchpoint_index) {
         get_cpu_locals()->current_thread->parent->local_watchpoint2 = (uint64_t) address;
         get_cpu_locals()->current_thread->parent->local_watchpoint2_active = 1;
     }
-    set_debug_state();
+
+    safe_set_debug_state();
 }
 
 void stack_trace(int_reg_t *r, uint64_t max_frames) {
@@ -207,7 +222,7 @@ void stack_trace(int_reg_t *r, uint64_t max_frames) {
         }
 
         rbp = (uint64_t) kernel_address((void *) stack[0]);
-        log("{-Trace-} RIP: %lx", stack[1]);
+        log("{-Trace-} RIP: %lx, RBP: %lx", stack[1], stack[0]);
 
         frames_parsed++;
         if (frames_parsed == max_frames) {
