@@ -35,6 +35,18 @@ cpu_locals_t *get_cpu_locals() {
     return ret;
 }
 
+thread_t *get_cur_thread() {
+    return get_cpu_locals()->current_thread;
+}
+
+process_t *get_cur_process() {
+    return get_cpu_locals()->current_thread->parent;
+}
+
+int64_t get_cur_pid() {
+    return get_cpu_locals()->current_thread->parent_pid;
+}
+
 uint8_t get_lapic_id() {
     return (read_lapic(0x20) >> 24) & 0xFF;
 }

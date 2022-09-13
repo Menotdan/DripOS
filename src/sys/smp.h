@@ -43,8 +43,13 @@ hashmap_t *cpu_locals_list;
 
 void launch_cpus();
 void send_ipi(uint8_t ap, uint32_t ipi_number);
+
 cpu_locals_t *get_cpu_locals();
 void new_cpu_locals();
+thread_t *get_cur_thread();
+process_t *get_cur_process();
+int64_t get_cur_pid();
+
 uint8_t get_lapic_id();
 
 extern uint8_t cores_booted;

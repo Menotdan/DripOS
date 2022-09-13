@@ -64,7 +64,7 @@ void isr_handler(int_reg_t *r) {
                     send_panic_ipis(); // Halt all other CPUs
 
                     if (scheduler_enabled) {
-                        safe_kprintf("Exception on core %u with apic id %u! (cur task %s with TID %ld and PID %ld)\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid, get_cpu_locals()->current_thread->parent_pid);
+                        safe_kprintf("Exception on core %u with apic id %u! (cur task %s with TID %ld and PID %ld)\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cur_thread()->name, get_cur_thread()->tid, get_cur_pid());
                     } else {
                         safe_kprintf("Exception on core %u with apic id %u!\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id);
                     }
@@ -84,22 +84,22 @@ void isr_handler(int_reg_t *r) {
                     asm volatile("movq %%cr2, %0;" : "=r"(cr2));
 
                     // Userspace exception
-                    log("Got userspace exception %lu with error %lu on pid %lu", r->int_num, r->int_err, get_cpu_locals()->current_thread->parent_pid);
+                    log("Got userspace exception %lu with error %lu on pid %lu", r->int_num, r->int_err, get_cur_pid());
                     log("CR2: %lx RIP %lx RBP %lx RSP %lx", cr2, r->rip, r->rbp, r->rsp);
                     if (r->int_num == 19) {
                         uint32_t mxcsr_val = get_mxcsr();
                         log("mxcsr: %lx", mxcsr_val);
                     }
 
-                    if (get_cpu_locals()->current_thread->parent_pid) {
-                        //sprintf("Killed process %ld\n", get_cpu_locals()->current_thread->parent_pid);
+                    if (get_cur_pid()) {
+                        //sprintf("Killed process %ld\n", get_cur_pid());
                         interrupt_safe_lock(sched_lock);
-                        thread_t *thread = threads[get_cpu_locals()->current_thread->tid];
+                        thread_t *thread = threads[get_cur_thread()->tid];
                         thread->state = BLOCKED;
                         thread->cpu = -1;
                         sprintf("tid = %ld\n", thread->tid);
-                        process_t *process = processes[get_cpu_locals()->current_thread->parent_pid];
-                        sprintf("killing process %ld with struct address %lx from ISR\n", get_cpu_locals()->current_thread->parent_pid, process);
+                        process_t *process = processes[get_cur_pid()];
+                        sprintf("killing process %ld with struct address %lx from ISR\n", get_cur_pid(), process);
 
                         uint64_t size = process->threads_size;
                         int64_t *tids = kmalloc(sizeof(int64_t) * process->threads_size);
@@ -115,11 +115,11 @@ void isr_handler(int_reg_t *r) {
                         }
 
                         interrupt_safe_lock(sched_lock);
-                        kfree(processes[get_cpu_locals()->current_thread->parent_pid]);
-                        processes[get_cpu_locals()->current_thread->parent_pid] = (void *) 0;
+                        kfree(processes[get_cur_pid()]);
+                        processes[get_cur_pid()] = (void *) 0;
                         interrupt_safe_unlock(sched_lock);
                     } else {
-                        kill_thread(get_cpu_locals()->current_thread->tid);
+                        kill_thread(get_cur_thread()->tid);
                     }
                     sprintf("Thread is dead\n");
                     get_cpu_locals()->current_thread = (thread_t *) 0;
@@ -164,7 +164,7 @@ void panic_handler(int_reg_t *r) {
 
     safe_kprintf("Panic!\nReason: %s\n", r->rdi);
     if (scheduler_enabled) {
-        safe_kprintf("Exception on core %u with apic id %u! (cur task %s with TID %ld)\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cpu_locals()->current_thread->name, get_cpu_locals()->current_thread->tid);
+        safe_kprintf("Exception on core %u with apic id %u! (cur task %s with TID %ld)\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cur_thread()->name, get_cur_thread()->tid);
     } else {
         safe_kprintf("Exception on core %u with apic id %u!\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id);
     }
@@ -177,7 +177,7 @@ void isr_panic_idle(int_reg_t *r) {
     (void) r;
     unlock(base_tty.tty_lock);
     unlock(vesa_lock);
-    //kprintf_yieldless("CPU %u, Thread %ld\n", (uint32_t) get_cpu_locals()->cpu_index, get_cpu_locals()->current_thread->tid);
+    //kprintf_yieldless("CPU %u, Thread %ld\n", (uint32_t) get_cpu_locals()->cpu_index, get_cur_thread()->tid);
     while (1) { asm volatile("hlt"); }
 }
 

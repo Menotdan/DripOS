@@ -11,7 +11,7 @@ void await_event(event_t *e) {
     }
 
     interrupt_safe_lock(sched_lock);
-    thread_t *current_thread = get_cpu_locals()->current_thread;
+    thread_t *current_thread = get_cur_thread();
     current_thread->event = e;
     current_thread->state = WAIT_EVENT;
     force_unlocked_schedule();
@@ -19,7 +19,7 @@ void await_event(event_t *e) {
 
 void await_event_timeout(event_t *e, uint64_t timeout) {
     interrupt_safe_lock(sched_lock);
-    thread_t *current_thread = get_cpu_locals()->current_thread;
+    thread_t *current_thread = get_cur_thread();
     current_thread->event = e;
     current_thread->state = WAIT_EVENT_TIMEOUT;
     current_thread->event_timeout = timeout;

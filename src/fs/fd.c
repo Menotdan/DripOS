@@ -19,7 +19,7 @@ int fd_open(char *filepath, int mode) {
     }
 
     int set_ignore = 0;
-    if (get_cpu_locals()->current_thread->ring == 3 && !get_cpu_locals()->ignore_ring) {
+    if (get_cur_thread()->ring == 3 && !get_cpu_locals()->ignore_ring) {
         get_cpu_locals()->ignore_ring = 1;
         set_ignore = 1;
     }
@@ -33,7 +33,7 @@ int fd_open(char *filepath, int mode) {
         return -err;
     }
 
-    int new_fd = fd_new(node, mode, get_cpu_locals()->current_thread->parent_pid);
+    int new_fd = fd_new(node, mode, get_cur_pid());
 
     if (node->ops.post_open) {
         /* Post open logic for filesystems */
@@ -67,7 +67,7 @@ int fd_close(int fd) {
 
 int fd_read(int fd, void *buf, uint64_t count) {
     int set_ignore = 0;
-    if (get_cpu_locals()->current_thread->ring == 3 && !get_cpu_locals()->ignore_ring) {
+    if (get_cur_thread()->ring == 3 && !get_cpu_locals()->ignore_ring) {
         get_cpu_locals()->ignore_ring = 1;
         set_ignore = 1;
     }
@@ -95,7 +95,7 @@ int fd_read(int fd, void *buf, uint64_t count) {
 
 int fd_write(int fd, void *buf, uint64_t count) {
     int set_ignore = 0;
-    if (get_cpu_locals()->current_thread->ring == 3 && !get_cpu_locals()->ignore_ring) {
+    if (get_cur_thread()->ring == 3 && !get_cpu_locals()->ignore_ring) {
         get_cpu_locals()->ignore_ring = 1;
         set_ignore = 1;
     }
@@ -121,7 +121,7 @@ int fd_write(int fd, void *buf, uint64_t count) {
 
 uint64_t fd_seek(int fd, uint64_t offset, int whence) {
     int set_ignore = 0;
-    if (get_cpu_locals()->current_thread->ring == 3 && !get_cpu_locals()->ignore_ring) {
+    if (get_cur_thread()->ring == 3 && !get_cpu_locals()->ignore_ring) {
         get_cpu_locals()->ignore_ring = 1;
         set_ignore = 1;
     }
@@ -201,7 +201,7 @@ fnd:
 
 void fd_remove(int fd) {
     interrupt_safe_lock(sched_lock);
-    process_t *current_process = processes[get_cpu_locals()->current_thread->parent_pid];
+    process_t *current_process = processes[get_cur_pid()];
     interrupt_safe_unlock(sched_lock);
 
     lock(fd_lock);
@@ -260,7 +260,7 @@ fd_entry_t *fd_lookup(int fd) {
     fd_entry_t *ret;
 
     interrupt_safe_lock(sched_lock);
-    process_t *current_process = processes[get_cpu_locals()->current_thread->parent_pid];
+    process_t *current_process = processes[get_cur_pid()];
     interrupt_safe_unlock(sched_lock);
 
     lock(fd_lock);

@@ -76,7 +76,7 @@ void kernel_process() {
     setup_drip_dgb();
 #endif
 
-    kill_task(get_cpu_locals()->current_thread->tid); // suicide
+    kill_task(get_cur_thread()->tid); // suicide
 }
 
 void kernel_task() {
@@ -98,7 +98,7 @@ void kernel_task() {
     add_new_child_thread(urm, 0);
     log("URM started and kernel process started, exiting kernel_task.");
 
-    kill_task(get_cpu_locals()->current_thread->tid); // suicide
+    kill_task(get_cur_thread()->tid); // suicide
 }
 
 // Kernel main function, execution starts here :D

@@ -10,7 +10,7 @@
 
 int register_ipc_handle(int port) {
     interrupt_safe_lock(sched_lock);
-    process_t *cur_process = processes[get_cpu_locals()->current_thread->parent_pid];
+    process_t *cur_process = processes[get_cur_pid()];
     interrupt_safe_unlock(sched_lock);
 
     lock(cur_process->ipc_create_handle_lock);
@@ -28,7 +28,7 @@ int register_ipc_handle(int port) {
 
 ipc_handle_t *wait_ipc(int port) {
     interrupt_safe_lock(sched_lock);
-    process_t *cur_process = processes[get_cpu_locals()->current_thread->parent_pid];
+    process_t *cur_process = processes[get_cur_pid()];
     interrupt_safe_unlock(sched_lock);
 
     ipc_handle_t *handle = hashmap_get_elem(cur_process->ipc_handles, port);
@@ -98,7 +98,7 @@ union ipc_err write_ipc_server(int pid, int port, void *buf, int size) {
     event_t wait_server_done = 0;
 
     /* Set data, trigger event, wait */
-    handle->pid = get_cpu_locals()->current_thread->parent_pid;
+    handle->pid = get_cur_pid();
     handle->ipc_completed = &wait_server_done;
     handle->buffer = buf;
     handle->size = size;
@@ -172,7 +172,7 @@ union ipc_err read_ipc_server(int pid, int port, void *buf, int size) {
     event_t wait_server_done = 0;
 
     /* Set data, trigger event, wait */
-    handle->pid = get_cpu_locals()->current_thread->parent_pid;
+    handle->pid = get_cur_pid();
     handle->ipc_completed = &wait_server_done;
     handle->buffer = buf;
     handle->size = size;

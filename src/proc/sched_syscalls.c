@@ -19,7 +19,7 @@ lock_t futex_lock = {0, 0, 0, 0};
 void *psuedo_mmap(void *base, uint64_t len, syscall_reg_t *r) {
     interrupt_safe_lock(sched_lock);
     len = (len + 0x1000 - 1) / 0x1000;
-    process_t *process = processes[get_cpu_locals()->current_thread->parent_pid];
+    process_t *process = processes[get_cur_pid()];
     if (!process) { r->rdx = ESRCH; interrupt_safe_unlock(sched_lock); return (void *) 0; } // bruh
 
     void *phys = pmm_alloc(len * 0x1000);
@@ -106,7 +106,7 @@ void *psuedo_mmap(void *base, uint64_t len, syscall_reg_t *r) {
 int munmap(char *addr, uint64_t len) {
     interrupt_safe_lock(sched_lock);
     len = (len + 0x1000 - 1) / 0x1000;
-    process_t *process = processes[get_cpu_locals()->current_thread->parent_pid];
+    process_t *process = processes[get_cur_pid()];
     interrupt_safe_unlock(sched_lock);
     if (!process) { return -ESRCH; } // bruh
 
@@ -132,7 +132,7 @@ int munmap(char *addr, uint64_t len) {
 int fork(syscall_reg_t *r) {
     sprintf("got fork call with r = %lx\n", r);
     interrupt_safe_lock(sched_lock);
-    process_t *process = processes[get_cpu_locals()->current_thread->parent_pid]; // Old process
+    process_t *process = processes[get_cur_pid()]; // Old process
     void *new_cr3 = vmm_fork((void *) process->cr3); // Fork address space
 
     process_t *forked_process = create_process(process->name, new_cr3);
@@ -173,7 +173,7 @@ int fork(syscall_reg_t *r) {
     unlock(process->brk_lock);
 
     /* New thread */
-    thread_t *old_thread = get_cpu_locals()->current_thread;
+    thread_t *old_thread = get_cur_thread();
 
     thread_t *thread = create_thread(old_thread->name, (void (*)()) old_thread->regs.rip, old_thread->regs.rsp, old_thread->ring);
     thread->regs.rax = 0;
@@ -274,8 +274,8 @@ void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r) {
     data.executable_path = kernel_exec_path;
     data.envc = envc;
     data.argc = argc;
-    data.pid = get_cpu_locals()->current_thread->parent_pid;
-    data.tid = get_cpu_locals()->current_thread->tid;
+    data.pid = get_cur_pid();
+    data.tid = get_cur_thread()->tid;
     int ret = send_urm_request(&data, URM_EXECVE);
     goto done;
 
@@ -318,8 +318,8 @@ done:
 }
 
 void set_fs_base_syscall(uint64_t base) {
-    get_cpu_locals()->current_thread->regs.fs = base;
-    write_msr(0xC0000100, get_cpu_locals()->current_thread->regs.fs); // Set the FS base in case the scheduler hasn't rescheduled
+    get_cur_thread()->regs.fs = base;
+    write_msr(0xC0000100, get_cur_thread()->regs.fs); // Set the FS base in case the scheduler hasn't rescheduled
 }
 
 /* Wake a single thread that is waiting on the futex */
@@ -370,7 +370,7 @@ int futex_wait(uint32_t *futex, uint32_t expected_value) {
     }
 
     interrupt_safe_lock(sched_lock);
-    thread_t *cur_thread = get_cpu_locals()->current_thread;
+    thread_t *cur_thread = get_cur_thread();
     int64_t index = -1;
     for (uint32_t i = 0; i < waiting_threads->count; i++) {
         if (!waiting_threads->waiting[i]) {

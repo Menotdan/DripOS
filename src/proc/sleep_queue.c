@@ -40,7 +40,7 @@ static void insert_to_queue(uint64_t ticks, int64_t tid) {
 
     sleep_queue_t *next = cur->next;
     uint64_t before_relative = ticks - total;
-    sleep_queue_t *new = get_cpu_locals()->current_thread->sleep_node;
+    sleep_queue_t *new = get_cur_thread()->sleep_node;
     new->next = (void *) 0;
     new->prev = (void *) 0;
     CHAIN_LINKED_LIST(cur, new);
@@ -94,10 +94,10 @@ void advance_time() {
 
 void sleep_ms(uint64_t ms) {
     interrupt_safe_lock(sched_lock);
-    assert(get_cpu_locals()->current_thread->state == RUNNING);
-    get_cpu_locals()->current_thread->state = SLEEP;
+    assert(get_cur_thread()->state == RUNNING);
+    get_cur_thread()->state = SLEEP;
 
-    insert_to_queue(ms, get_cpu_locals()->current_thread->tid); // Insert to the thread sleep queue
+    insert_to_queue(ms, get_cur_thread()->tid); // Insert to the thread sleep queue
     force_unlocked_schedule(); // Leave in case the scheduler hasn't scheduled us out itself
 }
 

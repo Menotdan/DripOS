@@ -481,12 +481,12 @@ void new_kernel_process(char *name, void (*main)()) {
 int64_t pick_task() {
     int64_t tid_ret = -1;
 
-    if (!(get_cpu_locals()->current_thread)) {
+    if (!(get_cur_thread())) {
         return tid_ret;
     }
 
     /* Prioritze tasks right after the current task */
-    for (int64_t t = get_cpu_locals()->current_thread->tid + 1; (uint64_t) t < threads_list_size; t++) {
+    for (int64_t t = get_cur_thread()->tid + 1; (uint64_t) t < threads_list_size; t++) {
         //sprintf("Looking at t = %ld in first loop\n", t);
         thread_t *task = threads[t];
         if (task) {
@@ -502,7 +502,7 @@ int64_t pick_task() {
     }
 
     /* Then look at the rest of the tasks */
-    for (int64_t t = 0; t < get_cpu_locals()->current_thread->tid + 1; t++) {
+    for (int64_t t = 0; t < get_cur_thread()->tid + 1; t++) {
         //sprintf("Looking at t = %ld in second loop\n", t);
         thread_t *task = threads[t];
         if (task) {
@@ -567,7 +567,7 @@ void schedule(int_reg_t *r) {
     int used_to_be_idle = 0;
     int used_to_be_active = 0;
 
-    thread_t *running_task = get_cpu_locals()->current_thread;
+    thread_t *running_task = get_cur_thread();
     if (running_task) {
         running_task->regs.rax = r->rax;
         running_task->regs.rbx = r->rbx;
@@ -629,7 +629,7 @@ repick_task:
     if (tid_run == -1) {
         /* Idle */
         get_cpu_locals()->current_thread = threads[get_cpu_locals()->idle_tid];
-        running_task = get_cpu_locals()->current_thread;
+        running_task = get_cur_thread();
         goto picked;
     } else {
         if (picked_first == -1) {
@@ -638,12 +638,12 @@ repick_task:
             // welp
             tid_run = -1;
             get_cpu_locals()->current_thread = threads[get_cpu_locals()->idle_tid];
-            running_task = get_cpu_locals()->current_thread;
+            running_task = get_cur_thread();
             goto picked;
         }
         thread_t *to_run = threads[tid_run];
         get_cpu_locals()->current_thread = to_run;
-        running_task = get_cpu_locals()->current_thread;
+        running_task = get_cur_thread();
         if (to_run->state == WAIT_EVENT) {
             if (*to_run->event) {
                 atomic_dec((uint32_t *) to_run->event);
@@ -686,7 +686,7 @@ picked:
         get_cpu_locals()->currently_idle = 1;
     }
 
-    get_cpu_locals()->local_dr7 = create_local_dr7(get_cpu_locals()->current_thread);
+    get_cpu_locals()->local_dr7 = create_local_dr7(get_cur_thread());
     set_debug_state();
 
     running_task->cpu = (int) get_cpu_locals()->cpu_index;
@@ -751,7 +751,7 @@ picked:
 int kill_task(int64_t tid) {
     urm_kill_thread_data data;
     data.tid = tid;
-    if (tid == get_cpu_locals()->current_thread->tid) {
+    if (tid == get_cur_thread()->tid) {
         send_urm_request_async(&data, URM_KILL_THREAD); // blah
         while (1) { asm("hlt"); } // wait for death
     } else {
@@ -764,7 +764,7 @@ int kill_task(int64_t tid) {
 int kill_process(int64_t pid) {
     urm_kill_process_data data;
     data.pid = pid;
-    if (pid == get_cpu_locals()->current_thread->parent_pid) {
+    if (pid == get_cur_pid()) {
         send_urm_request_async(&data, URM_KILL_PROCESS);
         while (1) { asm("hlt"); }
     } else {

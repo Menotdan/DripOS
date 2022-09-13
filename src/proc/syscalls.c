@@ -178,20 +178,20 @@ void syscall_set_fs(syscall_reg_t *r) {
 
 void syscall_getpid(syscall_reg_t *r) {
     (void) r;
-    r->rax = get_cpu_locals()->current_thread->parent_pid;
+    r->rax = get_cur_pid();
 }
 
 void syscall_getppid(syscall_reg_t *r) {
     (void) r;
     interrupt_safe_lock(sched_lock);
-    process_t *process = processes[get_cpu_locals()->current_thread->parent_pid];
+    process_t *process = processes[get_cur_pid()];
     interrupt_safe_unlock(sched_lock);
     r->rax = process->ppid;
 }
 
 void syscall_exit(syscall_reg_t *r) {
     (void) r;
-    kill_process(get_cpu_locals()->current_thread->parent_pid); // yeet
+    kill_process(get_cur_pid()); // yeet
 }
 
 void syscall_sprint(syscall_reg_t *r) {
@@ -250,15 +250,15 @@ void syscall_ipc_wait(syscall_reg_t *r) {
     }
 
     interrupt_safe_lock(sched_lock);
-    process_t *target_process = processes[get_cpu_locals()->current_thread->parent_pid];
-    assert(get_cpu_locals()->current_thread->parent_pid);
-    if (get_cpu_locals()->current_thread->parent->pid != get_cpu_locals()->current_thread->parent_pid) {
-        log("parent->pid: %ld", get_cpu_locals()->current_thread->parent->pid);
-        log("parent_pid: %ld", get_cpu_locals()->current_thread->parent_pid);
-        assert(get_cpu_locals()->current_thread->parent->pid == get_cpu_locals()->current_thread->parent_pid);
+    process_t *target_process = processes[get_cur_pid()];
+    assert(get_cur_pid());
+    if (get_cur_process()->pid != get_cur_pid()) {
+        log("parent->pid: %ld", get_cur_process()->pid);
+        log("parent_pid: %ld", get_cur_pid());
+        assert(get_cur_process()->pid == get_cur_pid());
     }
-    assert(get_cpu_locals()->current_thread->parent == target_process);
-    assert(get_cpu_locals()->current_thread->parent);
+    assert(get_cur_process() == target_process);
+    assert(get_cur_process());
     interrupt_safe_unlock(sched_lock);
 
     /* Map IPC buffer into the process */
@@ -333,7 +333,7 @@ void syscall_ms_sleep(syscall_reg_t *r) {
 void syscall_futex_wake(syscall_reg_t *r) {
     r->rdx = 0;
 
-    void *futex_phys = virt_to_phys((void *) r->rdi, (page_table_t *) get_cpu_locals()->current_thread->regs.cr3);
+    void *futex_phys = virt_to_phys((void *) r->rdi, (page_table_t *) get_cur_thread()->regs.cr3);
     if ((uint64_t) futex_phys == 0xFFFFFFFFFFFFFFFF) {
         r->rdx = EFAULT;
     }
@@ -344,7 +344,7 @@ void syscall_futex_wake(syscall_reg_t *r) {
 void syscall_futex_wait(syscall_reg_t *r) {
     r->rdx = 0;
 
-    void *futex_phys = virt_to_phys((void *) r->rdi, (page_table_t *) get_cpu_locals()->current_thread->regs.cr3);
+    void *futex_phys = virt_to_phys((void *) r->rdi, (page_table_t *) get_cur_thread()->regs.cr3);
     if ((uint64_t) futex_phys == 0xFFFFFFFFFFFFFFFF) {
         r->rdx = EFAULT;
     }
@@ -353,14 +353,14 @@ void syscall_futex_wait(syscall_reg_t *r) {
 }
 
 void syscall_start_thread(syscall_reg_t *r) {
-    thread_t *new_thread = create_thread(get_cpu_locals()->current_thread->name, (void *) r->rdi, r->rsi, 3);
+    thread_t *new_thread = create_thread(get_cur_thread()->name, (void *) r->rdi, r->rsi, 3);
     new_thread->regs.fs = r->rdx;
-    r->rax = add_new_child_thread_no_stack_init(new_thread, get_cpu_locals()->current_thread->parent_pid);
+    r->rax = add_new_child_thread_no_stack_init(new_thread, get_cur_pid());
 }
 
 void syscall_exit_thread(syscall_reg_t *r) {
     (void) r;
-    kill_task(get_cpu_locals()->current_thread->tid);
+    kill_task(get_cur_thread()->tid);
 }
 
 void syscall_map_to_process(syscall_reg_t *r) {
@@ -396,7 +396,7 @@ void syscall_map_from_us_to_process(syscall_reg_t *r) {
         return;
     }
 
-    void *phys = virt_to_phys((void *) (r->rsi & ~(0xfff)), (page_table_t *) get_cpu_locals()->current_thread->regs.cr3);
+    void *phys = virt_to_phys((void *) (r->rsi & ~(0xfff)), (page_table_t *) get_cur_thread()->regs.cr3);
     if (!range_mapped_in_userspace(phys, r->rdx)) {
         r->rdx = 0;
         return;
@@ -441,7 +441,7 @@ void syscall_open_pipe(syscall_reg_t *r) {
         return;
     }
     process_t *process = processes[pid];
-    if (process->ppid != get_cpu_locals()->current_thread->parent_pid) {
+    if (process->ppid != get_cur_pid()) {
         r->rdx = -EPERM;
     }
 
@@ -469,7 +469,7 @@ void syscall_open_pipe(syscall_reg_t *r) {
 
     unlock(fd_lock);
 
-    int new_pipe_fd = fd_new(&pipe_node, 0, get_cpu_locals()->current_thread->parent_pid); // Open an FD on our side
+    int new_pipe_fd = fd_new(&pipe_node, 0, get_cur_pid()); // Open an FD on our side
     create_pipe(new_pipe_fd, remote_fd, pid, r->rdx); // Create a new pipe
 
     r->rdx = new_pipe_fd;

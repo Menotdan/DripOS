@@ -38,6 +38,7 @@ CFLAGS = -g -fno-pic               \
     -ffreestanding                 \
     -fno-omit-frame-pointer        \
 	-fstack-protector-all          \
+	-D DEBUG
 
 # First rule is run by default
 DripOS.img: kernel.elf

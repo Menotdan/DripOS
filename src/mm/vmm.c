@@ -242,7 +242,7 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
     }
 
     if (vmm_complete) {
-        sprintf("+mapping %lu %lu %lu\n", phys, virt, count);
+        //sprintf("+mapping %lu %lu %lu\n", phys, virt, count);
     }
     unlock(vmm_spinlock);
     interrupt_unlock(state);
@@ -260,7 +260,7 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
     uint64_t cur_phys = ((uint64_t) phys) & VMM_4K_PERM_MASK;
 
     if (vmm_complete) {
-        sprintf("-mapping %lu %lu %lu\n", phys, virt, count);
+        //sprintf("-mapping %lu %lu %lu\n", phys, virt, count);
     }
 
     for (uint64_t page = 0; page < count; page++) {
@@ -274,7 +274,7 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
         vmm_invlpg((uint64_t) cur_virt - 0x1000);
     }
     if (vmm_complete) {
-        sprintf("+mapping %lu %lu %lu\n", phys, virt, count);
+        //sprintf("+mapping %lu %lu %lu\n", phys, virt, count);
     }
 
 
@@ -292,7 +292,7 @@ int vmm_unmap_pages(void *virt, void *p4, uint64_t count) {
     uint64_t cur_virt = (uint64_t) virt;
 
     if (vmm_complete) {
-        sprintf("-mapping %lu %lu %lu\n", virt_to_phys(virt, p4), virt, count);
+        //sprintf("-mapping %lu %lu %lu\n", virt_to_phys(virt, p4), virt, count);
     }
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);

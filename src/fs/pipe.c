@@ -29,7 +29,7 @@ void create_pipe(int cur_fd, int remote_fd, int other_pid, int direction) {
     pipes[index]->buffer = kcalloc(PIPE_DEFAULT_BUFFER_SIZE);
     pipes[index]->buffer_size = PIPE_DEFAULT_BUFFER_SIZE;
     pipes[index]->creator_fd = cur_fd;
-    pipes[index]->creator_pid = get_cpu_locals()->current_thread->parent_pid;
+    pipes[index]->creator_pid = get_cur_pid();
     pipes[index]->target_pid = other_pid;
     pipes[index]->target_fd = remote_fd;
     pipes[index]->direction = direction;
@@ -43,7 +43,7 @@ pipe_t *lookup_pipe(int fd) {
         pipe_t *pipe;
         for (uint64_t i = 0; i < pipes_size; i++) {
             pipe = pipes[i];
-            if ((fd == pipe->creator_fd && get_cpu_locals()->current_thread->parent_pid == pipe->creator_pid) || (fd == pipe->target_fd && get_cpu_locals()->current_thread->parent_pid == pipe->target_pid)) {
+            if ((fd == pipe->creator_fd && get_cur_pid() == pipe->creator_pid) || (fd == pipe->target_fd && get_cur_pid() == pipe->target_pid)) {
                 unlock(pipe_lock);
                 return pipe;
             }
@@ -62,11 +62,11 @@ int pipe_read(int fd, void *buf, uint64_t count) {
         return -EBADF;
     }
 
-    if (pipe->creator_fd == fd && pipe->creator_pid == get_cpu_locals()->current_thread->parent_pid && pipe->direction != PIPE_DIRECTION_FROM_TARGET) {
+    if (pipe->creator_fd == fd && pipe->creator_pid == get_cur_pid() && pipe->direction != PIPE_DIRECTION_FROM_TARGET) {
         return -EPERM;
     }
 
-    if (pipe->target_fd == fd && pipe->target_pid == get_cpu_locals()->current_thread->parent_pid && pipe->direction != PIPE_DIRECTION_TO_TARGET) {
+    if (pipe->target_fd == fd && pipe->target_pid == get_cur_pid() && pipe->direction != PIPE_DIRECTION_TO_TARGET) {
         return -EPERM;
     }
 
@@ -99,11 +99,11 @@ int pipe_write(int fd, void *buf, uint64_t count) {
         return -EBADF;
     }
 
-    if (pipe->creator_fd == fd && pipe->creator_pid == get_cpu_locals()->current_thread->parent_pid && pipe->direction != PIPE_DIRECTION_TO_TARGET) {
+    if (pipe->creator_fd == fd && pipe->creator_pid == get_cur_pid() && pipe->direction != PIPE_DIRECTION_TO_TARGET) {
         return -EPERM;
     }
 
-    if (pipe->target_fd == fd && pipe->target_pid == get_cpu_locals()->current_thread->parent_pid && pipe->direction != PIPE_DIRECTION_FROM_TARGET) {
+    if (pipe->target_fd == fd && pipe->target_pid == get_cur_pid() && pipe->direction != PIPE_DIRECTION_FROM_TARGET) {
         return -EPERM;
     }
 
