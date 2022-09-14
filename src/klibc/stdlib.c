@@ -13,21 +13,29 @@ void *kmalloc(uint64_t size) {
     interrupt_state_t state = interrupt_lock();
     uint64_t size_data = (uint64_t) pmm_alloc(size + 0x2000) + NORMAL_VMA_OFFSET;
     uint64_t page_count = ((size + 0x2000) + 0x1000 - 1) / 0x1000;
-    uint64_t last_page = size_data + (page_count * 0x1000) - 1;
+    uint64_t last_page = size_data + ((page_count - 1) * 0x1000);
 
-    /* Unmap top for high bounds reads/writes */
+    /* Unmap top for high OOB reads/writes */
     vmm_unmap((void *) last_page, 1);
     *(uint64_t *) size_data = size + 0x2000;
     *(uint64_t *) (size_data + 8) = MALLOC_SIGNATURE;
 
     log_alloc("+mem %lu %lu %lx\n", size_data, *(uint64_t *) size_data, __builtin_return_address(0));
 
-    /* Unmap size data for lower bounds reads/writes */
+    if (GET_LOWER_HALF(uint64_t, size_data) == 0x49D0000 || GET_LOWER_HALF(uint64_t, size_data) + 0x1000 == 0x49D0000 || GET_LOWER_HALF(uint64_t, last_page) == 0x49D0000) {
+        sprintf("Magic address 0x49D0000 was kalloc'd by %lx with size %lu.\n", __builtin_return_address(0), size);
+    }
+
+    if (GET_LOWER_HALF(uint64_t, size_data) == 0x535C000 || GET_LOWER_HALF(uint64_t, size_data) + 0x1000 == 0x535C000 || GET_LOWER_HALF(uint64_t, last_page) == 0x535C000) {
+        sprintf("Magic address 0x535C000 was kalloc'd by %lx with size %lu.\n", __builtin_return_address(0), size);
+    }
+
+    /* Unmap size data for low OOB reads/writes */
     vmm_unmap((void *) size_data, 1);
     interrupt_unlock(state);
 
     if (size_data % 0x1000 != 0) {
-        log("{-kmalloc-} died, caller: %lx, size: %lu\n", __builtin_return_address(0), size);
+        error("{-kmalloc-} died, caller: %lx, size: %lu\n", __builtin_return_address(0), size);
         assert(!"kmalloc bug");
     }
     return (void *) (size_data + 0x1000);
@@ -37,7 +45,7 @@ void *kmalloc(uint64_t size) {
 
 void kfree(void *addr) {
     if (((uint64_t) addr % 0x1000) != 0) {
-        log("{-kfree-} unaligned addr: %lx, caller: %lx", addr, __builtin_return_address(0));
+        warn("{-kfree-} unaligned addr: %lx, caller: %lx", addr, __builtin_return_address(0));
     }
 
     assert(((uint64_t) addr % 0x1000) == 0); // is divisible by page size
@@ -49,7 +57,18 @@ void kfree(void *addr) {
     uint64_t *size_data = (uint64_t *) ((uint64_t) addr - 0x1000);
     uint64_t *signature = (uint64_t *) ((uint64_t) addr - 0x0ff8);
     uint64_t page_count = ((*size_data - 0x1000) + 0x1000 - 1) / 0x1000;
-    uint64_t last_page = (uint64_t) addr + (page_count * 0x1000) - 1;
+    uint64_t last_page = (uint64_t) addr + ((page_count - 1) * 0x1000);
+
+    uint64_t start = GET_LOWER_HALF(uint64_t, addr) - 0x1000;
+    uint64_t end = start + ((page_count - 1) * 0x1000);
+
+    if ((start <= 0x49D0000 && end > 0x49D0000)) {
+        sprintf("Magic address 0x49D0000 was kfree'd by %lx with size %lu.\n", __builtin_return_address(0), *size_data);
+    }
+    
+    if ((start <= 0x535C000 && end > 0x535C000)) {
+        sprintf("Magic address 0x535C000 was kfree'd by %lx with size %lu.\n", __builtin_return_address(0), *size_data);
+    }
 
     /* Map last page */
     vmm_map(GET_LOWER_HALF(void *, last_page), (void *) last_page, 1, VMM_PRESENT | VMM_WRITE);
@@ -98,6 +117,19 @@ void remap_alloc(void *addr) {
 void *kcalloc(uint64_t size) {
     interrupt_state_t state = interrupt_lock();
     void *buffer = kmalloc(size);
+
+
+    uint64_t pages_count = ((size + 0x2000) + 0x1000 - 1) / 0x1000;
+    uint64_t start = GET_LOWER_HALF(uint64_t, buffer) - 0x1000;
+    uint64_t end = start + ((pages_count - 1) * 0x1000);
+    if (start <= 0x49D0000 && end > 0x49D0000) {
+        sprintf("Magic address 0x49D0000 was kcalloc'd by %lx with size %lu\n", __builtin_return_address(0), size);
+    }
+
+    if (start <= 0x535C000 && end > 0x535C000) {
+        sprintf("Magic address 0x535C000 was kcalloc'd by %lx with size %lu\n", __builtin_return_address(0), size);
+    }
+
     memset((uint8_t *) buffer, 0, size);
     interrupt_unlock(state);
     return buffer;
@@ -105,11 +137,11 @@ void *kcalloc(uint64_t size) {
 
 void *krealloc(void *addr, uint64_t new_size) {
     interrupt_state_t state = interrupt_lock();
+    void *new_buffer = kcalloc(new_size);
+    if (!addr) { interrupt_unlock(state); return new_buffer; }
+
     vmm_map(GET_LOWER_HALF(void *, (uint64_t) addr - 0x1000), (void *) ((uint64_t) addr - 0x1000), 1, VMM_PRESENT | VMM_WRITE);
     uint64_t *size_data = (uint64_t *) ((uint64_t) addr - 0x1000);
-    void *new_buffer = kcalloc(new_size);
-    
-    if (!addr) { interrupt_unlock(state); return new_buffer; }
 
     /* Copy everything over, and only copy part if our new size is lower than the old size */
     memcpy((uint8_t *) addr, (uint8_t *) new_buffer, (*size_data) - 0x2000);

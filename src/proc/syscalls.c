@@ -191,6 +191,7 @@ void syscall_getppid(syscall_reg_t *r) {
 
 void syscall_exit(syscall_reg_t *r) {
     (void) r;
+    sprintf("Magic EXITING pid: %ld, proc_address: %lx, tid: %ld\n", get_cur_pid(), get_cur_process(), get_cur_thread()->tid);
     kill_process(get_cur_pid()); // yeet
 }
 

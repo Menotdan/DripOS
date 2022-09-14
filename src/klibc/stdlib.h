@@ -9,7 +9,7 @@
 #define UNUSED(param) if (param) {}
 #define stringify_param(x) #x
 #define stringify(x) stringify_param(x)
-#define assert(statement) do { if (!(statement)) { panic("Assert failed. File: " __FILE__ ", Line: " stringify(__LINE__) " Condition: assert(" #statement ");"); } } while (0)
+#define assert(statement) do { if (!(statement)) { sprintf("Assert Failed. Return address: %lx\n", __builtin_return_address(0)); panic("Assert failed. File: " __FILE__ ", Line: " stringify(__LINE__) " Condition: assert(" #statement ");"); } } while (0)
 #define log_debug(msg) do { sprintf("File: " __FILE__ ", Line: " stringify(__LINE__) " [ Debug ] " msg "\n"); } while (0)
 #define MALLOC_SIGNATURE 0xf100f333f100f333
 

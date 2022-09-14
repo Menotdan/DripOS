@@ -230,6 +230,7 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
         /* Set the addresses */
         if (!(ptrs.p1->entries[offs.p1_off] & VMM_PRESENT)) {
             ptrs.p1->entries[offs.p1_off] = cur_phys | perms;
+            vmm_invlpg((uint64_t) cur_virt); // Invalidate pages
             cur_phys += 0x1000;
             cur_virt += 0x1000;
         } else {
@@ -238,7 +239,14 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
             cur_virt += 0x1000;
             continue;
         }
-        vmm_invlpg((uint64_t) cur_virt - 0x1000);
+
+        if ((uint64_t) cur_phys == 0x49D0000) {
+            sprintf("Magic address 0x49D0000 mapped by %lx, starting at %lx, for %lu pages.\n", __builtin_return_address(0), virt, count);
+        }
+
+        if ((uint64_t) cur_phys == 0x535C000) {
+            sprintf("Magic address 0x535C000 mapped by %lx, starting at %lx, for %lu pages.\n", __builtin_return_address(0), virt, count);
+        }
     }
 
     if (vmm_complete) {
@@ -269,9 +277,18 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
 
         /* Set the addresses */
         ptrs.p1->entries[offs.p1_off] = cur_phys | (perms | VMM_PRESENT);
+
+        vmm_invlpg((uint64_t) cur_virt); // Invalidate pages
         cur_phys += 0x1000;
         cur_virt += 0x1000;
-        vmm_invlpg((uint64_t) cur_virt - 0x1000);
+
+        if ((uint64_t) cur_phys == 0x49D0000) {
+            sprintf("Magic address 0x49D0000 remapped by %lx, starting at %lx, for %lu pages.\n", __builtin_return_address(0), virt, count);
+        }
+
+        if ((uint64_t) cur_phys == 0x535C000) {
+            sprintf("Magic address 0x535C000 remapped by %lx, starting at %lx, for %lu pages.\n", __builtin_return_address(0), virt, count);
+        }
     }
     if (vmm_complete) {
         //sprintf("+mapping %lu %lu %lu\n", phys, virt, count);
@@ -298,12 +315,25 @@ int vmm_unmap_pages(void *virt, void *p4, uint64_t count) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
         pt_ptr_t ptrs = vmm_get_table(&offs, p4);
 
+        uint64_t start = ((uint64_t) virt) & (~((uint64_t) 0xFFFFFFFF80000000));
+        uint64_t end = start + (count * 0x1000);
+        
+        if (start <= 0x49D0000 && end > 0x49D0000) {
+            sprintf("Magic address 0x49D0000 unmapped by %lx, starting at %lx, for %lu pages.\n", __builtin_return_address(0), virt, count);
+        }
+
+        if (start <= 0x535C000 && end > 0x535C000) {
+            sprintf("Magic address 0x535C000 unmapped by %lx, starting at %lx, for %lu pages.\n", __builtin_return_address(0), virt, count);
+        }
+
         /* Set the addresses */
         if ((ptrs.p1->entries[offs.p1_off] & VMM_PRESENT)) {
             ptrs.p1->entries[offs.p1_off] = 0;
         } else {
             ret = 1;
         }
+
+        vmm_invlpg(cur_virt); // Invalidate pages
         cur_virt += 0x1000;
     }
 
@@ -488,7 +518,16 @@ void vmm_deconstruct_address_space(void *old) {
                             for (uint64_t x = 0; x < 512; x++) {
                                 /* P1 */
                                 if (table_x->entries[x] & VMM_PRESENT) {
+                                    pt_off_t offs = {w, z, y, x};
+                                    void *virt = vmm_offs_to_virt(offs);
                                     void *phys = (void *) (table_x->entries[x] & VMM_4K_PERM_MASK);
+                                    if ((uint64_t) phys == 0x49D0000) {
+                                        sprintf("Magic address 0x49D0000 deconstructed by %lx, at virtual address %lx\n", __builtin_return_address(0), virt);
+                                    }
+
+                                    if ((uint64_t) phys == 0x535C000) {
+                                        sprintf("Magic address 0x535C000 deconstructed by %lx, at virtual address %lx\n", __builtin_return_address(0), virt);
+                                    }
                                     pmm_unalloc(phys, 0x1000);
                                 }
                             }

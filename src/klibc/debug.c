@@ -91,28 +91,30 @@ uint64_t create_local_dr7(thread_t *t) {
     }
 
     volatile uint64_t ret = 0;
-    sprint("test\n");
-    volatile thread_t **test2 = (volatile thread_t **) &(t);
-    sprint("tes\n");
-    volatile process_t **test1 = (volatile process_t **) &(t->parent);
-    sprintf("Test Addr: %lx\n", *test1);
-    sprint("te\n");
-    volatile uint8_t *test3 = &(t->parent->local_watchpoint1_active);
-    sprint("huh\n");
-    volatile uint8_t test4 = (t->parent->local_watchpoint1_active);
-    sprint("t\n");
-    (void) test1;
-    (void) test2;
-    (void) test3;
-    (void) test4;
-    volatile uint64_t test5 = ret + 1;
-    sprint("apples\n");
-    (void) test5;
+    // sprint("test\n");
+    // volatile thread_t **test2 = (volatile thread_t **) &(t);
+    // sprint("tes\n");
+    // volatile process_t **test1 = (volatile process_t **) &(t->parent);
+    // if ((uint64_t) (*test1) == 0xFFFF8000049CF000) {
+    //     sprintf("Test Addr: %lx\n", *test1);
+    // }
+    // sprint("te\n");
+    // volatile uint8_t *test3 = &(t->parent->local_watchpoint1_active);
+    // sprint("huh\n");
+    // volatile uint8_t test4 = (t->parent->local_watchpoint1_active);
+    // sprint("t\n");
+    // (void) test1;
+    // (void) test2;
+    // (void) test3;
+    // (void) test4;
+    // volatile uint64_t test5 = ret + 1;
+    // sprint("apples\n");
+    // (void) test5;
 
     if (t->parent->local_watchpoint1_active) {
         ret |= 0b1101 << 24;
         ret |= 1 << 5;
-        sprint("t\n");
+        //sprint("t\n");
     }
 
     if (t->parent->local_watchpoint2_active) {

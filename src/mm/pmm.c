@@ -153,6 +153,10 @@ void *pmm_alloc(uint64_t size) {
     used_memory += pages * 0x1000;
 
     //sprintf("+mem %lu %lu %lx\n", (free_page * 0x1000), size, __builtin_return_address(0));
+    if ((free_page * 0x1000) == 0x49D0000 || (free_page * 0x1000) == 0x1268000 || (free_page * 0x1000) == 0x535C000) {
+        sprintf("Magic address %lx allocated by %lx for %lu bytes.\n", (free_page * 0x1000) , __builtin_return_address(0), size);
+    }
+
 
     unlock(pmm_lock);
     interrupt_unlock(state);
@@ -192,6 +196,10 @@ void pmm_unalloc(void *addr, uint64_t size) {
 
     for (uint64_t i = 0; i < pages; i++) {
         pmm_clear_bit(page + i);
+    }
+
+    if ((uint64_t) addr == 0x49D0000 || (uint64_t) addr == 0x535C000) {
+        sprintf("Magic address %lx unllocated by %lx for %lu bytes.\n", addr, __builtin_return_address(0), size);
     }
 
     available_memory += pages * 0x1000;

@@ -71,18 +71,15 @@ void _idle() {
 
 char default_sse_state[512] __attribute__((aligned(16)));
 
-/* Initialize the BSP for scheduling */
-void scheduler_init_bsp() {
-    /* Setup syscall MSRs for this CPU */
+void init_scheduler_msr() {
     write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x8 << 32));
     write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x18 << 48));
     write_msr(0xC0000082, (uint64_t) syscall_stub); // Start execution at the syscall stub when a syscall occurs
     write_msr(0xC0000084, 0); // Mask nothing
     write_msr(0xC0000080, read_msr(0xC0000080) | 1); // Set the syscall enable bit
+}
 
-    asm volatile("fxsave %0;"::"m"(default_sse_state));
-
-    /* Setup the idle thread */
+void init_sched_cpu_locals() {
     uint64_t idle_rsp = (uint64_t) kcalloc(0x1000) + 0x1000;
     thread_t *new_idle = create_thread("Idle thread", _idle, idle_rsp, 0);
     new_idle->state = BLOCKED; // Idle thread will *not* run unless provoked
@@ -95,26 +92,19 @@ void scheduler_init_bsp() {
     get_cpu_locals()->total_tsc = read_tsc();
 }
 
+/* Initialize the BSP for scheduling */
+void scheduler_init_bsp() {
+    init_scheduler_msr();
+    asm volatile("fxsave %0;"::"m"(default_sse_state));
+
+    init_sched_cpu_locals(); // Sets up CPU locals for the scheduler including the idle task
+}
+
 /* Initilialize an AP for scheduling */
 void scheduler_init_ap() {
-    /* Setup syscall MSRs for this CPU */
-    write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x8 << 32));
-    write_msr(0xC0000081, read_msr(0xC0000081) | ((uint64_t) 0x18 << 48));
-    write_msr(0xC0000082, (uint64_t) syscall_stub); // Start execution at the syscall stub when a syscall occurs
-    write_msr(0xC0000084, 0);
-    write_msr(0xC0000080, read_msr(0xC0000080) | 1); // Set the syscall enable bit
+    init_scheduler_msr();
 
-    /* Setup the idle thread */
-    uint64_t idle_rsp = (uint64_t) kcalloc(0x1000) + 0x1000;
-    thread_t *new_idle = create_thread("Idle thread", _idle, idle_rsp, 0);
-    new_idle->state = BLOCKED; // Idle thread will *not* run unless provoked
-    int64_t idle_tid = start_thread(new_idle);
-
-    get_cpu_locals()->idle_tid = idle_tid;
-    sprintf("Idle task: %ld\n", get_cpu_locals()->idle_tid);
-    get_cpu_locals()->idle_start_tsc = read_tsc();
-    get_cpu_locals()->currently_idle = 1;
-    get_cpu_locals()->total_tsc = read_tsc();
+    init_sched_cpu_locals(); // Sets up CPU locals for the scheduler including the idle task
 }
 
 /* Create a new thread *and* add it to the dynarray */
@@ -241,6 +231,10 @@ int64_t add_new_child_thread_no_stack_init(thread_t *thread, int64_t pid) {
     thread->parent_pid = pid;
     thread->parent = new_parent;
 
+    if (new_tid == 12) {
+        sprintf("parent address: %lx, tid: %ld, pid: %ld\n", thread->parent, thread->tid, thread->parent->pid);
+    }
+
     /* Add the TID to it's parent's threads list */
     for (uint64_t i = 0; i < new_parent->threads_size; i++) {
         if (!new_parent->threads[i]) {
@@ -253,6 +247,7 @@ int64_t add_new_child_thread_no_stack_init(thread_t *thread, int64_t pid) {
         index = new_parent->threads_size;
         new_parent->threads_size += 10;
     }
+    sprintf("Remaining threads_size: %lu, index: %lu\n", new_parent->threads_size, index);
     new_parent->threads[index] = thread->tid;
 
     interrupt_safe_unlock(sched_lock);
@@ -262,8 +257,6 @@ int64_t add_new_child_thread_no_stack_init(thread_t *thread, int64_t pid) {
 /* Add a new thread to the dynarray and as a child of a process */
 int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
     interrupt_safe_lock(sched_lock);
-
-    int64_t index = -1;
 
     /* Find the parent process */
     process_t *new_parent = (void *) 0;
@@ -281,6 +274,7 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
             break;
         }
     }
+
     if (new_tid == -1) {
         threads = krealloc(threads, (threads_list_size + 10) * sizeof(thread_t *));
         new_tid = threads_list_size;
@@ -293,6 +287,9 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
     thread->parent_pid = pid;
     thread->parent = new_parent;
 
+    sprintf("Magic parent address: %lx, tid: %ld, pid: %ld\n", thread->parent, thread->tid, thread->parent->pid);
+
+
     if (new_parent->threads_size == 0) { // No children
         // -1 because kmalloc creates boundaries so page might not be mapped :|
         void *phys = virt_to_phys((void *) (thread->regs.rsp - 1), (page_table_t *) thread->regs.cr3);
@@ -300,6 +297,7 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
             sprintf("RSP not mapped :thonk:\n");
             goto done;
         }
+
         sprintf("virt: %lx\n", thread->regs.rsp);
         sprintf("phys: %lx\n", phys);
         uint64_t stack = GET_HIGHER_HALF(uint64_t, phys) + 1;
@@ -388,6 +386,8 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
 
         assert(!(stack & 15));
     }
+
+    int64_t index = -1;
 done:
     /* Add the TID to it's parent's threads list */
     for (uint64_t i = 0; i < new_parent->threads_size; i++) {
@@ -396,11 +396,14 @@ done:
             break;
         }
     }
-    if (new_tid == -1) {
+    
+    if (index == -1) {
         threads = krealloc(new_parent->threads, (new_parent->threads_size + 10) * sizeof(int64_t));
         index = new_parent->threads_size;
         new_parent->threads_size += 10;
     }
+
+    sprintf("Remaining threads_size: %lu, index: %lu\n", new_parent->threads_size, index);
     new_parent->threads[index] = thread->tid;
 
     interrupt_safe_unlock(sched_lock);
@@ -428,6 +431,7 @@ process_t *create_process(char *name, void *new_cr3) {
     new_process->local_watchpoint2 = 0;
 
     strcpy(name, new_process->name);
+    sprintf("Magic process name: %s, addr: %lx\n", new_process->name, new_process);
 
     return new_process;
 }
@@ -487,16 +491,11 @@ int64_t pick_task() {
 
     /* Prioritze tasks right after the current task */
     for (int64_t t = get_cur_thread()->tid + 1; (uint64_t) t < threads_list_size; t++) {
-        //sprintf("Looking at t = %ld in first loop\n", t);
         thread_t *task = threads[t];
         if (task) {
             if (task->state == READY || task->state == WAIT_EVENT || task->state == WAIT_EVENT_TIMEOUT) {
                 tid_ret = task->tid;
-                //sprintf("picked in first loop with state %u and event %lx\n", task->state, task->event);
                 return tid_ret;
-            }
-            if (task->state == SLEEP) {
-                //sprintf("Time left: %lu\n", task->sleep_node->time_left);
             }
         }
     }
@@ -530,9 +529,7 @@ void force_unlocked_schedule() {
     }
 }
 
-void schedule_bsp(int_reg_t *r) {
-    send_scheduler_ipis();
-
+void schedule_runner(int_reg_t *r) {
     if (!spinlock_check_and_lock(&sched_lock.lock_dat)) {
         sched_lock.current_holder = __FUNCTION__;
         schedule(r);
@@ -547,19 +544,13 @@ void schedule_bsp(int_reg_t *r) {
     }
 }
 
+void schedule_bsp(int_reg_t *r) {
+    send_scheduler_ipis();
+    schedule_runner(r);
+}
+
 void schedule_ap(int_reg_t *r) {
-    if (!spinlock_check_and_lock(&sched_lock.lock_dat)) {
-        sched_lock.current_holder = __FUNCTION__;
-        schedule(r);
-    } else {
-        if (get_cpu_locals()->currently_idle) {
-            get_cpu_locals()->idle_tsc_count += read_tsc() - get_cpu_locals()->idle_start_tsc;
-            get_cpu_locals()->idle_start_tsc = read_tsc();
-        }  else {
-            get_cpu_locals()->active_tsc_count += read_tsc() - get_cpu_locals()->active_start_tsc;
-            get_cpu_locals()->active_start_tsc = read_tsc();
-        }
-    }
+    schedule_runner(r);
     scheduler_ran = 1;
 }
 
