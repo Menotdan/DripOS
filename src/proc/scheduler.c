@@ -201,8 +201,6 @@ void push_thread_stack(uint64_t *stack_addr, uint64_t value) {
 int64_t add_new_child_thread_no_stack_init(thread_t *thread, int64_t pid) {
     interrupt_safe_lock(sched_lock);
 
-    int64_t index = -1;
-
     /* Find the parent process */
     process_t *new_parent = (void *) 0;
     if ((uint64_t) pid < process_list_size) {
@@ -231,23 +229,28 @@ int64_t add_new_child_thread_no_stack_init(thread_t *thread, int64_t pid) {
     thread->parent_pid = pid;
     thread->parent = new_parent;
 
-    if (new_tid == 12) {
-        sprintf("parent address: %lx, tid: %ld, pid: %ld\n", thread->parent, thread->tid, thread->parent->pid);
-    }
-
     /* Add the TID to it's parent's threads list */
+    int64_t index = -1;
+
     for (uint64_t i = 0; i < new_parent->threads_size; i++) {
-        if (!new_parent->threads[i]) {
+        if (new_parent->threads[i] == -1) {
             index = i;
             break;
         }
     }
-    if (new_tid == -1) {
-        threads = krealloc(new_parent->threads, (new_parent->threads_size + 10) * sizeof(int64_t));
+
+    sprintf("Remaining index: %ld\n", index);
+    
+    if (index == -1) {
+        new_parent->threads = krealloc(new_parent->threads, (new_parent->threads_size + 10) * sizeof(int64_t));
         index = new_parent->threads_size;
+        for (int64_t j = index; j < index + 10; j++) {
+            new_parent->threads[j] = -1;
+        }
         new_parent->threads_size += 10;
     }
-    sprintf("Remaining threads_size: %lu, index: %lu\n", new_parent->threads_size, index);
+
+    sprintf("Remaining threads_size: %lu, index: %ld\n", new_parent->threads_size, index);
     new_parent->threads[index] = thread->tid;
 
     interrupt_safe_unlock(sched_lock);
@@ -391,19 +394,24 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
 done:
     /* Add the TID to it's parent's threads list */
     for (uint64_t i = 0; i < new_parent->threads_size; i++) {
-        if (!new_parent->threads[i]) {
+        if (new_parent->threads[i] == -1) {
             index = i;
             break;
         }
     }
+
+    sprintf("Remaining index: %ld\n", index);
     
     if (index == -1) {
-        threads = krealloc(new_parent->threads, (new_parent->threads_size + 10) * sizeof(int64_t));
+        new_parent->threads = krealloc(new_parent->threads, (new_parent->threads_size + 10) * sizeof(int64_t));
         index = new_parent->threads_size;
+        for (int64_t j = index; j < index + 10; j++) {
+            new_parent->threads[j] = -1;
+        }
         new_parent->threads_size += 10;
     }
 
-    sprintf("Remaining threads_size: %lu, index: %lu\n", new_parent->threads_size, index);
+    sprintf("Remaining threads_size: %lu, index: %ld\n", new_parent->threads_size, index);
     new_parent->threads[index] = thread->tid;
 
     interrupt_safe_unlock(sched_lock);

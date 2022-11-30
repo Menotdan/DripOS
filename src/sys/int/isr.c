@@ -62,19 +62,24 @@ void isr_handler(int_reg_t *r) {
                     unlock(vesa_lock);
 
                     send_panic_ipis(); // Halt all other CPUs
+                    sprintf("PANIC PANIC!!!\n");
 
                     if (scheduler_enabled) {
                         safe_kprintf("Exception on core %u with apic id %u! (cur task %s with TID %ld and PID %ld)\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cur_thread()->name, get_cur_thread()->tid, get_cur_pid());
+                        sprintf("Exception on core %u with apic id %u! (cur task %s with TID %ld and PID %ld)\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id, get_cur_thread()->name, get_cur_thread()->tid, get_cur_pid());
                     } else {
                         safe_kprintf("Exception on core %u with apic id %u!\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id);
+                        sprintf("Exception on core %u with apic id %u!\n", get_cpu_locals()->cpu_index, get_cpu_locals()->apic_id);
                     }
                     safe_kprintf("RAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx CS: %lx\nSS: %lx RFLAGS: %lx\n", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2, r->cs, r->ss, r->rflags);
+                    sprintf("RAX: %lx RBX: %lx RCX: %lx \nRDX: %lx RBP: %lx RDI: %lx \nRSI: %lx R08: %lx R09: %lx \nR10: %lx R11: %lx R12: %lx \nR13: %lx R14: %lx R15: %lx \nRSP: %lx ERR: %lx INT: %lx \nRIP: %lx CR2: %lx CS: %lx\nSS: %lx RFLAGS: %lx\n", r->rax, r->rbx, r->rcx, r->rdx, r->rbp, r->rdi, r->rsi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13, r->r14, r->r15, r->rsp, r->int_err, r->int_num, r->rip, cr2, r->cs, r->ss, r->rflags);
                     if (r->int_num == 14) {
                         safe_kprintf("ERR Code: ");
-                        if (r->int_err & (1<<0)) { safe_kprintf("P "); } else { safe_kprintf("NP "); }
-                        if (r->int_err & (1<<1)) { safe_kprintf("W "); } else { safe_kprintf("R "); }
-                        if (r->int_err & (1<<2)) { safe_kprintf("U "); } else { safe_kprintf("S "); }
-                        if (r->int_err & (1<<3)) { safe_kprintf("RES "); }
+                        sprintf("ERR Code: ");
+                        if (r->int_err & (1<<0)) { safe_kprintf("P "); sprintf("P "); } else { safe_kprintf("NP "); sprintf("NP "); }
+                        if (r->int_err & (1<<1)) { safe_kprintf("W "); sprintf("W "); } else { safe_kprintf("R "); sprintf("R "); }
+                        if (r->int_err & (1<<2)) { safe_kprintf("U "); sprintf("U "); } else { safe_kprintf("S "); sprintf("S "); }
+                        if (r->int_err & (1<<3)) { safe_kprintf("RES "); sprintf("RES "); }
                     }
                     stack_trace(r, 10);
 
@@ -84,7 +89,7 @@ void isr_handler(int_reg_t *r) {
                     asm volatile("movq %%cr2, %0;" : "=r"(cr2));
 
                     // Userspace exception
-                    log("Got userspace exception %lu with error %lu on pid %lu", r->int_num, r->int_err, get_cur_pid());
+                    log("Got userspace exception %lu with error %lu on pid %ld, tid %ld", r->int_num, r->int_err, get_cur_pid(), get_cur_thread()->tid);
                     log("CR2: %lx RIP %lx RBP %lx RSP %lx", cr2, r->rip, r->rbp, r->rsp);
                     if (r->int_num == 19) {
                         uint32_t mxcsr_val = get_mxcsr();
@@ -105,11 +110,19 @@ void isr_handler(int_reg_t *r) {
                         int64_t *tids = kmalloc(sizeof(int64_t) * process->threads_size);
                         for (uint64_t i = 0; i < process->threads_size; i++) {
                             tids[i] = process->threads[i];
+                            thread_t *test_thread = threads[tids[i]];
+                            kprintf("attempt to read from tid: %ld\n", tids[i]);
+                            if (test_thread) {
+                                kprintf("tids[i]: %ld, running - %u\n", tids[i], test_thread->running);
+                            } else {
+                                kprintf("tids[i]: %ld, thread null\n", tids[i]);
+                            }
                         }
                         interrupt_safe_unlock(sched_lock);
 
+                        sprintf("isr_kill !!!!!!!!!!!!!\n");
                         for (uint64_t i = 0; i < size; i++) {
-                            if (tids[i]) {
+                            if (tids[i] != -1) {
                                 kill_thread(tids[i]);
                             }
                         }
@@ -161,6 +174,8 @@ void panic_handler(int_reg_t *r) {
 
     uint64_t cr2;
     asm volatile("movq %%cr2, %0;" : "=r"(cr2));
+
+    sprintf("PANIC PANIC!!!\n");
 
     safe_kprintf("Panic!\nReason: %s\n", r->rdi);
     if (scheduler_enabled) {

@@ -7,6 +7,7 @@
 #include "klibc/stdlib.h"
 #include "klibc/errno.h"
 #include "drivers/serial.h"
+#include "drivers/tty/tty.h"
 #include <stddef.h>
 
 urm_type_t urm_type;
@@ -18,8 +19,16 @@ int urm_trigger_done = 1;
 int urm_return = 0;
 
 void kill_thread(int64_t tid) {
+    char thread_name[50] = "";
+    if (threads[tid]) {
+        strcat(thread_name, threads[tid]->name);
+    }
+
+    kprintf("kill_thread(%ld) - %s (internal)\n", tid, thread_name);
+    sprintf("tid %ld - %s\n", tid, thread_name);
     interrupt_safe_lock(sched_lock);
     thread_t *thread = threads[tid];
+    assert(thread);
     thread->state = BLOCKED;
 
     if (thread->cpu != -1) {
@@ -36,9 +45,8 @@ void kill_thread(int64_t tid) {
     }
 
     sprintf("Magic KILLTID: %ld\n", tid);
-    thread_t *old_thread = threads[tid];
     threads[tid] = (void *) 0;
-    kfree(old_thread);
+    kfree(thread);
 
     for (uint64_t i = 0; i < threads_list_size; i++) {
         sprintf("Remaining thread: %lx %d\n", threads[i], i);
@@ -67,7 +75,12 @@ void urm_kill_process(urm_kill_process_data *data) {
     interrupt_safe_unlock(sched_lock);
 
     for (uint64_t i = 0; i < size; i++) {
-        if (tids[i]) {
+        sprintf("TIDs: %ld\n", tids[i]);
+        if (tids[i] != -1) {
+            sprintf("urm_kill ?????????????????\n");
+            sprintf("BYPASSED BYPASSED WHOOT WHOOT %ld\n", tids[i]);
+            kprintf("kill_thread(%ld)\n", tids[i]);
+            sprintf("tid %ld - %s\n", tids[i], threads[tids[i]]->name);
             kill_thread(tids[i]);
         }
     }
@@ -92,8 +105,10 @@ void urm_execve(urm_execve_data *data) {
     interrupt_safe_lock(sched_lock);
     process_t *current_process = processes[data->pid];
     for (uint64_t i = 0; i < current_process->threads_size; i++) {
-        kfree(threads[current_process->threads[i]]);
-        threads[current_process->threads[i]] = (void *) 0;
+        if (current_process->threads[i] != -1 && threads[current_process->threads[i]]) {
+            kfree(threads[current_process->threads[i]]);
+            threads[current_process->threads[i]] = (void *) 0;
+        }
     }
     vmm_deconstruct_address_space((void *) current_process->cr3);
     current_process->current_brk = 0x10000000000;
