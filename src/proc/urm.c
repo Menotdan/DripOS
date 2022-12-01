@@ -105,20 +105,25 @@ void urm_execve(urm_execve_data *data) {
     interrupt_safe_lock(sched_lock);
     process_t *current_process = processes[data->pid];
     for (uint64_t i = 0; i < current_process->threads_size; i++) {
-        if (current_process->threads[i] != -1 && threads[current_process->threads[i]]) {
-            kfree(threads[current_process->threads[i]]);
-            threads[current_process->threads[i]] = (void *) 0;
+        if (current_process->threads[i] != -1) {
+            if (threads[current_process->threads[i]]) {
+                kfree(threads[current_process->threads[i]]);
+                threads[current_process->threads[i]] = (void *) 0;
+            }
+            current_process->threads[i] = -1;
         }
     }
     vmm_deconstruct_address_space((void *) current_process->cr3);
-    current_process->current_brk = 0x10000000000;
 
+    current_process->current_brk = 0x10000000000;
     current_process->cr3 = (uint64_t) address_space;
+
     thread_t *thread = create_thread(data->executable_path, (void *) entry_point, USER_STACK, 3);
     if (auxv_info.auxv) {
         thread->vars.auxc = auxv_info.auxc;
         thread->vars.auxv = auxv_info.auxv;
     }
+
     thread->vars.envc = data->envc;
     thread->vars.argc = data->argc;
     thread->vars.enviroment = data->envp;
@@ -126,7 +131,7 @@ void urm_execve(urm_execve_data *data) {
 
     interrupt_safe_unlock(sched_lock);
 
-    sprintf("Magic execve, name thread: %s, name proc: %s, addr thread: %lx, addr proc: %lx\n", thread->name, current_process->name, thread, current_process);
+    sprintf("Magic execve, name thread: %s, name proc: %s, addr thread: %lx, addr proc: %lx, entrypoint: %lx\n", thread->name, current_process->name, thread, current_process, entry_point);
 
     add_new_child_thread(thread, data->pid);
     sprintf("Remaining code is add_new, tid: %ld, pid: %ld\n", thread->tid, data->pid);

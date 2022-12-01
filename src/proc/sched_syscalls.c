@@ -132,12 +132,14 @@ int munmap(char *addr, uint64_t len) {
 
 int fork(syscall_reg_t *r) {
     sprintf("got fork call with r = %lx\n", r);
+
     interrupt_safe_lock(sched_lock);
     process_t *process = processes[get_cur_pid()]; // Old process
     void *new_cr3 = vmm_fork((void *) process->cr3); // Fork address space
 
     process_t *forked_process = create_process(process->name, new_cr3);
-    int64_t new_pid = add_new_pid(forked_process, 1);
+    int64_t new_pid = add_new_pid(1);
+    processes[new_pid] = forked_process;
     forked_process->pid = new_pid;
 
     process_t *new_process = processes[new_pid]; // Get the process struct
@@ -205,6 +207,7 @@ void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r) {
             r->rdx = EFAULT;
             return;
         }
+
         if (!argv[i]) {
             found_null_argv = 1;
             break;
@@ -217,6 +220,7 @@ void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r) {
             r->rdx = EFAULT;
             return;
         }
+
         if (!envp[i]) {
             found_null_envp = 1;
             break;
@@ -257,6 +261,7 @@ void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r) {
     if (!kernel_exec_path) {
         goto fault_return;
     }
+
     urm_execve_data data;
     data.argv = kernel_argv;
     data.envp = kernel_envp;
@@ -275,12 +280,14 @@ fault_return:
         }
     }
     kfree(kernel_argv);
+
     for (uint64_t x = 0; x < envc; x++) {
         if (kernel_envp[x]) {
             kfree(kernel_envp[x]);
         }
     }
     kfree(kernel_envp);
+
     if (kernel_exec_path) {
         kfree(kernel_exec_path);
     }
@@ -294,12 +301,14 @@ done:
         }
     }
     kfree(kernel_argv);
+
     for (uint64_t x = 0; x < envc; x++) {
         if (kernel_envp[x]) {
             kfree(kernel_envp[x]);
         }
     }
     kfree(kernel_envp);
+
     if (kernel_exec_path) {
         kfree(kernel_exec_path);
     }

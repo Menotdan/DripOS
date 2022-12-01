@@ -1,9 +1,12 @@
 #include "process_management.h"
 #include "klibc/lock.h"
+#include "klibc/stdlib.h"
 #include "proc/scheduler.h"
 
-int64_t add_new_pid(process_t *process, int locked) {
-    if (!locked) interrupt_safe_lock(sched_lock);
+int64_t add_new_pid(int locked) {
+    if (!locked) {
+        interrupt_safe_lock(sched_lock);
+    }
 
     int64_t new_pid = -1;
     for (uint64_t i = 0; i < process_list_size; i++) {
@@ -19,12 +22,17 @@ int64_t add_new_pid(process_t *process, int locked) {
         process_list_size += 10;
     }
 
-    if (!locked) interrupt_safe_unlock(sched_lock);
+    if (!locked) {
+        interrupt_safe_unlock(sched_lock);
+    }
+
     return new_pid;
 }
 
-int64_t add_new_tid(thread_t *thread, int locked) {
-    if (!locked) interrupt_safe_lock(sched_lock);
+int64_t add_new_tid(int locked) {
+    if (!locked) {
+        interrupt_safe_lock(sched_lock);
+    }
 
     int64_t new_tid = -1;
     for (uint64_t i = 0; i < threads_list_size; i++) {
@@ -40,6 +48,9 @@ int64_t add_new_tid(thread_t *thread, int locked) {
         threads_list_size += 10;
     }
 
-    if (!locked) interrupt_safe_unlock(sched_lock);
+    if (!locked) {
+        interrupt_safe_unlock(sched_lock);
+    }
+
     return new_tid;
 }

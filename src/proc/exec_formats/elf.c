@@ -142,9 +142,11 @@ int64_t load_elf(char *path) {
     if (!address_space) {
         return -1;
     }
+
     process_t *process = create_process(path, address_space);
     thread_t *thread = create_thread(path, (void *) entry_point, USER_STACK, 3);
     int64_t pid = add_process(process);
+
     if (auxv_info.auxv) {
         thread->vars.auxc = auxv_info.auxc;
         thread->vars.auxv = auxv_info.auxv;

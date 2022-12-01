@@ -116,7 +116,7 @@ int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_
 /* Add the thread to the list */
 int64_t start_thread(thread_t *thread) {
     interrupt_safe_lock(sched_lock);
-    int64_t tid = add_new_tid(thread, 1);
+    int64_t tid = add_new_tid(1);
     thread->tid = tid;
 
     threads[tid] = thread;
@@ -198,7 +198,7 @@ int64_t add_new_child_thread_no_stack_init(thread_t *thread, int64_t pid) {
 
     /* Store the new task and save its TID */
 
-    int64_t new_tid = add_new_tid(thread, 1);
+    int64_t new_tid = add_new_tid(1);
     threads[new_tid] = thread;
     kprintf("Started new thread - %ld\n", new_tid);
 
@@ -229,6 +229,7 @@ int64_t add_new_child_thread_no_stack_init(thread_t *thread, int64_t pid) {
     }
 
     kprintf("Remaining threads_size: %lu, index: %ld, tid: %ld\n", new_parent->threads_size, index, new_tid);
+    sprintf("RETURN %lx no stack\n", __builtin_return_address(0));
     new_parent->threads[index] = thread->tid;
 
     interrupt_safe_unlock(sched_lock);
@@ -248,7 +249,7 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
 
     /* Store the new task and save its TID */
 
-    int64_t new_tid = add_new_tid(thread, 1);
+    int64_t new_tid = add_new_tid(1);
     threads[new_tid] = thread;
     kprintf("Started new thread - %ld\n", new_tid);
 
@@ -379,6 +380,7 @@ done:
     }
 
     kprintf("Remaining threads_size: %lu, index: %ld, tid: %ld\n", new_parent->threads_size, index, new_tid);
+    sprintf("RETURN %lx\n", __builtin_return_address(0));
     new_parent->threads[index] = thread->tid;
 
     interrupt_safe_unlock(sched_lock);
@@ -417,7 +419,7 @@ int64_t add_process(process_t *process) {
     interrupt_safe_lock(sched_lock);
 
     /* Add element to the list and save the PID */
-    int64_t pid = add_new_pid(process, 1);
+    int64_t pid = add_new_pid(1);
     processes[pid] = process;
     processes[pid]->pid = pid;
 
@@ -590,7 +592,6 @@ repick_task:
         if (picked_first == -1) {
             picked_first = tid_run;
         } else if (picked_first == tid_run) {
-            // welp
             tid_run = -1;
             get_cpu_locals()->current_thread = threads[get_cpu_locals()->idle_tid];
             running_task = get_cur_thread();
@@ -599,6 +600,7 @@ repick_task:
         thread_t *to_run = threads[tid_run];
         get_cpu_locals()->current_thread = to_run;
         running_task = get_cur_thread();
+
         if (to_run->state == WAIT_EVENT) {
             if (*to_run->event) {
                 atomic_dec((uint32_t *) to_run->event);
@@ -628,16 +630,19 @@ picked:
         running_task->running = 1;
         running_task->state = RUNNING;
         assert(running_task->state == RUNNING);
+
         if (get_cpu_locals()->currently_idle) {
             get_cpu_locals()->idle_tsc_count += read_tsc() - get_cpu_locals()->idle_start_tsc;
             used_to_be_idle = 1;
         }
+
         get_cpu_locals()->currently_idle = 0;
     } else {
         if (!get_cpu_locals()->currently_idle) {
             get_cpu_locals()->active_tsc_count += read_tsc() - get_cpu_locals()->active_start_tsc;
             used_to_be_active = 1;
         }
+
         get_cpu_locals()->currently_idle = 1;
     }
 

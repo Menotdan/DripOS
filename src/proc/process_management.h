@@ -120,7 +120,7 @@ typedef struct {
     uint64_t tsc_total; // The total time this task has been running for
 } __attribute__((packed)) thread_info_block_t;
 
-int64_t add_new_pid(process_t *process, int locked);
-int64_t add_new_tid(thread_t *thread, int locked);
+int64_t add_new_pid(int locked);
+int64_t add_new_tid(int locked);
 
 #endif

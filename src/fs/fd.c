@@ -282,12 +282,15 @@ void clone_fds(int64_t old_pid, int64_t new_pid) {
     if ((uint64_t) old_pid >= process_list_size || (uint64_t) new_pid >= process_list_size) {
         sprintf("BAD ERROR REEEEEEEEEEEEEEEEEEEEEE (go look in clone_fds) old_pid: %ld, new_pid: %ld\n", old_pid, new_pid);
     }
+
     process_t *old = processes[old_pid];
     process_t *new = processes[new_pid];
+    assert(old);
+    assert(new);
+
     interrupt_safe_unlock(sched_lock);
-
-
     lock(fd_lock);
+
     for (int i = 0; i < old->fd_table_size; i++) {
         if (old->fd_table[i]) {
             fd_entry_t *new_fd = kcalloc(sizeof(fd_entry_t));
