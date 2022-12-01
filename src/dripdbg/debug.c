@@ -79,9 +79,9 @@ void debug_worker() {
             } else if (buffer[0] == 't') {
                 // Send a list of thread names
                 char *data = kcalloc(1);
+
                 interrupt_safe_lock(sched_lock);
                 for (uint64_t i = 0; i < threads_list_size; i++) {
-                    
                     if (threads[i]) {
                         thread_t *task = threads[i];
                         data = krealloc(data, strlen(data) + 3 + strlen(task->name));

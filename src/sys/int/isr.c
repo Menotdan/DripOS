@@ -108,9 +108,14 @@ void isr_handler(int_reg_t *r) {
 
                         uint64_t size = process->threads_size;
                         int64_t *tids = kmalloc(sizeof(int64_t) * process->threads_size);
+
                         for (uint64_t i = 0; i < process->threads_size; i++) {
                             tids[i] = process->threads[i];
-                            thread_t *test_thread = threads[tids[i]];
+                            thread_t *test_thread = (void *) 0;
+                            if (tids[i] != -1) {
+                                test_thread = threads[tids[i]];
+                            }
+
                             kprintf("attempt to read from tid: %ld\n", tids[i]);
                             if (test_thread) {
                                 kprintf("tids[i]: %ld, running - %u\n", tids[i], test_thread->running);
