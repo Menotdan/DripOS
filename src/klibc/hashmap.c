@@ -34,7 +34,7 @@ done:
 
 static void hashmap_unref_elem(hashmap_elem_t *elem) {
     if (!atomic_dec(&elem->ref_count)) {
-        // If no more refs exist, remove the elem
+        // If no more refs exist, remove the element
         UNCHAIN_LINKED_LIST(elem);
     }
 }
