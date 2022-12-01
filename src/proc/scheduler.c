@@ -30,7 +30,6 @@ process_t **processes;
 uint64_t process_count = 0;
 
 uint8_t scheduler_enabled = 0;
-lock_t scheduler_lock = {0, 0, 0, 0};
 interrupt_safe_lock_t sched_lock = {0, 0, 0, 0, -1};
 
 task_regs_t default_kernel_regs = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x8,0,0x202,0,0x1F80,0x33f};
@@ -107,28 +106,17 @@ void scheduler_init_ap() {
     init_sched_cpu_locals(); // Sets up CPU locals for the scheduler including the idle task
 }
 
-/* Create a new thread *and* add it to the dynarray */
+/* Create a new thread *and* add it to the list */
 int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_t ring) {
     thread_t *new_task = create_thread(name, main, rsp, ring);
     int64_t new_tid = add_new_child_thread(new_task, pid);
     return new_tid;
 }
 
-/* Add the thread to the dynarray */
+/* Add the thread to the list */
 int64_t start_thread(thread_t *thread) {
     interrupt_safe_lock(sched_lock);
-    int64_t tid = -1;
-    for (uint64_t i = 0; i < threads_list_size; i++) {
-        if (!threads[i]) {
-            tid = i;
-            break;
-        }
-    }
-    if (tid == -1) {
-        threads = krealloc(threads, (threads_list_size + 10) * sizeof(thread_t *));
-        tid = threads_list_size;
-        threads_list_size += 10;
-    }
+    int64_t tid = add_new_tid(thread, 1);
     thread->tid = tid;
 
     threads[tid] = thread;
@@ -210,19 +198,9 @@ int64_t add_new_child_thread_no_stack_init(thread_t *thread, int64_t pid) {
 
     /* Store the new task and save its TID */
 
-    int64_t new_tid = -1;
-    for (uint64_t i = 0; i < threads_list_size; i++) {
-        if (!threads[i]) {
-            new_tid = i;
-            break;
-        }
-    }
-    if (new_tid == -1) {
-        threads = krealloc(threads, (threads_list_size + 10) * sizeof(thread_t *));
-        new_tid = threads_list_size;
-        threads_list_size += 10;
-    }
+    int64_t new_tid = add_new_tid(thread, 1);
     threads[new_tid] = thread;
+    kprintf("Started new thread - %ld\n", new_tid);
 
     thread->tid = new_tid;
     thread->regs.cr3 = new_parent->cr3; // Inherit parent's cr3
@@ -250,7 +228,7 @@ int64_t add_new_child_thread_no_stack_init(thread_t *thread, int64_t pid) {
         new_parent->threads_size += 10;
     }
 
-    sprintf("Remaining threads_size: %lu, index: %ld\n", new_parent->threads_size, index);
+    kprintf("Remaining threads_size: %lu, index: %ld, tid: %ld\n", new_parent->threads_size, index, new_tid);
     new_parent->threads[index] = thread->tid;
 
     interrupt_safe_unlock(sched_lock);
@@ -270,20 +248,9 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
 
     /* Store the new task and save its TID */
 
-    int64_t new_tid = -1;
-    for (uint64_t i = 0; i < threads_list_size; i++) {
-        if (!threads[i]) {
-            new_tid = i;
-            break;
-        }
-    }
-
-    if (new_tid == -1) {
-        threads = krealloc(threads, (threads_list_size + 10) * sizeof(thread_t *));
-        new_tid = threads_list_size;
-        threads_list_size += 10;
-    }
+    int64_t new_tid = add_new_tid(thread, 1);
     threads[new_tid] = thread;
+    kprintf("Started new thread - %ld\n", new_tid);
 
     thread->tid = new_tid;
     thread->regs.cr3 = new_parent->cr3; // Inherit parent's cr3
@@ -411,7 +378,7 @@ done:
         new_parent->threads_size += 10;
     }
 
-    sprintf("Remaining threads_size: %lu, index: %ld\n", new_parent->threads_size, index);
+    kprintf("Remaining threads_size: %lu, index: %ld, tid: %ld\n", new_parent->threads_size, index, new_tid);
     new_parent->threads[index] = thread->tid;
 
     interrupt_safe_unlock(sched_lock);
@@ -449,19 +416,8 @@ process_t *create_process(char *name, void *new_cr3) {
 int64_t add_process(process_t *process) {
     interrupt_safe_lock(sched_lock);
 
-    /* Add element to the dynarray and save the PID */
-    int64_t pid = -1;
-    for (uint64_t i = 0; i < process_list_size; i++) {
-        if (!processes[i]) {
-            pid = i;
-            break;
-        }
-    }
-    if (pid == -1) {
-        processes = krealloc(processes, (process_list_size + 10) * sizeof(process_t *));
-        pid = process_list_size;
-        process_list_size += 10;
-    }
+    /* Add element to the list and save the PID */
+    int64_t pid = add_new_pid(process, 1);
     processes[pid] = process;
     processes[pid]->pid = pid;
 

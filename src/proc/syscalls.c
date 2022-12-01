@@ -441,6 +441,7 @@ void syscall_open_pipe(syscall_reg_t *r) {
         r->rdx = -EINVAL;
         return;
     }
+    
     process_t *process = processes[pid];
     if (process->ppid != get_cur_pid()) {
         r->rdx = -EPERM;

@@ -6,6 +6,7 @@
 #include "mm/pmm.h"
 #include "klibc/errno.h"
 #include "klibc/stdlib.h"
+#include "proc/process_management.h"
 #include "io/msr.h"
 #include <stddef.h>
 
@@ -136,19 +137,7 @@ int fork(syscall_reg_t *r) {
     void *new_cr3 = vmm_fork((void *) process->cr3); // Fork address space
 
     process_t *forked_process = create_process(process->name, new_cr3);
-    int64_t new_pid = -1;
-    for (uint64_t i = 0; i < process_list_size; i++) {
-        if (!processes[i]) {
-            new_pid = i;
-            break;
-        }
-    }
-    if (new_pid == -1) {
-        processes = krealloc(processes, (process_list_size + 10) * sizeof(process_t *));
-        new_pid = process_list_size;
-        process_list_size += 10;
-    }
-    processes[new_pid] = forked_process;
+    int64_t new_pid = add_new_pid(forked_process, 1);
     forked_process->pid = new_pid;
 
     process_t *new_process = processes[new_pid]; // Get the process struct
