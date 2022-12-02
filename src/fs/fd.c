@@ -26,6 +26,7 @@ int fd_open(char *filepath, int mode) {
 
     uint64_t err;
     vfs_node_t *node = vfs_open(kernel_string, mode, &err);
+
     kfree(kernel_string);
     if (!node) {
         if (set_ignore)
