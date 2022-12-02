@@ -5,7 +5,6 @@
 #include "sys/smp.h"
 
 char *check_and_copy_string(char *userspace_string) {
-    // sprintf("string address addr: %lx\n", userspace_string);
     uint64_t string_length = 0;
     int found_string_null = 0;
     for (uint64_t i = 0; i < 4096; i++) {

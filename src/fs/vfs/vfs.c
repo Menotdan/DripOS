@@ -11,6 +11,7 @@
 #include "klibc/logger.h"
 #include "klibc/debug.h"
 #include "drivers/tty/tty.h"
+#include "drivers/pit.h"
 #include "drivers/serial.h"
 #include "mm/vmm.h"
 #include "mm/pmm.h"
@@ -370,6 +371,7 @@ vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
     lock(vfs_open_lock);
 
     vfs_node_t *node = get_node_from_path(name);
+
     if (!node) {
         /* The first missing node, where the generator should start generating */
         vfs_node_t *missing_start = create_missing_nodes_from_path(name, null_vfs_ops);
@@ -480,9 +482,6 @@ int vfs_read(int fd, void *buf, uint64_t count) {
         sprintf("fd_cookie4 = %lx\n", fd_lookup(fd)->fd_cookie4);
     }
 
-    // if (strcmp("satadeva", node->name)) {
-    //     sprintf("got node %lx with read at %lx and name %s\n", node, node->ops.read, node->name);
-    // }
     return node->ops.read(fd, buf, count);
 }
 

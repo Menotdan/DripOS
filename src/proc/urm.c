@@ -24,8 +24,6 @@ void kill_thread(int64_t tid) {
         strcat(thread_name, threads[tid]->name);
     }
 
-    kprintf("kill_thread(%ld) - %s (internal)\n", tid, thread_name);
-    sprintf("tid %ld - %s\n", tid, thread_name);
     interrupt_safe_lock(sched_lock);
     thread_t *thread = threads[tid];
     assert(thread);
@@ -43,18 +41,9 @@ void kill_thread(int64_t tid) {
         thread->parent->child_thread_count--;
     }
 
-    /* TODO: do proper cleanup */
-    if (!threads[tid]) {
-        //sprintf("thread is null\n");
-    }
-
-    sprintf("Magic KILLTID: %ld\n", tid);
+    /* TODO: do proper cleanup  (Deconstruct address space, etc) */
     threads[tid] = (void *) 0;
     kfree(thread);
-
-    for (uint64_t i = 0; i < threads_list_size; i++) {
-        sprintf("Remaining thread: %lx %d\n", threads[i], i);
-    }
 
     interrupt_safe_unlock(sched_lock);
 }
@@ -66,25 +55,18 @@ void urm_kill_thread(urm_kill_thread_data *data) {
 }
 
 void urm_kill_process(urm_kill_process_data *data) {
-    sprintf("Remaining kill_process.\n");
     interrupt_safe_lock(sched_lock);
     process_t *process = processes[data->pid];
 
     uint64_t size = process->threads_size;
     int64_t *tids = kmalloc(sizeof(int64_t) * process->threads_size);
-    sprintf("Remaining tids in process: %lu\n", process->threads_size);
     for (uint64_t i = 0; i < process->threads_size; i++) {
         tids[i] = process->threads[i];
     }
     interrupt_safe_unlock(sched_lock);
 
     for (uint64_t i = 0; i < size; i++) {
-        sprintf("TIDs: %ld\n", tids[i]);
         if (tids[i] != -1) {
-            sprintf("urm_kill ?????????????????\n");
-            sprintf("BYPASSED BYPASSED WHOOT WHOOT %ld\n", tids[i]);
-            kprintf("kill_thread(%ld)\n", tids[i]);
-            sprintf("tid %ld - %s\n", tids[i], threads[tids[i]]->name);
             kill_thread(tids[i]);
         }
     }
@@ -137,10 +119,7 @@ void urm_execve(urm_execve_data *data) {
 
     interrupt_safe_unlock(sched_lock);
 
-    sprintf("Magic execve, name thread: %s, name proc: %s, addr thread: %lx, addr proc: %lx, entrypoint: %lx\n", thread->name, current_process->name, thread, current_process, entry_point);
-
     add_new_child_thread(thread, data->pid);
-    sprintf("Remaining code is add_new, tid: %ld, pid: %ld\n", thread->tid, data->pid);
     urm_return = 0; // There is not code waiting for us, since we have replaced the thread
     urm_trigger_done = 0;
 }

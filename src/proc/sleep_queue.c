@@ -66,6 +66,7 @@ void advance_time() {
     if (lagged_ticks > (sched_period * 3)) {
         sprintf("[DripOS] Warning, kernel may be lagging, %lu ticks skipped.", lagged_ticks);
     }
+
     for (uint64_t i = 0; i < lagged_ticks + 1; i++) { // Count down for all the lagged ticks + the current tick
         sleep_queue_t *cur = base_queue.next;
         if (cur) {

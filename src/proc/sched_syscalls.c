@@ -131,8 +131,6 @@ int munmap(char *addr, uint64_t len) {
 }
 
 int fork(syscall_reg_t *r) {
-    sprintf("got fork call with r = %lx\n", r);
-
     interrupt_safe_lock(sched_lock);
     process_t *process = processes[get_cur_pid()]; // Old process
     void *new_cr3 = vmm_fork((void *) process->cr3); // Fork address space

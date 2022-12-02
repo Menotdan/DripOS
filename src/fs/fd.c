@@ -85,11 +85,11 @@ int fd_read(int fd, void *buf, uint64_t count) {
         return -EBADF;
     }
 
-    //sprintf("got to vfs_read\n");
+
     int read = vfs_read(fd, buf, count);
     if (set_ignore)
         get_cpu_locals()->ignore_ring = 0;
-    //sprintf("got past vfs_read\n");
+
     return read;
 }
 

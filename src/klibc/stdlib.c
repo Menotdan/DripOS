@@ -22,14 +22,6 @@ void *kmalloc(uint64_t size) {
 
     log_alloc("+mem %lu %lu %lx\n", size_data, *(uint64_t *) size_data, __builtin_return_address(0));
 
-    if (GET_LOWER_HALF(uint64_t, size_data) == 0x49D0000 || GET_LOWER_HALF(uint64_t, size_data) + 0x1000 == 0x49D0000 || GET_LOWER_HALF(uint64_t, last_page) == 0x49D0000) {
-        sprintf("Magic address 0x49D0000 was kalloc'd by %lx with size %lu.\n", __builtin_return_address(0), size);
-    }
-
-    if (GET_LOWER_HALF(uint64_t, size_data) == 0x535C000 || GET_LOWER_HALF(uint64_t, size_data) + 0x1000 == 0x535C000 || GET_LOWER_HALF(uint64_t, last_page) == 0x535C000) {
-        sprintf("Magic address 0x535C000 was kalloc'd by %lx with size %lu.\n", __builtin_return_address(0), size);
-    }
-
     /* Unmap size data for low OOB reads/writes */
     vmm_unmap((void *) size_data, 1);
     interrupt_unlock(state);
@@ -58,17 +50,6 @@ void kfree(void *addr) {
     uint64_t *signature = (uint64_t *) ((uint64_t) addr - 0x0ff8);
     uint64_t page_count = ((*size_data - 0x1000) + 0x1000 - 1) / 0x1000;
     uint64_t last_page = (uint64_t) addr + ((page_count - 1) * 0x1000);
-
-    uint64_t start = GET_LOWER_HALF(uint64_t, addr) - 0x1000;
-    uint64_t end = start + ((page_count - 1) * 0x1000);
-
-    if ((start <= 0x49D0000 && end > 0x49D0000)) {
-        sprintf("Magic address 0x49D0000 was kfree'd by %lx with size %lu.\n", __builtin_return_address(0), *size_data);
-    }
-    
-    if ((start <= 0x535C000 && end > 0x535C000)) {
-        sprintf("Magic address 0x535C000 was kfree'd by %lx with size %lu.\n", __builtin_return_address(0), *size_data);
-    }
 
     /* Map last page */
     vmm_map(GET_LOWER_HALF(void *, last_page), (void *) last_page, 1, VMM_PRESENT | VMM_WRITE);
@@ -117,18 +98,6 @@ void remap_alloc(void *addr) {
 void *kcalloc(uint64_t size) {
     interrupt_state_t state = interrupt_lock();
     void *buffer = kmalloc(size);
-
-
-    uint64_t pages_count = ((size + 0x2000) + 0x1000 - 1) / 0x1000;
-    uint64_t start = GET_LOWER_HALF(uint64_t, buffer) - 0x1000;
-    uint64_t end = start + ((pages_count - 1) * 0x1000);
-    if (start <= 0x49D0000 && end > 0x49D0000) {
-        sprintf("Magic address 0x49D0000 was kcalloc'd by %lx with size %lu\n", __builtin_return_address(0), size);
-    }
-
-    if (start <= 0x535C000 && end > 0x535C000) {
-        sprintf("Magic address 0x535C000 was kcalloc'd by %lx with size %lu\n", __builtin_return_address(0), size);
-    }
 
     memset((uint8_t *) buffer, 0, size);
     interrupt_unlock(state);

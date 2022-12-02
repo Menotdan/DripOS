@@ -97,35 +97,20 @@ void isr_handler(int_reg_t *r) {
                     }
 
                     if (get_cur_pid()) {
-                        //sprintf("Killed process %ld\n", get_cur_pid());
                         interrupt_safe_lock(sched_lock);
                         thread_t *thread = threads[get_cur_thread()->tid];
                         thread->state = BLOCKED;
                         thread->cpu = -1;
-                        sprintf("tid = %ld\n", thread->tid);
-                        process_t *process = processes[get_cur_pid()];
-                        sprintf("killing process %ld with struct address %lx from ISR\n", get_cur_pid(), process);
 
+                        process_t *process = processes[get_cur_pid()];
                         uint64_t size = process->threads_size;
                         int64_t *tids = kmalloc(sizeof(int64_t) * process->threads_size);
 
                         for (uint64_t i = 0; i < process->threads_size; i++) {
                             tids[i] = process->threads[i];
-                            thread_t *test_thread = (void *) 0;
-                            if (tids[i] != -1) {
-                                test_thread = threads[tids[i]];
-                            }
-
-                            kprintf("attempt to read from tid: %ld\n", tids[i]);
-                            if (test_thread) {
-                                kprintf("tids[i]: %ld, running - %u\n", tids[i], test_thread->running);
-                            } else {
-                                kprintf("tids[i]: %ld, thread null\n", tids[i]);
-                            }
                         }
                         interrupt_safe_unlock(sched_lock);
 
-                        sprintf("isr_kill !!!!!!!!!!!!!\n");
                         for (uint64_t i = 0; i < size; i++) {
                             if (tids[i] != -1) {
                                 kill_thread(tids[i]);
@@ -139,7 +124,7 @@ void isr_handler(int_reg_t *r) {
                     } else {
                         kill_thread(get_cur_thread()->tid);
                     }
-                    sprintf("Thread is dead\n");
+
                     get_cpu_locals()->current_thread = (thread_t *) 0;
                     schedule(r); // Schedule for this CPU
                 }
@@ -197,7 +182,7 @@ void isr_panic_idle(int_reg_t *r) {
     (void) r;
     unlock(base_tty.tty_lock);
     unlock(vesa_lock);
-    //kprintf_yieldless("CPU %u, Thread %ld\n", (uint32_t) get_cpu_locals()->cpu_index, get_cur_thread()->tid);
+
     while (1) { asm volatile("hlt"); }
 }
 

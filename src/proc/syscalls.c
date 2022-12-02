@@ -76,7 +76,6 @@ void init_syscalls() {
 
 void syscall_handler(syscall_reg_t *r) {
     if (r->rax < (uint64_t) HANDLER_COUNT) {
-        //sprintf("Handling syscall: %lu\n", r->rax);
         syscall_handlers[r->rax](r);
     }
 }
@@ -113,7 +112,6 @@ void syscall_open(syscall_reg_t *r) {
         r->rax = -1;
         r->rdx = -ret;
     }
-    //sprintf("ret: %d\n", ret);
 }
 
 void syscall_close(syscall_reg_t *r) {
@@ -127,7 +125,6 @@ void syscall_close(syscall_reg_t *r) {
 }
 
 void syscall_seek(syscall_reg_t *r) {
-    //sprintf("seek: %lu, whence: %d\n", r->rsi, (int) r->rdx);
     int64_t ret = fd_seek((int) r->rdi, (uint64_t) r->rsi, (int) r->rdx);
     if (ret >= 0) {
         r->rax = ret;
@@ -138,9 +135,7 @@ void syscall_seek(syscall_reg_t *r) {
 }
 
 void syscall_mmap(syscall_reg_t *r) {
-    //sprintf("Base: %lx, Size: %lx.\n", r->rdi, r->rsi);
     r->rax = (uint64_t) psuedo_mmap((void *) r->rdi, r->rsi, r);
-    //sprintf("Returning %lx\n", r->rax);
 }
 
 void syscall_munmap(syscall_reg_t *r) {
@@ -191,7 +186,6 @@ void syscall_getppid(syscall_reg_t *r) {
 
 void syscall_exit(syscall_reg_t *r) {
     (void) r;
-    sprintf("Magic EXITING pid: %ld, proc_address: %lx, tid: %ld\n", get_cur_pid(), get_cur_process(), get_cur_thread()->tid);
     kill_process(get_cur_pid()); // yeet
 }
 
@@ -441,7 +435,7 @@ void syscall_open_pipe(syscall_reg_t *r) {
         r->rdx = -EINVAL;
         return;
     }
-    
+
     process_t *process = processes[pid];
     if (process->ppid != get_cur_pid()) {
         r->rdx = -EPERM;

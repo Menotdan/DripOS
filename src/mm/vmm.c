@@ -239,19 +239,8 @@ int vmm_map_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t per
             cur_virt += 0x1000;
             continue;
         }
-
-        if ((uint64_t) cur_phys == 0x49D0000) {
-            sprintf("Magic address 0x49D0000 mapped by %lx, starting at %lx, for %lu pages.\n", __builtin_return_address(0), virt, count);
-        }
-
-        if ((uint64_t) cur_phys == 0x535C000) {
-            sprintf("Magic address 0x535C000 mapped by %lx, starting at %lx, for %lu pages.\n", __builtin_return_address(0), virt, count);
-        }
     }
 
-    if (vmm_complete) {
-        //sprintf("+mapping %lu %lu %lu\n", phys, virt, count);
-    }
     unlock(vmm_spinlock);
     interrupt_unlock(state);
     return ret;
@@ -267,10 +256,6 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
     uint8_t *cur_virt = (uint8_t *) (((uint64_t) virt) & VMM_4K_PERM_MASK);
     uint64_t cur_phys = ((uint64_t) phys) & VMM_4K_PERM_MASK;
 
-    if (vmm_complete) {
-        //sprintf("-mapping %lu %lu %lu\n", phys, virt, count);
-    }
-
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
         pt_ptr_t ptrs = vmm_get_table(&offs, p4);
@@ -281,19 +266,7 @@ int vmm_remap_pages(void *phys, void *virt, void *p4, uint64_t count, uint16_t p
         vmm_invlpg((uint64_t) cur_virt); // Invalidate pages
         cur_phys += 0x1000;
         cur_virt += 0x1000;
-
-        if ((uint64_t) cur_phys == 0x49D0000) {
-            sprintf("Magic address 0x49D0000 remapped by %lx, starting at %lx, for %lu pages.\n", __builtin_return_address(0), virt, count);
-        }
-
-        if ((uint64_t) cur_phys == 0x535C000) {
-            sprintf("Magic address 0x535C000 remapped by %lx, starting at %lx, for %lu pages.\n", __builtin_return_address(0), virt, count);
-        }
     }
-    if (vmm_complete) {
-        //sprintf("+mapping %lu %lu %lu\n", phys, virt, count);
-    }
-
 
     unlock(vmm_spinlock);
     interrupt_unlock(state);
@@ -308,23 +281,9 @@ int vmm_unmap_pages(void *virt, void *p4, uint64_t count) {
     int ret = 0;
     uint64_t cur_virt = (uint64_t) virt;
 
-    if (vmm_complete) {
-        //sprintf("-mapping %lu %lu %lu\n", virt_to_phys(virt, p4), virt, count);
-    }
     for (uint64_t page = 0; page < count; page++) {
         pt_off_t offs = vmm_virt_to_offs((void *) cur_virt);
         pt_ptr_t ptrs = vmm_get_table(&offs, p4);
-
-        uint64_t start = ((uint64_t) virt) & (~((uint64_t) 0xFFFFFFFF80000000));
-        uint64_t end = start + (count * 0x1000);
-        
-        if (start <= 0x49D0000 && end > 0x49D0000) {
-            sprintf("Magic address 0x49D0000 unmapped by %lx, starting at %lx, for %lu pages.\n", __builtin_return_address(0), virt, count);
-        }
-
-        if (start <= 0x535C000 && end > 0x535C000) {
-            sprintf("Magic address 0x535C000 unmapped by %lx, starting at %lx, for %lu pages.\n", __builtin_return_address(0), virt, count);
-        }
 
         /* Set the addresses */
         if ((ptrs.p1->entries[offs.p1_off] & VMM_PRESENT)) {
@@ -500,9 +459,6 @@ uint8_t range_mapped_in_userspace(void *data, uint64_t size) {
 }
 
 void vmm_deconstruct_address_space(void *old) {
-    uint64_t test_addr = 0;
-    uint64_t pages_lasted = 0;
-
     page_table_t *table = GET_HIGHER_HALF(page_table_t *, old);
     interrupt_state_t state = interrupt_lock();
     lock(vmm_spinlock);
@@ -521,22 +477,9 @@ void vmm_deconstruct_address_space(void *old) {
                             for (uint64_t x = 0; x < 512; x++) {
                                 /* P1 */
                                 if (table_x->entries[x] & VMM_PRESENT) {
-                                    pt_off_t offs = {w, z, y, x};
-                                    void *virt = vmm_offs_to_virt(offs);
                                     void *phys = (void *) (table_x->entries[x] & VMM_4K_PERM_MASK);
-                                    
-                                    if (!test_addr) {
-                                        test_addr = (uint64_t) virt;
-                                    }
-                                    pages_lasted++;
 
                                     pmm_unalloc(phys, 0x1000);
-                                } else {
-                                    if (test_addr) {
-                                        sprintf("[VMM] DC of %lx - %lx (%lu pages)\n", test_addr, test_addr + (pages_lasted * 0x1000), pages_lasted);
-                                        test_addr = 0;
-                                        pages_lasted = 0;
-                                    }
                                 }
                             }
                             pmm_unalloc(GET_LOWER_HALF(void *, table_x), 0x1000);

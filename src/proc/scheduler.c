@@ -200,7 +200,6 @@ int64_t add_new_child_thread_no_stack_init(thread_t *thread, int64_t pid) {
 
     int64_t new_tid = add_new_tid(1);
     threads[new_tid] = thread;
-    kprintf("Started new thread - %ld\n", new_tid);
 
     thread->tid = new_tid;
     thread->regs.cr3 = new_parent->cr3; // Inherit parent's cr3
@@ -210,8 +209,6 @@ int64_t add_new_child_thread_no_stack_init(thread_t *thread, int64_t pid) {
     /* Add the TID to it's parent's threads list */
     int64_t index = add_to_process(new_parent, 1);
 
-    kprintf("Remaining threads_size: %lu, index: %ld, tid: %ld\n", new_parent->threads_size, index, new_tid);
-    sprintf("RETURN %lx no stack\n", __builtin_return_address(0));
     new_parent->threads[index] = thread->tid;
 
     interrupt_safe_unlock(sched_lock);
@@ -233,15 +230,11 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
 
     int64_t new_tid = add_new_tid(1);
     threads[new_tid] = thread;
-    kprintf("Started new thread - %ld\n", new_tid);
 
     thread->tid = new_tid;
     thread->regs.cr3 = new_parent->cr3; // Inherit parent's cr3
     thread->parent_pid = pid;
     thread->parent = new_parent;
-
-    sprintf("Magic parent address: %lx, tid: %ld, pid: %ld\n", thread->parent, thread->tid, thread->parent->pid);
-
 
     if (new_parent->child_thread_count == 0) { // No children
         // -1 because kmalloc creates boundaries so page might not be mapped :|
@@ -251,10 +244,7 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
             goto done;
         }
 
-        sprintf("virt: %lx\n", thread->regs.rsp);
-        sprintf("phys: %lx\n", phys);
         uint64_t stack = GET_HIGHER_HALF(uint64_t, phys) + 1;
-        sprintf("stack var: %lx\n", stack);
         uint64_t old_stack = stack;
 
         int argc = thread->vars.argc;
@@ -265,25 +255,25 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
         // Actual data
         uint64_t *string_offsets = kcalloc(sizeof(uint64_t) * argc + sizeof(uint64_t) * thread->vars.envc);
         uint64_t total_string_len = 0;
-        sprintf("argc: %d\n", argc);
+        //sprintf("argc: %d\n", argc);
         for (int i = 0; i < argc; i++) {
-            sprintf("i = %d with argv[i] = %lx\n", i, argv[i]);
+            //sprintf("i = %d with argv[i] = %lx\n", i, argv[i]);
 
             total_string_len += (strlen(argv[i]) + 1);
             string_offsets[i] = total_string_len;
 
             char *new_string = (char *) (old_stack - string_offsets[i]);
-            sprintf("String Data: %s, String: %lx, string offset: %lu\n", argv[i], new_string, string_offsets[i]);
+            //sprintf("String Data: %s, String: %lx, string offset: %lu\n", argv[i], new_string, string_offsets[i]);
             strcpy(argv[i], new_string);
         }
         asm("hlt");
         for (int i = argc; i < argc + thread->vars.envc; i++) {
-            sprintf("i = %d with envp[i] = %lx\n", i, thread->vars.enviroment[i - argc]);
+            //sprintf("i = %d with envp[i] = %lx\n", i, thread->vars.enviroment[i - argc]);
             total_string_len += (strlen(thread->vars.enviroment[i - argc]) + 1);
             string_offsets[i] = total_string_len;
 
             char *new_string = (char *) (old_stack - string_offsets[i]);
-            sprintf("String Data: %s, String: %lx, string offset: %lu\n", thread->vars.enviroment[i - argc], new_string, string_offsets[i]);
+            //sprintf("String Data: %s, String: %lx, string offset: %lu\n", thread->vars.enviroment[i - argc], new_string, string_offsets[i]);
             strcpy(thread->vars.enviroment[i - argc], new_string);
         }
         stack -= total_string_len;
@@ -345,8 +335,6 @@ done:
     /* Add the TID to it's parent's threads list */
     index = add_to_process(new_parent, 1);
 
-    kprintf("Remaining threads_size: %lu, index: %ld, tid: %ld\n", new_parent->threads_size, index, new_tid);
-    sprintf("RETURN %lx\n", __builtin_return_address(0));
     new_parent->threads[index] = thread->tid;
 
     interrupt_safe_unlock(sched_lock);
@@ -374,7 +362,6 @@ process_t *create_process(char *name, void *new_cr3) {
     new_process->local_watchpoint2 = 0;
 
     strcpy(name, new_process->name);
-    sprintf("Magic process name: %s, addr: %lx\n", new_process->name, new_process);
 
     return new_process;
 }
@@ -434,12 +421,10 @@ int64_t pick_task() {
 
     /* Then look at the rest of the tasks */
     for (int64_t t = 0; t < get_cur_thread()->tid + 1; t++) {
-        //sprintf("Looking at t = %ld in second loop\n", t);
         thread_t *task = threads[t];
         if (task) {
             if (task->state == READY || task->state == WAIT_EVENT || task->state == WAIT_EVENT_TIMEOUT) {
                 tid_ret = task->tid;
-                //sprintf("picked in second loop with state %u and event %lx\n", task->state, task->event);
                 return tid_ret;
             }
         }
@@ -548,7 +533,6 @@ void schedule(int_reg_t *r) {
 repick_task:
     // Run the next thread
     tid_run = pick_task();
-    //sprintf("Picked %ld\n", tid_run);
     if (tid_run == -1) {
         /* Idle */
         get_cpu_locals()->current_thread = threads[get_cpu_locals()->idle_tid];

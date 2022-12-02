@@ -227,8 +227,6 @@ uint64_t echfs_find_entry_name_parent(echfs_filesystem_t *filesystem, char *name
         if (entry->parent_id == parent_id && strcmp(name, entry->name) == 0) {
             kfree(entry);
             return entry_n - 1;
-        } else {
-            //sprintf("entry %lu failed with its id being %lu and the target being %lu, and with the its name being %s and the target name being %s\n", entry_n - 1, entry->parent_id, parent_id, entry->name, name);
         }
 
         if (entry->parent_id == 0) {
@@ -282,8 +280,6 @@ next_elem:
     }
     filename++; // Get rid of the final '/'
 
-    //sprintf("[EchFS] Path: %s\n", current_name);
-
     /* Do magic lookup things */
     if (!is_last) {
         /* Lookup the directory IDs */
@@ -315,7 +311,6 @@ next_elem:
             if (cur_entry) kfree(cur_entry); // Free the old entry, if it exists
             cur_entry = echfs_read_dir_entry(filesystem, found_elem_index);
 
-            //sprintf("[EchFS] Resolved path.\n");
             cur_entry->entry_number = found_elem_index;
             return cur_entry;
         } else {
@@ -403,7 +398,7 @@ void *read_blocks_for_range(echfs_filesystem_t *filesystem, echfs_dir_entry_t *f
 
     for (uint64_t i = 0; i < start_block; i++) {
         current_block = echfs_get_entry_for_block(filesystem, current_block);
-        //sprintf("skipping to block: %lx\n", current_block);
+
         if (current_block == ECHFS_END_OF_CHAIN) {
             kfree(block_buffer);
             sprintf("failed to get to the correct start block\n");
@@ -453,13 +448,10 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
     assert(node);
     char *path = get_full_path(node);
     char *original_path_addr = path;
-    //sprintf("[EchFS] Full path: %s\n", path);
 
     echfs_filesystem_t *filesystem_info = get_unid_fs_data(node->fs_root->unid);
     if (filesystem_info) {
-        //sprintf("[EchFS] Got read for mountpoint %s\n", filesystem_info->mountpoint_path);
         path += strlen(filesystem_info->mountpoint_path);
-        //sprintf("[EchFS] File path: %s\n", path);
 
         uint8_t err;
         echfs_dir_entry_t *entry = echfs_path_resolve(filesystem_info, path, &err);
@@ -496,7 +488,7 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
         kfree(entry);
         kfree(original_path_addr);
         fd->seek += count_to_read;
-        //sprintf("[EchFS] Read data successfully!\n");
+
         return count_to_read; // Done
     } else {
         sprintf("[EchFS] Read died somehow\n");
@@ -517,7 +509,6 @@ int write_blocks_for_range(echfs_filesystem_t *filesystem, echfs_dir_entry_t *fi
 
     for (uint64_t i = 0; i < start_block; i++) {
         current_block = echfs_get_entry_for_block(filesystem, current_block);
-        //sprintf("skipping to block: %lx\n", current_block);
         if (current_block == ECHFS_END_OF_CHAIN) {
             sprintf("failed to get to the correct start block\n");
             return 1;
@@ -711,9 +702,8 @@ int echfs_create_handler(vfs_node_t *self, char *name, int mode) {
         parent_id = ECHFS_ROOT_DIR_ID;
     }
 
-    sprintf("got parent id %lu\n", parent_id);
     echfs_dir_entry_t new_file;
-    sprintf("path being copied to file: %s\n", ptr_to_end_path_elem(name));
+
     strcpy(ptr_to_end_path_elem(name), new_file.name);
     new_file.parent_id = parent_id;
     new_file.group_id = 0;
@@ -729,11 +719,6 @@ int echfs_create_handler(vfs_node_t *self, char *name, int mode) {
 
     uint64_t free_id = get_free_directory_entry(fs_data);
     echfs_write_dir_entry(fs_data, free_id, &new_file);
-
-    sprintf("Starting block: %lu\n", new_file.starting_block);
-    sprintf("entry: %lu\n", free_id);
-    echfs_dir_entry_t *entry = echfs_read_dir_entry(fs_data, free_id);
-    sprintf("written entry name: %s\n", entry->name);
 
     kfree(editable_path);
     vfs_node_t *missing_start = create_missing_nodes_from_path(name, null_vfs_ops);
