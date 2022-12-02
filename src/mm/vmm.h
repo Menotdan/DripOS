@@ -2,8 +2,8 @@
 #define VMM_H
 #include <stdint.h>
 
-#define VMM_4K_PERM_MASK ~(0xfff)
-#define VMM_2M_PERM_MASK ~(0x1fffff)
+#define VMM_4K_PERM_MASK (~(0xfff))
+#define VMM_2M_PERM_MASK (~(0x1fffff))
 
 #define VMM_PRESENT (1<<0)
 #define VMM_WRITE (1<<1)
@@ -14,11 +14,11 @@
 #define VMM_DIRTY (1<<6)
 #define VMM_HUGE (1<<7)
 
-#define NORMAL_VMA_OFFSET 0xFFFF800000000000
-#define KERNEL_VMA_OFFSET 0xFFFFFFFF80000000
+#define NORMAL_VMA_OFFSET (0xFFFF800000000000)
+#define KERNEL_VMA_OFFSET (0xFFFFFFFF80000000)
 
-#define GET_HIGHER_HALF(type, lower_half) (type) ((uint64_t) (lower_half) + NORMAL_VMA_OFFSET)
-#define GET_LOWER_HALF(type, higher_half) (type) ((uint64_t) (higher_half) - NORMAL_VMA_OFFSET)
+#define GET_HIGHER_HALF(type, lower_half) ((type) ((uint64_t) (lower_half) + NORMAL_VMA_OFFSET))
+#define GET_LOWER_HALF(type, higher_half) ((type) ((uint64_t) (higher_half) - NORMAL_VMA_OFFSET))
 
 typedef struct {
     uint64_t p4_off;
