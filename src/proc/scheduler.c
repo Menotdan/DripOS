@@ -208,25 +208,7 @@ int64_t add_new_child_thread_no_stack_init(thread_t *thread, int64_t pid) {
     thread->parent = new_parent;
 
     /* Add the TID to it's parent's threads list */
-    int64_t index = -1;
-
-    for (uint64_t i = 0; i < new_parent->threads_size; i++) {
-        if (new_parent->threads[i] == -1) {
-            index = i;
-            break;
-        }
-    }
-
-    sprintf("Remaining index: %ld\n", index);
-    
-    if (index == -1) {
-        new_parent->threads = krealloc(new_parent->threads, (new_parent->threads_size + 10) * sizeof(int64_t));
-        index = new_parent->threads_size;
-        for (int64_t j = index; j < index + 10; j++) {
-            new_parent->threads[j] = -1;
-        }
-        new_parent->threads_size += 10;
-    }
+    int64_t index = add_to_process(new_parent, 1);
 
     kprintf("Remaining threads_size: %lu, index: %ld, tid: %ld\n", new_parent->threads_size, index, new_tid);
     sprintf("RETURN %lx no stack\n", __builtin_return_address(0));
@@ -261,7 +243,7 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
     sprintf("Magic parent address: %lx, tid: %ld, pid: %ld\n", thread->parent, thread->tid, thread->parent->pid);
 
 
-    if (new_parent->threads_size == 0) { // No children
+    if (new_parent->child_thread_count == 0) { // No children
         // -1 because kmalloc creates boundaries so page might not be mapped :|
         void *phys = virt_to_phys((void *) (thread->regs.rsp - 1), (page_table_t *) thread->regs.cr3);
         if ((uint64_t) phys == 0xFFFFFFFFFFFFFFFF) {
@@ -361,23 +343,7 @@ int64_t add_new_child_thread(thread_t *thread, int64_t pid) {
     int64_t index = -1;
 done:
     /* Add the TID to it's parent's threads list */
-    for (uint64_t i = 0; i < new_parent->threads_size; i++) {
-        if (new_parent->threads[i] == -1) {
-            index = i;
-            break;
-        }
-    }
-
-    sprintf("Remaining index: %ld\n", index);
-    
-    if (index == -1) {
-        new_parent->threads = krealloc(new_parent->threads, (new_parent->threads_size + 10) * sizeof(int64_t));
-        index = new_parent->threads_size;
-        for (int64_t j = index; j < index + 10; j++) {
-            new_parent->threads[j] = -1;
-        }
-        new_parent->threads_size += 10;
-    }
+    index = add_to_process(new_parent, 1);
 
     kprintf("Remaining threads_size: %lu, index: %ld, tid: %ld\n", new_parent->threads_size, index, new_tid);
     sprintf("RETURN %lx\n", __builtin_return_address(0));

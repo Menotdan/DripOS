@@ -67,7 +67,7 @@ disk_image:
 	echfs-utils temp-image quick-format 512
 
 	- rm -rf mountpoint
-	./copy-echfs-fuse.sh
+	./copy-sysroot-to-echfs-img.sh /var/dripos-sysroot temp-image
 	- rm -rf mountpoint
 
 	#./copy-sysroot-to-echfs-img.sh $(DRIPOS_SYSROOT_ON_HOST) temp-image

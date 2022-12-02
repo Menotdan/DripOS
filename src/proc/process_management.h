@@ -52,6 +52,7 @@ typedef struct {
 
     int64_t *threads;
     uint64_t threads_size;
+    uint64_t child_thread_count; // This is different than threads_size because the threads list can contain nulls
 
     int64_t pid; // Process ID
 
@@ -124,5 +125,6 @@ typedef struct {
 
 int64_t add_new_pid(int locked);
 int64_t add_new_tid(int locked);
+int64_t add_to_process(process_t *parent, int locked);
 
 #endif

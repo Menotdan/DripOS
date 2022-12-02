@@ -75,6 +75,7 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
             fd_seek(fd, phdrs[i].p_offset, SEEK_SET);
             fd_read(fd, region_virt, phdrs[i].p_filesz);
 
+            sprintf("Mapping %lx - %lx (PHYS) to %lx - %lx (VIRT) PT_LOAD\n", region_phys, region_phys + (pages * 0x1000), virt, virt + (pages * 0x1000));
             vmm_remap_pages(region_phys, virt, elf_address_space, pages, VMM_PRESENT | VMM_USER | VMM_WRITE);
         } else if (phdrs[i].p_type == PT_INTERP) {
             char *ld_path = kcalloc(phdrs[i].p_filesz + 1);
@@ -108,18 +109,18 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
         }
     }
 
-    void *virt_stack = (void *) USER_STACK_START;
-    void *phys_stack_region = pmm_alloc(USER_STACK_SIZE);
-    void *virt_stack_region = GET_HIGHER_HALF(void *, phys_stack_region);
-    memset(virt_stack_region, 0, USER_STACK_SIZE);
-
-    vmm_map_pages(phys_stack_region, virt_stack, elf_address_space, USER_STACK_PAGES, 
-        VMM_PRESENT | VMM_USER | VMM_WRITE);
-
     if (loaded_dynamic_linker) {
         *entry_out = dynamic_linker_entry;
     } else {
         *entry_out = ehdr->e_entry + base;
+        void *virt_stack = (void *) USER_STACK_START;
+        void *phys_stack_region = pmm_alloc(USER_STACK_SIZE);
+        void *virt_stack_region = GET_HIGHER_HALF(void *, phys_stack_region);
+        memset(virt_stack_region, 0, USER_STACK_SIZE);
+
+        sprintf("Mapping %lx - %lx (PHYS) to %lx - %lx (VIRT) STACK\n", phys_stack_region, phys_stack_region + (USER_STACK_PAGES * 0x1000), virt_stack, virt_stack + (USER_STACK_PAGES * 0x1000));
+        vmm_map_pages(phys_stack_region, virt_stack, elf_address_space, USER_STACK_PAGES, 
+            VMM_PRESENT | VMM_USER | VMM_WRITE);
     }
 
     if (auxv_out) {

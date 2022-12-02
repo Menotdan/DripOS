@@ -54,3 +54,34 @@ int64_t add_new_tid(int locked) {
 
     return new_tid;
 }
+
+int64_t add_to_process(process_t *parent, int locked) {
+    if (!locked) {
+        interrupt_safe_lock(sched_lock);
+    }
+
+    int64_t new_index = -1;
+    for (uint64_t i = 0; i < parent->threads_size; i++) {
+        if (parent->threads[i] == -1) {
+            new_index = i;
+            break;
+        }
+    }
+    
+    if (new_index == -1) {
+        parent->threads = krealloc(parent->threads, (parent->threads_size + 10) * sizeof(int64_t));
+        new_index = parent->threads_size;
+        for (int64_t j = new_index; j < new_index + 10; j++) {
+            parent->threads[j] = -1;
+        }
+        parent->threads_size += 10;
+    }
+
+    parent->child_thread_count++;
+
+    if (!locked) {
+        interrupt_safe_unlock(sched_lock);
+    }
+
+    return new_index;
+}

@@ -66,7 +66,7 @@ void kernel_process() {
 
     kprintf("Loading DripOS init!\n");
     log("Creating an instance of init.");
-    int64_t init_pid = load_elf("/bin/init");
+    int64_t init_pid = load_elf("/bin/e1");
     
     if (init_pid == -1) {
         panic("Init failed to load!");

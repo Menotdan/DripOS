@@ -39,6 +39,10 @@ void kill_thread(int64_t tid) {
         interrupt_safe_lock(sched_lock);
     }
 
+    if (thread->parent) {
+        thread->parent->child_thread_count--;
+    }
+
     /* TODO: do proper cleanup */
     if (!threads[tid]) {
         //sprintf("thread is null\n");
@@ -111,6 +115,7 @@ void urm_execve(urm_execve_data *data) {
                 threads[current_process->threads[i]] = (void *) 0;
             }
             current_process->threads[i] = -1;
+            current_process->child_thread_count--;
         }
     }
     vmm_deconstruct_address_space((void *) current_process->cr3);
@@ -123,6 +128,7 @@ void urm_execve(urm_execve_data *data) {
         thread->vars.auxc = auxv_info.auxc;
         thread->vars.auxv = auxv_info.auxv;
     }
+    add_argv(&thread->vars, data->executable_path);
 
     thread->vars.envc = data->envc;
     thread->vars.argc = data->argc;
