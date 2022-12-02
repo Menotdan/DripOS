@@ -115,7 +115,7 @@ void urm_execve(urm_execve_data *data) {
     }
     vmm_deconstruct_address_space((void *) current_process->cr3);
 
-    current_process->current_brk = 0x10000000000;
+    current_process->current_brk = DEFAULT_BRK;
     current_process->cr3 = (uint64_t) address_space;
 
     thread_t *thread = create_thread(data->executable_path, (void *) entry_point, USER_STACK, 3);
@@ -135,7 +135,7 @@ void urm_execve(urm_execve_data *data) {
 
     add_new_child_thread(thread, data->pid);
     sprintf("Remaining code is add_new, tid: %ld, pid: %ld\n", thread->tid, data->pid);
-    urm_return = 0;
+    urm_return = 0; // There is not code waiting for us, since we have replaced the thread
     urm_trigger_done = 0;
 }
 

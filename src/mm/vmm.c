@@ -500,6 +500,9 @@ uint8_t range_mapped_in_userspace(void *data, uint64_t size) {
 }
 
 void vmm_deconstruct_address_space(void *old) {
+    uint64_t test_addr = 0;
+    uint64_t pages_lasted = 0;
+
     page_table_t *table = GET_HIGHER_HALF(page_table_t *, old);
     interrupt_state_t state = interrupt_lock();
     lock(vmm_spinlock);
@@ -521,14 +524,19 @@ void vmm_deconstruct_address_space(void *old) {
                                     pt_off_t offs = {w, z, y, x};
                                     void *virt = vmm_offs_to_virt(offs);
                                     void *phys = (void *) (table_x->entries[x] & VMM_4K_PERM_MASK);
-                                    if ((uint64_t) phys == 0x49D0000) {
-                                        sprintf("Magic address 0x49D0000 deconstructed by %lx, at virtual address %lx\n", __builtin_return_address(0), virt);
+                                    
+                                    if (!test_addr) {
+                                        test_addr = (uint64_t) virt;
                                     }
+                                    pages_lasted++;
 
-                                    if ((uint64_t) phys == 0x535C000) {
-                                        sprintf("Magic address 0x535C000 deconstructed by %lx, at virtual address %lx\n", __builtin_return_address(0), virt);
-                                    }
                                     pmm_unalloc(phys, 0x1000);
+                                } else {
+                                    if (test_addr) {
+                                        sprintf("[VMM] DC of %lx - %lx (%lu pages)\n", test_addr, test_addr + (pages_lasted * 0x1000), pages_lasted);
+                                        test_addr = 0;
+                                        pages_lasted = 0;
+                                    }
                                 }
                             }
                             pmm_unalloc(GET_LOWER_HALF(void *, table_x), 0x1000);

@@ -399,7 +399,7 @@ process_t *create_process(char *name, void *new_cr3) {
     new_process->gid = 0;
     new_process->fd_table = kcalloc(10 * sizeof(fd_entry_t));
     new_process->fd_table_size = 10;
-    new_process->current_brk = 0x10000000000;
+    new_process->current_brk = DEFAULT_BRK;
     new_process->ipc_handles = init_hashmap();
 
     new_process->local_watchpoint1_active = 0;

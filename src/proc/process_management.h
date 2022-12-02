@@ -5,6 +5,8 @@
 #include "klibc/hashmap.h"
 #include "proc/sleep_queue.h"
 
+#define DEFAULT_BRK 0x10000000000
+
 typedef struct {
     uint64_t r15, r14, r13, r12, r11, r10, r9, r8, rsi, rdi, rbp, rdx, rcx, rbx, rax;
 } __attribute__((packed)) syscall_reg_t;

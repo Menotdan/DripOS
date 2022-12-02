@@ -271,7 +271,7 @@ void execve(char *executable_path, char **argv, char **envp, syscall_reg_t *r) {
     data.pid = get_cur_pid();
     data.tid = get_cur_thread()->tid;
     int ret = send_urm_request(&data, URM_EXECVE);
-    goto done;
+    goto failed; // We should not return frrom this request
 
 fault_return:
     for (uint64_t x = 0; x < argc; x++) {
@@ -293,8 +293,8 @@ fault_return:
     }
     r->rdx = EFAULT;
     return;
-done:
-    sprintf("returning\n");
+failed:
+    sprintf("returning, execVE failed\n");
     for (uint64_t x = 0; x < argc; x++) {
         if (kernel_argv[x]) {
             kfree(kernel_argv[x]);
