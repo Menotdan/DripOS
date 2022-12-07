@@ -274,7 +274,7 @@ done:
 
 void remove_node(vfs_node_t *node) {
     lock(vfs_lock);
-    if (atomic_dec(&node->ref_counter)) {
+    // if (atomic_dec(&node->ref_counter)) {
         for (uint64_t i = 0; i < node->parent->children_array_size; i++) {
             if (node->parent->children[i] == node) {
                 node->parent->children[i] = 0;
@@ -288,7 +288,8 @@ void remove_node(vfs_node_t *node) {
         }
 
         kfree(node);
-    }
+    // }
+    // TODO: Add reference counter
     unlock(vfs_lock);
 }
 
@@ -362,117 +363,47 @@ char *get_full_path(vfs_node_t *node) {
 }
 
 vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
-    lock(vfs_open_lock);
-
-    vfs_node_t *node = get_node_from_path(name);
-    if (!node) {
-        /* The first missing node, where the generator should start generating */
-        vfs_node_t *missing_start = create_missing_nodes_from_path(name, null_vfs_ops);
-        assert(missing_start);
-        assert(get_node_from_path(name));
-
-        sprintf("[VFS] Handling mountpoint for %s\n", name);
-        node = get_node_from_path(name);
-
-        while (node && !node->node_handle) {
-            if (node == root_node) {
-                remove_node(missing_start);
-                *err = ENOENT;
-
-                unlock(vfs_open_lock);
-                return (void *) 0; // Welp
-            }
-            node = node->parent;
-        }
-
-        assert(node);
-        char *temp_name = name;
-        char *full_path = get_full_path(node);
-        log("[VFS] Mountpoint at %s", full_path);
-        temp_name += strlen(full_path);
-        kfree(full_path);
-
-        log("[VFS] Temp name: %s", temp_name);
-
-        if (mode & O_CREAT) {
-            /* The FS will create nodes for us */
-
-
-            unlock(vfs_open_lock);
-            int create_err = node->create_handle(node, temp_name, mode);
-            lock(vfs_open_lock);
-
-            if (create_err != 0) {
-                *err = -create_err;
-
-                unlock(vfs_open_lock);
-                return NULL;
-            } else {
-                vfs_node_t *created_file = get_node_from_path(name);
-                if (!created_file) {
-                    assert(!"vfs go bruh");
-                }
-
-                unlock(vfs_open_lock);
-                return created_file;
-            }
-        }
-
-        unlock(vfs_open_lock);
-
-        assert(get_node_from_path(name));
-        node->node_handle(node, get_node_from_path(name), temp_name); // this might read from a device
-
-        lock(vfs_open_lock);
-
-        node = get_node_from_path(name);
-        if (!node) {
-            sprintf("Name: %s\n", name);
-            assert(!"node vanish O.o");
-        }
-
-        if (!node->ops.open) {
-            // No file or directory
-            remove_node(missing_start);
-            node = 0;
-            *err = ENOENT;
-            unlock(vfs_open_lock);
-            return (void *) 0;
-        }
-    }
-
-    unlock(vfs_open_lock);
-    if (node) {
-        node->ops.open(name, mode);
-    }
+    vfs_node_t *node;
 
     return node;
 }
 
 int vfs_read(int fd, void *buf, uint64_t count) {
-    vfs_node_t *node = fd_lookup(fd)->node;
+    fd_entry_t *fd_entry = fd_lookup(fd);
+    assert(fd_entry);
+
+    vfs_node_t *node = fd_entry->node;
     if (!node) {
         sprintf("why is node null lol\n");
-        sprintf("fd_cookie1 = %lx\n", fd_lookup(fd)->fd_cookie1);
-        sprintf("fd_cookie2 = %lx\n", fd_lookup(fd)->fd_cookie2);
-        sprintf("fd_cookie3 = %lx\n", fd_lookup(fd)->fd_cookie3);
-        sprintf("fd_cookie4 = %lx\n", fd_lookup(fd)->fd_cookie4);
+        sprintf("fd_cookie1 = %lx\n", fd_entry->fd_cookie1);
+        sprintf("fd_cookie2 = %lx\n", fd_entry->fd_cookie2);
+        sprintf("fd_cookie3 = %lx\n", fd_entry->fd_cookie3);
+        sprintf("fd_cookie4 = %lx\n", fd_entry->fd_cookie4);
     }
 
     return node->ops.read(fd, buf, count);
 }
 
 int vfs_write(int fd, void *buf, uint64_t count) {
-    vfs_node_t *node = fd_lookup(fd)->node;
+    fd_entry_t *fd_entry = fd_lookup(fd);
+    assert(fd_entry);
+
+    vfs_node_t *node = fd_entry->node;
     return node->ops.write(fd, buf, count);
 }
 
 int vfs_close(int fd) {
-    vfs_node_t *node = fd_lookup(fd)->node;
+    fd_entry_t *fd_entry = fd_lookup(fd);
+    assert(fd_entry);
+
+    vfs_node_t *node = fd_entry->node;
     return node->ops.close(fd);
 }
 
 uint64_t vfs_seek(int fd, uint64_t offset, int whence) {
-    vfs_node_t *node = fd_lookup(fd)->node;
+    fd_entry_t *fd_entry = fd_lookup(fd);
+    assert(fd_entry);
+
+    vfs_node_t *node = fd_entry->node;
     return node->ops.seek(fd, offset, whence);
 }
