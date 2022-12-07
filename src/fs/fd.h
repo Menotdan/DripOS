@@ -40,5 +40,6 @@ uint64_t fd_seek(int fd, uint64_t offset, int whence);
 int open_remote_fd(char *name, int mode, int pid);
 
 void clone_fds(int64_t old_pid, int64_t new_pid);
+void clear_fds(int64_t pid);
 
 #endif

@@ -12,8 +12,8 @@ LINKER = x86_64-elf-ld
 incPath = ~/DripOS/src
 GDB = gdb
 
-MEM = 4G # Memory for qemu
-CORES = 8 # Core count for qemu
+MEM = 1G # Memory for qemu
+CORES = 3 # Core count for qemu
 
 O_LEVEL = 2 # Optimization level for build
 

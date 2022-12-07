@@ -23,20 +23,6 @@ typedef struct {
 } __attribute__((packed)) echfs_block0_t;
 
 typedef struct {
-    uint64_t alloc_table_addr;
-    uint64_t alloc_table_size;
-    uint64_t alloc_table_block;
-    uint64_t alloc_table_blocks;
-    uint64_t main_dir_block;
-    uint64_t main_dir_blocks;
-    uint64_t blocks;
-    uint64_t block_size;
-    char *device_name;
-    char *mountpoint_path;
-    vfs_node_t *mountpoint;
-} echfs_filesystem_t;
-
-typedef struct {
     uint64_t parent_id;
 
     uint8_t entry_type;
@@ -57,6 +43,22 @@ typedef struct {
     // added for usefulness, not actually in the entry
     uint64_t entry_number;
 } __attribute__((packed)) echfs_dir_entry_t;
+
+typedef struct {
+    uint64_t alloc_table_addr;
+    uint64_t alloc_table_size;
+    uint64_t alloc_table_block;
+    uint64_t alloc_table_blocks;
+    uint64_t main_dir_block;
+    uint64_t main_dir_blocks;
+    uint64_t blocks;
+    uint64_t block_size;
+    char *device_name;
+    char *mountpoint_path;
+    vfs_node_t *mountpoint;
+
+    echfs_dir_entry_t *node_dir_entry;
+} echfs_filesystem_t;
 
 int echfs_read_block0(char *device, echfs_filesystem_t *output);
 void echfs_test(char *device);

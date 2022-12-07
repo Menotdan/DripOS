@@ -44,3 +44,8 @@ uint64_t stopwatch_start() {
 uint64_t stopwatch_stop(uint64_t start) {
     return (global_ticks - start);
 }
+
+void time_code(uint64_t *start, char *description) {
+    sprintf("%s Took: %lu\n", description, global_ticks - *start);
+    *start = global_ticks;
+}

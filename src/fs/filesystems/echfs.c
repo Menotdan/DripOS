@@ -22,6 +22,15 @@
 hashmap_t cached_blocks;
 lock_t echfs_cache_lock = {0, 0, 0, 0};
 
+int echfs_open(char *name, int mode);
+int echfs_post_open(int fd, int mode);
+int echfs_close(int fd_no);
+int echfs_read(int fd_no, void *buf, uint64_t count);
+int echfs_write(int fd_no, void *buf, uint64_t count);
+uint64_t echfs_seek(int fd_no, uint64_t offset, int whence);
+
+vfs_ops_t echfs_ops = {echfs_open, echfs_post_open, echfs_close, echfs_read, echfs_write, echfs_seek};
+
 /* Parse the first block of information */
 int echfs_read_block0(char *device, echfs_filesystem_t *output) {
     echfs_block0_t *block0 = kcalloc(sizeof(echfs_block0_t));
@@ -239,7 +248,22 @@ uint64_t echfs_find_entry_name_parent(echfs_filesystem_t *filesystem, char *name
     }
 }
 
-echfs_dir_entry_t *echfs_path_resolve(echfs_filesystem_t *filesystem, char *filename, uint8_t *err_code) {
+echfs_dir_entry_t *echfs_path_resolve(echfs_filesystem_t *filesystem, char *filename, uint8_t *err_code, uint64_t unid) {
+    (void) unid;
+    // if (unid) {
+    //     echfs_filesystem_t *node_data = get_unid_fs_data(unid);
+    //     if (node_data) {
+    //         if (node_data->node_dir_entry) {
+    //             echfs_dir_entry_t *cache_entry = node_data->node_dir_entry;
+    //             echfs_dir_entry_t *cur_entry = kcalloc(sizeof(echfs_dir_entry_t));
+
+    //             memcpy((uint8_t *) cache_entry, (uint8_t *) cur_entry, sizeof(echfs_dir_entry_t));
+
+    //             return cur_entry;
+    //         }
+    //     }
+    // }
+
     char current_name[201] = {'\0'}; // Filenames are max 201 chars
     uint8_t is_last = 0; // Is this the last in the path?
     *err_code = 0;
@@ -312,6 +336,16 @@ next_elem:
             cur_entry = echfs_read_dir_entry(filesystem, found_elem_index);
 
             cur_entry->entry_number = found_elem_index;
+
+            // if (unid) {
+            //     echfs_filesystem_t *final_node_data = get_unid_fs_data(unid);
+            //     if (final_node_data) {
+            //         echfs_dir_entry_t *cache_entry = kcalloc(sizeof(echfs_dir_entry_t));
+            //         memcpy((uint8_t *) cur_entry, (uint8_t *) cache_entry, sizeof(echfs_dir_entry_t));
+            //         final_node_data->node_dir_entry = cache_entry;
+            //     }
+            // }
+
             return cur_entry;
         } else {
             if (cur_entry) kfree(cur_entry);
@@ -369,10 +403,11 @@ uint64_t echfs_seek(int fd_no, uint64_t offset, int whence) {
         }
 
         char *path = get_full_path(fd->node);
-        path += strlen(filesystem_info->mountpoint_path);
+        char *path_ptr = path; // Can't free at a misaligned address
+        path_ptr += strlen(filesystem_info->mountpoint_path);
 
         uint8_t err;
-        echfs_dir_entry_t *entry = echfs_path_resolve(filesystem_info, path, &err);
+        echfs_dir_entry_t *entry = echfs_path_resolve(filesystem_info, path_ptr, &err, fd->node->unid);
         if (!entry) {
             kfree(path);
             return -ENOENT; // somehow
@@ -454,8 +489,9 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
         path += strlen(filesystem_info->mountpoint_path);
 
         uint8_t err;
-        echfs_dir_entry_t *entry = echfs_path_resolve(filesystem_info, path, &err);
+        echfs_dir_entry_t *entry = echfs_path_resolve(filesystem_info, path, &err, fd->node->unid);
         if (!entry) {
+            sprintf("Name: %s, Cur Name: %s\n", original_path_addr, path);
             sprintf("[EchFS] Read died somehow with entry getting\n");
 
             kfree(original_path_addr);
@@ -469,6 +505,7 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
             kfree(entry);
             return 0;
         }
+
         if (count_to_read + fd->seek > entry->file_size_bytes) {
             sprintf("count_to_read bad\n");
             sprintf("count_to_read: %lu, fd->seek: %lu, entry->file_size_bytes: %lu\n", count_to_read, fd->seek, entry->file_size_bytes);
@@ -476,6 +513,7 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
             kfree(entry);
             return -EINVAL;
         }
+
         uint8_t *local_buf = read_for_range(filesystem_info, entry, fd->seek, count_to_read);
         if (!local_buf) {
             kfree(entry);
@@ -564,7 +602,7 @@ int echfs_write(int fd_no, void *buf, uint64_t count) {
         path += strlen(filesystem_info->mountpoint_path);
 
         uint8_t err;
-        echfs_dir_entry_t *entry = echfs_path_resolve(filesystem_info, path, &err);
+        echfs_dir_entry_t *entry = echfs_path_resolve(filesystem_info, path, &err, fd->node->unid);
         if (!entry) {
             sprintf("[EchFS] Write died somehow with entry getting\n");
 
@@ -609,12 +647,17 @@ int echfs_post_open(int fd, int mode) {
     char *path = get_full_path(node);
     char *original_path_addr = path;
 
+    // if (!get_unid_fs_data(node->unid)) {
+    //     echfs_filesystem_t *node_data = kcalloc(sizeof(echfs_filesystem_t));
+    //     register_unid(node->unid, node_data);
+    // }
+
     echfs_filesystem_t *filesystem_info = get_unid_fs_data(node->fs_root->unid);
     if (filesystem_info) {
         path += strlen(filesystem_info->mountpoint_path);
 
         uint8_t err;
-        echfs_dir_entry_t *entry = echfs_path_resolve(filesystem_info, path, &err);
+        echfs_dir_entry_t *entry = echfs_path_resolve(filesystem_info, path, &err, node->unid);
         if (!entry) {
             sprintf("[EchFS] Post open died somehow with entry getting\n");
 
@@ -647,12 +690,11 @@ void echfs_node_gen(vfs_node_t *fs_node, vfs_node_t *target_node, char *path) {
     sprintf("[EchFS] Searching for path %s\n", path);
 
     uint8_t err;
-    echfs_dir_entry_t *entry = echfs_path_resolve(fs_data, path, &err);
+    echfs_dir_entry_t *entry = echfs_path_resolve(fs_data, path, &err, 0);
+    sprintf("Found Entry in node_gen(): %lx\n\n", entry);
     if (!entry) return;
     log("[EchFS] Got entry for path %s", path);
     kfree(entry);
-
-    vfs_ops_t echfs_ops = {echfs_open, echfs_post_open, echfs_close, echfs_read, echfs_write, echfs_seek};
 
     /* Set all the VFS ops */
     set_child_ops(target_node, echfs_ops);
@@ -666,7 +708,7 @@ int echfs_create_handler(vfs_node_t *self, char *name, int mode) {
     echfs_filesystem_t *fs_data = get_unid_fs_data(self->unid);
 
     uint8_t resolve_error1;
-    echfs_dir_entry_t *file = echfs_path_resolve(fs_data, name, &resolve_error1);
+    echfs_dir_entry_t *file = echfs_path_resolve(fs_data, name, &resolve_error1, 0);
     if (file) {
         kfree(file);
         return -EEXIST;
@@ -682,7 +724,7 @@ int echfs_create_handler(vfs_node_t *self, char *name, int mode) {
 
     sprintf("checking for parent %s\n", editable_path);
     if (strcmp(editable_path, "/")) {
-        echfs_dir_entry_t *parent_dir = echfs_path_resolve(fs_data, editable_path, &resolve_error1);
+        echfs_dir_entry_t *parent_dir = echfs_path_resolve(fs_data, editable_path, &resolve_error1, 0);
         if (!parent_dir) {
             sprintf("parent not found (%s)\n", editable_path);
             kfree(editable_path);
@@ -721,11 +763,14 @@ int echfs_create_handler(vfs_node_t *self, char *name, int mode) {
     echfs_write_dir_entry(fs_data, free_id, &new_file);
 
     kfree(editable_path);
-    vfs_node_t *missing_start = create_missing_nodes_from_path(name, null_vfs_ops);
-    assert(missing_start);
-    echfs_node_gen(self, missing_start, name);
-
     return 0;
+}
+
+int echfs_file_exists(vfs_node_t *fs_root, char *path) {
+    echfs_filesystem_t *fs_data = get_unid_fs_data(fs_root->unid);
+
+    uint8_t err = 0;
+    return echfs_path_resolve(fs_data, path, &err, 0) != 0;
 }
 
 void echfs_test(char *device) {
@@ -743,6 +788,10 @@ void echfs_test(char *device) {
         filesystem->mountpoint = root_node;
 
         register_unid(root_node->unid, filesystem);
+        root_node->filesystem_descriptor = kcalloc(sizeof(vfs_fs_descriptor_t));
+        root_node->filesystem_descriptor->file_exists = echfs_file_exists;
+        root_node->filesystem_descriptor->fs_ops = echfs_ops;
+        root_node->filesystem_descriptor->fs_root = root_node;
         root_node->node_handle = echfs_node_gen;
         root_node->create_handle = echfs_create_handler;
 

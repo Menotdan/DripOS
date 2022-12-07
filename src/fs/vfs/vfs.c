@@ -175,6 +175,7 @@ vfs_node_t *vfs_new_node(char *name, vfs_ops_t ops) {
     node->name = kcalloc(strlen(name) + 1);
     node->fs_root = 0;
     node->node_handle = 0;
+    node->ref_counter = 1; // each node should start with a reference
     strcpy(name, node->name);
 
     sprintf("[VFS] Created new node with name %s\n", node->name);
@@ -206,10 +207,11 @@ done:
 
 /* Attempt to find a node from a given path */
 vfs_node_t *get_node_from_path(char *path) {
-    lock(vfs_lock);
     char *buffer = kcalloc(50);
     uint64_t buffer_size = 50;
     uint64_t buffer_index = 0;
+
+    lock(vfs_lock);
     vfs_node_t *cur_node = root_node;
 
     if (*path++ != '/') { // If the path doesnt start with `/`
@@ -226,6 +228,7 @@ vfs_node_t *get_node_from_path(char *path) {
                         cur_node = cur_node->children[i]; // Move to the next node
                         buffer_index = 0; // Reset buffer index
                         memset((uint8_t *) buffer, 0, buffer_size); // Clear the buffer
+
                         goto fnd;
                     }
                 }
@@ -271,13 +274,21 @@ done:
 
 void remove_node(vfs_node_t *node) {
     lock(vfs_lock);
-    for (uint64_t i = 0; i < node->parent->children_array_size; i++) {
-        if (node->parent->children[i] == node) {
-            node->parent->children[i] = 0;
+    if (atomic_dec(&node->ref_counter)) {
+        for (uint64_t i = 0; i < node->parent->children_array_size; i++) {
+            if (node->parent->children[i] == node) {
+                node->parent->children[i] = 0;
+            }
         }
-    }
 
-    kfree(node);
+        for (uint64_t i = 0; i < node->children_array_size; i++) {
+            if (node->children[i]) {
+                remove_node(node->children[i]); // This is recursive so that all node and children get removed.
+            }
+        }
+
+        kfree(node);
+    }
     unlock(vfs_lock);
 }
 
@@ -311,23 +322,6 @@ loop:
     if (current_work == node) return;
     vfs_node_t *parent = current_work->parent;
     current_work->fs_root = fs_root;
-    current_work = parent;
-    goto loop;
-}
-
-void remove_children(vfs_node_t *node) {
-    vfs_node_t *current_work = node;
-
-loop:
-    for (uint64_t i = 0; i < current_work->children_array_size; i++) {
-        if (current_work->children[i]) {
-            current_work = current_work->children[i];
-            goto loop;
-        }
-    }
-    if (current_work == node) return;
-    vfs_node_t *parent = current_work->parent;
-    remove_node(current_work);
     current_work = parent;
     goto loop;
 }
@@ -370,35 +364,26 @@ char *get_full_path(vfs_node_t *node) {
 vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
     lock(vfs_open_lock);
 
-    uint64_t time_start = global_ticks;
     vfs_node_t *node = get_node_from_path(name);
-    uint64_t time_int1 = global_ticks;
     if (!node) {
         /* The first missing node, where the generator should start generating */
         vfs_node_t *missing_start = create_missing_nodes_from_path(name, null_vfs_ops);
         assert(missing_start);
         assert(get_node_from_path(name));
-        uint64_t time_int2 = global_ticks;
 
         sprintf("[VFS] Handling mountpoint for %s\n", name);
         node = get_node_from_path(name);
-        uint64_t time_int3 = global_ticks;
+
         while (node && !node->node_handle) {
             if (node == root_node) {
-                remove_children(missing_start);
                 remove_node(missing_start);
                 *err = ENOENT;
 
                 unlock(vfs_open_lock);
-                sprintf("Time 1: %lu\n", time_int1 - time_start);
-                sprintf("Time 2: %lu\n", time_int2 - time_int1);
-                sprintf("Time 3: %lu\n", time_int3 - time_int2);
                 return (void *) 0; // Welp
             }
             node = node->parent;
         }
-        uint64_t time_int4 = global_ticks;
-        
 
         assert(node);
         char *temp_name = name;
@@ -409,12 +394,9 @@ vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
 
         log("[VFS] Temp name: %s", temp_name);
 
-        uint64_t time_int5 = global_ticks;
-
         if (mode & O_CREAT) {
             /* The FS will create nodes for us */
-            remove_children(missing_start);
-            remove_node(missing_start);
+
 
             unlock(vfs_open_lock);
             int create_err = node->create_handle(node, temp_name, mode);
@@ -424,11 +406,6 @@ vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
                 *err = -create_err;
 
                 unlock(vfs_open_lock);
-                sprintf("Time 1: %lu\n", time_int1 - time_start);
-                sprintf("Time 2: %lu\n", time_int2 - time_int1);
-                sprintf("Time 3: %lu\n", time_int3 - time_int2);
-                sprintf("Time 4: %lu\n", time_int4 - time_int3);
-                sprintf("Time 5: %lu\n", time_int5 - time_int4);
                 return NULL;
             } else {
                 vfs_node_t *created_file = get_node_from_path(name);
@@ -437,66 +414,36 @@ vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
                 }
 
                 unlock(vfs_open_lock);
-                sprintf("Time 1: %lu\n", time_int1 - time_start);
-                sprintf("Time 2: %lu\n", time_int2 - time_int1);
-                sprintf("Time 3: %lu\n", time_int3 - time_int2);
-                sprintf("Time 4: %lu\n", time_int4 - time_int3);
-                sprintf("Time 5: %lu\n", time_int5 - time_int4);
                 return created_file;
             }
         }
-        uint64_t time_int6 = global_ticks;
-
-        assert(get_node_from_path(name));
-
-        cur_pain = GET_LOWER_HALF(uint64_t, get_node_from_path(name));
 
         unlock(vfs_open_lock);
+
+        assert(get_node_from_path(name));
         node->node_handle(node, get_node_from_path(name), temp_name); // this might read from a device
+
         lock(vfs_open_lock);
 
         node = get_node_from_path(name);
-
         if (!node) {
+            sprintf("Name: %s\n", name);
             assert(!"node vanish O.o");
         }
 
-        clear_global_watchpoint(0);
-        cur_pain = 0;
-
         if (!node->ops.open) {
             // No file or directory
-            remove_children(missing_start);
             remove_node(missing_start);
             node = 0;
             *err = ENOENT;
             unlock(vfs_open_lock);
-            sprintf("Time 1: %lu\n", time_int1 - time_start);
-            sprintf("Time 2: %lu\n", time_int2 - time_int1);
-            sprintf("Time 3: %lu\n", time_int3 - time_int2);
-            sprintf("Time 4: %lu\n", time_int4 - time_int3);
-            sprintf("Time 5: %lu\n", time_int5 - time_int4);
-            sprintf("Time 6: %lu\n", time_int6 - time_int5);
             return (void *) 0;
         }
-
-        sprintf("Time 1: %lu\n", time_int1 - time_start);
-        sprintf("Time 2: %lu\n", time_int2 - time_int1);
-        sprintf("Time 3: %lu\n", time_int3 - time_int2);
-        sprintf("Time 4: %lu\n", time_int4 - time_int3);
-        sprintf("Time 5: %lu\n", time_int5 - time_int4);
-        sprintf("Time 6: %lu\n", time_int6 - time_int5);
     }
 
     unlock(vfs_open_lock);
     if (node) {
         node->ops.open(name, mode);
-    }
-
-    uint64_t time_end = global_ticks;
-
-    if (time_end - time_start > 100) {
-        sprintf("Full Time: %lu\n", time_end - time_start);
     }
 
     return node;

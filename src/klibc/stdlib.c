@@ -122,6 +122,8 @@ void *krealloc(void *addr, uint64_t new_size) {
 
 void panic(char *msg) {
     if (check_interrupts()) {
+        sprintf("Panic Message Address: %lx\n", msg);
+        sprintf("Panic Message: %s\n", msg);
         asm volatile("mov %0, %%rdi; int $251;" ::"r"(msg) : "memory");
     } else {
         kprintf("Panic! Message: %s\n", msg);

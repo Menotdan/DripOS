@@ -12,6 +12,26 @@ hashmap_t *init_hashmap() {
     return ret;
 }
 
+void delete_hashmap(hashmap_t *hashmap) {
+    for (uint64_t i = 0; i < HASHMAP_BUCKET_SIZE; i++) {
+        hashmap_bucket_t bucket = hashmap->buckets[i];
+        hashmap_elem_t *cur_element = bucket.elements;
+
+        if (hashmap->buckets[i].elements) {
+            while (cur_element->next) {
+                cur_element = cur_element->next;
+            }
+
+            while (cur_element->prev) {
+                cur_element = cur_element->prev;
+                kfree(cur_element->next);
+            }
+        }
+    }
+    kfree(hashmap->buckets);
+    kfree(hashmap);
+}
+
 static hashmap_elem_t *hashmap_get_elem_dat(hashmap_t *hashmap, uint64_t key) {
     lock(hashmap->hashmap_lock);
     hashmap_elem_t *ret = (hashmap_elem_t *) 0;

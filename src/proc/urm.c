@@ -7,6 +7,7 @@
 #include "klibc/stdlib.h"
 #include "klibc/errno.h"
 #include "drivers/serial.h"
+#include "drivers/pit.h"
 #include "drivers/tty/tty.h"
 #include <stddef.h>
 
@@ -71,14 +72,22 @@ void urm_kill_process(urm_kill_process_data *data) {
         }
     }
 
+    vmm_deconstruct_address_space((void *) process->cr3);
+    clear_fds(data->pid);
+    kfree(process->threads);
+    delete_hashmap(process->ipc_handles);
+
     interrupt_safe_lock(sched_lock);
     kfree(processes[data->pid]);
     processes[data->pid] = (void *) 0;
     interrupt_safe_unlock(sched_lock);
+    kfree(tids);
     urm_return = 0;
 }
 
 void urm_execve(urm_execve_data *data) {
+    uint64_t starting_memory = pmm_get_used_mem();
+
     uint64_t entry_point = 0;
     auxv_auxc_group_t auxv_info;
     void *address_space = load_elf_addrspace(data->executable_path, &entry_point, 0, NULL, &auxv_info);
@@ -100,6 +109,7 @@ void urm_execve(urm_execve_data *data) {
             current_process->child_thread_count--;
         }
     }
+
     vmm_deconstruct_address_space((void *) current_process->cr3);
 
     current_process->current_brk = DEFAULT_BRK;
@@ -120,6 +130,8 @@ void urm_execve(urm_execve_data *data) {
     interrupt_safe_unlock(sched_lock);
 
     add_new_child_thread(thread, data->pid);
+    uint64_t ending_memory = pmm_get_used_mem();
+    sprintf("Starting memory: %lx, Ending memory: %lx, Difference: %lx\n", starting_memory, ending_memory, ending_memory - starting_memory);
     urm_return = 0; // There is not code waiting for us, since we have replaced the thread
     urm_trigger_done = 0;
 }

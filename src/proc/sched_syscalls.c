@@ -8,6 +8,7 @@
 #include "klibc/stdlib.h"
 #include "proc/process_management.h"
 #include "io/msr.h"
+#include "drivers/pit.h"
 #include <stddef.h>
 
 typedef struct {

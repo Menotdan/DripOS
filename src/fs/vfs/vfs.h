@@ -23,12 +23,19 @@ typedef struct {
     vfs_seek_t seek;
 } vfs_ops_t;
 
+typedef struct {
+    vfs_node_t *fs_root;
+    vfs_ops_t fs_ops;
+    int (*file_exists)(vfs_node_t *fs_root_node, char *path);
+} vfs_fs_descriptor_t;
+
 typedef struct vfs_node {
     char *name;
     vfs_ops_t ops;
 
     void (*node_handle)(struct vfs_node *, struct vfs_node *, char *);
     int (*create_handle)(struct vfs_node *, char *, int);
+    vfs_fs_descriptor_t *filesystem_descriptor;
 
     struct vfs_node *parent; // Parent
     struct vfs_node *fs_root; // Filesystem root
@@ -37,6 +44,9 @@ typedef struct vfs_node {
     uint64_t children_array_size;
 
     uint64_t unid; // Unique node id
+    uint32_t ref_counter; // During vfs_open(), blank nodes are created to search for a file on a physical filesystem,
+                        // if it is not found, the node is removed, if two threads look for the same path, 
+                        // one will delete the node and the other will be confused looking for it
 } vfs_node_t;
 
 void vfs_init();

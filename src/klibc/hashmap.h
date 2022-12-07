@@ -26,5 +26,6 @@ hashmap_t *init_hashmap();
 void *hashmap_get_elem(hashmap_t *hashmap, uint64_t hash);
 void hashmap_set_elem(hashmap_t *hashmap, uint64_t key, void *data);
 void hashmap_remove_elem(hashmap_t *hashmap, uint64_t key);
+void delete_hashmap(hashmap_t *hashmap);
 
 #endif

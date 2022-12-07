@@ -315,3 +315,20 @@ void clone_fds(int64_t old_pid, int64_t new_pid) {
     }
     unlock(fd_lock);
 }
+
+void clear_fds(int64_t pid) {
+    interrupt_safe_lock(sched_lock);
+    process_t *process = processes[pid];
+    assert(process);
+    interrupt_safe_unlock(sched_lock);
+
+    lock(fd_lock);
+    for (int i = 0; i < process->fd_table_size; i++) {
+        if (process->fd_table[i]) {
+            kfree(process->fd_table[i]);
+        }
+    }
+
+    kfree(process->fd_table);
+    unlock(fd_lock);
+}
