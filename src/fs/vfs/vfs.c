@@ -175,7 +175,7 @@ vfs_node_t *vfs_new_node(char *name, vfs_ops_t ops) {
     node->name = kcalloc(strlen(name) + 1);
     node->fs_root = 0;
     node->node_handle = 0;
-    node->ref_counter = 1; // each node should start with a reference
+    // node->ref_counter = 1; // each node should start with a reference
     strcpy(name, node->name);
 
     sprintf("[VFS] Created new node with name %s\n", node->name);
