@@ -51,7 +51,9 @@ vfs_node_t *vfs_new_node(char *name, vfs_ops_t ops);
 void vfs_add_child(vfs_node_t *parent, vfs_node_t *child);
 vfs_node_t *create_missing_nodes_from_path(char *path, vfs_ops_t ops);
 vfs_node_t *get_node_from_path(char *path);
+vfs_node_t *get_mountpoint_of_path(char *path);
 char *get_full_path(vfs_node_t *node);
+uint64_t split_path_elements(char *path, char ***out);
 
 void set_child_ops(vfs_node_t *node, vfs_ops_t ops);
 void set_child_fs_root(vfs_node_t *node, vfs_node_t *fs_root);

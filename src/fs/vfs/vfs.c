@@ -65,7 +65,7 @@ uint64_t dummy_seek(int _1, uint64_t _2, int _3) {
 
 vfs_ops_t dummy_ops = {dummy_open, dummy_post_open, dummy_close, dummy_read, dummy_write, dummy_seek};
 
-static uint8_t search_node_name(vfs_node_t *node, char *name) {
+uint8_t search_node_name(vfs_node_t *node, char *name, uint64_t *out) {
     lock(vfs_lock);
     for (uint64_t i = 0; i < node->children_array_size; i++) {
         vfs_node_t *cur = node->children[i];
@@ -73,6 +73,9 @@ static uint8_t search_node_name(vfs_node_t *node, char *name) {
         if (cur) {
             if (strcmp(cur->name, name) == 0) {
                 unlock(vfs_lock);
+                if (out) {
+                    *out = i;
+                }
                 return 1;
             }
         }
@@ -109,7 +112,7 @@ next_elem:
             }
 
             // Add the final node
-            if (!search_node_name(cur_node, temp_buffer)) {
+            if (!search_node_name(cur_node, temp_buffer, (void *) 0)) {
                 vfs_node_t *new_node = vfs_new_node(temp_buffer, ops);
                 vfs_add_child(cur_node, new_node);
                 if (!first_missing) first_missing = new_node;
@@ -132,7 +135,7 @@ next_elem:
     }
 
     // Add the next node
-    if (!search_node_name(cur_node, temp_buffer)) {
+    if (!search_node_name(cur_node, temp_buffer, (void *) 0)) {
         vfs_node_t *new_node = vfs_new_node(temp_buffer, ops);
         vfs_add_child(cur_node, new_node);
         if (!first_missing) first_missing = new_node;
@@ -205,70 +208,36 @@ done:
     unlock(vfs_lock);
 }
 
+void cleanup_split_path(char **path, uint64_t length) {
+    for (uint64_t i = 0; i < length; i++) {
+        if (path[i]) {
+            kfree(path[i]);
+        }
+    }
+
+    kfree(path);
+}
+
 /* Attempt to find a node from a given path */
 vfs_node_t *get_node_from_path(char *path) {
-    char *buffer = kcalloc(50);
-    uint64_t buffer_size = 50;
-    uint64_t buffer_index = 0;
+    char **split_list = (void *) 0;
+    uint64_t split_list_length = split_path_elements(path, &split_list);
 
-    lock(vfs_lock);
     vfs_node_t *cur_node = root_node;
+    for (uint64_t i = 0; i < split_list_length; i++) {
+        uint64_t node_index = 0;
 
-    if (*path++ != '/') { // If the path doesnt start with `/`
-        unlock(vfs_lock);
-        return (vfs_node_t *) 0;
-    }
-
-    while (*path != '\0') {
-        if (*path == '/') {
-            for (uint64_t i = 0; i < cur_node->children_array_size; i++) {
-                if (cur_node->children[i]) {
-                    if (strcmp(buffer, cur_node->children[i]->name) == 0) {
-                        // Found the next node
-                        cur_node = cur_node->children[i]; // Move to the next node
-                        buffer_index = 0; // Reset buffer index
-                        memset((uint8_t *) buffer, 0, buffer_size); // Clear the buffer
-
-                        goto fnd;
-                    }
-                }
-            }
-            
-            // No nodes found, return nothing
-            unlock(vfs_lock);
-            kfree(buffer);
+        if (!search_node_name(cur_node, split_list[i], &node_index)) {
+            cleanup_split_path(split_list, split_list_length);
             return (vfs_node_t *) 0;
-        } else {
-            buffer[buffer_index++] = *path; // Store the data
-            if (buffer_index == buffer_size) { // If the buffer is out of bounds, resize it
-                buffer_size += 10;
-                buffer = krealloc(buffer, buffer_size);
-            }
-        }
-fnd:
-        path++;
-    }
-
-    if (strlen(buffer) != 0) { // If the buffer hasn't been flushed with a '/'
-        for (uint64_t i = 0; i < cur_node->children_array_size; i++) {
-            if (cur_node->children[i]) {
-                if (strcmp(buffer, cur_node->children[i]->name) == 0) {
-                    // Found the next node
-                    cur_node = cur_node->children[i]; // Move to the last node
-                    goto done;
-                }
-            }
         }
 
-        // No nodes found, return nothing
+        lock(vfs_lock);
+        cur_node = cur_node->children[node_index];
         unlock(vfs_lock);
-        kfree(buffer);
-        return (vfs_node_t *) 0;
     }
 
-done:
-    unlock(vfs_lock);
-    kfree(buffer);
+    cleanup_split_path(split_list, split_list_length);
     return cur_node;
 }
 
@@ -291,6 +260,57 @@ void remove_node(vfs_node_t *node) {
     // }
     // TODO: Add reference counter
     unlock(vfs_lock);
+}
+
+char *join_split_path(char **path, uint64_t path_length) {
+    char *ret = (void *) 0;
+    uint64_t cur_length = 0;
+
+    for (uint64_t i = 0; i < path_length; i++) {
+        uint64_t element_length = strlen(path[i]) + 1; // + 1 for the '/'
+        cur_length += element_length;
+
+        ret = krealloc(ret, cur_length + 1); // + 1 for the null
+        strcat(ret, "/");
+        strcat(ret, path[i]);
+    }
+
+    return ret;
+}
+
+vfs_node_t *get_mountpoint_of_node(vfs_node_t *node) {
+    vfs_node_t *cur_node = node;
+
+    lock(vfs_lock);
+    while (cur_node != root_node) {
+        if (cur_node->filesystem_descriptor) {
+            unlock(vfs_lock);
+            return cur_node;
+        }
+        cur_node = cur_node->parent;
+    }
+
+    unlock(vfs_lock);
+    return cur_node;
+}
+
+vfs_node_t *get_mountpoint_of_path(char *path) {
+    char **path_elements = (void *) 0;
+    uint64_t path_elements_length = split_path_elements(path, &path_elements);
+
+    for (int64_t i = ((int64_t) path_elements_length - 1); i >= 0; i--) {
+        char *cur_path = join_split_path(path_elements, i + 1);
+        vfs_node_t *node = get_node_from_path(cur_path);
+        kfree(cur_path);
+
+        if (node) {
+            cleanup_split_path(path_elements, path_elements_length);
+            return get_mountpoint_of_node(node);
+        }
+    }
+
+    cleanup_split_path(path_elements, path_elements_length);
+    return root_node;
 }
 
 void set_child_ops(vfs_node_t *node, vfs_ops_t ops) {
@@ -337,6 +357,7 @@ char *get_full_path(vfs_node_t *node) {
     if (cur_node == root_node) {
         path = kcalloc(1);
     }
+
     while (cur_node != root_node) {
         assert(cur_node);
         assert(cur_node->name);
@@ -362,8 +383,52 @@ char *get_full_path(vfs_node_t *node) {
     return path;
 }
 
+uint64_t split_path_elements(char *path, char ***out) {
+    char **output = (void *) 0;
+    char *path_ptr = path;
+    uint64_t list_length = 0;
+    uint64_t cur_string_length = 0;
+    uint8_t starting_new = 1;
+
+    if (*path_ptr == '/') path_ptr++;
+
+    while (*path_ptr) {
+        if (starting_new && *(path_ptr + 1)) {
+            output = krealloc(output, (++list_length) * sizeof(char *));
+            output[list_length - 1] = kcalloc(1);
+
+            cur_string_length = 0;
+            starting_new = 0;
+        }
+
+        if (*path_ptr == '/') {
+            assert(!starting_new);
+            starting_new = 1;
+            path_ptr++;
+            continue;
+        }
+
+        char *old_string = output[list_length - 1];
+        uint64_t old_string_length = cur_string_length++;
+        output[list_length - 1] = kcalloc((cur_string_length) + 1); // Allocate for 1 extra for the null, which should also be cleared
+        
+        memcpy((uint8_t *) old_string, (uint8_t *) output[list_length - 1], old_string_length);
+        output[list_length - 1][cur_string_length - 1] = *path_ptr;
+        kfree(old_string);
+
+        path_ptr++;
+    }
+
+    *out = output;
+    return list_length;
+}
+
 vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
-    vfs_node_t *node;
+    vfs_node_t *node = (void *) 0;
+    (void) mode;
+    (void) err;
+    // char **split_path;
+    // uint64_t split_path_length = split_path_elements(name, &split_path);
 
     return node;
 }

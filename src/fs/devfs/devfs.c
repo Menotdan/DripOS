@@ -1,6 +1,7 @@
 #include "devfs.h"
 #include "drivers/serial.h"
 #include "klibc/hashmap.h"
+#include "klibc/stdlib.h"
 #include "fs/fd.h"
 
 /* Devices we want to register */
@@ -22,6 +23,13 @@ int devfs_close(int fd_no) {
     return 0;
 }
 
+int devfs_file_exists(vfs_node_t *root_node, char *path) {
+    (void) root_node;
+    (void) path;
+
+    return 0; // Any time the vfs has to ask about a file existing, it doesn't exist in the devfs.
+}
+
 void register_devices() {
     setup_vesa_device();
 }
@@ -30,6 +38,9 @@ void devfs_init() {
     /* Setup the devfs root */
     devfs_root = vfs_new_node("dev", dummy_ops);
     devfs_root->ops.open = devfs_open;
+    devfs_root->filesystem_descriptor = kcalloc(sizeof(vfs_fs_descriptor_t));
+    devfs_root->filesystem_descriptor->file_exists = devfs_file_exists;
+    devfs_root->filesystem_descriptor->fs_root = devfs_root;
     vfs_add_child(root_node, devfs_root);
 
     /* Setup the devfs hashmap */
