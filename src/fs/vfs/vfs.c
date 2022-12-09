@@ -427,6 +427,17 @@ vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
     vfs_node_t *node = (void *) 0;
     (void) mode;
     (void) err;
+    // Check if we already have a node
+    // If we do, check if the caller wanted to use O_CREAT, if they did, return -EEXIST,
+    // Otherwise, return that node.
+    // If we do not already have a node:
+    // Get the mountpoint of the requested file.
+    // Call mountpoint.file_exists(), stripping off the path that belongs to the mountpoint
+    // If the file does exist, create nodes in its path that don't exist, HANDLING OPEN ACCORDINGLY!
+    //!!!!! <<<<<<<<<<<^^^ HANDLE OPEN DO IT DO IT DO IT
+    // Call set_vfs_ops with the filesystem's requested vfs_ops (located in mountpoint.fs_ops)
+    // Return the node we have created.
+
     // char **split_path;
     // uint64_t split_path_length = split_path_elements(name, &split_path);
 
