@@ -49,9 +49,10 @@ typedef struct vfs_node {
 void vfs_init();
 vfs_node_t *vfs_new_node(char *name, vfs_ops_t ops);
 void vfs_add_child(vfs_node_t *parent, vfs_node_t *child);
-vfs_node_t *create_missing_nodes_from_path(char *path, vfs_ops_t ops);
+vfs_node_t *create_missing_nodes_from_path(char *path, vfs_ops_t ops, vfs_node_t *root_node);
 vfs_node_t *get_node_from_path(char *path);
 vfs_node_t *get_mountpoint_of_path(char *path);
+char *get_mountpoint_relative_path(vfs_node_t *mountpoint, char *path);
 char *get_full_path(vfs_node_t *node);
 uint64_t split_path_elements(char *path, char ***out);
 

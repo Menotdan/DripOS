@@ -14,6 +14,7 @@ void *load_elf_addrspace(char *path, uint64_t *entry_out, uint64_t base, void *e
     uint64_t time_s = global_ticks;
     uint64_t time_read = 0;
 
+    sprintf("Reading ELF: %s\n", path);
     int fd = fd_open(path, 0);
 
     if (fd < 0) {

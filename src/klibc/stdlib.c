@@ -34,7 +34,7 @@ void *kmalloc(uint64_t size) {
 }
 
 //void *cur_pain = (void *) 0;
-
+// 727
 void kfree(void *addr) {
     if (((uint64_t) addr % 0x1000) != 0) {
         warn("{-kfree-} unaligned addr: %lx, caller: %lx", addr, __builtin_return_address(0));
@@ -131,4 +131,18 @@ void panic(char *msg) {
 
     // We shouldnt return
     while (1) { asm volatile("hlt"); }
+}
+
+char *normalize_path(char *path) {
+    char *normalized = kcalloc(4097);
+    if (path[0] != '/') {
+        strcat(normalized, "/");
+    }
+
+    strcat(normalized, path);
+    if (normalized[strlen(normalized) - 1] != '/') {
+        strcat(normalized, "/");
+    }
+
+    return normalized;
 }

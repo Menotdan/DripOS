@@ -22,6 +22,6 @@ void remap_alloc(void *addr);
 void yield();
 void panic(char *msg);
 
-//extern void *cur_pain;
+char *normalize_path(char *path);
 
 #endif

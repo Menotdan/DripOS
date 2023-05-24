@@ -85,7 +85,7 @@ uint8_t search_node_name(vfs_node_t *node, char *name, uint64_t *out) {
     return 0;
 }
 
-vfs_node_t *create_missing_nodes_from_path(char *path, vfs_ops_t ops) {
+vfs_node_t *create_missing_nodes_from_path(char *path, vfs_ops_t ops, vfs_node_t *root_node) {
     vfs_node_t *first_missing = 0;
 
     char *temp_buffer = kcalloc(strlen(path)); // temporary buffer for each part of the path
@@ -114,6 +114,7 @@ next_elem:
             // Add the final node
             if (!search_node_name(cur_node, temp_buffer, (void *) 0)) {
                 vfs_node_t *new_node = vfs_new_node(temp_buffer, ops);
+                new_node->fs_root = root_node;
                 vfs_add_child(cur_node, new_node);
                 if (!first_missing) first_missing = new_node;
             }
@@ -137,6 +138,7 @@ next_elem:
     // Add the next node
     if (!search_node_name(cur_node, temp_buffer, (void *) 0)) {
         vfs_node_t *new_node = vfs_new_node(temp_buffer, ops);
+        new_node->fs_root = root_node;
         vfs_add_child(cur_node, new_node);
         if (!first_missing) first_missing = new_node;
     }
@@ -178,6 +180,7 @@ vfs_node_t *vfs_new_node(char *name, vfs_ops_t ops) {
     node->name = kcalloc(strlen(name) + 1);
     node->fs_root = 0;
     node->node_handle = 0;
+    node->create_handle = 0;
     // node->ref_counter = 1; // each node should start with a reference
     strcpy(name, node->name);
 
@@ -220,6 +223,10 @@ void cleanup_split_path(char **path, uint64_t length) {
 
 /* Attempt to find a node from a given path */
 vfs_node_t *get_node_from_path(char *path) {
+    if (!strcmp(path, "/")) {
+        return root_node;
+    }
+
     char **split_list = (void *) 0;
     uint64_t split_list_length = split_path_elements(path, &split_list);
 
@@ -423,24 +430,77 @@ uint64_t split_path_elements(char *path, char ***out) {
     return list_length;
 }
 
+char *get_mountpoint_relative_path(vfs_node_t *mountpoint, char *path) {
+    char *mountpoint_path = get_full_path(mountpoint);
+    char *mp_normalized = normalize_path(mountpoint_path);
+    char *path_normalized = normalize_path(path);
+
+    kfree(mountpoint_path);
+    // /dev/sdb/real/
+    // /dev/
+    // > sdb/real/
+    // normalize
+    // /sdb/real
+
+    char *rel_path = path_normalized + strlen(mp_normalized);
+    char *rel_path_normalized = normalize_path(rel_path);
+
+    kfree(mp_normalized);
+    kfree(path_normalized);
+    return rel_path_normalized;
+}
+
 vfs_node_t *vfs_open(char *name, int mode, uint64_t *err) {
-    vfs_node_t *node = (void *) 0;
-    (void) mode;
-    (void) err;
-    // Check if we already have a node
-    // If we do, check if the caller wanted to use O_CREAT, if they did, return -EEXIST,
-    // Otherwise, return that node.
-    // If we do not already have a node:
-    // Get the mountpoint of the requested file.
-    // Call mountpoint.file_exists(), stripping off the path that belongs to the mountpoint
-    // If the file does exist, create nodes in its path that don't exist, HANDLING OPEN ACCORDINGLY!
-    //!!!!! <<<<<<<<<<<^^^ HANDLE OPEN DO IT DO IT DO IT
-    // Call set_vfs_ops with the filesystem's requested vfs_ops (located in mountpoint.fs_ops)
-    // Return the node we have created.
+    vfs_node_t *node = get_node_from_path(name);
+    if (node) {
+        if (mode & O_CREAT) {
+            *err = EEXIST;
+            return NULL;
+        }
 
-    // char **split_path;
-    // uint64_t split_path_length = split_path_elements(name, &split_path);
+        return node;
+    }
 
+    vfs_node_t *mountpoint_node = get_mountpoint_of_path(name);
+    if (!mountpoint_node) {
+        *err = ENOENT;
+        return NULL;
+    }
+    char *relative_path = get_mountpoint_relative_path(mountpoint_node, name);
+    relative_path[strlen(relative_path) - 1] = '\0'; // Clear the / at the end of the path
+
+    int file_exists = mountpoint_node->filesystem_descriptor->file_exists
+        (mountpoint_node, relative_path);
+    
+    if (!file_exists && !(mode & O_CREAT)) {
+        *err = ENOENT;
+        kfree(relative_path);
+        return NULL;
+    }
+
+    if (mode & O_CREAT) {
+        // If create handle doesn't exist
+        if (!mountpoint_node->create_handle) {
+            *err = EPERM;
+            kfree(relative_path);
+            return NULL;
+        }
+
+        int create_err = mountpoint_node->create_handle(mountpoint_node, relative_path, mode);
+        if (create_err) {
+            *err = -create_err;
+            kfree(relative_path);
+            return NULL;
+        }
+    }
+
+    create_missing_nodes_from_path
+        (name, mountpoint_node->filesystem_descriptor->fs_ops, mountpoint_node);
+    node = get_node_from_path(name);
+    assert(node);
+
+    node->ops.open(name, mode);
+    kfree(relative_path);
     return node;
 }
 

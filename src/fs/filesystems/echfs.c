@@ -250,19 +250,6 @@ uint64_t echfs_find_entry_name_parent(echfs_filesystem_t *filesystem, char *name
 
 echfs_dir_entry_t *echfs_path_resolve(echfs_filesystem_t *filesystem, char *filename, uint8_t *err_code, uint64_t unid) {
     (void) unid;
-    // if (unid) {
-    //     echfs_filesystem_t *node_data = get_unid_fs_data(unid);
-    //     if (node_data) {
-    //         if (node_data->node_dir_entry) {
-    //             echfs_dir_entry_t *cache_entry = node_data->node_dir_entry;
-    //             echfs_dir_entry_t *cur_entry = kcalloc(sizeof(echfs_dir_entry_t));
-
-    //             memcpy((uint8_t *) cache_entry, (uint8_t *) cur_entry, sizeof(echfs_dir_entry_t));
-
-    //             return cur_entry;
-    //         }
-    //     }
-    // }
 
     char current_name[201] = {'\0'}; // Filenames are max 201 chars
     uint8_t is_last = 0; // Is this the last in the path?
@@ -270,13 +257,11 @@ echfs_dir_entry_t *echfs_path_resolve(echfs_filesystem_t *filesystem, char *file
     echfs_dir_entry_t *cur_entry = (echfs_dir_entry_t *) 0;
     uint64_t current_parent = ECHFS_ROOT_DIR_ID;
 
-    (void) filesystem;
-
     if (*filename == '/') filename++; // Ignore the first '/' to make parsing the path easier
 
     if (strcmp(filename, "/") == 0) {
         *err_code |= (1<<0); // Root entry
-        sprintf("found root entry ;-; $s\n", filename);
+        sprintf("found root entry ;-; %s\n", filename);
         return (echfs_dir_entry_t *) 0; // Fail
     }
 
@@ -337,15 +322,6 @@ next_elem:
 
             cur_entry->entry_number = found_elem_index;
 
-            // if (unid) {
-            //     echfs_filesystem_t *final_node_data = get_unid_fs_data(unid);
-            //     if (final_node_data) {
-            //         echfs_dir_entry_t *cache_entry = kcalloc(sizeof(echfs_dir_entry_t));
-            //         memcpy((uint8_t *) cur_entry, (uint8_t *) cache_entry, sizeof(echfs_dir_entry_t));
-            //         final_node_data->node_dir_entry = cache_entry;
-            //     }
-            // }
-
             return cur_entry;
         } else {
             if (cur_entry) kfree(cur_entry);
@@ -382,6 +358,7 @@ void allocate_blocks_for_file(echfs_filesystem_t *filesystem, echfs_dir_entry_t 
 int echfs_open(char *name, int mode) {
     (void) name;
     (void) mode;
+    sprintf("opening: %s\n", name);
 
     return 0;
 }
@@ -481,59 +458,67 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
     fd_entry_t *fd = fd_lookup(fd_no);
     vfs_node_t *node = fd->node;
     assert(node);
-    char *path = get_full_path(node);
-    char *original_path_addr = path;
+    char *original_path = get_full_path(node);
+    sprintf("node name: %s, path: %s\n", node->name, original_path);
+    char *path = get_mountpoint_relative_path(node->fs_root, original_path);
+    path[strlen(path) - 1] = '\0'; // Remove trailing /
 
     echfs_filesystem_t *filesystem_info = get_unid_fs_data(node->fs_root->unid);
-    if (filesystem_info) {
-        path += strlen(filesystem_info->mountpoint_path);
-
-        uint8_t err;
-        echfs_dir_entry_t *entry = echfs_path_resolve(filesystem_info, path, &err, fd->node->unid);
-        if (!entry) {
-            sprintf("Name: %s, Cur Name: %s\n", original_path_addr, path);
-            sprintf("[EchFS] Read died somehow with entry getting\n");
-
-            kfree(original_path_addr);
-            return -ENOENT;
-        }
-
-        uint64_t count_to_read = count;
-        if (!count_to_read) {
-            sprintf("count_to_read is null\n");
-            kfree(original_path_addr);
-            kfree(entry);
-            return 0;
-        }
-
-        if (count_to_read + fd->seek > entry->file_size_bytes) {
-            sprintf("count_to_read bad\n");
-            sprintf("count_to_read: %lu, fd->seek: %lu, entry->file_size_bytes: %lu\n", count_to_read, fd->seek, entry->file_size_bytes);
-            kfree(original_path_addr);
-            kfree(entry);
-            return -EINVAL;
-        }
-
-        uint8_t *local_buf = read_for_range(filesystem_info, entry, fd->seek, count_to_read);
-        if (!local_buf) {
-            kfree(entry);
-            kfree(original_path_addr);
-            return -EIO;
-        }
-
-        memcpy(local_buf, buf, count_to_read); // Copy the data
-        kfree(local_buf);
-        kfree(entry);
-        kfree(original_path_addr);
-        fd->seek += count_to_read;
-
-        return count_to_read; // Done
-    } else {
+    if (!filesystem_info) {
         sprintf("[EchFS] Read died somehow\n");
 
         kfree(path);
+        kfree(original_path);
         return -ENOENT;
     }
+
+    uint8_t err;
+    echfs_dir_entry_t *entry = echfs_path_resolve(filesystem_info, path, &err, fd->node->unid);
+    if (!entry) {
+        sprintf("Name: %s, Cur Name: %s\n", original_path, path);
+        sprintf("[EchFS] Read died somehow with entry getting\n");
+
+        kfree(path);
+        kfree(original_path);
+        return -ENOENT;
+    }
+
+    uint64_t count_to_read = count;
+    if (!count_to_read) {
+        sprintf("count_to_read is null\n");
+
+        kfree(path);
+        kfree(original_path);
+        kfree(entry);
+        return 0;
+    }
+
+    if (count_to_read + fd->seek > entry->file_size_bytes) {
+        sprintf("count_to_read bad\n");
+        sprintf("count_to_read: %lu, fd->seek: %lu, entry->file_size_bytes: %lu\n", count_to_read, fd->seek, entry->file_size_bytes);
+
+        kfree(path);
+        kfree(original_path);
+        kfree(entry);
+        return -EINVAL;
+    }
+
+    uint8_t *local_buf = read_for_range(filesystem_info, entry, fd->seek, count_to_read);
+    if (!local_buf) {
+        kfree(path);
+        kfree(entry);
+        kfree(original_path);
+        return -EIO;
+    }
+
+    memcpy(local_buf, buf, count_to_read); // Copy the data
+    kfree(local_buf);
+    kfree(entry);
+    kfree(original_path);
+    kfree(path);
+    fd->seek += count_to_read;
+
+    return count_to_read; // Done
 }
 
 int write_blocks_for_range(echfs_filesystem_t *filesystem, echfs_dir_entry_t *file, uint64_t write_start, uint64_t write_count, void *data) {
@@ -646,11 +631,6 @@ int echfs_post_open(int fd, int mode) {
     assert(node);
     char *path = get_full_path(node);
     char *original_path_addr = path;
-
-    // if (!get_unid_fs_data(node->unid)) {
-    //     echfs_filesystem_t *node_data = kcalloc(sizeof(echfs_filesystem_t));
-    //     register_unid(node->unid, node_data);
-    // }
 
     echfs_filesystem_t *filesystem_info = get_unid_fs_data(node->fs_root->unid);
     if (filesystem_info) {
@@ -770,7 +750,13 @@ int echfs_file_exists(vfs_node_t *fs_root, char *path) {
     echfs_filesystem_t *fs_data = get_unid_fs_data(fs_root->unid);
 
     uint8_t err = 0;
-    return echfs_path_resolve(fs_data, path, &err, 0) != 0;
+    echfs_dir_entry_t *dir_entry = echfs_path_resolve(fs_data, path, &err, 0);
+    if (dir_entry) {
+        kfree(dir_entry);
+        return 1;
+    }
+
+    return 0;
 }
 
 void echfs_test(char *device) {
