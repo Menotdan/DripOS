@@ -59,10 +59,13 @@ typedef struct {
     char *mountpoint_path;
     vfs_node_t *mountpoint;
 
-    echfs_dir_entry_t *node_dir_entry;
+    hashmap_t *cached_blocks;
+    hashmap_t *cached_dir_entries;
+    lock_t cache_block_lock;
+    lock_t cache_dir_lock;
 } echfs_filesystem_t;
 
-int echfs_read_block0(char *device, echfs_filesystem_t *output);
+int echfs_check_and_init(char *device, echfs_filesystem_t *output);
 void echfs_test(char *device);
 
 #endif

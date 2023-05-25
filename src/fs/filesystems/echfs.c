@@ -38,6 +38,9 @@ int echfs_read_block0(char *device, echfs_filesystem_t *output) {
     echfs_block0_t *block0 = kcalloc(sizeof(echfs_block0_t));
     int device_fd = fd_open(device, 0);
 
+    output->cached_blocks = init_hashmap();
+    output->cached_dir_entries = init_hashmap();
+
     if (device_fd < 0) {
         kfree(block0);
         return 0;
@@ -89,14 +92,14 @@ int echfs_read_block0(char *device, echfs_filesystem_t *output) {
 void *echfs_read_block(echfs_filesystem_t *filesystem, uint64_t block) {
     void *data_area = kcalloc(filesystem->block_size);
 
-    lock(echfs_cache_lock);
-    void *cached = hashmap_get_elem(&cached_blocks, block);
+    lock(filesystem->cache_block_lock);
+    void *cached = hashmap_get_elem(filesystem->cached_blocks, block);
     if (cached) {
         memcpy(cached, data_area, filesystem->block_size);
-        unlock(echfs_cache_lock);
+        unlock(filesystem->cache_block_lock);
         return data_area;
     }
-    unlock(echfs_cache_lock);
+    unlock(filesystem->cache_block_lock);
 
     int device_fd = fd_open(filesystem->device_name, 0);
 
@@ -104,11 +107,11 @@ void *echfs_read_block(echfs_filesystem_t *filesystem, uint64_t block) {
     fd_seek(device_fd, block * filesystem->block_size, SEEK_SET);
     fd_read(device_fd, data_area, filesystem->block_size);
 
-    lock(echfs_cache_lock);
+    lock(filesystem->cache_block_lock);
     void *cached_block = kcalloc(filesystem->block_size);
     memcpy(data_area, cached_block, filesystem->block_size);
-    hashmap_set_elem(&cached_blocks, block, cached_block);
-    unlock(echfs_cache_lock);
+    hashmap_set_elem(filesystem->cached_blocks, block, cached_block);
+    unlock(filesystem->cache_block_lock);
 
     // Close and return
     fd_close(device_fd);
