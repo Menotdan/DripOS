@@ -98,39 +98,104 @@ int urm_execve(urm_execve_data *data) {
     interrupt_safe_unlock(sched_lock);
 
     add_new_child_thread(thread, data->pid);
-    uint64_t ending_memory = pmm_get_used_mem();
-    sprintf("Starting memory: %lx, Ending memory: %lx, Difference: %lx\n", starting_memory, ending_memory, ending_memory - starting_memory);
-    urm_return = 0; // There is not code waiting for us, since we have replaced the thread
-    urm_trigger_done = 0;
+
+    return 0; // There is not code waiting for us, since we have replaced the thread
+}
+
+void urm_runner(void *data, urm_runtime_params_t *params) {
+    int ret_temp = 0;
+    if (!params->return_val) {
+        params->return_val = &ret_temp;
+    }
+
+    switch (params->type) {
+        case URM_KILL_PROCESS:
+            *params->return_val = urm_kill_process(data);
+            break;
+        case URM_KILL_THREAD:
+            *params->return_val = urm_kill_thread(data);
+            break;
+        case URM_EXECVE:
+            *params->return_val = urm_execve(data);
+            break;
+        default:
+            break;
+    }
+
+    if (params->done_event) {
+        trigger_event(params->done_event);
+    }
+    kfree(data);
+
+    urm_kill_process_data *self_kill_data = kcalloc(sizeof(urm_kill_process_data));
+    self_kill_data->pid = get_cur_pid();
+    send_urm_request_async(self_kill_data, URM_KILL_RUNNER);
+
+    lock(sched_lock);
+    get_cur_thread()->state = BLOCKED;
+    force_unlocked_schedule();
 }
 
 /* Epic */
 void urm_thread() {
     while (1) {
         await_event(&urm_request_event); // Wait for a URM request
+
+        int param_size = 0;
         switch (urm_type) {
             case URM_KILL_PROCESS:
-                urm_kill_process(urm_data);
+                param_size = sizeof(urm_kill_process_data);               
                 break;
             case URM_KILL_THREAD:
-                urm_kill_thread(urm_data);
+                param_size = sizeof(urm_kill_thread_data);
                 break;
             case URM_EXECVE:
-                urm_execve(urm_data);
+                param_size = sizeof(urm_execve_data);
+                break;
+            case URM_KILL_RUNNER:
+                urm_kill_process(urm_data);
                 break;
             default:
                 break;
         }
-        if (urm_trigger_done) {
-            trigger_event(&urm_done_event);
+
+        if (param_size == 0) {
+            // Reset state
+            urm_done_event = NULL;
+            urm_data = NULL;
+            urm_return = NULL;
+
+            unlock(urm_lock);
+            continue; // Skip, runner requesting kill or bad request.
         }
+
+        void *urm_data_copy = kcalloc(param_size);
+        memcpy(urm_data, urm_data_copy, param_size);
+
+        urm_runtime_params_t *runtime_params = kcalloc(sizeof(runtime_params));
+        runtime_params->done_event = urm_done_event;
+        runtime_params->return_val = urm_return;
+        runtime_params->type = urm_type;
+
+        thread_t *new_urm_thread = add_basic_kernel_thread("URM Worker", urm_runner, BLOCKED);
+        new_urm_thread->regs.rdi = (uint64_t) urm_data_copy;
+        new_urm_thread->regs.rsi = (uint64_t) runtime_params;
+
+        lock(sched_lock);
+        new_urm_thread->state = READY;
+        unlock(sched_lock);
+
+        // Reset state
+        urm_done_event = NULL;
+        urm_data = NULL;
+        urm_return = NULL;
+
         unlock(urm_lock);
     }
 }
 
 int send_urm_request(void *data, urm_type_t type) {
     lock(urm_lock);
-    urm_trigger_done = 1;
     urm_data = data;
     urm_type = type;
     trigger_event(&urm_request_event);
@@ -151,7 +216,6 @@ int send_urm_request(void *data, urm_type_t type) {
 
 void send_urm_request_isr(void *data, urm_type_t type) {
     lock(urm_lock);
-    urm_trigger_done = 0;
     urm_data = data;
     urm_type = type;
     trigger_event(&urm_request_event);
@@ -159,7 +223,6 @@ void send_urm_request_isr(void *data, urm_type_t type) {
 
 void send_urm_request_async(void *data, urm_type_t type) {
     lock(urm_lock);
-    urm_trigger_done = 0;
     urm_data = data;
     urm_type = type;
     trigger_event(&urm_request_event);

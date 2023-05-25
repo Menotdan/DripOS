@@ -8,6 +8,7 @@ typedef enum {
     URM_KILL_PROCESS,
     URM_KILL_THREAD,
     URM_EXECVE,
+    URM_KILL_RUNNER,
 } urm_type_t;
 
 typedef struct {
@@ -27,6 +28,12 @@ typedef struct {
     int64_t pid;
     int64_t tid;
 } urm_execve_data;
+
+typedef struct {
+    urm_type_t type;
+    event_t *done_event;
+    int *return_val;
+} urm_runtime_params_t;
 
 void urm_thread();
 int send_urm_request(void *data, urm_type_t type);
