@@ -4,6 +4,21 @@
 #include "klibc/lock.h"
 
 #define HASHMAP_BUCKET_SIZE 200
+#define HASHMAP_ITERABLE(hashmap) for (uint64_t hashmap_bucket_i = 0; hashmap_bucket_i < HASHMAP_BUCKET_SIZE; hashmap_bucket_i++) { \
+  hashmap_elem_t *hashmap_element_cur = hashmap->buckets[hashmap_bucket_i].elements; \
+  if (!hashmap_element_cur) { \
+   continue; \
+  } \
+  do { \
+
+#define HASHMAP_ITERABLE_END \
+    hashmap_element_cur = hashmap_element_cur->next; \
+  } while (hashmap_element_cur); \
+} \
+
+#define HASHMAP_ITERABLE_GET (hashmap_element_cur)
+
+#define HASHMAP_ITERABLE_DROP_ENTRY(hashmap) hashmap_remove_elem(hashmap, hashmap_element_cur->key);
 
 typedef struct hashmap_elem {
     uint64_t key;

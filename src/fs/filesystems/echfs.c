@@ -21,6 +21,8 @@
 
 hashmap_t cached_blocks;
 lock_t echfs_cache_lock = {0, 0, 0, 0};
+hashmap_t cached_dir_entries;
+lock_t echfs_dir_ent_lock = {0, 0, 0, 0};
 
 int echfs_open(char *name, int mode);
 int echfs_post_open(int fd, int mode);
@@ -145,8 +147,24 @@ echfs_dir_entry_t *echfs_read_dir_entry(echfs_filesystem_t *filesystem, uint64_t
     return data_area;
 }
 
+int echfs_mark_entry_cache_dirty(echfs_filesystem_t *filesystem, uint64_t entry) {
+    lock(filesystem->cache_dir_lock);
+    HASHMAP_ITERABLE(filesystem->cached_dir_entries)
+    if (((echfs_dir_entry_t *) HASHMAP_ITERABLE_GET->data)->entry_number == entry) {
+        HASHMAP_ITERABLE_DROP_ENTRY(filesystem->cached_dir_entries)
+
+        unlock(filesystem->cache_dir_lock);
+        return 1;
+    }
+    HASHMAP_ITERABLE_END
+
+    unlock(filesystem->cache_dir_lock);
+    return 0;
+}
+
 /* Write a directory entry to the main directory */
 void echfs_write_dir_entry(echfs_filesystem_t *filesystem, uint64_t entry, echfs_dir_entry_t *data) {
+    echfs_mark_entry_cache_dirty(filesystem, entry);
     int device_fd = fd_open(filesystem->device_name, 0);
 
     uint64_t main_dir_start_byte = filesystem->main_dir_block * filesystem->block_size;
@@ -209,7 +227,7 @@ void *echfs_read_file(echfs_filesystem_t *filesystem, echfs_dir_entry_t *file, u
     uint64_t current_block = file->starting_block;
     uint64_t byte_offset = 0;
     *read_count = file->file_size_bytes;
-    
+
     while (1) {
         /* Read the data */
         uint8_t *temp_data = echfs_read_block(filesystem, current_block);
@@ -248,7 +266,18 @@ uint64_t echfs_find_entry_name_parent(echfs_filesystem_t *filesystem, char *name
 }
 
 echfs_dir_entry_t *echfs_path_resolve(echfs_filesystem_t *filesystem, char *filename, uint8_t *err_code, uint64_t unid) {
-    (void) unid;
+    if (unid != 0) {
+        lock(filesystem->cache_dir_lock);
+        echfs_dir_entry_t *dir_entry = hashmap_get_elem(filesystem->cached_dir_entries, unid);
+        if (dir_entry) {
+            echfs_dir_entry_t *return_entry = kcalloc(sizeof(echfs_dir_entry_t));
+            memcpy((void *) dir_entry, (void *) return_entry, sizeof(echfs_dir_entry_t));
+
+            unlock(filesystem->cache_dir_lock);
+            return return_entry;
+        }
+        unlock(filesystem->cache_dir_lock);
+    }
 
     char current_name[201] = {'\0'}; // Filenames are max 201 chars
     uint8_t is_last = 0; // Is this the last in the path?
@@ -319,6 +348,14 @@ next_elem:
             cur_entry = echfs_read_dir_entry(filesystem, found_elem_index);
 
             cur_entry->entry_number = found_elem_index;
+
+            if (unid != 0) {
+                lock(filesystem->cache_dir_lock);
+                echfs_dir_entry_t *dir_entry_save = kcalloc(sizeof(echfs_dir_entry_t));
+                memcpy((void *) cur_entry, (void *) dir_entry_save, sizeof(echfs_dir_entry_t));
+                hashmap_set_elem(filesystem->cached_dir_entries, unid, (void *) dir_entry_save);
+                unlock(filesystem->cache_dir_lock);
+            }
 
             return cur_entry;
         } else {

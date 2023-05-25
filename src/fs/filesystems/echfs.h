@@ -1,6 +1,8 @@
 #ifndef ECHFS_FILESYSTEM_H
 #define ECHFS_FILESYSTEM_H
 #include <stdint.h>
+#include "klibc/lock.h"
+#include "klibc/hashmap.h"
 #include "fs/vfs/vfs.h"
 
 #define BYTES_TO_BLOCKS(bytes, block_size) ((bytes + block_size - 1) / block_size)
