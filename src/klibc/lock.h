@@ -34,12 +34,12 @@ void interrupt_unlock(interrupt_state_t state);
 uint8_t check_interrupts();
 
 #define lock(lock_) \
-    lock_.attempting_to_get = __FUNCTION__; \
-    lock_.lock_name = #lock_; \
-    spinlock_lock(&lock_.lock_dat); \
-    lock_.current_holder = __FUNCTION__;
+    (lock_).attempting_to_get = __FUNCTION__; \
+    (lock_).lock_name = #lock_; \
+    spinlock_lock(&((lock_).lock_dat)); \
+    (lock_).current_holder = __FUNCTION__;
 #define unlock(lock_) \
-    spinlock_unlock(&lock_.lock_dat);
+    spinlock_unlock(&((lock_).lock_dat));
 
         // if (lock_.cpu_holding_lock != -1 && lock_.cpu_holding_lock != get_cpu_index()) { 
         //     spinlock_lock(&lock_.lock_dat); 
