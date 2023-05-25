@@ -41,6 +41,7 @@ thread_t *create_thread(char *name, void (*main)(), uint64_t rsp, uint8_t ring);
 int64_t start_thread(thread_t *thread);
 int64_t new_thread(char *name, void (*main)(), uint64_t rsp, int64_t pid, uint8_t ring);
 int64_t new_process(char *name, void *new_cr3);
+thread_t *add_basic_kernel_thread(char *name, void (*main)(), uint8_t init_state);
 void new_kernel_process(char *name, void (*main)());
 void new_user_process(char *name, void (*virt_main)(), void (*phys_main)(), uint64_t code_size);
 int64_t add_process(process_t *process);

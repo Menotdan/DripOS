@@ -398,7 +398,49 @@ int64_t new_process(char *name, void *new_cr3) {
 void new_kernel_process(char *name, void (*main)()) {
     int64_t task_parent_pid = new_process(name, (void *) base_kernel_cr3);
     uint64_t new_rsp = (uint64_t) kcalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE;
+
     new_thread(name, main, new_rsp, task_parent_pid, 0);
+}
+
+thread_t *add_basic_kernel_thread(char *name, void (*main)(), uint8_t init_state) {
+    int64_t thread_parent_pid = new_process(name, (void *) base_kernel_cr3);
+    uint64_t new_rsp = (uint64_t) kcalloc(TASK_STACK_SIZE) + TASK_STACK_SIZE;
+
+    thread_t *added_thread = create_thread(name, main, new_rsp, 0);
+    added_thread->state = init_state;
+    add_new_child_thread_no_stack_init(added_thread, thread_parent_pid);
+
+    return added_thread;
+}
+
+void kill_thread(int64_t tid) {
+    char thread_name[50] = "";
+    if (threads[tid]) {
+        strcat(thread_name, threads[tid]->name);
+    }
+
+    interrupt_safe_lock(sched_lock);
+    thread_t *thread = threads[tid];
+    assert(thread);
+    thread->state = BLOCKED;
+
+    if (thread->cpu != -1) {
+        uint8_t cpu = (uint8_t) thread->cpu;
+        interrupt_safe_unlock(sched_lock);
+        send_ipi(cpu, (1 << 14) | 253); // Reschedule, in case the cpu is still running the thread
+        while (thread->cpu != -1) { asm("pause"); }
+        interrupt_safe_lock(sched_lock);
+    }
+
+    if (thread->parent) {
+        thread->parent->child_thread_count--;
+    }
+
+    /* TODO: do proper cleanup  (Deconstruct address space, etc) */
+    threads[tid] = (void *) 0;
+    kfree(thread);
+
+    interrupt_safe_unlock(sched_lock);
 }
 
 int64_t pick_task() {
