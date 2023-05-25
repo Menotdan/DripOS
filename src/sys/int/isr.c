@@ -89,7 +89,7 @@ void isr_handler(int_reg_t *r) {
                     asm volatile("movq %%cr2, %0;" : "=r"(cr2));
 
                     // Userspace exception
-                    log("Got userspace exception %lu with error %lu on pid %ld, tid %ld", r->int_num, r->int_err, get_cur_pid(), get_cur_thread()->tid);
+                    log("Got userspace exception %lu with error %lu on pid %ld, tid %ld, thread: %s", r->int_num, r->int_err, get_cur_pid(), get_cur_thread()->tid, get_cur_thread()->name);
                     log("CR2: %lx RIP %lx RBP %lx RSP %lx", cr2, r->rip, r->rbp, r->rsp);
                     if (r->int_num == 19) {
                         uint32_t mxcsr_val = get_mxcsr();

@@ -18,10 +18,6 @@ int fd_open(char *filepath, int mode) {
         return -EFAULT;
     }
 
-    if (strncmp("/dev", kernel_string, 4)) {
-        sprintf("Opening %s\n", kernel_string);
-    }
-
     int set_ignore = 0;
     if (get_cur_thread()->ring == 3 && !get_cpu_locals()->ignore_ring) {
         get_cpu_locals()->ignore_ring = 1;

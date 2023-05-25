@@ -96,9 +96,6 @@ vfs_node_t *create_missing_nodes_from_path(char *path, vfs_ops_t ops, vfs_node_t
 
     if (*path == '/') path++;
     if (path[strlen(path) - 1] == '/') path[strlen(path) - 1] = '\0';
-
-
-    sprintf("[VFS] Parsing path %s\n", path);
     
 next_elem:
     for (uint64_t i = 0; *path != '/'; path++) {
@@ -181,11 +178,8 @@ vfs_node_t *vfs_new_node(char *name, vfs_ops_t ops) {
     node->fs_root = 0;
     node->node_handle = 0;
     node->create_handle = 0;
-    // node->ref_counter = 1; // each node should start with a reference
+
     strcpy(name, node->name);
-
-    sprintf("[VFS] Created new node with name %s\n", node->name);
-
     return node;
 }
 

@@ -239,7 +239,6 @@ uint64_t echfs_find_entry_name_parent(echfs_filesystem_t *filesystem, char *name
         }
 
         if (entry->parent_id == 0) {
-            sprintf("failed on entry index %lu\n", entry_n - 1);
             kfree(entry);
             return ECHFS_SEARCH_FAIL; // ERR
         }
@@ -309,7 +308,6 @@ next_elem:
             current_parent = cur_entry->starting_block;
         } else {
             if (cur_entry) kfree(cur_entry);
-            sprintf("search for %s parent failed\n", current_name);
             *err_code |= (1<<2); // Search failed
             return (echfs_dir_entry_t *) 0;
         }
@@ -325,7 +323,6 @@ next_elem:
             return cur_entry;
         } else {
             if (cur_entry) kfree(cur_entry);
-            sprintf("search for %s parent failed\n", current_name);
             *err_code |= (1<<2); // Search failed
             return (echfs_dir_entry_t *) 0;
         }
@@ -358,7 +355,6 @@ void allocate_blocks_for_file(echfs_filesystem_t *filesystem, echfs_dir_entry_t 
 int echfs_open(char *name, int mode) {
     (void) name;
     (void) mode;
-    sprintf("opening: %s\n", name);
 
     return 0;
 }
@@ -459,7 +455,6 @@ int echfs_read(int fd_no, void *buf, uint64_t count) {
     vfs_node_t *node = fd->node;
     assert(node);
     char *original_path = get_full_path(node);
-    sprintf("node name: %s, path: %s\n", node->name, original_path);
     char *path = get_mountpoint_relative_path(node->fs_root, original_path);
     path[strlen(path) - 1] = '\0'; // Remove trailing /
 
@@ -698,11 +693,8 @@ int echfs_create_handler(vfs_node_t *self, char *name, int mode) {
 
     char *editable_path = kcalloc(strlen(name) + 1);
     strcpy(name, editable_path);
-    sprintf("unedited path: %s\n", editable_path);
     path_remove_elem(editable_path);
-    sprintf("path after element removed: %s\n", editable_path);
 
-    sprintf("checking for parent %s\n", editable_path);
     if (strcmp(editable_path, "/")) {
         echfs_dir_entry_t *parent_dir = echfs_path_resolve(fs_data, editable_path, &resolve_error1, 0);
         if (!parent_dir) {
