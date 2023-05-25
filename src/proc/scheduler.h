@@ -55,6 +55,7 @@ void add_env(main_thread_vars_t *vars, char *string);
 /* Killing stuff */
 int kill_process(int64_t pid);
 int kill_task(int64_t tid);
+void kill_thread(int64_t tid);
 
 void start_test_user_task(); // bruh
 

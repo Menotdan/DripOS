@@ -15,41 +15,11 @@ urm_type_t urm_type;
 void *urm_data;
 lock_t urm_lock = {0, 0, 0, 0};
 event_t urm_request_event = 0;
-event_t urm_done_event = 0;
-int urm_trigger_done = 1;
-int urm_return = 0;
 
-void kill_thread(int64_t tid) {
-    char thread_name[50] = "";
-    if (threads[tid]) {
-        strcat(thread_name, threads[tid]->name);
-    }
+event_t *urm_done_event;
+int *urm_return;
 
-    interrupt_safe_lock(sched_lock);
-    thread_t *thread = threads[tid];
-    assert(thread);
-    thread->state = BLOCKED;
-
-    if (thread->cpu != -1) {
-        uint8_t cpu = (uint8_t) thread->cpu;
-        interrupt_safe_unlock(sched_lock);
-        send_ipi(cpu, (1 << 14) | 253); // Reschedule, in case the cpu is still running the thread
-        while (thread->cpu != -1) { asm("pause"); }
-        interrupt_safe_lock(sched_lock);
-    }
-
-    if (thread->parent) {
-        thread->parent->child_thread_count--;
-    }
-
-    /* TODO: do proper cleanup  (Deconstruct address space, etc) */
-    threads[tid] = (void *) 0;
-    kfree(thread);
-
-    interrupt_safe_unlock(sched_lock);
-}
-
-void urm_kill_thread(urm_kill_thread_data *data) {
+int urm_kill_thread(urm_kill_thread_data *data) {
     int64_t tid_to_kill = data->tid;
     kill_thread(tid_to_kill);
     urm_return = 0;
