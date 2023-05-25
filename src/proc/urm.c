@@ -43,7 +43,9 @@ int urm_kill_process(urm_kill_process_data *data) {
         }
     }
 
-    vmm_deconstruct_address_space((void *) process->cr3);
+    if (process->cr3 != base_kernel_cr3) {
+        vmm_deconstruct_address_space((void *) process->cr3);
+    }
     clear_fds(data->pid);
     kfree(process->threads);
     delete_hashmap(process->ipc_handles);
