@@ -33,6 +33,4 @@ int send_urm_request(void *data, urm_type_t type);
 void send_urm_request_isr(void *data, urm_type_t type);
 void send_urm_request_async(void *data, urm_type_t type);
 
-void kill_thread(int64_t tid);
-
 #endif
