@@ -34,7 +34,7 @@ uint64_t echfs_seek(int fd_no, uint64_t offset, int whence);
 vfs_ops_t echfs_ops = {echfs_open, echfs_post_open, echfs_close, echfs_read, echfs_write, echfs_seek};
 
 /* Parse the first block of information */
-int echfs_read_block0(char *device, echfs_filesystem_t *output) {
+int echfs_check_and_init(char *device, echfs_filesystem_t *output) {
     echfs_block0_t *block0 = kcalloc(sizeof(echfs_block0_t));
     int device_fd = fd_open(device, 0);
 
@@ -794,7 +794,7 @@ int echfs_file_exists(vfs_node_t *fs_root, char *path) {
 void echfs_test(char *device) {
     echfs_filesystem_t *filesystem = kcalloc(sizeof(echfs_filesystem_t));
 
-    int is_echfs = echfs_read_block0(device, filesystem);
+    int is_echfs = echfs_check_and_init(device, filesystem);
 
     if (is_echfs) {
         sprintf("Main directory block: %lu\n", filesystem->main_dir_block);
