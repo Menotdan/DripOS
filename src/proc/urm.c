@@ -22,10 +22,11 @@ int *urm_return;
 int urm_kill_thread(urm_kill_thread_data *data) {
     int64_t tid_to_kill = data->tid;
     kill_thread(tid_to_kill);
-    urm_return = 0;
+    
+    return 0;
 }
 
-void urm_kill_process(urm_kill_process_data *data) {
+int urm_kill_process(urm_kill_process_data *data) {
     interrupt_safe_lock(sched_lock);
     process_t *process = processes[data->pid];
 
@@ -52,19 +53,16 @@ void urm_kill_process(urm_kill_process_data *data) {
     processes[data->pid] = (void *) 0;
     interrupt_safe_unlock(sched_lock);
     kfree(tids);
-    urm_return = 0;
+    return 0;
 }
 
-void urm_execve(urm_execve_data *data) {
-    uint64_t starting_memory = pmm_get_used_mem();
-
+int urm_execve(urm_execve_data *data) {
     uint64_t entry_point = 0;
     auxv_auxc_group_t auxv_info;
     void *address_space = load_elf_addrspace(data->executable_path, &entry_point, 0, NULL, &auxv_info);
     if (!address_space) {
         sprintf("bruh momento [execve]\n");
-        urm_return = ENOENT;
-        return;
+        return ENOENT;
     }
 
     interrupt_safe_lock(sched_lock);
@@ -136,8 +134,19 @@ int send_urm_request(void *data, urm_type_t type) {
     urm_data = data;
     urm_type = type;
     trigger_event(&urm_request_event);
-    await_event(&urm_done_event);
-    return urm_return;
+
+    event_t *event_to_wait = kcalloc(sizeof(event_t));
+    int *return_value = kcalloc(sizeof(int));
+
+    urm_done_event = event_to_wait;
+    urm_return = return_value;
+    await_event(event_to_wait);
+
+    int return_value_storage = *return_value;
+    kfree(return_value);
+    kfree(event_to_wait);
+
+    return return_value_storage;
 }
 
 void send_urm_request_isr(void *data, urm_type_t type) {
