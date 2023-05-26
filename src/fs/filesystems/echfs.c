@@ -19,11 +19,6 @@
 #include "drivers/serial.h"
 #include "proc/scheduler.h"
 
-hashmap_t cached_blocks;
-lock_t echfs_cache_lock = {0, 0, 0, 0};
-hashmap_t cached_dir_entries;
-lock_t echfs_dir_ent_lock = {0, 0, 0, 0};
-
 int echfs_open(char *name, int mode);
 int echfs_post_open(int fd, int mode);
 int echfs_close(int fd_no);
