@@ -121,12 +121,12 @@ void echfs_write_block(echfs_filesystem_t *filesystem, uint64_t block, void *dat
     fd_seek(device_fd, block * filesystem->block_size, SEEK_SET);
     fd_write(device_fd, data, filesystem->block_size);
 
-    lock(echfs_cache_lock);
-    void *cached = hashmap_get_elem(&cached_blocks, block);
+    lock(filesystem->cache_block_lock);
+    void *cached = hashmap_get_elem(filesystem->cached_blocks, block);
     if (cached) {
         memcpy(data, cached, filesystem->block_size);
     }
-    unlock(echfs_cache_lock);
+    unlock(filesystem->cache_block_lock);
 
     // Close and return
     fd_close(device_fd);
