@@ -17,6 +17,7 @@ int tty_dev_write(int fd_no, void *buf, uint64_t count) {
     lock(base_tty.tty_lock);
 
     char *char_buf = buf;
+    sprintf("TTY Write: '%s'\n", char_buf);
     for (uint64_t i = 0; i < count; i++) {
         tty_out(char_buf[i], &base_tty);
     }
