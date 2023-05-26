@@ -133,7 +133,7 @@ void urm_runner(void *data, urm_runtime_params_t *params) {
     self_kill_data->pid = get_cur_pid();
     send_urm_request_async(self_kill_data, URM_KILL_RUNNER);
 
-    lock(sched_lock);
+    interrupt_safe_lock(sched_lock);
     get_cur_thread()->state = BLOCKED;
     force_unlocked_schedule();
 }
@@ -183,9 +183,9 @@ void urm_thread() {
         new_urm_thread->regs.rdi = (uint64_t) urm_data_copy;
         new_urm_thread->regs.rsi = (uint64_t) runtime_params;
 
-        lock(sched_lock);
+        interrupt_safe_lock(sched_lock);
         new_urm_thread->state = READY;
-        unlock(sched_lock);
+        interrupt_safe_unlock(sched_lock);
 
         // Reset state
         urm_done_event = NULL;
