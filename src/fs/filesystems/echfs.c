@@ -388,21 +388,14 @@ void allocate_blocks_for_file(echfs_filesystem_t *filesystem, echfs_dir_entry_t 
 
 /* EchFS VFS ops */
 int echfs_open(char *name, int mode) {
-    (void) name;
-    (void) mode;
-
     return 0;
 }
 
 int echfs_close(int fd_no) {
-    (void) fd_no;
-
     return 0;
 }
 
 uint64_t echfs_seek(int fd_no, uint64_t offset, int whence) {
-    (void) offset;
-
     if (whence == SEEK_END) {
         fd_entry_t *fd = fd_lookup(fd_no);
         echfs_filesystem_t *filesystem_info = get_unid_fs_data(fd->node->fs_root->unid);

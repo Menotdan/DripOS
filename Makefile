@@ -105,7 +105,7 @@ update_qloader2:
 # To make an object, always compile from its .c
 
 %.o: %.c
-	${CC} ${CFLAGS} -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -fno-omit-frame-pointer -ffunction-sections -fdata-sections -MD -c $< -o $@ -ffreestanding
+	${CC} ${CFLAGS} -Iinclude -I src -O${O_LEVEL} -Werror -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable -fno-omit-frame-pointer -ffunction-sections -fdata-sections -MD -c $< -o $@ -ffreestanding
 
 %.bin: %.real
 	nasm -f bin -o $@ $<

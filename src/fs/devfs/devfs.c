@@ -11,22 +11,17 @@ vfs_node_t *devfs_root;
 hashmap_t *devfs_hashmap;
 
 int devfs_open(char *name, int mode) {
-    (void) name;
-    (void) mode;
     return 0;
 }
 
 int devfs_close(int fd_no) {
     fd_entry_t *fd_data = fd_lookup(fd_no);
     vfs_node_t *node = fd_data->node;
-    (void) node;
+
     return 0;
 }
 
 int devfs_file_exists(vfs_node_t *root_node, char *path) {
-    (void) root_node;
-    (void) path;
-
     return 0; // Any time the vfs has to ask about a file existing, it doesn't exist in the devfs.
 }
 

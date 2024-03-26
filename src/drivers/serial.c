@@ -130,7 +130,5 @@ void sprintf(char *message, ...) {
     va_end(format_list);
     //unlock(&serial_print_lock);
     //yield();
-#else
-    (void) message;
 #endif
 }

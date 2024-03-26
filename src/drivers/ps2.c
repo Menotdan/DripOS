@@ -104,8 +104,6 @@ void mouse_handler(int_reg_t *r) {
 }
 
 int ps2kb_read(int fd, void *buf, uint64_t count) {
-    (void) fd;
-
     memset(buf, 0, count);
     uint8_t *buffer = buf;
     for (uint64_t i = 0; i < count; i++) {

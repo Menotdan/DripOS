@@ -13,7 +13,6 @@ color_t default_bg = {56, 56, 56};
 tty_t base_tty;
 
 int tty_dev_write(int fd_no, void *buf, uint64_t count) {
-    (void) fd_no;
     lock(base_tty.tty_lock);
 
     char *char_buf = buf;
@@ -28,8 +27,6 @@ int tty_dev_write(int fd_no, void *buf, uint64_t count) {
 }
 
 int tty_dev_read(int fd_no, void *buf, uint64_t count) {
-    (void) fd_no;
-
     char *char_buf = buf;
     for (uint64_t i = 0; i < count; i++) {
         char_buf[i] = tty_get_char(&base_tty);

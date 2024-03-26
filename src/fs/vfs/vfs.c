@@ -26,40 +26,26 @@ vfs_ops_t null_vfs_ops = {0, 0, 0, 0, 0, 0};
 
 /* Dummy ops */
 int dummy_open(char *_1, int _2) {
-    (void) _1;
-    (void) _2;
     return -ENOSYS;
 }
 
 int dummy_post_open(int _1, int _2) {
-    (void) _1;
-    (void) _2;
     return -ENOSYS;
 }
 
 int dummy_close(int _) {
-    (void) _;
     return -ENOSYS;
 }
 
 int dummy_read(int _1, void *_2, uint64_t _3) {
-    (void) _1;
-    (void) _2;
-    (void) _3;
     return -ENOSYS;
 }
 
 int dummy_write(int _1, void *_2, uint64_t _3) {
-    (void) _1;
-    (void) _2;
-    (void) _3;
     return -ENOSYS;
 }
 
 uint64_t dummy_seek(int _1, uint64_t _2, int _3) {
-    (void) _1;
-    (void) _2;
-    (void) _3;
     return -ENOSYS;
 }
 
@@ -147,9 +133,6 @@ next_elem:
 }
 
 void dummy_node_handle(vfs_node_t *_1, vfs_node_t *_2, char *_3) {
-    (void) _1;
-    (void) _2;
-    (void) _3;
 }
 
 /* Setting up the root node */

@@ -77,8 +77,6 @@ void log(char *message, ...) {
     va_end(format_list);
     sprint("\e[0m\n");
     unlock(log_lock);
-#else
-    (void) message;
 #endif
 }
 
@@ -155,8 +153,6 @@ void warn(char *message, ...) {
     va_end(format_list);
     sprint("\e[0m\n");
     unlock(log_lock);
-#else
-    (void) message;
 #endif
 }
 
@@ -233,8 +229,6 @@ void error(char *message, ...) {
     va_end(format_list);
     sprint("\e[0m\n");
     unlock(log_lock);
-#else
-    (void) message;
 #endif
 }
 
@@ -306,7 +300,5 @@ void log_alloc(char *message, ...) {
     }
     va_end(format_list);
     unlock(log_lock);
-#else
-    (void) message;
 #endif
 }

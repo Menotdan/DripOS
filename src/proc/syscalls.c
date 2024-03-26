@@ -149,7 +149,6 @@ void syscall_munmap(syscall_reg_t *r) {
 }
 
 void syscall_yield(syscall_reg_t *r) {
-    (void) r;
     yield();
 }
 
@@ -172,12 +171,10 @@ void syscall_set_fs(syscall_reg_t *r) {
 }
 
 void syscall_getpid(syscall_reg_t *r) {
-    (void) r;
     r->rax = get_cur_pid();
 }
 
 void syscall_getppid(syscall_reg_t *r) {
-    (void) r;
     interrupt_safe_lock(sched_lock);
     process_t *process = processes[get_cur_pid()];
     interrupt_safe_unlock(sched_lock);
@@ -185,7 +182,6 @@ void syscall_getppid(syscall_reg_t *r) {
 }
 
 void syscall_exit(syscall_reg_t *r) {
-    (void) r;
     kill_process(get_cur_pid()); // yeet
 }
 
@@ -195,8 +191,6 @@ void syscall_sprint(syscall_reg_t *r) {
     sprint(string);
     sprint("\e[0m\n");
     kfree(string);
-#else
-    (void) r;
 #endif
 }
 
@@ -354,7 +348,6 @@ void syscall_start_thread(syscall_reg_t *r) {
 }
 
 void syscall_exit_thread(syscall_reg_t *r) {
-    (void) r;
     kill_task(get_cur_thread()->tid);
 }
 

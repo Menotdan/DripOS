@@ -103,13 +103,8 @@ uint64_t create_local_dr7(thread_t *t) {
     // sprint("huh\n");
     // volatile uint8_t test4 = (t->parent->local_watchpoint1_active);
     // sprint("t\n");
-    // (void) test1;
-    // (void) test2;
-    // (void) test3;
-    // (void) test4;
     // volatile uint64_t test5 = ret + 1;
     // sprint("apples\n");
-    // (void) test5;
 
     if (t->parent->local_watchpoint1_active) {
         ret |= 0b1101 << 24;

@@ -124,20 +124,14 @@ uint8_t sata_device_count = 0;
 lock_t ahci_lock = {0, 0, 0, 0};
 
 int ahci_open(char *path, int mode) {
-    (void) path;
-    (void) mode;
     return 0;
 }
 
 int ahci_close(int fd_no) {
-    (void) fd_no;
     return 0;
 }
 
 uint64_t ahci_seek(int fd_no, uint64_t offset, int whence) {
-    (void) fd_no;
-    (void) offset;
-    (void) whence;
     return 0;
 }
 

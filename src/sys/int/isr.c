@@ -181,7 +181,6 @@ void panic_handler(int_reg_t *r) {
 }
 
 void isr_panic_idle(int_reg_t *r) {
-    (void) r;
     unlock(base_tty.tty_lock);
     unlock(vesa_lock);
 

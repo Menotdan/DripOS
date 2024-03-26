@@ -35,11 +35,6 @@ void vmm_invlpg(uint64_t new) {
 //         uint64_t a,b,c,d;
 //         __cpuid(1, a, b, c, d);
 //         cache_line_size = (b >> 8) & 0xff;
-
-//         // UNUSED
-//         (void) a;
-//         (void) c;
-//         (void) d;
 //     }
 //     uint64_t cur_addr = ((uint64_t) addr / cache_line_size) * cache_line_size; // Round down to align
 //     uint64_t end_byte = (uint64_t) addr + count;

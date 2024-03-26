@@ -8,13 +8,10 @@
 #include "drivers/tty/tty.h"
 
 int mbr_open(char *name, int mode) {
-    (void) name;
-    (void) mode;
     return 0;
 }
 
 int mbr_close(int fd_no) {
-    (void) fd_no;
     return 0;
 }
 
@@ -43,16 +40,10 @@ int mbr_write(int fd_no, void *buf, uint64_t count) {
 }
 
 uint64_t mbr_seek(int fd_no, uint64_t offset, int whence) {
-    (void) fd_no;
-    (void) offset;
-    (void) whence;
-
     return 0;
 }
 
 void read_mbr(char *drive_name, uint64_t sector_size) {
-    (void) sector_size;
-
     int fd = fd_open(drive_name, 0);
     mbr_bootsect_t *data = kcalloc(sizeof(mbr_bootsect_t));
     fd_seek(fd, 0, SEEK_SET);
